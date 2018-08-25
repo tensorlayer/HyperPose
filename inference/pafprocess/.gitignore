@@ -1,0 +1,5 @@
+*.so
+/build
+pafprocess_wrap.cpp
+pafprocess_wrap.cxx
+pafprocess.py
