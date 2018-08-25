@@ -1,10 +1,11 @@
-models_*
+__pycache__
 coco/
+cocoapi-master/
 cocoapi/
-inference/*png
-vis/
 data/mscoco2014
 data/mscoco2017
+inference/*png
+models_*
 models/
 tensorlayer/
-cocoapi-master/
+vis/
