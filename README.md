@@ -45,9 +45,9 @@ python PythonAPI/setup.py build_ext install
 
 2. Build c++ library for post processing. See: <https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess>
 
-```python
-cd pafprocess
-swig -python -c++ pafprocess.i && python3 setup.py build_ext --inplace
+```bash
+cd inference/pafprocess
+make
 
 # ** before recompiling **
 rm -rf build
@@ -62,10 +62,10 @@ Runs `xxx.py`, it will automatically download the default VGG19-based model from
 and use it for inferencing.
 The performance of pre-trained model is as follow:
 
-|                  | Speed | AP | xxx |
-|------------------|-------|----|-----|
-| VGG19            | xx    | xx | xx  |
-| Residual Squeeze | xx    | xx | xx  |
+|                  | Speed | AP  | xxx |
+| ---------------- | ----- | --- | --- |
+| VGG19            | xx    | xx  | xx  |
+| Residual Squeeze | xx    | xx  | xx  |
 
 - Speed is tested on XXX
 
