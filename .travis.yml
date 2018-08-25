@@ -1,8 +1,10 @@
 # https://docs.travis-ci.com/user/languages/cpp/
 language: cpp
 
+sudo: required
+
 before_install:
-- apt install -y swig
+- sudo apt install -y swig
 
 script:
 # The default is
