@@ -108,3 +108,7 @@ For TensorRT float16 (half-float) inferencing, xxx
 - [Default MPII](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_MPI/pose_deploy.prototxt)
 - [Default COCO model](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_COCO/pose_deploy.prototxt)
 - [Visualizing Caffe model](http://ethereon.github.io/netscope/#/editor)
+
+## License
+
+- This project for academic use only.
