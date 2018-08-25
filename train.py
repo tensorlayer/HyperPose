@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import cv2
 import time
@@ -18,12 +20,12 @@ tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
 
 tl.files.exists_or_mkdir(config.LOG.vis_path, verbose=False)  # to save visualization results
-tl.files.exists_or_mkdir(config.MODEL.model_path, verbose=False) # to save model files
+tl.files.exists_or_mkdir(config.MODEL.model_path, verbose=False)  # to save model files
 
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-## define hyper-parameters for training
+# define hyper-parameters for training
 batch_size = config.TRAIN.batch_size
 n_epoch = config.TRAIN.n_epoch
 step_size = config.TRAIN.step_size
@@ -32,7 +34,7 @@ weight_decay = config.TRAIN.weight_decay
 base_lr = config.TRAIN.base_lr
 gamma = config.TRAIN.gamma
 
-## define hyper-parameters for model
+# define hyper-parameters for model
 model_path = config.MODEL.model_path
 n_pos = config.MODEL.n_pos
 hin = config.MODEL.hin
@@ -59,7 +61,7 @@ wout = config.MODEL.wout
 
 
 def _data_aug_fn(image, ground_truth):
-    """ Data augmentation function """
+    """Data augmentation function."""
     ground_truth = cPickle.loads(ground_truth)
     ground_truth = list(ground_truth)
 
@@ -101,7 +103,7 @@ def _data_aug_fn(image, ground_truth):
 
 
 def _map_fn(img_list, annos):
-    """ TF Dataset pipeline. """
+    """TF Dataset pipeline."""
     image = tf.read_file(img_list)
     image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
@@ -111,11 +113,11 @@ def _map_fn(img_list, annos):
 
 if __name__ == '__main__':
 
-    ## download MSCOCO data to "data/mscoco..."" folder
+    # download MSCOCO data to "data/mscoco..."" folder
     train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
         load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version)
 
-    ## read coco training images contains valid people
+    # read coco training images contains valid people
     train_data = PoseInfo(train_im_path, train_ann_path, False)
     train_imgs_file_list = train_data.get_image_list()
     train_objs_info_list = train_data.get_joint_list()
@@ -126,7 +128,7 @@ if __name__ == '__main__':
     else:
         print("number of training images {}".format(len(train_imgs_file_list)))
 
-    ## read coco validating images contains valid people (you can use it for training as well)
+    # read coco validating images contains valid people (you can use it for training as well)
     # val_data = PoseInfo(val_im_path, val_ann_path, False)
     # val_imgs_file_list = val_data.get_image_list()
     # val_objs_info_list = val_data.get_joint_list()
@@ -137,7 +139,7 @@ if __name__ == '__main__':
     # else:
     #     print("number of validating images {}".format(len(val_imgs_file_list)))
 
-    ## read your customized images contains valid people
+    # read your customized images contains valid people
     your_images_path = config.DATA.your_images_path
     your_annos_path = config.DATA.your_annos_path
     your_data = PoseInfo(your_images_path, your_annos_path, False)
@@ -149,18 +151,18 @@ if __name__ == '__main__':
     else:
         print("number of customized images {}".format(len(your_imgs_file_list)))
 
-    ## choice dataset for training
+    # choice dataset for training
     # 1. only coco training set
     # imgs_file_list = train_imgs_file_list
     # train_targets = list(zip(train_objs_info_list, train_mask_list))
     # 2. your customized data from "data/your_data" and coco training set
     imgs_file_list = train_imgs_file_list + your_imgs_file_list
-    train_targets = list(zip(train_objs_info_list + your_objs_info_list, \
-                    train_mask_list + your_mask_list))
+    train_targets = list(zip(train_objs_info_list + your_objs_info_list,
+                             train_mask_list + your_mask_list))
 
-    ## define data augmentation
+    # define data augmentation
     def generator():
-        """ TF Dataset generartor """
+        """TF Dataset generartor."""
         assert len(imgs_file_list) == len(train_targets)
         for _input, _target in zip(imgs_file_list, train_targets):
             yield _input.encode('utf-8'), cPickle.dumps(_target)
@@ -174,9 +176,8 @@ if __name__ == '__main__':
     one_element = iterator.get_next()
 
     if config.TRAIN.train_mode == 'placeholder':
-        """ Train with placeholder can help your to check the data easily.
-        """
-        ## define model architecture
+        # Train with placeholder can help your to check the data easily.
+        # define model architecture
         x = tf.placeholder(tf.float32, [None, hin, win, 3], "image")
         confs = tf.placeholder(tf.float32, [None, hout, wout, n_pos], "confidence_maps")
         pafs = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 2], "pafs")
@@ -187,7 +188,7 @@ if __name__ == '__main__':
 
         cnn, b1_list, b2_list, net = model(x, n_pos, img_mask1, img_mask2, False, False)
 
-        ## define loss
+        # define loss
         losses = []
         last_losses_l1 = []
         last_losses_l2 = []
@@ -219,7 +220,7 @@ if __name__ == '__main__':
         train_op = opt.minimize(total_loss, global_step=global_step)
         config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
 
-        ## start training
+        # start training
         with tf.Session(config=config) as sess:
             sess.run(tf.global_variables_initializer())
 
@@ -285,7 +286,7 @@ if __name__ == '__main__':
                     print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
                 # save some intermedian results
-                if (gs_num != 0) and (gs_num % 1 == 0):  #save_interval == 0):
+                if (gs_num != 0) and (gs_num % 1 == 0):  # save_interval == 0):
                     draw_intermedia_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train')
                     # np.save(config.LOG.vis_path + 'image' + str(gs_num) + '.npy', x_)
                     # np.save(config.LOG.vis_path + 'heat_ground' + str(gs_num) + '.npy', confs_)
@@ -300,10 +301,8 @@ if __name__ == '__main__':
                 if gs_num > 3000001:
                     break
     elif config.TRAIN.train_mode == 'dataset':  # TODO
-        """ Train with TensorFlow dataset mode is usually faster than placeholder.
-        """
+        # Train with TensorFlow dataset mode is usually faster than placeholder.
         raise Exception("xx")
     elif config.TRAIN.train_mode == 'distributed':  # TODO
-        """ Train with distributed mode.
-        """
+        # Train with distributed mode.
         raise Exception("TODO tl.distributed.Trainer")
