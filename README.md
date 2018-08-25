@@ -7,9 +7,10 @@
 
 ## 1. Motivation
 
-OpenPose from CMU provides real-time 2D pose estimation following ["Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields"](https://arxiv.org/pdf/1611.08050.pdf) However, the [training code](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation) is based on Caffe and C++, which is hard to customize.
+[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) from CMU provides real-time 2D pose estimation following ["Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields"](https://arxiv.org/pdf/1611.08050.pdf) However, the [training code](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation) is based on Caffe and C++, which is hard to be customized.
 While in practice, developers need to customize their training set, data augmentation methods according to their requirement.
-For this reason, we reimplemented this project in TensorLayer fashion.
+For this reason, we reimplemented this project in [TensorLayer fashion](https://github.com/tensorlayer/tensorlayer).
+
 
 ## 2. Project files
 
@@ -68,6 +69,8 @@ The performance of pre-trained model is as follow:
 
 - Speed is tested on XXX
 
+- We follow the [data format of official OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/output.md)
+
 ## 5. Train a model
 
 For your own training, please put .jpg files into coco_dataset/images/ and put .json into coco_dataset/annotations/
@@ -102,7 +105,6 @@ For TensorRT float16 (half-float) inferencing, xxx
 
 ## Paper's Model
 
-Image: <https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/tree/master/model/_trained_MPI>
-MPII: <https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_MPI/pose_deploy.prototxt>
-COCO: <https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_COCO/pose_deploy.prototxt>  <- same architecture but more key points
-Visualize Caffe model: <http://ethereon.github.io/netscope/#/editor>
+- [Default MPII](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_MPI/pose_deploy.prototxt)
+- [Default COCO model](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_COCO/pose_deploy.prototxt)
+- [Visualizing Caffe model](http://ethereon.github.io/netscope/#/editor)
