@@ -1,4 +1,7 @@
-import time, os
+#!/usr/bin/env python3
+
+import time
+import os
 import numpy as np
 from config import config
 from models import model
@@ -13,11 +16,11 @@ if __name__ == '__main__':
     if (h % 16 != 0) or (w % 16 != 0):
         raise Exception("image size should be divided by 16")
 
-    ## define model
+    # define model
     x = tf.placeholder(tf.float32, [None, h, w, 3], "image")
     _, _, _, net = model(x, n_pos, None, None, False, False)
 
-    ## get output from network
+    # get output from network
     conf_tensor = tl.layers.get_layers_with_name(net, 'model/cpm/stage6/branch1/conf')[0]
     pafs_tensor = tl.layers.get_layers_with_name(net, 'model/cpm/stage6/branch2/pafs')[0]
 
@@ -33,17 +36,17 @@ if __name__ == '__main__':
 
     peak_tensor = get_peak(pafs_tensor)
 
-    ## restore model parameters
+    # restore model parameters
     sess = tf.InteractiveSession()
     sess.run(tf.global_variables_initializer())
     # tl.files.load_and_assign_npz_dict(os.path.join(model_path, 'pose1.npz'), sess)
 
-    ## get one example image with range 0~1
+    # get one example image with range 0~1
     im = tl.vis.read_image('data/test.jpeg')
     im = tl.prepro.imresize(im, [h, w])
     im = im / 255.  # input image 0~1
 
-    ## inference
+    # inference
     # 1st time need time to compile
     # _, _ = sess.run([conf_tensor, pafs_tensor], feed_dict={x: [im]})
     st = time.time()
@@ -52,7 +55,7 @@ if __name__ == '__main__':
     print("get maps took {}s i.e. {} FPS".format(t, 1. / t))
     # print(conf.shape, pafs.shape, peak.shape)
 
-    ## get coordinate results from maps using conf and pafs from network output, and peak
+    # get coordinate results from maps using conf and pafs from network output, and peak
     # using OpenPose's official C++ code for this part
     from inference.estimator import Human
 
@@ -86,7 +89,7 @@ if __name__ == '__main__':
     humans = estimate_paf(peak[0], conf[0], pafs[0])
     print(humans)
 
-    ## draw maps
+    # draw maps
     draw_intermedia_results([im], None, conf, None, pafs, None, 'inference')
 
-    ## draw connection
+    # draw connection

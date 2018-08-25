@@ -1,6 +1,6 @@
 import tensorflow as tf
 import tensorlayer as tl
-from tensorlayer.layers import *
+from tensorlayer.layers import ConcatLayer, Conv2d, InputLayer, MaxPool2d
 
 __all__ = ['model']
 
@@ -9,7 +9,7 @@ b_init = tf.constant_initializer(value=0.0)
 
 
 def stage(cnn, b1, b2, n_pos, maskInput1, maskInput2, is_train, name='stageX'):
-    """ Define the archuecture of stage 2 to 6 """
+    """Define the archuecture of stage 2 to 6."""
     with tf.variable_scope(name):
         net = ConcatLayer([cnn, b1, b2], -1, name='concat')
         with tf.variable_scope("branch1"):
@@ -36,10 +36,10 @@ def stage(cnn, b1, b2, n_pos, maskInput1, maskInput2, is_train, name='stageX'):
 
 
 def vgg_network(x):
-    """ VGG19 network for default model """
+    """VGG19 network for default model."""
 
-    #input x: 0~1
-    #bgr: -0.5~0.5 for InputLayer
+    # input x: 0~1
+    # bgr: -0.5~0.5 for InputLayer
     red, green, blue = tf.split(axis=3, num_or_size_splits=3, value=x)
     bgr = tf.concat(axis=3, values=[blue, green, red])
     bgr = bgr - 0.5
@@ -70,7 +70,7 @@ def vgg_network(x):
 
 
 def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):
-    """ Defines the entire pose estimation model. """
+    """Defines the entire pose estimation model."""
     b1_list = []
     b2_list = []
     with tf.variable_scope('model', reuse):
