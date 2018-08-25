@@ -111,4 +111,4 @@ For TensorRT float16 (half-float) inferencing, xxx
 
 ## License
 
-- This project for academic use only.
+- This project is for academic use only.
