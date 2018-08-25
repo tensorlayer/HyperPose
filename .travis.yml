@@ -5,6 +5,7 @@ sudo: required
 
 before_install:
 - sudo apt install -y swig
+- sudo pip install -r requirements.txt
 
 script:
 # The default is
