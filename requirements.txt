@@ -1,4 +1,5 @@
 numpy
 easydict
 cython
-# pycocotools
+opencv-python
+pycocotools
