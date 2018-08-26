@@ -1,4 +1,4 @@
 numpy
 easydict
-cython
-# pycocotools
+opencv-python
+pycocotools  # must be installed after cython is installed
