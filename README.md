@@ -13,7 +13,6 @@ For this reason, we reimplemented this project in [TensorLayer fashion](https://
 
 ⚠️ ⚠️ This repo will be moved into example folder of [tensorlayer](https://github.com/zsdonghao/tensorlayer) for life-cycle management soon. More cool Computer Vision applications such as pose estimation and style transfer can be found in this [organization](https://github.com/tensorlayer).
 
-
 ## 2. Project files
 
 - `config.py` : to config the directories of dataset, training details and etc.
