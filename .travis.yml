@@ -1,6 +1,9 @@
 # https://docs.travis-ci.com/user/languages/python/
 language: python
 
+python:
+  - '3.6'
+
 sudo: required
 
 before_install:
