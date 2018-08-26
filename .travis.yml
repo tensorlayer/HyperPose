@@ -1,14 +1,12 @@
-# https://docs.travis-ci.com/user/languages/cpp/
-language: cpp
+# https://docs.travis-ci.com/user/languages/python/
+language: python
 
 sudo: required
 
 before_install:
 - sudo apt install -y swig
-- sudo pip install -r requirements.txt
+- pip install -r requirements.txt
 
 script:
-# The default is
-# - ./configure && make && make test
 - cd inference/pafprocess && make
 # TODO: add move tests
