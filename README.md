@@ -25,26 +25,7 @@ For this reason, we reimplemented this project in [TensorLayer fashion](https://
 
 ## 3. Preparation
 
-1. for data processing, COCOAPIs are used, download cocoapi repo: <https://github.com/cocodataset/cocoapi>, go into Python folder and make.
-
-```bash
-git clone https://github.com/pdollar/coco.git
-cd coco/PythonAPI
-make
-
-# ** before recompiling **
-rm -rf build
-```
-
-alternatively, following this:
-
-```bash
-git clone https://github.com/waleedka/coco
-cd cococ
-python PythonAPI/setup.py build_ext install
-```
-
-2. Build c++ library for post processing. See: <https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess>
+Build C++ library for post processing. See: <https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess>
 
 ```bash
 cd inference/pafprocess
@@ -63,10 +44,10 @@ Runs `xxx.py`, it will automatically download the default VGG19-based model from
 and use it for inferencing.
 The performance of pre-trained model is as follow:
 
-|                  | Speed | AP  | xxx |
-| ---------------- | ----- | --- | --- |
-| VGG19            | xx    | xx  | xx  |
-| Residual Squeeze | xx    | xx  | xx  |
+|                  | Speed | AP | xxx |
+|------------------|-------|----|-----|
+| VGG19            | xx    | xx | xx  |
+| Residual Squeeze | xx    | xx | xx  |
 
 - Speed is tested on XXX
 
