@@ -11,7 +11,7 @@
 While in practice, developers need to customize their training set, data augmentation methods according to their requirement.
 For this reason, we reimplemented this project in [TensorLayer fashion](https://github.com/tensorlayer/tensorlayer).
 
-⚠️ ⚠️ This repo will be moved into example folder of [tensorlayer](https://github.com/tensorlayer/tensorlayer) for life-cycle management soon. More cool Computer Vision applications such as pose estimation and style transfer can be found in this [organization](https://github.com/tensorlayer).
+⚠️ ⚠️ This repo will be moved into example folder of [tensorlayer](https://github.com/tensorlayer/tensorlayer) for life-cycle management soon. More cool Computer Vision applications such as super resolution and style transfer can be found in this [organization](https://github.com/tensorlayer).
 
 ## 2. Project files
 
