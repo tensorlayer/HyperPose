@@ -4,6 +4,10 @@ import time
 import os
 import numpy as np
 from config import config
+
+import matplotlib
+matplotlib.use('Agg')
+
 from models import model
 import tensorflow as tf
 import tensorlayer as tl
