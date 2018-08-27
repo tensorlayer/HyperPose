@@ -281,7 +281,7 @@ if __name__ == '__main__':
                 # conf and paf maps
                 map_batch = tran_batch[1]
                 confs_ = map_batch[:, :, :, 0:n_pos]  # TODO 0:19
-                pafs_ = map_batch[:, :, :, n_pos:57]  # TODO 19:57
+                pafs_ = map_batch[:, :, :, n_pos:57]  # TODO 19:57  i.e. [:, :, :, n_pos::] to the end
                 # mask
                 mask = tran_batch[2]
                 mask = mask.reshape(batch_size, hout, wout, 1)
