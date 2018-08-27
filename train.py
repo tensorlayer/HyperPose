@@ -209,7 +209,7 @@ if __name__ == '__main__':
         num_images = np.shape(imgs_file_list)[0]
 
         cnn, b1_list, b2_list, net = model(x, n_pos, img_mask1, img_mask2,
-                                           False, False)
+                                           True, False)
 
         # define loss
         losses = []
