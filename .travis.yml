@@ -11,7 +11,9 @@ before_install:
 - sudo apt install -y swig
 - pip install cython
 - pip install -r requirements.txt
+- make
+- ./scripts/download-test-data.sh
 
 script:
-- cd inference/pafprocess && make
+- ./inference.py
 # TODO: add move tests
