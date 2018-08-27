@@ -15,5 +15,5 @@ before_install:
 - ./scripts/download-test-data.sh
 
 script:
-- ./inference.py
+- python inference.py
 # TODO: add move tests
