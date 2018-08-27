@@ -14,7 +14,10 @@ from inference.pafprocess import pafprocess
 from models import model
 from utils import draw_intermedia_results
 
+# TODO: make them flags
 input_file = 'data/test.jpeg'
+model_file = None
+# model_file = 'pose1.npz'
 
 if __name__ == '__main__':
     n_pos = config.MODEL.n_pos
@@ -52,7 +55,9 @@ if __name__ == '__main__':
     # restore model parameters
     sess = tf.InteractiveSession()
     sess.run(tf.global_variables_initializer())
-    # tl.files.load_and_assign_npz_dict(os.path.join(model_path, 'pose1.npz'), sess)
+    if model_file:
+        tl.files.load_and_assign_npz_dict(
+            os.path.join(model_path, model_file), sess)
 
     # get one example image with range 0~1
     im = tl.vis.read_image(input_file)
