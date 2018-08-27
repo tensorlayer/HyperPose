@@ -185,11 +185,11 @@ if __name__ == '__main__':
 
     dataset = tf.data.Dataset().from_generator(
         generator, output_types=(tf.string, tf.string))
-    dataset = dataset.map(_map_fn, num_parallel_calls=1)
+    dataset = dataset.map(_map_fn, num_parallel_calls=8)
+    dataset = dataset.shuffle(buffer_size=2046)
     dataset = dataset.repeat(n_epoch)
     dataset = dataset.batch(batch_size)
-    dataset = dataset.prefetch(
-        buffer_size=2)  # larger prefetach buffer means xxxx
+    dataset = dataset.prefetch(buffer_size=20)
     iterator = dataset.make_one_shot_iterator()
     one_element = iterator.get_next()
 
