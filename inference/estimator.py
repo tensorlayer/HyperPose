@@ -1,22 +1,23 @@
 import logging
 import math
-import cv2
-import numpy as np
-import tensorflow as tf
+import sys
 import time
 
+import cv2
+import numpy as np
+
+import tensorflow as tf
 import tensorlayer as tl
+from config import config
+from models import model
 from tensorlayer.layers import *
 
 from . import common
 from .common import CocoPart
-from .smoother import Smoother
 from .pafprocess import pafprocess
+from .smoother import Smoother
 
-import sys
 sys.path.append("../")
-from config import config
-from models import model
 
 logger = logging.getLogger('TfPoseEstimator')
 logger.setLevel(logging.INFO)

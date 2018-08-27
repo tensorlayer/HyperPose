@@ -1,11 +1,13 @@
-import sys
-import os
-import numpy as np
-import logging
 import argparse
 import json
-from tqdm import tqdm
+import logging
+import os
+import sys
+
 import cv2
+import numpy as np
+from tqdm import tqdm
+
 from estimator import TfPoseEstimator
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval

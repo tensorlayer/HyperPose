@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*-
 
-from pycocotools.coco import COCO
-import numpy as np
+## xxx
+import math
 import os
-from scipy.spatial.distance import cdist
-from pycocotools.coco import maskUtils
-from tensorlayer.files.utils import maybe_download_and_extract, folder_exists, del_file
-from tensorlayer import logging
-from config import config
-import matplotlib.pyplot as plt
 from distutils.dir_util import mkpath
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.spatial.distance import cdist
+
+from config import config
+from pycocotools.coco import COCO, maskUtils
+from tensorlayer import logging
+from tensorlayer.files.utils import (del_file, folder_exists,
+                                     maybe_download_and_extract)
 
 
 ## download dataset
@@ -390,9 +395,6 @@ class PoseInfo:
         return mask_list
 
 
-## xxx
-import math
-import cv2
 
 
 def get_heatmap(annos, height, width):

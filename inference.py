@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 
-import time
 import os
-import numpy as np
-from config import config
+import time
 
 import matplotlib
 matplotlib.use('Agg')
+import numpy as np
 
-from models import model
 import tensorflow as tf
 import tensorlayer as tl
-from utils import draw_intermedia_results
-
+from config import config
 from inference.pafprocess import pafprocess
+from models import model
+from utils import draw_intermedia_results
 
 input_file = 'data/test.jpeg'
 

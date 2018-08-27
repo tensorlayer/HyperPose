@@ -1,26 +1,32 @@
 #!/usr/bin/env python3
 
 import os
-import cv2
 import time
-# import argparse
-import numpy as np
-import _pickle as cPickle
+
+import cv2
 import matplotlib
 matplotlib.use('Agg')
+import numpy as np
+
+import _pickle as cPickle
 import tensorflow as tf
 import tensorlayer as tl
-from tensorlayer.prepro import keypoint_random_rotate, keypoint_random_resize_shortestedge, keypoint_random_resize, keypoint_random_flip, keypoint_random_crop
-from models import model
 from config import config
-from utils import PoseInfo, get_heatmap, get_vectormap, load_mscoco_dataset, draw_intermedia_results
+from models import model
 from pycocotools.coco import maskUtils
+from tensorlayer.prepro import (
+    keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
+    keypoint_random_resize_shortestedge, keypoint_random_rotate)
+from utils import (PoseInfo, draw_intermedia_results, get_heatmap,
+                   get_vectormap, load_mscoco_dataset)
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
 
-tl.files.exists_or_mkdir(config.LOG.vis_path, verbose=False)  # to save visualization results
-tl.files.exists_or_mkdir(config.MODEL.model_path, verbose=False)  # to save model files
+tl.files.exists_or_mkdir(
+    config.LOG.vis_path, verbose=False)  # to save visualization results
+tl.files.exists_or_mkdir(
+    config.MODEL.model_path, verbose=False)  # to save model files
 
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -77,12 +83,16 @@ def _data_aug_fn(image, ground_truth):
         mask_miss = np.bitwise_and(mask_miss, bin_mask)
 
     # image data augmentation
-    image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
-    image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
-    image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
-    image, annos, mask_miss = keypoint_random_resize_shortestedge(image, annos, mask_miss,
-                                                                  min_size=(hin, win))  # TODO: give size
-    image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # TODO: give size
+    image, annos, mask_miss = keypoint_random_resize(
+        image, annos, mask_miss, zoom_range=(0.8, 1.2))
+    image, annos, mask_miss = keypoint_random_rotate(
+        image, annos, mask_miss, rg=15.0)
+    image, annos, mask_miss = keypoint_random_flip(
+        image, annos, mask_miss, prob=0.5)
+    image, annos, mask_miss = keypoint_random_resize_shortestedge(
+        image, annos, mask_miss, min_size=(hin, win))  # TODO: give size
+    image, annos, mask_miss = keypoint_random_crop(
+        image, annos, mask_miss, size=(hin, win))  # TODO: give size
 
     # generate result maps including keypoints heatmap, pafs and mask
     h, w, _ = np.shape(image)
@@ -97,7 +107,8 @@ def _data_aug_fn(image, ground_truth):
     image = image * np.repeat(img_mask, 3, 2)
 
     resultmap = np.array(resultmap, dtype=np.float32)
-    mask_miss = cv2.resize(mask_miss, (hout, wout), interpolation=cv2.INTER_AREA)
+    mask_miss = cv2.resize(
+        mask_miss, (hout, wout), interpolation=cv2.INTER_AREA)
     mask_miss = np.array(mask_miss, dtype=np.float32)
     return image, resultmap, mask_miss
 
@@ -107,7 +118,8 @@ def _map_fn(img_list, annos):
     image = tf.read_file(img_list)
     image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
-    image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
+    image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos],
+                                        [tf.float32, tf.float32, tf.float32])
     return image, resultmap, mask
 
 
@@ -124,7 +136,8 @@ if __name__ == '__main__':
     train_mask_list = train_data.get_mask()
     # train_targets = list(zip(train_objs_info_list, train_mask_list))
     if len(train_imgs_file_list) != len(train_objs_info_list):
-        raise Exception("number of training images and annotations do not match")
+        raise Exception(
+            "number of training images and annotations do not match")
     else:
         print("number of training images {}".format(len(train_imgs_file_list)))
 
@@ -147,9 +160,11 @@ if __name__ == '__main__':
     your_objs_info_list = your_data.get_joint_list()
     your_mask_list = your_data.get_mask()
     if len(your_imgs_file_list) != len(your_objs_info_list):
-        raise Exception("number of customized images and annotations do not match")
+        raise Exception(
+            "number of customized images and annotations do not match")
     else:
-        print("number of customized images {}".format(len(your_imgs_file_list)))
+        print("number of customized images {}".format(
+            len(your_imgs_file_list)))
 
     # choice dataset for training
     # 1. only coco training set
@@ -157,8 +172,9 @@ if __name__ == '__main__':
     # train_targets = list(zip(train_objs_info_list, train_mask_list))
     # 2. your customized data from "data/your_data" and coco training set
     imgs_file_list = train_imgs_file_list + your_imgs_file_list
-    train_targets = list(zip(train_objs_info_list + your_objs_info_list,
-                             train_mask_list + your_mask_list))
+    train_targets = list(
+        zip(train_objs_info_list + your_objs_info_list,
+            train_mask_list + your_mask_list))
 
     # define data augmentation
     def generator():
@@ -167,11 +183,13 @@ if __name__ == '__main__':
         for _input, _target in zip(imgs_file_list, train_targets):
             yield _input.encode('utf-8'), cPickle.dumps(_target)
 
-    dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
+    dataset = tf.data.Dataset().from_generator(
+        generator, output_types=(tf.string, tf.string))
     dataset = dataset.map(_map_fn, num_parallel_calls=1)
     dataset = dataset.repeat(n_epoch)
     dataset = dataset.batch(batch_size)
-    dataset = dataset.prefetch(buffer_size=2)  # larger prefetach buffer means xxxx
+    dataset = dataset.prefetch(
+        buffer_size=2)  # larger prefetach buffer means xxxx
     iterator = dataset.make_one_shot_iterator()
     one_element = iterator.get_next()
 
@@ -179,14 +197,19 @@ if __name__ == '__main__':
         # Train with placeholder can help your to check the data easily.
         # define model architecture
         x = tf.placeholder(tf.float32, [None, hin, win, 3], "image")
-        confs = tf.placeholder(tf.float32, [None, hout, wout, n_pos], "confidence_maps")
-        pafs = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 2], "pafs")
+        confs = tf.placeholder(tf.float32, [None, hout, wout, n_pos],
+                               "confidence_maps")
+        pafs = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 2],
+                              "pafs")
         # if the people does not have keypoints annotations, ignore the area
-        img_mask1 = tf.placeholder(tf.float32, [None, hout, wout, n_pos], 'img_mask1')
-        img_mask2 = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 2], 'img_mask2')
+        img_mask1 = tf.placeholder(tf.float32, [None, hout, wout, n_pos],
+                                   'img_mask1')
+        img_mask2 = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 2],
+                                   'img_mask2')
         num_images = np.shape(imgs_file_list)[0]
 
-        cnn, b1_list, b2_list, net = model(x, n_pos, img_mask1, img_mask2, False, False)
+        cnn, b1_list, b2_list, net = model(x, n_pos, img_mask1, img_mask2,
+                                           False, False)
 
         # define loss
         losses = []
@@ -195,8 +218,12 @@ if __name__ == '__main__':
         stage_losses = []
         L2 = 0.0
         for idx, (l1, l2) in enumerate(zip(b1_list, b2_list)):
-            loss_l1 = tf.nn.l2_loss((tf.concat(l1.outputs, axis=0) - tf.concat(confs, axis=0)) * img_mask1)
-            loss_l2 = tf.nn.l2_loss((tf.concat(l2.outputs, axis=0) - tf.concat(pafs, axis=0)) * img_mask2)
+            loss_l1 = tf.nn.l2_loss(
+                (tf.concat(l1.outputs, axis=0) - tf.concat(confs, axis=0)) *
+                img_mask1)
+            loss_l2 = tf.nn.l2_loss(
+                (tf.concat(l2.outputs, axis=0) - tf.concat(pafs, axis=0)) *
+                img_mask2)
             losses.append(tf.reduce_mean([loss_l1, loss_l2]))
             stage_losses.append(loss_l1 / batch_size)
             stage_losses.append(loss_l2 / batch_size)
@@ -210,15 +237,15 @@ if __name__ == '__main__':
         total_loss = tf.reduce_sum(losses) / batch_size + L2
 
         global_step = tf.Variable(1, trainable=False)
-        print(
-            'Config:', 'n_epoch: ', n_epoch, 'batch_size: ', batch_size, 'base_lr: ', base_lr, 'step_size: ', step_size
-        )
+        print('Config:', 'n_epoch: ', n_epoch, 'batch_size: ', batch_size,
+              'base_lr: ', base_lr, 'step_size: ', step_size)
         with tf.variable_scope('learning_rate'):
             lr_v = tf.Variable(base_lr, trainable=False)
 
         opt = tf.train.MomentumOptimizer(lr_v, 0.9)
         train_op = opt.minimize(total_loss, global_step=global_step)
-        config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
+        config = tf.ConfigProto(
+            allow_soft_placement=True, log_device_placement=False)
 
         # start training
         with tf.Session(config=config) as sess:
@@ -265,29 +292,36 @@ if __name__ == '__main__':
                 # os.path.join(config.LOG.vis_path, 'data_aug_{}.png'.format(i))
                 # tl.file.save_image()
 
-                [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm, paf_result] = sess.run(
-                    [train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf], feed_dict={
+                [
+                    _, the_loss, loss_ll, L2_reg, conf_result, weight_norm,
+                    paf_result
+                ] = sess.run(
+                    [
+                        train_op, total_loss, stage_losses, L2, last_conf, L2,
+                        last_paf
+                    ],
+                    feed_dict={
                         x: x_,
                         confs: confs_,
                         pafs: pafs_,
                         img_mask1: mask1,
                         img_mask2: mask2
-                    }
-                )
+                    })
 
-                tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
+                tstring = time.strftime('%d-%m %H:%M:%S',
+                                        time.localtime(time.time()))
                 lr = sess.run(lr_v)
                 print(
-                    'Total Loss at iteration {} is: {} Learning rate {:10e} weight_norm {:10e} Time: {}'.format(
-                        gs_num, the_loss, lr, weight_norm, tstring
-                    )
-                )
+                    'Total Loss at iteration {} is: {} Learning rate {:10e} weight_norm {:10e} Time: {}'.
+                    format(gs_num, the_loss, lr, weight_norm, tstring))
                 for ix, ll in enumerate(loss_ll):
-                    print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
+                    print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:',
+                          ll)
 
                 # save some intermedian results
                 if (gs_num != 0) and (gs_num % 1 == 0):  # save_interval == 0):
-                    draw_intermedia_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train')
+                    draw_intermedia_results(x_, confs_, conf_result, pafs_,
+                                            paf_result, mask, 'train')
                     # np.save(config.LOG.vis_path + 'image' + str(gs_num) + '.npy', x_)
                     # np.save(config.LOG.vis_path + 'heat_ground' + str(gs_num) + '.npy', confs_)
                     # np.save(config.LOG.vis_path + 'heat_result' + str(gs_num) + '.npy', conf_result)
@@ -295,9 +329,14 @@ if __name__ == '__main__':
                     # np.save(config.LOG.vis_path + 'mask' + str(gs_num) + '.npy', mask)
                     # np.save(config.LOG.vis_path + 'paf_result' + str(gs_num) + '.npy', paf_result)
                     tl.files.save_npz_dict(
-                        net.all_params, os.path.join(model_path, 'pose' + str(gs_num) + '.npz'), sess=sess
-                    )
-                    tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+                        net.all_params,
+                        os.path.join(model_path,
+                                     'pose' + str(gs_num) + '.npz'),
+                        sess=sess)
+                    tl.files.save_npz_dict(
+                        net.all_params,
+                        os.path.join(model_path, 'pose.npz'),
+                        sess=sess)
                 if gs_num > 3000001:
                     break
     elif config.TRAIN.train_mode == 'dataset':  # TODO

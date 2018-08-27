@@ -1,9 +1,10 @@
 # vim: sta:et:sw=2:ts=2:sts=2
 # Written by Antonio Loquercio
 
+import pdb
+
 import numpy as np
 import scipy.stats as st
-import pdb
 
 import tensorflow as tf
 
