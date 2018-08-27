@@ -7,6 +7,7 @@ from tensorlayer.files.utils import maybe_download_and_extract, folder_exists, d
 from tensorlayer import logging
 from config import config
 import matplotlib.pyplot as plt
+from distutils.dir_util import mkpath
 
 
 ## download dataset
@@ -725,6 +726,7 @@ def draw_intermedia_results(images,
         # plt.savefig(str(i)+'.png',dpi=300)
         # plt.show()
 
+        mkpath(config.LOG.vis_path)
         plt.savefig(
             os.path.join(config.LOG.vis_path, '%s%d.png' % (name, i)), dpi=300)
 
