@@ -11,6 +11,7 @@ before_install:
 - sudo apt install -y swig
 - pip install cython
 - pip install -r requirements.txt
+- pip install git+https://github.com/tensorlayer/tensorlayer.git # TODO: create a latest release for TL
 - make
 - ./scripts/download-test-data.sh
 
