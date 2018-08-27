@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from pycocotools.coco import COCO
 import numpy as np
 import os
