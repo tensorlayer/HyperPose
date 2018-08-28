@@ -279,7 +279,7 @@ if __name__ == '__main__':
 
                 tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
                 lr = sess.run(lr_v)
-                print('Total Loss at iteration {}/{} is: {} Learning rate {:10e} weight_norm {:10e} Time: {}'.format(
+                print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} weight_norm {:10e} Time: {}'.format(
                     step, n_step, the_loss, lr, weight_norm, tstring))
                 for ix, ll in enumerate(loss_ll):
                     print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
