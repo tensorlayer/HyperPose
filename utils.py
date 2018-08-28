@@ -677,6 +677,13 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
 
             plt.colorbar()
             plt.imshow(tmp, alpha=0.3)
+
+        if masks is not None:
+            a = fig.add_subplot(2, 3, 6)
+            a.set_title('Mask')
+            # print(mask.shape, tmp.shape)
+            plt.colorbar()
+            plt.imshow(mask[:, :, 0], alpha=0.3)
         # plt.savefig(str(i)+'.png',dpi=300)
         # plt.show()
 

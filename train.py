@@ -154,7 +154,6 @@ if __name__ == '__main__':
     ## 1. only coco training set
     imgs_file_list = train_imgs_file_list
     train_targets = list(zip(train_objs_info_list, train_mask_list))
-
     ## 2. your own data and coco training set
     # imgs_file_list = train_imgs_file_list + your_imgs_file_list
     # train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
@@ -172,7 +171,7 @@ if __name__ == '__main__':
     n_epoch = math.ceil(n_step / len(imgs_file_list))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
     dataset = dataset.map(_map_fn, num_parallel_calls=8)
-    dataset = dataset.shuffle(buffer_size=2046)
+    # dataset = dataset.shuffle(buffer_size=2046)
     dataset = dataset.repeat(n_epoch)
     dataset = dataset.batch(batch_size)
     dataset = dataset.prefetch(buffer_size=20)
@@ -214,7 +213,7 @@ if __name__ == '__main__':
         total_loss = tf.reduce_sum(losses) / batch_size + L2
 
         global_step = tf.Variable(1, trainable=False)
-        print('Config - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
+        print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
             n_step, batch_size, base_lr, decay_every_step))
         with tf.variable_scope('learning_rate'):
             lr_v = tf.Variable(base_lr, trainable=False)
@@ -252,20 +251,20 @@ if __name__ == '__main__':
 
                 # get a batch of training data. TODO change to direct feed without using placeholder
                 tran_batch = sess.run(one_element)
-                # image
+                # get image
                 x_ = tran_batch[0]
-                # conf and paf maps
+                # get conf and paf maps
                 map_batch = tran_batch[1]
-                confs_ = map_batch[:, :, :, 0:n_pos]  # TODO 0:19
-                pafs_ = map_batch[:, :, :, n_pos:57]  # TODO 19:57  i.e. [:, :, :, n_pos::] to the end
-                # mask
+                confs_ = map_batch[:, :, :, 0:n_pos] # 0:19
+                pafs_ = map_batch[:, :, :, n_pos::]  # 19:57
+                # get mask
                 mask = tran_batch[2]
                 mask = mask.reshape(batch_size, hout, wout, 1)
                 mask1 = np.repeat(mask, n_pos, 3)
                 mask2 = np.repeat(mask, n_pos * 2, 3)
 
-                # TODO save some training data for checking data augmentation
-                draw_results(x_, confs_, None, pafs_, None, mask, 'check_batch')
+                ## ave some training data for checking data augmentation (slow)
+                # draw_results(x_, confs_, None, pafs_, None, mask, 'check_batch')
 
                 [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm, paf_result] = sess.run(
                     [train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf],
@@ -277,16 +276,16 @@ if __name__ == '__main__':
                         img_mask2: mask2
                     })
 
-                tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
+                # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
                 lr = sess.run(lr_v)
-                print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} weight_norm {:10e} Time: {}'.format(
-                    step, n_step, the_loss, lr, weight_norm, tstring))
+                print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} weight_norm {:10e} Took: {}s'.format(
+                    step, n_step, the_loss, lr, weight_norm, tic-time.time()))
                 for ix, ll in enumerate(loss_ll):
                     print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
                 ## save intermedian results and model
                 if (step != 0) and (step % save_interval == 0):
-                    draw_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train_%d' % step)
+                    draw_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train_%d_' % step)
                     tl.files.save_npz_dict(
                         net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                     tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
