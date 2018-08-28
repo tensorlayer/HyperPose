@@ -12,7 +12,7 @@ import tensorlayer as tl
 from config import config
 from inference.pafprocess import pafprocess
 from models import model
-from utils import draw_intermedia_results
+from utils import draw_results
 
 # TODO: make them flags
 input_file = 'data/test.jpeg'
@@ -99,6 +99,6 @@ if __name__ == '__main__':
     print(humans)
 
     # draw maps
-    draw_intermedia_results([im], None, conf, None, pafs, None, 'inference')
+    draw_results([im], None, conf, None, pafs, None, 'inference')
 
     # draw connection

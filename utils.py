@@ -261,7 +261,9 @@ class PoseInfo:
         return annolist
 
     def get_image_annos(self):
-
+        """Read JSON file, and get and check the image list.
+        Skip missing images.
+        """
         images_ids = self.coco.getImgIds()
         len_imgs = len(images_ids)
         for idx in range(len_imgs):
@@ -270,7 +272,7 @@ class PoseInfo:
             image_path = os.path.join(self.image_base_dir, images_info[0]['file_name'])
             # filter that some images might not in the list
             if not os.path.exists(image_path):
-                print("non path exists:", image_path)
+                print("[skip] json annotation found, but cannot found image: {}".format(image_path))
                 continue
 
             annos_ids = self.coco.getAnnIds(imgIds=images_ids[idx])
@@ -326,7 +328,8 @@ class PoseInfo:
                 meta = CocoMeta(images_ids[idx], image_path, images_info[0], keypoints, masks)
                 self.metas.append(meta)
 
-        print("Overall get {}".format(len(self.metas)))
+        print("Overall get {} valid pose images from {} and {}".format(
+            len(self.metas), self.image_base_dir, self.anno_path))
 
     def load_images(self):
         pass
@@ -583,15 +586,20 @@ def fast_vectormap(vectormap, countmap, i, v_start, v_end):
     return vectormap
 
 
-def draw_intermedia_results(images, heats_ground, heats_result, pafs_ground, pafs_result, masks, name=''):
+def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, masks, name=''):
+    """Save results for debugging.
+
+    Parameters
+    -----------
+    images : a list of RGB images
+    heats_ground : a list of keypoint heat maps or None
+    heats_result : a list of keypoint heat maps or None
+    pafs_ground : a list of paf vector maps or None
+    pafs_result : a list of paf vector maps or None
+    masks : a list of mask for people
     """
-    images :
-    heats : keypoint maps
-    pafs :
-    masks :
-    """
-    interval = len(pafs_result)
-    for i in range(interval):
+    # interval = len(images)
+    for i in range(len(images)):
         if heats_ground is not None:
             heat_ground = heats_ground[i]
         if heats_result is not None:

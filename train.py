@@ -2,7 +2,7 @@
 
 import os
 import time
-
+import math
 import cv2
 import matplotlib
 matplotlib.use('Agg')
@@ -16,7 +16,7 @@ from models import model
 from pycocotools.coco import maskUtils
 from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
                                 keypoint_random_resize_shortestedge, keypoint_random_rotate)
-from utils import (PoseInfo, draw_intermedia_results, get_heatmap, get_vectormap, load_mscoco_dataset)
+from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset)
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
@@ -29,8 +29,9 @@ tl.files.exists_or_mkdir(config.MODEL.model_path, verbose=False)  # to save mode
 
 # define hyper-parameters for training
 batch_size = config.TRAIN.batch_size
-n_epoch = config.TRAIN.n_epoch
-step_size = config.TRAIN.step_size
+# n_epoch = config.TRAIN.n_epoch
+decay_every_step = config.TRAIN.decay_every_step
+n_step = config.TRAIN.n_step
 save_interval = config.TRAIN.save_interval
 weight_decay = config.TRAIN.weight_decay
 base_lr = config.TRAIN.base_lr
@@ -113,53 +114,69 @@ def _map_fn(img_list, annos):
     return image, resultmap, mask
 
 
+def get_pose_data_list(im_path, ann_path):
+    """
+    train_im_path : image folder name
+    train_ann_path : coco json file name
+    """
+    print("[x] Get pose data from {}".format(im_path))
+    data = PoseInfo(im_path, ann_path, False)
+    imgs_file_list = data.get_image_list()
+    objs_info_list = data.get_joint_list()
+    mask_list = data.get_mask()
+    targets = list(zip(objs_info_list, mask_list))
+    if len(imgs_file_list) != len(objs_info_list):
+        raise Exception("number of images and annotations do not match")
+    else:
+        print("{} has {} images".format(im_path, len(imgs_file_list)))
+    return imgs_file_list, objs_info_list, mask_list, targets
+
+
 if __name__ == '__main__':
 
-    # download MSCOCO data to "data/mscoco..."" folder
+    ## automatically download MSCOCO data to "data/mscoco..."" folder
     train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
-        load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version)
+        load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
 
-    # read coco training images contains valid people
-    train_data = PoseInfo(train_im_path, train_ann_path, False)
-    train_imgs_file_list = train_data.get_image_list()
-    train_objs_info_list = train_data.get_joint_list()
-    train_mask_list = train_data.get_mask()
-    # train_targets = list(zip(train_objs_info_list, train_mask_list))
-    if len(train_imgs_file_list) != len(train_objs_info_list):
-        raise Exception("number of training images and annotations do not match")
-    else:
-        print("number of training images {}".format(len(train_imgs_file_list)))
+    ## read coco training images contains valid people
+    train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
+        get_pose_data_list(train_im_path, train_ann_path)
 
-    # read coco validating images contains valid people (you can use it for training as well)
-    # val_data = PoseInfo(val_im_path, val_ann_path, False)
-    # val_imgs_file_list = val_data.get_image_list()
-    # val_objs_info_list = val_data.get_joint_list()
-    # val_mask_list = val_data.get_mask()
-    # # val_targets = list(zip(val_objs_info_list, val_mask_list))
-    # if len(val_imgs_file_list) != len(val_objs_info_list):
-    #     raise Exception("number of validating images and annotations do not match")
-    # else:
-    #     print("number of validating images {}".format(len(val_imgs_file_list)))
+    ## read coco validating images contains valid people (you can use it for training as well)
+    val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
+        get_pose_data_list(val_im_path, val_ann_path)
 
-    # read your customized images contains valid people
-    your_images_path = config.DATA.your_images_path
-    your_annos_path = config.DATA.your_annos_path
-    your_data = PoseInfo(your_images_path, your_annos_path, False)
-    your_imgs_file_list = your_data.get_image_list()
-    your_objs_info_list = your_data.get_joint_list()
-    your_mask_list = your_data.get_mask()
-    if len(your_imgs_file_list) != len(your_objs_info_list):
-        raise Exception("number of customized images and annotations do not match")
-    else:
-        print("number of customized images {}".format(len(your_imgs_file_list)))
+    ## read your own images contains valid people
+    ## 1. if you only have one folder as follow:
+    #   data/your_data
+    #           /images
+    #               0001.jpeg
+    #               0002.jpeg
+    #           /coco.json
+    # your_imgs_file_list, your_objs_info_list, your_mask_list, your_targets = \
+    #     get_pose_data_list(config.DATA.your_images_path, config.DATA.your_annos_path)
+    ## 2. if you have a folder with many folders: (which is common in industry)
+    # folder_list = tl.files.load_folder_list(path='data/your_data')
+    # your_imgs_file_list, your_objs_info_list, your_mask_list = [], [], []
+    # for folder in folder_list:
+    #     _imgs_file_list, _objs_info_list, _mask_list, _targets = \
+    #         get_pose_data_list(os.path.join(folder, 'images'), os.path.join(folder, 'coco.json'))
+    #     print(len(_imgs_file_list))
+    #     your_imgs_file_list.extend(_imgs_file_list)
+    #     your_objs_info_list.extend(_objs_info_list)
+    #     your_mask_list.extend(_mask_list)
+    # print("number of own images found:", len(your_imgs_file_list))
 
-    # choice dataset for training
-    # 1. only coco training set
-    # imgs_file_list = train_imgs_file_list
-    # train_targets = list(zip(train_objs_info_list, train_mask_list))
-    # 2. your customized data from "data/your_data" and coco training set
-    imgs_file_list = train_imgs_file_list + your_imgs_file_list
-    train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
+    ## choice dataset for training
+    ## 1. only coco training set
+    imgs_file_list = train_imgs_file_list
+    train_targets = list(zip(train_objs_info_list, train_mask_list))
+    ## 2. your own data and coco training set
+    # imgs_file_list = train_imgs_file_list + your_imgs_file_list
+    # train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
+    ## 3. only your own data
+    # imgs_file_list = your_imgs_file_list
+    # train_targets = list(zip(your_objs_info_list, your_mask_list))
 
     # define data augmentation
     def generator():
@@ -168,6 +185,7 @@ if __name__ == '__main__':
         for _input, _target in zip(imgs_file_list, train_targets):
             yield _input.encode('utf-8'), cPickle.dumps(_target)
 
+    n_epoch = math.ceil(n_step / len(imgs_file_list))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
     dataset = dataset.map(_map_fn, num_parallel_calls=8)
     dataset = dataset.shuffle(buffer_size=2046)
@@ -178,19 +196,19 @@ if __name__ == '__main__':
     one_element = iterator.get_next()
 
     if config.TRAIN.train_mode == 'placeholder':
-        # Train with placeholder can help your to check the data easily.
-        # define model architecture
+        ## Train with placeholder can help your to check the data easily.
+        ## define model architecture
         x = tf.placeholder(tf.float32, [None, hin, win, 3], "image")
         confs = tf.placeholder(tf.float32, [None, hout, wout, n_pos], "confidence_maps")
         pafs = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 2], "pafs")
         # if the people does not have keypoints annotations, ignore the area
         img_mask1 = tf.placeholder(tf.float32, [None, hout, wout, n_pos], 'img_mask1')
         img_mask2 = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 2], 'img_mask2')
-        num_images = np.shape(imgs_file_list)[0]
+        # num_images = np.shape(imgs_file_list)[0]
 
         cnn, b1_list, b2_list, net = model(x, n_pos, img_mask1, img_mask2, True, False)
 
-        # define loss
+        ## define loss
         losses = []
         last_losses_l1 = []
         last_losses_l2 = []
@@ -212,8 +230,8 @@ if __name__ == '__main__':
         total_loss = tf.reduce_sum(losses) / batch_size + L2
 
         global_step = tf.Variable(1, trainable=False)
-        print('Config:', 'n_epoch: ', n_epoch, 'batch_size: ', batch_size, 'base_lr: ', base_lr, 'step_size: ',
-              step_size)
+        print('Config - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
+            n_step, batch_size, base_lr, decay_every_step))
         with tf.variable_scope('learning_rate'):
             lr_v = tf.Variable(base_lr, trainable=False)
 
@@ -221,11 +239,11 @@ if __name__ == '__main__':
         train_op = opt.minimize(total_loss, global_step=global_step)
         config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
 
-        # start training
+        ## start training
         with tf.Session(config=config) as sess:
             sess.run(tf.global_variables_initializer())
 
-            # restore pretrained vgg19  TODO: use tl.models.VGG19
+            ## restore pretrained weights  TODO: use tl.models.VGG19
             # npy_file = np.load('models', encoding='latin1').item()
             # params = []
             # for val in sorted(npy_file.items()):
@@ -239,13 +257,13 @@ if __name__ == '__main__':
             # print("Restoring model from npy file")
             # cnn.restore_params(sess)
 
-            # train until the end
+            ## train until the end
             sess.run(tf.assign(lr_v, base_lr))
             while (True):
                 tic = time.time()
-                gs_num = sess.run(global_step)
-                if gs_num != 0 and (gs_num % step_size == 0):
-                    new_lr_decay = gamma**(gs_num // step_size)
+                step = sess.run(global_step)
+                if step != 0 and (step % decay_every_step == 0):
+                    new_lr_decay = gamma**(step // decay_every_step)
                     sess.run(tf.assign(lr_v, base_lr * new_lr_decay))
 
                 # get a batch of training data. TODO change to direct feed without using placeholder
@@ -263,8 +281,7 @@ if __name__ == '__main__':
                 mask2 = np.repeat(mask, n_pos * 2, 3)
 
                 # TODO save some training data for checking data augmentation
-                # os.path.join(config.LOG.vis_path, 'data_aug_{}.png'.format(i))
-                # tl.file.save_image()
+                draw_results(x_, confs_, None, pafs_, None, mask, 'check_batch')
 
                 [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm, paf_result] = sess.run(
                     [train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf],
@@ -279,27 +296,22 @@ if __name__ == '__main__':
                 tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
                 lr = sess.run(lr_v)
                 print('Total Loss at iteration {} is: {} Learning rate {:10e} weight_norm {:10e} Time: {}'.format(
-                    gs_num, the_loss, lr, weight_norm, tstring))
+                    step, the_loss, lr, weight_norm, tstring))
                 for ix, ll in enumerate(loss_ll):
                     print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
-                # save some intermedian results
-                if (gs_num != 0) and (gs_num % 1 == 0):  # save_interval == 0):
-                    draw_intermedia_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train')
-                    # np.save(config.LOG.vis_path + 'image' + str(gs_num) + '.npy', x_)
-                    # np.save(config.LOG.vis_path + 'heat_ground' + str(gs_num) + '.npy', confs_)
-                    # np.save(config.LOG.vis_path + 'heat_result' + str(gs_num) + '.npy', conf_result)
-                    # np.save(config.LOG.vis_path + 'paf_ground' + str(gs_num) + '.npy', pafs_)
-                    # np.save(config.LOG.vis_path + 'mask' + str(gs_num) + '.npy', mask)
-                    # np.save(config.LOG.vis_path + 'paf_result' + str(gs_num) + '.npy', paf_result)
+                ## save intermedian results and model
+                if (step != 0) and (step % save_interval == 0):
+                    draw_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train_%d' % step)
                     tl.files.save_npz_dict(
-                        net.all_params, os.path.join(model_path, 'pose' + str(gs_num) + '.npz'), sess=sess)
+                        net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                     tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
-                if gs_num > 3000001:
+                if step == n_step:  # training finished
                     break
-    elif config.TRAIN.train_mode == 'dataset':  # TODO
-        # Train with TensorFlow dataset mode is usually faster than placeholder.
-        raise Exception("xx")
+
+    elif config.TRAIN.train_mode == 'datasetapi':  # TODO
+        ## Train with TensorFlow dataset mode is usually faster than placeholder.
+        raise Exception("TODO")
     elif config.TRAIN.train_mode == 'distributed':  # TODO
-        # Train with distributed mode.
+        ## Train with distributed mode.
         raise Exception("TODO tl.distributed.Trainer")
