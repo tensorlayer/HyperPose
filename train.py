@@ -143,7 +143,7 @@ if __name__ == '__main__':
 
     ## read coco validating images contains valid people (you can use it for training as well)
     val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
-        get_pose_data_list(train_im_path, train_ann_path)
+        get_pose_data_list(val_im_path, val_ann_path)
 
     ## read your own images contains valid people
     ## 1. if you only have one folder as follow:
