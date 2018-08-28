@@ -2,7 +2,7 @@
 
 import os
 import time
-
+import math
 import cv2
 import matplotlib
 matplotlib.use('Agg')
@@ -16,7 +16,7 @@ from models import model
 from pycocotools.coco import maskUtils
 from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
                                 keypoint_random_resize_shortestedge, keypoint_random_rotate)
-from utils import (PoseInfo, draw_intermedia_results, get_heatmap, get_vectormap, load_mscoco_dataset)
+from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset)
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
@@ -29,8 +29,9 @@ tl.files.exists_or_mkdir(config.MODEL.model_path, verbose=False)  # to save mode
 
 # define hyper-parameters for training
 batch_size = config.TRAIN.batch_size
-n_epoch = config.TRAIN.n_epoch
-step_size = config.TRAIN.step_size
+# n_epoch = config.TRAIN.n_epoch
+decay_every_step = config.TRAIN.decay_every_step
+n_step = config.TRAIN.n_step
 save_interval = config.TRAIN.save_interval
 weight_decay = config.TRAIN.weight_decay
 base_lr = config.TRAIN.base_lr
@@ -170,7 +171,6 @@ if __name__ == '__main__':
     ## 1. only coco training set
     imgs_file_list = train_imgs_file_list
     train_targets = list(zip(train_objs_info_list, train_mask_list))
-
     ## 2. your own data and coco training set
     # imgs_file_list = train_imgs_file_list + your_imgs_file_list
     # train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
@@ -185,9 +185,10 @@ if __name__ == '__main__':
         for _input, _target in zip(imgs_file_list, train_targets):
             yield _input.encode('utf-8'), cPickle.dumps(_target)
 
+    n_epoch = math.ceil(n_step / len(imgs_file_list))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
     dataset = dataset.map(_map_fn, num_parallel_calls=8)
-    dataset = dataset.shuffle(buffer_size=2046)
+    # dataset = dataset.shuffle(buffer_size=2046)
     dataset = dataset.repeat(n_epoch)
     dataset = dataset.batch(batch_size)
     dataset = dataset.prefetch(buffer_size=20)
@@ -229,8 +230,8 @@ if __name__ == '__main__':
         total_loss = tf.reduce_sum(losses) / batch_size + L2
 
         global_step = tf.Variable(1, trainable=False)
-        print('Config:', 'n_epoch: ', n_epoch, 'batch_size: ', batch_size, 'base_lr: ', base_lr, 'step_size: ',
-              step_size)
+        print('Config - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
+            n_step, batch_size, base_lr, decay_every_step))
         with tf.variable_scope('learning_rate'):
             lr_v = tf.Variable(base_lr, trainable=False)
 
@@ -242,7 +243,7 @@ if __name__ == '__main__':
         with tf.Session(config=config) as sess:
             sess.run(tf.global_variables_initializer())
 
-            ## restore pretrained vgg19  TODO: use tl.models.VGG19
+            ## restore pretrained weights  TODO: use tl.models.VGG19
             # npy_file = np.load('models', encoding='latin1').item()
             # params = []
             # for val in sorted(npy_file.items()):
@@ -260,9 +261,9 @@ if __name__ == '__main__':
             sess.run(tf.assign(lr_v, base_lr))
             while (True):
                 tic = time.time()
-                gs_num = sess.run(global_step)
-                if gs_num != 0 and (gs_num % step_size == 0):
-                    new_lr_decay = gamma**(gs_num // step_size)
+                step = sess.run(global_step)
+                if step != 0 and (step % decay_every_step == 0):
+                    new_lr_decay = gamma**(step // decay_every_step)
                     sess.run(tf.assign(lr_v, base_lr * new_lr_decay))
 
                 # get a batch of training data. TODO change to direct feed without using placeholder
@@ -280,8 +281,7 @@ if __name__ == '__main__':
                 mask2 = np.repeat(mask, n_pos * 2, 3)
 
                 # TODO save some training data for checking data augmentation
-                # os.path.join(config.LOG.vis_path, 'data_aug_{}.png'.format(i))
-                # tl.file.save_image()
+                draw_results(x_, confs_, None, pafs_, None, mask, 'check_batch')
 
                 [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm, paf_result] = sess.run(
                     [train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf],
@@ -296,25 +296,20 @@ if __name__ == '__main__':
                 tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
                 lr = sess.run(lr_v)
                 print('Total Loss at iteration {} is: {} Learning rate {:10e} weight_norm {:10e} Time: {}'.format(
-                    gs_num, the_loss, lr, weight_norm, tstring))
+                    step, the_loss, lr, weight_norm, tstring))
                 for ix, ll in enumerate(loss_ll):
                     print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
-                ## save some intermedian results
-                if (gs_num != 0) and (gs_num % 1 == 0):  # save_interval == 0):
-                    draw_intermedia_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train')
-                    # np.save(config.LOG.vis_path + 'image' + str(gs_num) + '.npy', x_)
-                    # np.save(config.LOG.vis_path + 'heat_ground' + str(gs_num) + '.npy', confs_)
-                    # np.save(config.LOG.vis_path + 'heat_result' + str(gs_num) + '.npy', conf_result)
-                    # np.save(config.LOG.vis_path + 'paf_ground' + str(gs_num) + '.npy', pafs_)
-                    # np.save(config.LOG.vis_path + 'mask' + str(gs_num) + '.npy', mask)
-                    # np.save(config.LOG.vis_path + 'paf_result' + str(gs_num) + '.npy', paf_result)
+                ## save intermedian results and model
+                if (step != 0) and (step % save_interval == 0):
+                    draw_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train_%d' % step)
                     tl.files.save_npz_dict(
-                        net.all_params, os.path.join(model_path, 'pose' + str(gs_num) + '.npz'), sess=sess)
+                        net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                     tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
-                if gs_num > 3000001:
+                if step == n_step:  # training finished
                     break
-    elif config.TRAIN.train_mode == 'dataset':  # TODO
+
+    elif config.TRAIN.train_mode == 'datasetapi':  # TODO
         ## Train with TensorFlow dataset mode is usually faster than placeholder.
         raise Exception("TODO")
     elif config.TRAIN.train_mode == 'distributed':  # TODO

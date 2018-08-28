@@ -328,7 +328,8 @@ class PoseInfo:
                 meta = CocoMeta(images_ids[idx], image_path, images_info[0], keypoints, masks)
                 self.metas.append(meta)
 
-        print("Overall get {}".format(len(self.metas)))
+        print("Overall get {} valid pose images from {} and {}".format(
+            len(self.metas), self.image_base_dir, self.anno_path))
 
     def load_images(self):
         pass
@@ -585,15 +586,20 @@ def fast_vectormap(vectormap, countmap, i, v_start, v_end):
     return vectormap
 
 
-def draw_intermedia_results(images, heats_ground, heats_result, pafs_ground, pafs_result, masks, name=''):
+def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, masks, name=''):
+    """Save results for debugging.
+
+    Parameters
+    -----------
+    images : a list of RGB images
+    heats_ground : a list of keypoint heat maps or None
+    heats_result : a list of keypoint heat maps or None
+    pafs_ground : a list of paf vector maps or None
+    pafs_result : a list of paf vector maps or None
+    masks : a list of mask for people
     """
-    images :
-    heats : keypoint maps
-    pafs :
-    masks :
-    """
-    interval = len(pafs_result)
-    for i in range(interval):
+    # interval = len(images)
+    for i in range(len(images)):
         if heats_ground is not None:
             heat_ground = heats_ground[i]
         if heats_result is not None:
