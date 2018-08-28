@@ -112,28 +112,31 @@ def _map_fn(img_list, annos):
     image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
     return image, resultmap, mask
 
+
 def get_pose_data_list(im_path, ann_path):
     """
     train_im_path : image folder name
     train_ann_path : coco json file name
     """
+    print("[x] Get pose data from {}".format(im_path))
     data = PoseInfo(im_path, ann_path, False)
     imgs_file_list = data.get_image_list()
     objs_info_list = data.get_joint_list()
     mask_list = data.get_mask()
     targets = list(zip(objs_info_list, mask_list))
     if len(imgs_file_list) != len(objs_info_list):
-        raise Exception(
-            "number of images and annotations do not match")
+        raise Exception("number of images and annotations do not match")
     else:
-        print("number of images {} in".format(len(imgs_file_list), im_path))
+        print("{} has {} images".format(im_path, len(imgs_file_list)))
     return imgs_file_list, objs_info_list, mask_list, targets
+
 
 if __name__ == '__main__':
 
-    ## download MSCOCO data to "data/mscoco..."" folder
-    train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
-        load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version)
+    ## automatically download MSCOCO data to "data/mscoco..."" folder
+    # train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
+    #     load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version,
+    #         path='data', dataset='2017', task='person')
 
     ## read coco training images contains valid people
     # train_data = PoseInfo(train_im_path, train_ann_path, False)
@@ -146,8 +149,8 @@ if __name__ == '__main__':
     #         "number of training images and annotations do not match")
     # else:
     #     print("number of training images {}".format(len(train_imgs_file_list)))
-    train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
-        get_pose_data_list(train_im_path, train_ann_path)
+    # train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
+    #     get_pose_data_list(train_im_path, train_ann_path)
 
     ## read coco validating images contains valid people (you can use it for training as well)
     # val_data = PoseInfo(val_im_path, val_ann_path, False)
@@ -159,27 +162,45 @@ if __name__ == '__main__':
     #     raise Exception("number of validating images and annotations do not match")
     # else:
     #     print("number of validating images {}".format(len(val_imgs_file_list)))
-    val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
-        get_pose_data_list(train_im_path, train_ann_path)
+    # val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
+    #     get_pose_data_list(train_im_path, train_ann_path)
 
-
-    # read your customized images contains valid people
-    your_images_path = config.DATA.your_images_path
-    your_annos_path = config.DATA.your_annos_path
-    your_data = PoseInfo(your_images_path, your_annos_path, False)
-    your_imgs_file_list = your_data.get_image_list()
-    your_objs_info_list = your_data.get_joint_list()
-    your_mask_list = your_data.get_mask()
-    if len(your_imgs_file_list) != len(your_objs_info_list):
-        raise Exception("number of customized images and annotations do not match")
-    else:
-        print("number of customized images {}".format(len(your_imgs_file_list)))
-
-    # choice dataset for training
-    # 1. only coco training set
+    ## read your customized images contains valid people
+    # your_images_path = config.DATA.your_images_path
+    # your_annos_path = config.DATA.your_annos_path
+    # your_data = PoseInfo(your_images_path, your_annos_path, False)
+    # your_imgs_file_list = your_data.get_image_list()
+    # your_objs_info_list = your_data.get_joint_list()
+    # your_mask_list = your_data.get_mask()
+    # if len(your_imgs_file_list) != len(your_objs_info_list):
+    #     raise Exception("number of customized images and annotations do not match")
+    # else:
+    #     print("number of customized images {}".format(len(your_imgs_file_list)))
+    ## 1. if you only have one folder as follow:
+    #   data/your_data
+    #           /images
+    #               0001.jpeg
+    #               0002.jpeg
+    #           /coco.json
+    # your_imgs_file_list, your_objs_info_list, your_mask_list, your_targets = \
+    #     get_pose_data_list(config.DATA.your_images_path, config.DATA.your_annos_path)
+    ## 2. if you have a folder with many folders: (which is common in industry)
+    folder_list = tl.files.load_folder_list(path='your_data')
+    your_imgs_file_list, your_objs_info_list, your_mask_list = [], [], []
+    for folder in folder_list:
+        _imgs_file_list, _objs_info_list, _mask_list, _targets = \
+            get_pose_data_list(os.path.join(folder, 'images'), os.path.join(folder, 'coco.json'))
+        print(len(_imgs_file_list))
+        your_imgs_file_list.extend(_imgs_file_list)
+        your_objs_info_list.extend(your_objs_info_list)
+        your_mask_list.extend(your_mask_list)
+    print("number of customized images found:", len(your_imgs_file_list))
+    exit()
+    ## choice dataset for training
+    ## 1. only coco training set
     # imgs_file_list = train_imgs_file_list
     # train_targets = list(zip(train_objs_info_list, train_mask_list))
-    # 2. your customized data from "data/your_data" and coco training set
+    ## 2. your customized data from "data/your_data" and coco training set
     imgs_file_list = train_imgs_file_list + your_imgs_file_list
     train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
 
@@ -208,7 +229,7 @@ if __name__ == '__main__':
         # if the people does not have keypoints annotations, ignore the area
         img_mask1 = tf.placeholder(tf.float32, [None, hout, wout, n_pos], 'img_mask1')
         img_mask2 = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 2], 'img_mask2')
-        num_images = np.shape(imgs_file_list)[0]
+        # num_images = np.shape(imgs_file_list)[0]
 
         cnn, b1_list, b2_list, net = model(x, n_pos, img_mask1, img_mask2, True, False)
 

@@ -270,7 +270,7 @@ class PoseInfo:
             image_path = os.path.join(self.image_base_dir, images_info[0]['file_name'])
             # filter that some images might not in the list
             if not os.path.exists(image_path):
-                print("non path exists:", image_path)
+                print("[!] no image exists:", image_path)
                 continue
 
             annos_ids = self.coco.getAnnIds(imgIds=images_ids[idx])
