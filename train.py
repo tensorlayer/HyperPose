@@ -112,25 +112,44 @@ def _map_fn(img_list, annos):
     image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
     return image, resultmap, mask
 
+def get_pose_data_list(im_path, ann_path):
+    """
+    train_im_path : image folder name
+    train_ann_path : coco json file name
+    """
+    data = PoseInfo(im_path, ann_path, False)
+    imgs_file_list = data.get_image_list()
+    objs_info_list = data.get_joint_list()
+    mask_list = data.get_mask()
+    targets = list(zip(objs_info_list, mask_list))
+    if len(imgs_file_list) != len(objs_info_list):
+        raise Exception(
+            "number of images and annotations do not match")
+    else:
+        print("number of images {} in".format(len(imgs_file_list), im_path))
+    return imgs_file_list, objs_info_list, mask_list, targets
 
 if __name__ == '__main__':
 
-    # download MSCOCO data to "data/mscoco..."" folder
+    ## download MSCOCO data to "data/mscoco..."" folder
     train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
         load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version)
 
-    # read coco training images contains valid people
-    train_data = PoseInfo(train_im_path, train_ann_path, False)
-    train_imgs_file_list = train_data.get_image_list()
-    train_objs_info_list = train_data.get_joint_list()
-    train_mask_list = train_data.get_mask()
-    # train_targets = list(zip(train_objs_info_list, train_mask_list))
-    if len(train_imgs_file_list) != len(train_objs_info_list):
-        raise Exception("number of training images and annotations do not match")
-    else:
-        print("number of training images {}".format(len(train_imgs_file_list)))
+    ## read coco training images contains valid people
+    # train_data = PoseInfo(train_im_path, train_ann_path, False)
+    # train_imgs_file_list = train_data.get_image_list()
+    # train_objs_info_list = train_data.get_joint_list()
+    # train_mask_list = train_data.get_mask()
+    # # train_targets = list(zip(train_objs_info_list, train_mask_list))
+    # if len(train_imgs_file_list) != len(train_objs_info_list):
+    #     raise Exception(
+    #         "number of training images and annotations do not match")
+    # else:
+    #     print("number of training images {}".format(len(train_imgs_file_list)))
+    train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
+        get_pose_data_list(train_im_path, train_ann_path)
 
-    # read coco validating images contains valid people (you can use it for training as well)
+    ## read coco validating images contains valid people (you can use it for training as well)
     # val_data = PoseInfo(val_im_path, val_ann_path, False)
     # val_imgs_file_list = val_data.get_image_list()
     # val_objs_info_list = val_data.get_joint_list()
@@ -140,6 +159,9 @@ if __name__ == '__main__':
     #     raise Exception("number of validating images and annotations do not match")
     # else:
     #     print("number of validating images {}".format(len(val_imgs_file_list)))
+    val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
+        get_pose_data_list(train_im_path, train_ann_path)
+
 
     # read your customized images contains valid people
     your_images_path = config.DATA.your_images_path
@@ -178,8 +200,8 @@ if __name__ == '__main__':
     one_element = iterator.get_next()
 
     if config.TRAIN.train_mode == 'placeholder':
-        # Train with placeholder can help your to check the data easily.
-        # define model architecture
+        ## Train with placeholder can help your to check the data easily.
+        ## define model architecture
         x = tf.placeholder(tf.float32, [None, hin, win, 3], "image")
         confs = tf.placeholder(tf.float32, [None, hout, wout, n_pos], "confidence_maps")
         pafs = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 2], "pafs")
@@ -190,7 +212,7 @@ if __name__ == '__main__':
 
         cnn, b1_list, b2_list, net = model(x, n_pos, img_mask1, img_mask2, True, False)
 
-        # define loss
+        ## define loss
         losses = []
         last_losses_l1 = []
         last_losses_l2 = []
@@ -221,11 +243,11 @@ if __name__ == '__main__':
         train_op = opt.minimize(total_loss, global_step=global_step)
         config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
 
-        # start training
+        ## start training
         with tf.Session(config=config) as sess:
             sess.run(tf.global_variables_initializer())
 
-            # restore pretrained vgg19  TODO: use tl.models.VGG19
+            ## restore pretrained vgg19  TODO: use tl.models.VGG19
             # npy_file = np.load('models', encoding='latin1').item()
             # params = []
             # for val in sorted(npy_file.items()):
@@ -239,7 +261,7 @@ if __name__ == '__main__':
             # print("Restoring model from npy file")
             # cnn.restore_params(sess)
 
-            # train until the end
+            ## train until the end
             sess.run(tf.assign(lr_v, base_lr))
             while (True):
                 tic = time.time()
@@ -283,7 +305,7 @@ if __name__ == '__main__':
                 for ix, ll in enumerate(loss_ll):
                     print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
-                # save some intermedian results
+                ## save some intermedian results
                 if (gs_num != 0) and (gs_num % 1 == 0):  # save_interval == 0):
                     draw_intermedia_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train')
                     # np.save(config.LOG.vis_path + 'image' + str(gs_num) + '.npy', x_)
@@ -298,8 +320,8 @@ if __name__ == '__main__':
                 if gs_num > 3000001:
                     break
     elif config.TRAIN.train_mode == 'dataset':  # TODO
-        # Train with TensorFlow dataset mode is usually faster than placeholder.
-        raise Exception("xx")
+        ## Train with TensorFlow dataset mode is usually faster than placeholder.
+        raise Exception("TODO")
     elif config.TRAIN.train_mode == 'distributed':  # TODO
-        # Train with distributed mode.
+        ## Train with distributed mode.
         raise Exception("TODO tl.distributed.Trainer")
