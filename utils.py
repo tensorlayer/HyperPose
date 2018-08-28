@@ -261,7 +261,9 @@ class PoseInfo:
         return annolist
 
     def get_image_annos(self):
-
+        """Read JSON file, and get and check the image list.
+        Skip missing images.
+        """
         images_ids = self.coco.getImgIds()
         len_imgs = len(images_ids)
         for idx in range(len_imgs):
@@ -270,7 +272,7 @@ class PoseInfo:
             image_path = os.path.join(self.image_base_dir, images_info[0]['file_name'])
             # filter that some images might not in the list
             if not os.path.exists(image_path):
-                print("[!] no image exists:", image_path)
+                print("[skip] json annotation found, but cannot found image: {}".format(image_path))
                 continue
 
             annos_ids = self.coco.getAnnIds(imgIds=images_ids[idx])
