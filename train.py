@@ -188,7 +188,7 @@ if __name__ == '__main__':
     n_epoch = math.ceil(n_step / len(imgs_file_list))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
     dataset = dataset.map(_map_fn, num_parallel_calls=8)
-    # dataset = dataset.shuffle(buffer_size=2046)
+    dataset = dataset.shuffle(buffer_size=2046)
     dataset = dataset.repeat(n_epoch)
     dataset = dataset.batch(batch_size)
     dataset = dataset.prefetch(buffer_size=20)
