@@ -135,8 +135,7 @@ if __name__ == '__main__':
 
     ## automatically download MSCOCO data to "data/mscoco..."" folder
     train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
-        load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version,
-            path='data', dataset='2017', task='person')
+        load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
 
     ## read coco training images contains valid people
     train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
