@@ -134,48 +134,19 @@ def get_pose_data_list(im_path, ann_path):
 if __name__ == '__main__':
 
     ## automatically download MSCOCO data to "data/mscoco..."" folder
-    # train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
-    #     load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version,
-    #         path='data', dataset='2017', task='person')
+    train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
+        load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version,
+            path='data', dataset='2017', task='person')
 
     ## read coco training images contains valid people
-    # train_data = PoseInfo(train_im_path, train_ann_path, False)
-    # train_imgs_file_list = train_data.get_image_list()
-    # train_objs_info_list = train_data.get_joint_list()
-    # train_mask_list = train_data.get_mask()
-    # # train_targets = list(zip(train_objs_info_list, train_mask_list))
-    # if len(train_imgs_file_list) != len(train_objs_info_list):
-    #     raise Exception(
-    #         "number of training images and annotations do not match")
-    # else:
-    #     print("number of training images {}".format(len(train_imgs_file_list)))
-    # train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
-    #     get_pose_data_list(train_im_path, train_ann_path)
+    train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
+        get_pose_data_list(train_im_path, train_ann_path)
 
     ## read coco validating images contains valid people (you can use it for training as well)
-    # val_data = PoseInfo(val_im_path, val_ann_path, False)
-    # val_imgs_file_list = val_data.get_image_list()
-    # val_objs_info_list = val_data.get_joint_list()
-    # val_mask_list = val_data.get_mask()
-    # # val_targets = list(zip(val_objs_info_list, val_mask_list))
-    # if len(val_imgs_file_list) != len(val_objs_info_list):
-    #     raise Exception("number of validating images and annotations do not match")
-    # else:
-    #     print("number of validating images {}".format(len(val_imgs_file_list)))
-    # val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
-    #     get_pose_data_list(train_im_path, train_ann_path)
+    val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
+        get_pose_data_list(train_im_path, train_ann_path)
 
-    ## read your customized images contains valid people
-    # your_images_path = config.DATA.your_images_path
-    # your_annos_path = config.DATA.your_annos_path
-    # your_data = PoseInfo(your_images_path, your_annos_path, False)
-    # your_imgs_file_list = your_data.get_image_list()
-    # your_objs_info_list = your_data.get_joint_list()
-    # your_mask_list = your_data.get_mask()
-    # if len(your_imgs_file_list) != len(your_objs_info_list):
-    #     raise Exception("number of customized images and annotations do not match")
-    # else:
-    #     print("number of customized images {}".format(len(your_imgs_file_list)))
+    ## read your own images contains valid people
     ## 1. if you only have one folder as follow:
     #   data/your_data
     #           /images
@@ -185,24 +156,28 @@ if __name__ == '__main__':
     # your_imgs_file_list, your_objs_info_list, your_mask_list, your_targets = \
     #     get_pose_data_list(config.DATA.your_images_path, config.DATA.your_annos_path)
     ## 2. if you have a folder with many folders: (which is common in industry)
-    folder_list = tl.files.load_folder_list(path='your_data')
-    your_imgs_file_list, your_objs_info_list, your_mask_list = [], [], []
-    for folder in folder_list:
-        _imgs_file_list, _objs_info_list, _mask_list, _targets = \
-            get_pose_data_list(os.path.join(folder, 'images'), os.path.join(folder, 'coco.json'))
-        print(len(_imgs_file_list))
-        your_imgs_file_list.extend(_imgs_file_list)
-        your_objs_info_list.extend(your_objs_info_list)
-        your_mask_list.extend(your_mask_list)
-    print("number of customized images found:", len(your_imgs_file_list))
-    exit()
+    # folder_list = tl.files.load_folder_list(path='data/your_data')
+    # your_imgs_file_list, your_objs_info_list, your_mask_list = [], [], []
+    # for folder in folder_list:
+    #     _imgs_file_list, _objs_info_list, _mask_list, _targets = \
+    #         get_pose_data_list(os.path.join(folder, 'images'), os.path.join(folder, 'coco.json'))
+    #     print(len(_imgs_file_list))
+    #     your_imgs_file_list.extend(_imgs_file_list)
+    #     your_objs_info_list.extend(_objs_info_list)
+    #     your_mask_list.extend(_mask_list)
+    # print("number of own images found:", len(your_imgs_file_list))
+
     ## choice dataset for training
     ## 1. only coco training set
-    # imgs_file_list = train_imgs_file_list
-    # train_targets = list(zip(train_objs_info_list, train_mask_list))
-    ## 2. your customized data from "data/your_data" and coco training set
-    imgs_file_list = train_imgs_file_list + your_imgs_file_list
-    train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
+    imgs_file_list = train_imgs_file_list
+    train_targets = list(zip(train_objs_info_list, train_mask_list))
+
+    ## 2. your own data and coco training set
+    # imgs_file_list = train_imgs_file_list + your_imgs_file_list
+    # train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
+    ## 3. only your own data
+    # imgs_file_list = your_imgs_file_list
+    # train_targets = list(zip(your_objs_info_list, your_mask_list))
 
     # define data augmentation
     def generator():
