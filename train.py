@@ -45,23 +45,6 @@ win = config.MODEL.win
 hout = config.MODEL.hout
 wout = config.MODEL.wout
 
-# parser = argparse.ArgumentParser(description='Training code for OpenPose using Tensorflow')
-# parser.add_argument('--save_interval', type=int, default=5000)
-# parser.add_argument(
-#     '--model_path', type=str, default='models/vgg19.npy', help='Path to your pretrained vgg19.npy file'
-# )
-# parser.add_argument('--log_interval', type=int, default=1)
-# parser.add_argument('--batch_size', type=int, default=8)
-# parser.add_argument('--save_path', type=str, default='logging/model/')
-# parser.add_argument('--vis_path', type=str, default='logging/val/')
-# args = parser.parse_args()
-# '''
-# file structure:
-# data_dir:
-#     image_folder : xxxx.jpg
-#     'annotations': xxxx.json
-# '''
-
 
 def _data_aug_fn(image, ground_truth):
     """Data augmentation function."""
@@ -171,6 +154,7 @@ if __name__ == '__main__':
     ## 1. only coco training set
     imgs_file_list = train_imgs_file_list
     train_targets = list(zip(train_objs_info_list, train_mask_list))
+
     ## 2. your own data and coco training set
     # imgs_file_list = train_imgs_file_list + your_imgs_file_list
     # train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
