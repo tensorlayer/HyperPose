@@ -31,23 +31,16 @@ if __name__ == '__main__':
     _, _, _, net = model(x, n_pos, None, None, False, False)
 
     # get output from network
-    conf_tensor = tl.layers.get_layers_with_name(
-        net, 'model/cpm/stage6/branch1/conf')[0]
-    pafs_tensor = tl.layers.get_layers_with_name(
-        net, 'model/cpm/stage6/branch2/pafs')[0]
+    conf_tensor = tl.layers.get_layers_with_name(net, 'model/cpm/stage6/branch1/conf')[0]
+    pafs_tensor = tl.layers.get_layers_with_name(net, 'model/cpm/stage6/branch2/pafs')[0]
 
     def get_peak(pafs_tensor):
         from inference.smoother import Smoother
         smoother = Smoother({'data': pafs_tensor}, 25, 3.0)
         gaussian_heatMat = smoother.get_output()
-        max_pooled_in_tensor = tf.nn.pool(
-            gaussian_heatMat,
-            window_shape=(3, 3),
-            pooling_type='MAX',
-            padding='SAME')
+        max_pooled_in_tensor = tf.nn.pool(gaussian_heatMat, window_shape=(3, 3), pooling_type='MAX', padding='SAME')
         tensor_peaks = tf.where(
-            tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat,
-            tf.zeros_like(gaussian_heatMat))
+            tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat, tf.zeros_like(gaussian_heatMat))
         return tensor_peaks
 
     peak_tensor = get_peak(pafs_tensor)
@@ -56,8 +49,7 @@ if __name__ == '__main__':
     sess = tf.InteractiveSession()
     sess.run(tf.global_variables_initializer())
     if model_file:
-        tl.files.load_and_assign_npz_dict(
-            os.path.join(model_path, model_file), sess)
+        tl.files.load_and_assign_npz_dict(os.path.join(model_path, model_file), sess)
 
     # get one example image with range 0~1
     im = tl.vis.read_image(input_file)
@@ -68,8 +60,7 @@ if __name__ == '__main__':
     # 1st time need time to compile
     # _, _ = sess.run([conf_tensor, pafs_tensor], feed_dict={x: [im]})
     st = time.time()
-    conf, pafs, peak = sess.run(
-        [conf_tensor, pafs_tensor, peak_tensor], feed_dict={x: [im]})
+    conf, pafs, peak = sess.run([conf_tensor, pafs_tensor, peak_tensor], feed_dict={x: [im]})
     t = time.time() - st
     print("get maps took {}s i.e. {} FPS".format(t, 1. / t))
     # print(conf.shape, pafs.shape, peak.shape)
@@ -92,11 +83,10 @@ if __name__ == '__main__':
                     continue
 
                 is_added = True
-                human.body_parts[part_idx] = BodyPart(
-                    '%d-%d' % (human_id, part_idx), part_idx,
-                    float(pafprocess.get_part_x(c_idx)) / heat_mat.shape[1],
-                    float(pafprocess.get_part_y(c_idx)) / heat_mat.shape[0],
-                    pafprocess.get_part_score(c_idx))
+                human.body_parts[part_idx] = BodyPart('%d-%d' % (human_id, part_idx), part_idx,
+                                                      float(pafprocess.get_part_x(c_idx)) / heat_mat.shape[1],
+                                                      float(pafprocess.get_part_y(c_idx)) / heat_mat.shape[0],
+                                                      pafprocess.get_part_score(c_idx))
 
             if is_added:
                 score = pafprocess.get_score(human_id)

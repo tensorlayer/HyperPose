@@ -13,13 +13,11 @@ from scipy.spatial.distance import cdist
 from config import config
 from pycocotools.coco import COCO, maskUtils
 from tensorlayer import logging
-from tensorlayer.files.utils import (del_file, folder_exists,
-                                     maybe_download_and_extract)
+from tensorlayer.files.utils import (del_file, folder_exists, maybe_download_and_extract)
 
 
 ## download dataset
-def load_mscoco_dataset(path='data', dataset='2017',
-                        task='person'):  # TODO move to tl.files later
+def load_mscoco_dataset(path='data', dataset='2017', task='person'):  # TODO move to tl.files later
     """Download MSCOCO Dataset.
     Both 2014 and 2017 dataset have train, validate and test sets, but 2017 version put less data into the validation set (115k train, 5k validate) i.e. has more training data.
 
@@ -70,9 +68,7 @@ def load_mscoco_dataset(path='data', dataset='2017',
 
         if folder_exists(os.path.join(path, "annotations")) is False:
             logging.info("    downloading annotations")
-            os.system(
-                "wget http://images.cocodataset.org/annotations/annotations_trainval2014.zip -P {}".
-                format(path))
+            os.system("wget http://images.cocodataset.org/annotations/annotations_trainval2014.zip -P {}".format(path))
             unzip(os.path.join(path, "annotations_trainval2014.zip"), path)
             del_file(os.path.join(path, "annotations_trainval2014.zip"))
         else:
@@ -80,9 +76,7 @@ def load_mscoco_dataset(path='data', dataset='2017',
 
         if folder_exists(os.path.join(path, "val2014")) is False:
             logging.info("    downloading validating images")
-            os.system(
-                "wget http://images.cocodataset.org/zips/val2014.zip -P {}".
-                format(path))
+            os.system("wget http://images.cocodataset.org/zips/val2014.zip -P {}".format(path))
             unzip(os.path.join(path, "val2014.zip"), path)
             del_file(os.path.join(path, "val2014.zip"))
         else:
@@ -90,9 +84,7 @@ def load_mscoco_dataset(path='data', dataset='2017',
 
         if folder_exists(os.path.join(path, "train2014")) is False:
             logging.info("    downloading training images")
-            os.system(
-                "wget http://images.cocodataset.org/zips/train2014.zip -P {}".
-                format(path))
+            os.system("wget http://images.cocodataset.org/zips/train2014.zip -P {}".format(path))
             unzip(os.path.join(path, "train2014.zip"), path)
             del_file(os.path.join(path, "train2014.zip"))
         else:
@@ -100,9 +92,7 @@ def load_mscoco_dataset(path='data', dataset='2017',
 
         if folder_exists(os.path.join(path, "test2014")) is False:
             logging.info("    downloading testing images")
-            os.system(
-                "wget http://images.cocodataset.org/zips/test2014.zip -P {}".
-                format(path))
+            os.system("wget http://images.cocodataset.org/zips/test2014.zip -P {}".format(path))
             unzip(os.path.join(path, "test2014.zip"), path)
             del_file(os.path.join(path, "test2014.zip"))
         else:
@@ -113,9 +103,7 @@ def load_mscoco_dataset(path='data', dataset='2017',
 
         if folder_exists(os.path.join(path, "annotations")) is False:
             logging.info("    downloading annotations")
-            os.system(
-                "wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip -P {}".
-                format(path))
+            os.system("wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip -P {}".format(path))
             unzip(os.path.join(path, "annotations_trainval2017.zip"), path)
             del_file(os.path.join(path, "annotations_trainval2017.zip"))
         else:
@@ -123,9 +111,7 @@ def load_mscoco_dataset(path='data', dataset='2017',
 
         if folder_exists(os.path.join(path, "val2017")) is False:
             logging.info("    downloading validating images")
-            os.system(
-                "wget http://images.cocodataset.org/zips/val2017.zip -P {}".
-                format(path))
+            os.system("wget http://images.cocodataset.org/zips/val2017.zip -P {}".format(path))
             unzip(os.path.join(path, "val2017.zip"), path)
             del_file(os.path.join(path, "val2017.zip"))
         else:
@@ -133,9 +119,7 @@ def load_mscoco_dataset(path='data', dataset='2017',
 
         if folder_exists(os.path.join(path, "train2017")) is False:
             logging.info("    downloading training images")
-            os.system(
-                "wget http://images.cocodataset.org/zips/train2017.zip -P {}".
-                format(path))
+            os.system("wget http://images.cocodataset.org/zips/train2017.zip -P {}".format(path))
             unzip(os.path.join(path, "train2017.zip"), path)
             del_file(os.path.join(path, "train2017.zip"))
         else:
@@ -143,18 +127,14 @@ def load_mscoco_dataset(path='data', dataset='2017',
 
         if folder_exists(os.path.join(path, "test2017")) is False:
             logging.info("    downloading testing images")
-            os.system(
-                "wget http://images.cocodataset.org/zips/test2017.zip -P {}".
-                format(path))
+            os.system("wget http://images.cocodataset.org/zips/test2017.zip -P {}".format(path))
             unzip(os.path.join(path, "test2017.zip"), path)
             del_file(os.path.join(path, "test2017.zip"))
         else:
             logging.info("    testing images exists")
 
     else:
-        raise Exception(
-            "dataset can only be 2014 and 2017, see MSCOCO website for more details."
-        )
+        raise Exception("dataset can only be 2014 and 2017, see MSCOCO website for more details.")
 
     # logging.info("    downloading annotations")
     # print(url, tar_filename)
@@ -168,51 +148,39 @@ def load_mscoco_dataset(path='data', dataset='2017',
     if dataset == "2014":
         train_images_path = os.path.join(path, "train2014")
         if task == "person":
-            train_annotations_file_path = os.path.join(
-                path, "annotations", "person_keypoints_train2014.json")
+            train_annotations_file_path = os.path.join(path, "annotations", "person_keypoints_train2014.json")
         elif task == "caption":
-            train_annotations_file_path = os.path.join(
-                path, "annotations", "captions_train2014.json")
+            train_annotations_file_path = os.path.join(path, "annotations", "captions_train2014.json")
         elif task == "instance":
-            train_annotations_file_path = os.path.join(
-                path, "annotations", "instances_train2014.json")
+            train_annotations_file_path = os.path.join(path, "annotations", "instances_train2014.json")
         else:
             raise Exception("unknown task")
         val_images_path = os.path.join(path, "val2014")
         if task == "person":
-            val_annotations_file_path = os.path.join(
-                path, "annotations", "person_keypoints_val2014.json")
+            val_annotations_file_path = os.path.join(path, "annotations", "person_keypoints_val2014.json")
         elif task == "caption":
-            val_annotations_file_path = os.path.join(path, "annotations",
-                                                     "captions_val2014.json")
+            val_annotations_file_path = os.path.join(path, "annotations", "captions_val2014.json")
         elif task == "instance":
-            val_annotations_file_path = os.path.join(path, "annotations",
-                                                     "instances_val2014.json")
+            val_annotations_file_path = os.path.join(path, "annotations", "instances_val2014.json")
         test_images_path = os.path.join(path, "test2014")
         test_annotations_file_path = None  #os.path.join(path, "annotations", "person_keypoints_test2014.json")
     else:
         train_images_path = os.path.join(path, "train2017")
         if task == "person":
-            train_annotations_file_path = os.path.join(
-                path, "annotations", "person_keypoints_train2017.json")
+            train_annotations_file_path = os.path.join(path, "annotations", "person_keypoints_train2017.json")
         elif task == "caption":
-            train_annotations_file_path = os.path.join(
-                path, "annotations", "captions_train2017.json")
+            train_annotations_file_path = os.path.join(path, "annotations", "captions_train2017.json")
         elif task == "instance":
-            train_annotations_file_path = os.path.join(
-                path, "annotations", "instances_train2017.json")
+            train_annotations_file_path = os.path.join(path, "annotations", "instances_train2017.json")
         else:
             raise Exception("unknown task")
         val_images_path = os.path.join(path, "val2017")
         if task == "person":
-            val_annotations_file_path = os.path.join(
-                path, "annotations", "person_keypoints_val2017.json")
+            val_annotations_file_path = os.path.join(path, "annotations", "person_keypoints_val2017.json")
         elif task == "caption":
-            val_annotations_file_path = os.path.join(path, "annotations",
-                                                     "captions_val2017.json")
+            val_annotations_file_path = os.path.join(path, "annotations", "captions_val2017.json")
         elif task == "instance":
-            val_annotations_file_path = os.path.join(path, "annotations",
-                                                     "instances_val2017.json")
+            val_annotations_file_path = os.path.join(path, "annotations", "instances_val2017.json")
         test_images_path = os.path.join(path, "test2017")
         test_annotations_file_path = None  #os.path.join(path, "annotations", "person_keypoints_test2017.json")
     return train_images_path, train_annotations_file_path, \
@@ -224,9 +192,8 @@ def load_mscoco_dataset(path='data', dataset='2017',
 class CocoMeta:
     """ Be used in PoseInfo. """
     limb = list(
-        zip([2, 9, 10, 2, 12, 13, 2, 3, 4, 3, 2, 6, 7, 6, 2, 1, 1, 15, 16], [
-            9, 10, 11, 12, 13, 14, 3, 4, 5, 17, 6, 7, 8, 18, 1, 15, 16, 17, 18
-        ]))
+        zip([2, 9, 10, 2, 12, 13, 2, 3, 4, 3, 2, 6, 7, 6, 2, 1, 1, 15, 16],
+            [9, 10, 11, 12, 13, 14, 3, 4, 5, 17, 6, 7, 8, 18, 1, 15, 16, 17, 18]))
 
     def __init__(self, idx, img_url, img_meta, annotations, masks):
         self.idx = idx
@@ -246,15 +213,13 @@ class CocoMeta:
             ys = kp[1::3]
             vs = kp[2::3]
             # if joint is marked
-            joint_list.append([(x, y) if v >= 1 else (-1000, -1000)
-                               for x, y, v in zip(xs, ys, vs)])
+            joint_list.append([(x, y) if v >= 1 else (-1000, -1000) for x, y, v in zip(xs, ys, vs)])
 
         self.joint_list = []
         # 对原 COCO 数据集的转换 其中第二位之所以不一样是为了计算 Neck 等于左右 shoulder 的中点
         transform = list(
             zip([1, 6, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4],
-                [1, 7, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4
-                 ]))
+                [1, 7, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]))
         for prev_joint in joint_list:
             new_joint = []
             for idx1, idx2 in transform:
@@ -264,15 +229,12 @@ class CocoMeta:
                 if j1[0] <= 0 or j1[1] <= 0 or j2[0] <= 0 or j2[1] <= 0:
                     new_joint.append((-1000, -1000))
                 else:
-                    new_joint.append(((j1[0] + j2[0]) / 2,
-                                      (j1[1] + j2[1]) / 2))
+                    new_joint.append(((j1[0] + j2[0]) / 2, (j1[1] + j2[1]) / 2))
 
             # for background
             new_joint.append((-1000, -1000))
             if len(new_joint) != 19:
-                print(
-                    'The Length of joints list should be 0 or 19 but actually:',
-                    len(new_joint))
+                print('The Length of joints list should be 0 or 19 but actually:', len(new_joint))
             self.joint_list.append(new_joint)
 
 
@@ -294,10 +256,7 @@ class PoseInfo:
     def get_keypoints(annos_info):
         annolist = []
         for anno in annos_info:
-            adjust_anno = {
-                'keypoints': anno['keypoints'],
-                'num_keypoints': anno['num_keypoints']
-            }
+            adjust_anno = {'keypoints': anno['keypoints'], 'num_keypoints': anno['num_keypoints']}
             annolist.append(adjust_anno)
         return annolist
 
@@ -308,8 +267,7 @@ class PoseInfo:
         for idx in range(len_imgs):
 
             images_info = self.coco.loadImgs(images_ids[idx])
-            image_path = os.path.join(self.image_base_dir,
-                                      images_info[0]['file_name'])
+            image_path = os.path.join(self.image_base_dir, images_info[0]['file_name'])
             # filter that some images might not in the list
             if not os.path.exists(image_path):
                 print("non path exists:", image_path)
@@ -326,8 +284,7 @@ class PoseInfo:
 
             # sort from the biggest person to the smallest one
             if self.with_mask:
-                persons_ids = np.argsort(
-                    [-a['area'] for a in anns], kind='mergesort')
+                persons_ids = np.argsort([-a['area'] for a in anns], kind='mergesort')
 
                 for p_id in list(persons_ids):
                     person_meta = anns[p_id]
@@ -364,11 +321,9 @@ class PoseInfo:
                         continue
 
             ############################################################################
-            total_keypoints = sum(
-                [ann.get('num_keypoints', 0) for ann in annos_info])
+            total_keypoints = sum([ann.get('num_keypoints', 0) for ann in annos_info])
             if total_keypoints > 0:
-                meta = CocoMeta(images_ids[idx], image_path, images_info[0],
-                                keypoints, masks)
+                meta = CocoMeta(images_ids[idx], image_path, images_info[0], keypoints, masks)
                 self.metas.append(meta)
 
         print("Overall get {}".format(len(self.metas)))
@@ -393,8 +348,6 @@ class PoseInfo:
         for meta in self.metas:
             mask_list.append(meta.masks)
         return mask_list
-
-
 
 
 def get_heatmap(annos, height, width):
@@ -430,8 +383,7 @@ def get_heatmap(annos, height, width):
     joints_heatmap = joints_heatmap.transpose((1, 2, 0))
 
     # background
-    joints_heatmap[:, :, -1] = np.clip(1 - np.amax(joints_heatmap, axis=2),
-                                       0.0, 1.0)
+    joints_heatmap[:, :, -1] = np.clip(1 - np.amax(joints_heatmap, axis=2), 0.0, 1.0)
 
     mapholder = []
     for i in range(0, 19):
@@ -496,9 +448,8 @@ def get_vectormap(annos, height, width):
     num_joints = 19
 
     limb = list(
-        zip([2, 9, 10, 2, 12, 13, 2, 3, 4, 3, 2, 6, 7, 6, 2, 1, 1, 15, 16], [
-            9, 10, 11, 12, 13, 14, 3, 4, 5, 17, 6, 7, 8, 18, 1, 15, 16, 17, 18
-        ]))
+        zip([2, 9, 10, 2, 12, 13, 2, 3, 4, 3, 2, 6, 7, 6, 2, 1, 1, 15, 16],
+            [9, 10, 11, 12, 13, 14, 3, 4, 5, 17, 6, 7, 8, 18, 1, 15, 16, 17, 18]))
 
     vectormap = np.zeros((num_joints * 2, height, width), dtype=np.float32)
     counter = np.zeros((num_joints, height, width), dtype=np.int16)
@@ -521,8 +472,7 @@ def get_vectormap(annos, height, width):
     # normalize the PAF (otherwise longer limb gives stronger absolute strength)
     nonzero_vector = np.nonzero(counter)
 
-    for i, y, x in zip(nonzero_vector[0], nonzero_vector[1],
-                       nonzero_vector[2]):
+    for i, y, x in zip(nonzero_vector[0], nonzero_vector[1], nonzero_vector[2]):
 
         if counter[i][y][x] <= 0:
             continue
@@ -531,9 +481,7 @@ def get_vectormap(annos, height, width):
 
     mapholder = []
     for i in range(0, 38):
-        a = cv2.resize(
-            np.array(vectormap[:, :, i]), (46, 46),
-            interpolation=cv2.INTER_AREA)
+        a = cv2.resize(np.array(vectormap[:, :, i]), (46, 46), interpolation=cv2.INTER_AREA)
         mapholder.append(a)
     mapholder = np.array(mapholder)
     vectormap = mapholder.transpose(1, 2, 0)
@@ -635,13 +583,7 @@ def fast_vectormap(vectormap, countmap, i, v_start, v_end):
     return vectormap
 
 
-def draw_intermedia_results(images,
-                            heats_ground,
-                            heats_result,
-                            pafs_ground,
-                            pafs_result,
-                            masks,
-                            name=''):
+def draw_intermedia_results(images, heats_ground, heats_result, pafs_ground, pafs_result, masks, name=''):
     """
     images :
     heats : keypoint maps
@@ -731,15 +673,13 @@ def draw_intermedia_results(images,
         # plt.show()
 
         mkpath(config.LOG.vis_path)
-        plt.savefig(
-            os.path.join(config.LOG.vis_path, '%s%d.png' % (name, i)), dpi=300)
+        plt.savefig(os.path.join(config.LOG.vis_path, '%s%d.png' % (name, i)), dpi=300)
 
 
 if __name__ == '__main__':
     data_dir = '/Users/Joel/Desktop/coco'
     data_type = 'val'
-    anno_path = '{}/annotations/person_keypoints_{}2014.json'.format(
-        data_dir, data_type)
+    anno_path = '{}/annotations/person_keypoints_{}2014.json'.format(data_dir, data_type)
     df_val = PoseInfo(data_dir, data_type, anno_path)
 
     for i in range(50):

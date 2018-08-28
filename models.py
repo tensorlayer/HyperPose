@@ -29,7 +29,7 @@ def stage(cnn, b1, b2, n_pos, maskInput1, maskInput2, is_train, name='stageX'):
             b2 = Conv2d(b2, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c4')
             b2 = Conv2d(b2, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c5')
             b2 = Conv2d(b2, 128, (1, 1), (1, 1), tf.nn.relu, 'VALID', W_init=W_init, b_init=b_init, name='c6')
-            b2 = Conv2d(b2, 38, (1, 1), (1, 1), None, 'VALID', W_init=W_init, b_init=b_init, name='pafs')
+            b2 = Conv2d(b2, n_pos * 2, (1, 1), (1, 1), None, 'VALID', W_init=W_init, b_init=b_init, name='pafs')
             if is_train:
                 b2.outputs = b2.outputs * maskInput2
     return b1, b2
@@ -87,7 +87,8 @@ def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):
                 b1 = Conv2d(cnn, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c1')
                 b1 = Conv2d(b1, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c2')
                 b1 = Conv2d(b1, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c3')
-                b1 = Conv2d(b1, 512, (1, 1), (1, 1), tf.nn.relu, 'VALID', W_init=W_init, b_init=b_init, name='c4')
+                # b1 = Conv2d(b1, 512, (1, 1), (1, 1), tf.nn.relu, 'VALID', W_init=W_init, b_init=b_init, name='c4')
+                b1 = Conv2d(b1, 128, (1, 1), (1, 1), tf.nn.relu, 'VALID', W_init=W_init, b_init=b_init, name='c4')
                 b1 = Conv2d(b1, n_pos, (1, 1), (1, 1), None, 'VALID', W_init=W_init, b_init=b_init, name='confs')
                 if is_train:
                     b1.outputs = b1.outputs * mask_miss1
@@ -95,8 +96,9 @@ def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):
                 b2 = Conv2d(cnn, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c1')
                 b2 = Conv2d(b2, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c2')
                 b2 = Conv2d(b2, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c3')
-                b2 = Conv2d(b2, 512, (1, 1), (1, 1), tf.nn.relu, 'VALID', W_init=W_init, b_init=b_init, name='c4')
-                b2 = Conv2d(b2, 38, (1, 1), (1, 1), None, 'VALID', W_init=W_init, b_init=b_init, name='pafs')
+                # b2 = Conv2d(b2, 512, (1, 1), (1, 1), tf.nn.relu, 'VALID', W_init=W_init, b_init=b_init, name='c4')
+                b2 = Conv2d(b2, 128, (1, 1), (1, 1), tf.nn.relu, 'VALID', W_init=W_init, b_init=b_init, name='c4')
+                b2 = Conv2d(b2, n_pos * 2, (1, 1), (1, 1), None, 'VALID', W_init=W_init, b_init=b_init, name='pafs')
                 if is_train:
                     b2.outputs = b2.outputs * mask_miss2
             b1_list.append(b1)
@@ -104,8 +106,7 @@ def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):
             # stage 2~6
             for i in range(2, 7):
                 b1, b2 = stage(
-                    cnn, b1_list[-1], b2_list[-1], n_pos, mask_miss1, mask_miss2, is_train, name='stage%d' % i
-                )
+                    cnn, b1_list[-1], b2_list[-1], n_pos, mask_miss1, mask_miss2, is_train, name='stage%d' % i)
                 b1_list.append(b1)
                 b2_list.append(b2)
         net = tl.layers.merge_networks([b1_list[-1], b2_list[-1]])
