@@ -62,12 +62,17 @@ def _data_aug_fn(image, ground_truth):
         bin_mask = np.logical_not(bin_mask)
         mask_miss = np.bitwise_and(mask_miss, bin_mask)
 
-    # image data augmentation
+    ## image data augmentation
+    # randomly resize height and width independently, scale is changed
     image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
+    # random rotate
     image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
+    # random left-right flipping
     image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
-    image, annos, mask_miss = keypoint_random_resize_shortestedge(image, annos, mask_miss, min_size=(hin, win))
-    image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))
+    # random resize height and width together
+    image, annos, mask_miss = keypoint_random_resize_shortestedge(image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
+    # random crop
+    image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win)) # with padding
 
     # generate result maps including keypoints heatmap, pafs and mask
     h, w, _ = np.shape(image)
@@ -262,8 +267,8 @@ if __name__ == '__main__':
                 mask1 = np.repeat(mask, n_pos, 3)
                 mask2 = np.repeat(mask, n_pos * 2, 3)
 
-                ## ave some training data for checking data augmentation (slow)
-                # draw_results(x_, confs_, None, pafs_, None, mask, 'check_batch')
+                ## save some training data for debugging data augmentation (slow)
+                # draw_results(x_, confs_, None, pafs_, None, mask, 'check_batch_{}_'.format(step))
 
                 [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm, paf_result] = sess.run(
                     [train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf],

@@ -15,6 +15,9 @@ from pycocotools.coco import COCO, maskUtils
 from tensorlayer import logging
 from tensorlayer.files.utils import (del_file, folder_exists, maybe_download_and_extract)
 
+n_pos = config.MODEL.n_pos
+hout = config.MODEL.hout
+wout = config.MODEL.wout
 
 ## download dataset
 def load_mscoco_dataset(path='data', dataset='2017', task='person'):  # TODO move to tl.files later
@@ -390,7 +393,7 @@ def get_heatmap(annos, height, width):
 
     mapholder = []
     for i in range(0, 19):
-        a = cv2.resize(np.array(joints_heatmap[:, :, i]), (46, 46))
+        a = cv2.resize(np.array(joints_heatmap[:, :, i]), (hout, wout))
         mapholder.append(a)
     mapholder = np.array(mapholder)
     joints_heatmap = mapholder.transpose(1, 2, 0)
@@ -483,8 +486,8 @@ def get_vectormap(annos, height, width):
         vectormap[y][x][i * 2 + 1] /= counter[i][y][x]
 
     mapholder = []
-    for i in range(0, 38):
-        a = cv2.resize(np.array(vectormap[:, :, i]), (46, 46), interpolation=cv2.INTER_AREA)
+    for i in range(0, n_pos * 2):
+        a = cv2.resize(np.array(vectormap[:, :, i]), (hout, wout), interpolation=cv2.INTER_AREA)
         mapholder.append(a)
     mapholder = np.array(mapholder)
     vectormap = mapholder.transpose(1, 2, 0)
@@ -610,9 +613,9 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
             paf_result = pafs_result[i]
         if masks is not None:
             mask = masks[i]
-            mask = mask.reshape(46, 46, 1)
-            mask1 = np.repeat(mask, 19, 2)
-            mask2 = np.repeat(mask, 38, 2)
+            mask = mask.reshape(hout, wout, 1)
+            mask1 = np.repeat(mask, n_pos, 2)
+            mask2 = np.repeat(mask, n_pos * 2, 2)
 
         image = images[i]
 
