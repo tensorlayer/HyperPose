@@ -174,8 +174,9 @@ if __name__ == '__main__':
 
     n_epoch = math.ceil(n_step / len(imgs_file_list))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
+    dataset = dataset.shuffle(buffer_size=2046) # shuffle before loading images
     dataset = dataset.map(_map_fn, num_parallel_calls=8)
-    dataset = dataset.shuffle(buffer_size=2046)
+    # dataset = dataset.shuffle(buffer_size=2046)
     dataset = dataset.repeat(n_epoch)
     dataset = dataset.batch(batch_size)
     dataset = dataset.prefetch(buffer_size=20)
@@ -283,7 +284,7 @@ if __name__ == '__main__':
                 # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
                 lr = sess.run(lr_v)
                 print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} weight_norm {:10e} Took: {}s'.format(
-                    step, n_step, the_loss, lr, weight_norm, tic-time.time()))
+                    step, n_step, the_loss, lr, weight_norm, time.time()-tic))
                 for ix, ll in enumerate(loss_ll):
                     print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
