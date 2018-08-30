@@ -3,8 +3,6 @@
 import os
 import time
 
-import matplotlib
-matplotlib.use('Agg')
 import numpy as np
 
 import tensorflow as tf
@@ -12,7 +10,7 @@ import tensorlayer as tl
 from config import config
 from inference.pafprocess import pafprocess
 from models import model
-from utils import draw_results
+from utils import draw_results, load_image, get_peak
 
 # TODO: make them flags
 input_file = 'data/test.jpeg'
@@ -33,16 +31,6 @@ if __name__ == '__main__':
     # get output from network
     conf_tensor = tl.layers.get_layers_with_name(net, 'model/cpm/stage6/branch1/conf')[0]
     pafs_tensor = tl.layers.get_layers_with_name(net, 'model/cpm/stage6/branch2/pafs')[0]
-
-    def get_peak(pafs_tensor):
-        from inference.smoother import Smoother
-        smoother = Smoother({'data': pafs_tensor}, 25, 3.0)
-        gaussian_heatMat = smoother.get_output()
-        max_pooled_in_tensor = tf.nn.pool(gaussian_heatMat, window_shape=(3, 3), pooling_type='MAX', padding='SAME')
-        tensor_peaks = tf.where(
-            tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat, tf.zeros_like(gaussian_heatMat))
-        return tensor_peaks
-
     peak_tensor = get_peak(pafs_tensor)
 
     # restore model parameters
@@ -51,10 +39,7 @@ if __name__ == '__main__':
     if model_file:
         tl.files.load_and_assign_npz_dict(os.path.join(model_path, model_file), sess)
 
-    # get one example image with range 0~1
-    im = tl.vis.read_image(input_file)
-    im = tl.prepro.imresize(im, [h, w])
-    im = im / 255.  # input image 0~1
+    im = load_image(input_file)
 
     # inference
     # 1st time need time to compile

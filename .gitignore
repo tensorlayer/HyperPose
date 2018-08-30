@@ -1,10 +1,11 @@
 __pycache__
-/data
+/checkpoints
 /coco
+/data
+/models
+/tensorlayer
+/vis
 cocoapi-master/
 cocoapi/
 inference/*png
 models_*
-/models
-/tensorlayer
-/vis

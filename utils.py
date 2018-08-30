@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-## xxx
 import math
 import os
 from distutils.dir_util import mkpath
@@ -14,10 +13,13 @@ from config import config
 from pycocotools.coco import COCO, maskUtils
 from tensorlayer import logging
 from tensorlayer.files.utils import (del_file, folder_exists, maybe_download_and_extract)
+import tensorflow as tf
+import tensorlayer as tl
 
 n_pos = config.MODEL.n_pos
 hout = config.MODEL.hout
 wout = config.MODEL.wout
+
 
 ## download dataset
 def load_mscoco_dataset(path='data', dataset='2017', task='person'):  # TODO move to tl.files later
@@ -692,6 +694,26 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
 
         mkpath(config.LOG.vis_path)
         plt.savefig(os.path.join(config.LOG.vis_path, '%s%d.png' % (name, i)), dpi=300)
+
+
+def load_image(input_file):
+    image_height = 368
+    image_width = 432
+
+    im = tl.vis.read_image(input_file)
+    im = tl.prepro.imresize(im, [image_height, image_width])
+    im = im / 255.  # input image 0~1
+    return im
+
+
+def get_peak(pafs_tensor):
+    from inference.smoother import Smoother
+    smoother = Smoother({'data': pafs_tensor}, 25, 3.0)
+    gaussian_heatMat = smoother.get_output()
+    max_pooled_in_tensor = tf.nn.pool(gaussian_heatMat, window_shape=(3, 3), pooling_type='MAX', padding='SAME')
+    tensor_peaks = tf.where(
+        tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat, tf.zeros_like(gaussian_heatMat))
+    return tensor_peaks
 
 
 if __name__ == '__main__':
