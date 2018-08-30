@@ -5,8 +5,6 @@ import os
 from distutils.dir_util import mkpath
 
 import cv2
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.distance import cdist

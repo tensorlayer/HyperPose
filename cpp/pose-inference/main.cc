@@ -5,26 +5,6 @@
 
 namespace tf = tensorflow;
 
-const int image_height = 368;
-const int image_width = 432;
-
-tf::Status LoadGraph(const std::string &graph_file_name,
-                     std::unique_ptr<tf::Session> &session)
-{
-    tf::GraphDef graph_def;
-    {
-        auto status = tf::ReadBinaryProto(tf::Env::Default(), graph_file_name,
-                                          &graph_def);
-        if (!status.ok()) { return status; }
-    }
-    {
-        session.reset(tf::NewSession(tf::SessionOptions()));
-        auto status = session->Create(graph_def);
-        if (!status.ok()) { return status; }
-    }
-    return tf::Status::OK();
-}
-
 tf::Status ReadEntireFile(tf::Env *env, const std::string &filename,
                           tf::Tensor *output)
 {
@@ -58,7 +38,6 @@ tf::Status ReadTensorFromImageFile(const std::string &file_name,
                                    std::vector<tf::Tensor> *out_tensors)
 {
     auto root = tensorflow::Scope::NewRootScope();
-    // using namespace ::tensorflow::ops;  // NOLINT(build/namespaces)
 
     std::string input_name = "file_reader";
     std::string output_name = "normalized";
@@ -125,45 +104,108 @@ tf::Status ReadTensorFromImageFile(const std::string &file_name,
     return tf::Status::OK();
 }
 
-tf::Status openpose()
+void debug(const std::string &name, const tf::Tensor &t)
 {
-    std::unique_ptr<tf::Session> session;
-    std::string graph_path = "../checkpoints/freezed";
-    TF_RETURN_IF_ERROR(LoadGraph(graph_path, session));
-
+    const auto shape = t.shape();
+    std::string dims_str;
     {
-        const std::string input_name = "image";
-        const std::vector<std::string> output_names = {
-            "model/cpm/stage6/branch1/conf/BiasAdd",
-            "model/cpm/stage6/branch2/pafs/BiasAdd",
-            "Select",
-        };
-
-        tf::TensorShape shape;
-        shape.AddDim(1);
-        shape.AddDim(image_height);
-        shape.AddDim(image_width);
-        shape.AddDim(3);
-
-        tf::Tensor resized_tensor(tf::DT_FLOAT, shape);
-
-        std::vector<tf::Tensor> outputs;
-        auto status = session->Run({{input_name, resized_tensor}}, output_names,
-                                   {}, &outputs);
-        TF_RETURN_IF_ERROR(status);
-
-        LOG(INFO) << "got " << outputs.size() << " outputs";
+        const auto dims = shape.dim_sizes();
+        // for (auto d : dims) { dims_str = " " + std::to_string(d) + dims_str;
+        // }
+        for (int i = 0; i < shape.dims(); ++i) {
+            dims_str = " " + std::to_string(shape.dim_size(i)) + dims_str;
+        }
     }
+    LOG(INFO) << "tensor: " << name << " :: "
+              << " dtype: " << t.dtype() << " rank: " << shape.dims()
+              << " dims: " << dims_str;
+}
 
+tf::Status read_and_resize_image(const std::string &image_path,
+                                 int image_height, int image_width,
+                                 std::vector<tf::Tensor> &resized_tensors)
+{
+    const float input_mean = 0;
+    const float input_std = 255;
+    auto status =
+        ReadTensorFromImageFile(image_path, image_height, image_width,
+                                input_mean, input_std, &resized_tensors);
+    TF_RETURN_IF_ERROR(status);
     return tf::Status::OK();
 }
 
+class PoseDetector
+{
+  public:
+    PoseDetector(const std::string &graph_path)
+    {
+        auto status = LoadGraph_(graph_path, session_);
+        if (!status.ok()) { exit(1); }
+    }
+
+    tf::Status example(const std::string &image_path)
+    {
+        // TODO: read image with opencv
+        std::vector<tf::Tensor> resized_tensors;
+        TF_RETURN_IF_ERROR(read_and_resize_image(image_path, image_height,
+                                                 image_width, resized_tensors));
+        const auto &resized_tensor = resized_tensors[0];
+
+        std::vector<tf::Tensor> outputs;
+        auto status = session_->Run({{input_name, resized_tensor}},
+                                    output_names, {}, &outputs);
+        TF_RETURN_IF_ERROR(status);
+
+        LOG(INFO) << "got " << outputs.size() << " outputs";
+        int idx = 0;
+        for (auto &t : outputs) { debug("output" + std::to_string(++idx), t); }
+        return tf::Status::OK();
+    }
+
+  private:
+    static const int image_height = 368;
+    static const int image_width = 432;
+
+    const std::string input_name = "image";
+    const std::vector<std::string> output_names = {
+        "model/cpm/stage6/branch1/conf/BiasAdd",
+        "model/cpm/stage6/branch2/pafs/BiasAdd",
+        "Select",
+    };
+
+    std::unique_ptr<tf::Session> session_;
+
+    tf::Status LoadGraph_(const std::string &graph_file_name,
+                          std::unique_ptr<tf::Session> &session)
+    {
+        tf::GraphDef graph_def;
+        {
+            auto status = tf::ReadBinaryProto(tf::Env::Default(),
+                                              graph_file_name, &graph_def);
+            if (!status.ok()) { return status; }
+        }
+        {
+            session.reset(tf::NewSession(tf::SessionOptions()));
+            auto status = session->Create(graph_def);
+            if (!status.ok()) { return status; }
+        }
+        return tf::Status::OK();
+    }
+};
+
 int main()
 {
-    auto status = openpose();
-    if (!status.ok()) {
-        LOG(ERROR) << status;
-        exit(1);
+    std::string graph_path = "../checkpoints/freezed";
+    PoseDetector pd(graph_path);
+
+    const int n = 1;
+    for (int i = 0; i < n; ++i) {
+        std::string image_path = "../data/test.jpeg";
+        auto status = pd.example(image_path);
+        if (!status.ok()) {
+            LOG(ERROR) << status;
+            exit(1);
+        }
     }
     return 0;
 }

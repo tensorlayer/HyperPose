@@ -10,6 +10,7 @@ import tensorlayer as tl
 
 from inference.pafprocess import pafprocess
 from utils import draw_results, load_image
+from debug import tensor_summary
 
 model_file = 'checkpoints/freezed'
 input_file = 'data/test.jpeg'
@@ -50,6 +51,10 @@ def run(graph):
                 input_operation: [im],
             },
         )
+
+    tensor_summary('conf', conf)
+    tensor_summary('pafs', pafs)
+    tensor_summary('peak', peak)
 
     # draw maps
     draw_results([im], None, conf, None, pafs, None, 'inference')
