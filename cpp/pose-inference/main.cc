@@ -1,4 +1,3 @@
-#include "tensorflow/cc/client/client_session.h"
 #include "tensorflow/cc/ops/image_ops.h"
 #include "tensorflow/cc/ops/standard_ops.h"
 #include "tensorflow/core/framework/tensor.h"
@@ -46,17 +45,6 @@ tf::Status ReadEntireFile(tf::Env *env, const std::string &filename,
                                             data.size());
     }
     output->scalar<std::string>()() = data.ToString();
-    return tf::Status::OK();
-}
-
-tf::Status createTestTensor(tf::Tensor *output)
-{
-    // const int width = 28;
-    // const int height = 28;
-
-    // auto &t =
-    // output->tensor<float, 2>()() = 1;//{{1, 2, 3}};
-
     return tf::Status::OK();
 }
 
@@ -165,7 +153,6 @@ tf::Status openpose()
         TF_RETURN_IF_ERROR(status);
 
         LOG(INFO) << "got " << outputs.size() << " outputs";
-        // for (auto &o : outputs) { LOG(INFO) << o.tensor<float, 2>(); }
     }
 
     return tf::Status::OK();
@@ -173,7 +160,7 @@ tf::Status openpose()
 
 int main()
 {
-    auto status = example_2();
+    auto status = openpose();
     if (!status.ok()) {
         LOG(ERROR) << status;
         exit(1);
