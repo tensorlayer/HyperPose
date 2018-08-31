@@ -1,0 +1,13 @@
+__pycache__
+*.log
+/checkpoints
+/coco
+/data
+/models
+/tensorlayer
+/vis
+cocoapi-master/
+cocoapi/
+inference/*png
+models_*
+/cpp/tensorflow

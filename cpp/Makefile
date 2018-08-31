@@ -10,7 +10,9 @@ run: app
 	$(TF_ROOT)/bazel-bin/$(PKG)/pose-inference
 
 # Use a mirror URL if this is slow for you
-TF_GIT_URL = https://github.com/tensorflow/tensorflow.git
+# TF_GIT_URL = https://github.com/tensorflow/tensorflow.git
+TF_GIT_URL = https://gitee.com/kuroicrow/tensorflow.git
+
 TF_VERSION = v1.10.1
 
 tensorflow:
