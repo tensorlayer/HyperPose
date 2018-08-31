@@ -17,7 +17,8 @@ int main()
         // TODO: make it a flag
         std::string image_path = "../data/test.jpeg";
         // detector->detect_pose(image_path);
-        auto results = detector->get_detection_tensors(image_path);
+        // auto results = detector->get_detection_tensors(
+        // );
         // TODO: draw results
     }
     return 0;

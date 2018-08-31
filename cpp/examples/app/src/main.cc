@@ -3,8 +3,10 @@
 #include <vector>
 
 #include <opencv2/opencv.hpp>
+#include <tensorflow/examples/pose-inference/pose-detector.h>
 
-#include "tensorflow/examples/pose-inference/pose-detector.h"
+#include "input.h"
+#include "timer.h"
 
 void camera_example()
 {
@@ -30,12 +32,19 @@ void pose_example(const std::vector<std::string> &image_files)
 {
     std::string graph_path = "checkpoints/freezed";
     std::unique_ptr<PoseDetector> detector;
-    create_pose_detector(graph_path, detector);
+    {
+        timer_t _("create_pose_detector");
+        create_pose_detector(graph_path, detector);
+    }
 
     for (auto f : image_files) {
-        // std::string image_path = "data/test.jpeg";
+        const auto img = input_image(f.c_str());
         // detector->detect_pose(image_path);
-        auto results = detector->get_detection_tensors(f);
+        {
+            timer_t _("get_detection_tensors");
+            auto results = detector->get_detection_tensors(img);
+        }
+        // auto results = detector->get_detection_tensors(f);
         // TODO: draw results
     }
 }

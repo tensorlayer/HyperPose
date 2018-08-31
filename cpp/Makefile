@@ -1,12 +1,16 @@
 TF_ROOT = $(PWD)/tensorflow
 PKG = tensorflow/examples/pose-inference
 
-app: tensorflow
+all: \
+	libpose-inference \
+	opencv_example
+
+libpose-inference: tensorflow
 	rm -fr $(TF_ROOT)/$(PKG)
 	cp -r pose-inference $(TF_ROOT)/$(PKG)
 	cd $(TF_ROOT) && bazel build //$(PKG):all
 
-run: app
+run: libpose-inference
 	$(TF_ROOT)/bazel-bin/$(PKG)/pose-inference
 
 # Use a mirror URL if this is slow for you
@@ -21,3 +25,6 @@ tensorflow:
 
 query_deps:
 	cd $(TF_ROOT) && bazel query 'deps(//$(PKG))'
+
+opencv_example:
+	make -C examples/app
