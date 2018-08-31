@@ -22,4 +22,5 @@ class PoseDetector
     get_detection_tensors(const std::string &image_path) = 0;
 };
 
-void create_pose_detector(std::unique_ptr<PoseDetector> &p);
+void create_pose_detector(const std::string &model_file,
+                          std::unique_ptr<PoseDetector> &p);

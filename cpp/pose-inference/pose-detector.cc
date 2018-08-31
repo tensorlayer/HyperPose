@@ -273,8 +273,8 @@ tf::Status TFPoseDetector::LoadGraph_(const std::string &graph_file_name,
     return tf::Status::OK();
 }
 
-void create_pose_detector(std::unique_ptr<PoseDetector> &p)
+void create_pose_detector(const std::string &model_file,
+                          std::unique_ptr<PoseDetector> &p)
 {
-    std::string graph_path = "../checkpoints/freezed";
-    p.reset(new TFPoseDetector(graph_path));
+    p.reset(new TFPoseDetector(model_file));
 }
