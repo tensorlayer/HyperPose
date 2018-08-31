@@ -695,6 +695,26 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
         mkpath(config.LOG.vis_path)
         plt.savefig(os.path.join(config.LOG.vis_path, '%s%d.png' % (name, i)), dpi=300)
 
+def vis_annos(image, annos,name=''):
+    """Save results for debugging.
+
+    Parameters
+    -----------
+    images : single RGB image
+    annos  : annotation, list of lists
+    """
+
+    fig = plt.figure(figsize=(8, 8))
+    a = fig.add_subplot(1, 1, 1)
+
+    plt.imshow(image)
+    for people in annos:
+        for idx, jo in enumerate(people):
+            if jo[0] > 0 and jo[1] > 0:
+                plt.plot(jo[0], jo[1], '*')
+
+    mkpath(config.LOG.vis_path)
+    plt.savefig(os.path.join(config.LOG.vis_path, 'keypoints%s%d.png' % (name, i)), dpi=300)
 
 def load_image(input_file):
     image_height = 368
