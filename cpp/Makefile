@@ -4,7 +4,7 @@ PKG = tensorflow/examples/pose-inference
 app: tensorflow
 	rm -fr $(TF_ROOT)/$(PKG)
 	cp -r pose-inference $(TF_ROOT)/$(PKG)
-	cd $(TF_ROOT) && bazel build //$(PKG)
+	cd $(TF_ROOT) && bazel build //$(PKG):all
 
 run: app
 	$(TF_ROOT)/bazel-bin/$(PKG)/pose-inference
@@ -18,3 +18,6 @@ TF_VERSION = v1.10.1
 tensorflow:
 	git clone $(TF_GIT_URL)
 	cd tensorflow && git checkout $(TF_VERSION)
+
+query_deps:
+	cd $(TF_ROOT) && bazel query 'deps(//$(PKG))'

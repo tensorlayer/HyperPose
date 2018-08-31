@@ -7,6 +7,8 @@
 class PoseDetector
 {
   public:
+    virtual ~PoseDetector() {}
+
     virtual void detect_pose(const std::string &image_path) = 0;
 
     // non stable API
