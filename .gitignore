@@ -1,4 +1,6 @@
 __pycache__
+*.avi
+*.jpg
 *.log
 /checkpoints
 /coco

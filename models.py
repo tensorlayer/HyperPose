@@ -8,9 +8,30 @@ W_init = tf.truncated_normal_initializer(stddev=0.01)
 b_init = tf.constant_initializer(value=0.0)
 
 
-def stage(cnn, b1, b2, n_pos, maskInput1, maskInput2, is_train, name='stageX'):
-    """Define the archuecture of stage 2 to 6."""
-    with tf.variable_scope(name):
+def state1(cnn, n_pos, mask_miss1, mask_miss2, is_train):
+    """Define the first stage of openpose."""
+    with tf.variable_scope("stage1/branch1"):
+        b1 = Conv2d(cnn, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c1')
+        b1 = Conv2d(b1, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c2')
+        b1 = Conv2d(b1, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c3')
+        b1 = Conv2d(b1, 512, (1, 1), (1, 1), tf.nn.relu, 'VALID', W_init=W_init, b_init=b_init, name='c4')
+        b1 = Conv2d(b1, n_pos, (1, 1), (1, 1), None, 'VALID', W_init=W_init, b_init=b_init, name='confs')
+        if is_train:
+            b1.outputs = b1.outputs * mask_miss1
+    with tf.variable_scope("stage1/branch2"):
+        b2 = Conv2d(cnn, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c1')
+        b2 = Conv2d(b2, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c2')
+        b2 = Conv2d(b2, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c3')
+        b2 = Conv2d(b2, 512, (1, 1), (1, 1), tf.nn.relu, 'VALID', W_init=W_init, b_init=b_init, name='c4')
+        b2 = Conv2d(b2, n_pos * 2, (1, 1), (1, 1), None, 'VALID', W_init=W_init, b_init=b_init, name='pafs')
+        if is_train:
+            b2.outputs = b2.outputs * mask_miss2
+    return b1, b2
+
+
+def stage2(cnn, b1, b2, n_pos, maskInput1, maskInput2, is_train, scope_name):
+    """Define the archuecture of stage 2 and so on."""
+    with tf.variable_scope(scope_name):
         net = ConcatLayer([cnn, b1, b2], -1, name='concat')
         with tf.variable_scope("branch1"):
             b1 = Conv2d(net, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c1')
@@ -71,8 +92,6 @@ def vgg_network(x):
 
 def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):
     """Defines the entire pose estimation model."""
-    b1_list = []
-    b2_list = []
     with tf.variable_scope('model', reuse):
         # Feature extraction part
         # 1. by default, following the paper, we use VGG19 as the default model
@@ -81,31 +100,18 @@ def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):
         # 2. you can customize this part to speed up the inferencing
         # cnn = tl.models.MobileNetV1(x, end_with='depth5', is_train=is_train, reuse=reuse)  # i.e. vgg16 conv4_2 ~ 4_4
 
+        b1_list = []
+        b2_list = []
         with tf.variable_scope('cpm', reuse):
             # stage 1
-            with tf.variable_scope("stage1/branch1"):
-                b1 = Conv2d(cnn, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c1')
-                b1 = Conv2d(b1, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c2')
-                b1 = Conv2d(b1, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c3')
-                b1 = Conv2d(b1, 512, (1, 1), (1, 1), tf.nn.relu, 'VALID', W_init=W_init, b_init=b_init, name='c4')
-                b1 = Conv2d(b1, n_pos, (1, 1), (1, 1), None, 'VALID', W_init=W_init, b_init=b_init, name='confs')
-                if is_train:
-                    b1.outputs = b1.outputs * mask_miss1
-            with tf.variable_scope("stage1/branch2"):
-                b2 = Conv2d(cnn, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c1')
-                b2 = Conv2d(b2, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c2')
-                b2 = Conv2d(b2, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', W_init=W_init, b_init=b_init, name='c3')
-                b2 = Conv2d(b2, 512, (1, 1), (1, 1), tf.nn.relu, 'VALID', W_init=W_init, b_init=b_init, name='c4')
-                b2 = Conv2d(b2, n_pos * 2, (1, 1), (1, 1), None, 'VALID', W_init=W_init, b_init=b_init, name='pafs')
-                if is_train:
-                    b2.outputs = b2.outputs * mask_miss2
+            b1, b2 = state1(cnn, n_pos, mask_miss1, mask_miss2, is_train)
             b1_list.append(b1)
             b2_list.append(b2)
-            # stage 2~6
+            # stage 2 ~ 6
             for i in range(2, 7):
-                b1, b2 = stage(
-                    cnn, b1_list[-1], b2_list[-1], n_pos, mask_miss1, mask_miss2, is_train, name='stage%d' % i)
+                b1, b2 = stage2(cnn, b1, b2, n_pos, mask_miss1, mask_miss2, is_train, scope_name='stage%d' % i)
                 b1_list.append(b1)
                 b2_list.append(b2)
-        net = tl.layers.merge_networks([b1_list[-1], b2_list[-1]])
+
+        net = tl.layers.merge_networks([b1, b2])
         return cnn, b1_list, b2_list, net
