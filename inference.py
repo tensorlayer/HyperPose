@@ -113,4 +113,8 @@ def inference(input_files):
 
 if __name__ == '__main__':
     input_files = sys.argv[1:]
+    batch_limit = 5
+    if len(input_files) > batch_limit:
+        print('batch limit is %d' % batch_limit)
+        input_files = input_files[:batch_limit]
     inference(input_files)
