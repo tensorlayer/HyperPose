@@ -138,6 +138,9 @@ class TFPoseDetector : public PoseDetector
     TFPoseDetector(const std::string &graph_path);
     void detect_pose(const std::string &image_path) override;
 
+    detection_result_t
+    get_detection_tensors(const std::string &image_path) override;
+
   private:
     static const int image_height = 368;
     static const int image_width = 432;
@@ -161,7 +164,10 @@ class TFPoseDetector : public PoseDetector
 TFPoseDetector::TFPoseDetector(const std::string &graph_path)
 {
     auto status = LoadGraph_(graph_path, session_);
-    if (!status.ok()) { exit(1); }
+    if (!status.ok()) {
+        LOG(ERROR) << status;
+        exit(1);
+    }
 }
 
 void TFPoseDetector::detect_pose(const std::string &image_path)
@@ -170,36 +176,37 @@ void TFPoseDetector::detect_pose(const std::string &image_path)
     if (!status.ok()) { LOG(WARNING) << status; }
 }
 
-template <typename T> void for4d(int a, int b, int c, int d, const T &tt)
+template <typename T, typename Tensor>
+std::vector<T> export4dtensor(int a, int b, int c, int d, const Tensor &tt)
 {
+    std::vector<T> v(a * b * c * d);
+    int idx = 0;
     for (int i = 0; i < a; ++i) {
         for (int j = 0; j < b; ++j) {
             for (int k = 0; k < c; ++k) {
-                for (int l = 0; l < d; ++l) {
-                    std::cout << "T[" << i << "," << j << "," << k << "," << l
-                              << "] = " << tt(i, j, k, l) << std::endl;
-                }
+                for (int l = 0; l < d; ++l) { v[idx++] = tt(i, j, k, l); }
             }
         }
     }
+    return v;
 }
 
-void export_conf_tensor(const tf::Tensor &t)
+template <typename T> std::vector<T> export_conf_tensor(const tf::Tensor &t)
 {
-    auto tt = t.tensor<float, 4>();
-    // for4d(1, 46, 54, 19, tt);
+    auto tt = t.tensor<T, 4>();
+    return export4dtensor<T>(1, 46, 54, 19, tt);
 }
 
-void export_pafs_tensor(const tf::Tensor &t)
+template <typename T> std::vector<T> export_pafs_tensor(const tf::Tensor &t)
 {
-    auto tt = t.tensor<float, 4>();
-    // for4d(1, 46, 54, 38, tt);
+    auto tt = t.tensor<T, 4>();
+    return export4dtensor<T>(1, 46, 54, 38, tt);
 }
 
-void export_peek_tensor(const tf::Tensor &t)
+template <typename T> std::vector<T> export_peek_tensor(const tf::Tensor &t)
 {
-    auto tt = t.tensor<float, 4>();
-    // for4d(1, 46, 54, 38, tt);
+    auto tt = t.tensor<T, 4>();
+    return export4dtensor<T>(1, 46, 54, 38, tt);
 }
 
 tf::Status TFPoseDetector::detect_pose_(const std::string &image_path)
@@ -215,17 +222,44 @@ tf::Status TFPoseDetector::detect_pose_(const std::string &image_path)
                                 {}, &outputs);
     TF_RETURN_IF_ERROR(status);
 
-    LOG(INFO) << "got " << outputs.size() << " outputs";
-    int idx = 0;
-    for (auto &t : outputs) { debug("output" + std::to_string(++idx), t); }
-
-    export_conf_tensor(outputs[0]);
-    export_pafs_tensor(outputs[1]);
-    export_peek_tensor(outputs[2]);
-
     // TODO: run pafprocess
 
     return tf::Status::OK();
+}
+
+PoseDetector::detection_result_t
+TFPoseDetector::get_detection_tensors(const std::string &image_path)
+{
+    // TODO: read image with opencv
+    std::vector<tf::Tensor> resized_tensors;
+    {
+        auto status = read_and_resize_image(image_path, image_height,
+                                            image_width, resized_tensors);
+        if (!status.ok()) {
+            // TODO: handle error
+            LOG(ERROR) << status;
+            exit(1);
+        }
+    }
+    const auto &resized_tensor = resized_tensors[0];
+
+    std::vector<tf::Tensor> outputs;
+    {
+        auto status = session_->Run({{input_name, resized_tensor}},
+                                    output_names, {}, &outputs);
+        if (!status.ok()) {
+            // TODO: handle error
+            LOG(ERROR) << status;
+            exit(1);
+        }
+    }
+
+    using T = float;
+    const auto t1 = export_conf_tensor<T>(outputs[0]);
+    const auto t2 = export_pafs_tensor<T>(outputs[1]);
+    const auto t3 = export_peek_tensor<T>(outputs[2]);
+
+    return std::make_tuple(t1, t2, t3);
 }
 
 tf::Status TFPoseDetector::LoadGraph_(const std::string &graph_file_name,

@@ -12,7 +12,9 @@ int main()
     const int n = 1;
     for (int i = 0; i < n; ++i) {
         std::string image_path = "../data/test.jpeg";
-        detector->detect_pose(image_path);
+        // detector->detect_pose(image_path);
+        auto results = detector->get_detection_tensors(image_path);
+        // TODO: draw results
     }
     return 0;
 }
