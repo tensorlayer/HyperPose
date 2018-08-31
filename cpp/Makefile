@@ -15,4 +15,4 @@ TF_VERSION = v1.10.1
 
 tensorflow:
 	git clone $(TF_GIT_URL)
-	git checkout $(TF_VERSION)
+	cd tensorflow && git checkout $(TF_VERSION)

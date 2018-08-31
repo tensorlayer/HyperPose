@@ -15,10 +15,8 @@ measure() {
 }
 
 cd $(dirname $0)
-
-make
-
 TF_ROOT=$(pwd)/tensorflow
 PKG=tensorflow/examples/pose-inference
 
+measure make
 measure ${TF_ROOT}/bazel-bin/${PKG}/pose-inference
