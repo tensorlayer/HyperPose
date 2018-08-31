@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import time
 
 import matplotlib
@@ -15,19 +16,27 @@ from models import model
 from utils import draw_results
 
 # TODO: make them flags
-input_file = 'data/test.jpeg'
 model_file = None
+
 # model_file = 'pose1.npz'
 
-if __name__ == '__main__':
+image_height = 368
+image_width = 432
+
+
+def load_image(input_file):
+    im = tl.vis.read_image(input_file)
+    im = tl.prepro.imresize(im, [image_height, image_width])
+    im = im / 255.  # input image 0~1
+    return im
+
+
+def inference(input_files):
     n_pos = config.MODEL.n_pos
     model_path = config.MODEL.model_path
-    h, w = 368, 432  # image size for inferencing, small size can speed up
-    if (h % 16 != 0) or (w % 16 != 0):
-        raise Exception("image size should be divided by 16")
 
     # define model
-    x = tf.placeholder(tf.float32, [None, h, w, 3], "image")
+    x = tf.placeholder(tf.float32, [None, image_height, image_width, 3], "image")
     _, _, _, net = model(x, n_pos, None, None, False, False)
 
     # get output from network
@@ -51,16 +60,13 @@ if __name__ == '__main__':
     if model_file:
         tl.files.load_and_assign_npz_dict(os.path.join(model_path, model_file), sess)
 
-    # get one example image with range 0~1
-    im = tl.vis.read_image(input_file)
-    im = tl.prepro.imresize(im, [h, w])
-    im = im / 255.  # input image 0~1
+    images = [load_image(f) for f in input_files]
 
     # inference
     # 1st time need time to compile
     # _, _ = sess.run([conf_tensor, pafs_tensor], feed_dict={x: [im]})
     st = time.time()
-    conf, pafs, peak = sess.run([conf_tensor, pafs_tensor, peak_tensor], feed_dict={x: [im]})
+    conf, pafs, peak = sess.run([conf_tensor, pafs_tensor, peak_tensor], feed_dict={x: images})
     t = time.time() - st
     print("get maps took {}s i.e. {} FPS".format(t, 1. / t))
     # print(conf.shape, pafs.shape, peak.shape)
@@ -95,10 +101,20 @@ if __name__ == '__main__':
 
         return humans
 
-    humans = estimate_paf(peak[0], conf[0], pafs[0])
-    print(humans)
+    for a, b, c in zip(peak, conf, pafs):
+        humans = estimate_paf(a, b, c)
+        print(humans)
 
     # draw maps
-    draw_results([im], None, conf, None, pafs, None, 'inference')
+    draw_results(images, None, conf, None, pafs, None, 'inference')
 
-    # draw connection
+    # TODO: draw connection
+
+
+if __name__ == '__main__':
+    input_files = sys.argv[1:]
+    batch_limit = 5
+    if len(input_files) > batch_limit:
+        print('batch limit is %d' % batch_limit)
+        input_files = input_files[:batch_limit]
+    inference(input_files)

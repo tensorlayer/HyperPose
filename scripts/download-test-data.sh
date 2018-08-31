@@ -3,7 +3,6 @@
 set -e
 
 cd $(dirname $0)/..
-mkdir -p data
+mkdir -p data && cd data
 
-# download data/test.jpeg
-curl -L https://github.com/CMU-Perceptual-Computing-Lab/openpose/raw/master/examples/media/COCO_val2014_000000000192.jpg >data/test.jpeg
+svn export https://github.com/CMU-Perceptual-Computing-Lab/openpose/trunk/examples/media
