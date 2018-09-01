@@ -291,7 +291,7 @@ class TfPoseEstimator:
         x = tf.placeholder(tf.float32, [None, target_size[1], target_size[0], 3], "image")
         cnn, b1_list, b2_list, net = model(x, 19, False, False)
 
-        tl.layers.initialize_global_variables(self.persistent_sess)
+        self.persistent_sess.run(tf.global_variables_initializer())
         tl.files.load_and_assign_npz_dict(graph_path, self.persistent_sess)
 
         conf_tensor = tl.layers.get_layers_with_name(net, 'model/cpm/stage6/branch1/conf')[0]
