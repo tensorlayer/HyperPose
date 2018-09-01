@@ -57,11 +57,16 @@ if __name__ == '__main__':
     w, h = model_wh(args.resize)
 
     result = []
-    if args.net_type=='full_normal':
-        e= TfPoseEstimator2('/Users/Joel/Desktop/Log_2108/inf_model255000.npz', target_size=(w, h))
-
+    #path to npz model
+    path_to_npz='/Users/Joel/Desktop/Log_2108/inf_model255000.npz'
+    #path to your image folder
     base_dir = '/Users/Joel/Desktop/test/'
+
+    if args.net_type=='full_normal':
+        e= TfPoseEstimator2(path_to_npz, target_size=(w, h))
     imglist=os.listdir(base_dir)
+
+
     for idx,i in enumerate(imglist):
 
         img_name=os.path.join(base_dir,i)
