@@ -1,26 +1,18 @@
 import logging
 import math
-
-import slidingwindow as sw
+import time
 
 import cv2
 import numpy as np
+import slidingwindow as sw
 import tensorflow as tf
-import time
+import tensorlayer as tl
+
 import common
 from common import CocoPart
+from models import model
+from pafprocess import pafprocess
 from tensblur.smoother import Smoother
-import tensorlayer as tl
-# from models import model
-from tensorlayer.layers import *
-
-
-try:
-    from pafprocess import pafprocess
-except ModuleNotFoundError as e:
-    print(e)
-    print('you need to build c++ library for pafprocess. See : https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess')
-    exit(-1)
 
 logger = logging.getLogger('TfPoseEstimator')
 logger.setLevel(logging.INFO)
@@ -29,89 +21,6 @@ formatter = logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname)s] %(messag
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
-def _stage(cnn, b1, b2, n_pos, name='stageX'):
-    with tf.variable_scope(name):
-        net = ConcatLayer([cnn, b1, b2], -1, name='concat')
-        with tf.variable_scope("branch1"):
-            b1 = Conv2d(net, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', name='c1')
-            b1 = Conv2d(b1, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', name='c2')
-            b1 = Conv2d(b1, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', name='c3')
-            b1 = Conv2d(b1, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', name='c4')
-            b1 = Conv2d(b1, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', name='c5')
-            b1 = Conv2d(b1, 128, (1, 1), (1, 1), tf.nn.relu, 'VALID', name='c6')
-            b1 = Conv2d(b1, n_pos, (1, 1), (1, 1), None, 'VALID', name='conf')
-        with tf.variable_scope("branch2"):
-            b2 = Conv2d(net, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', name='c1')
-            b2 = Conv2d(b2, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', name='c2')
-            b2 = Conv2d(b2, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', name='c3')
-            b2 = Conv2d(b2, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', name='c4')
-            b2 = Conv2d(b2, 128, (7, 7), (1, 1), tf.nn.relu, 'SAME', name='c5')
-            b2 = Conv2d(b2, 128, (1, 1), (1, 1), tf.nn.relu, 'VALID', name='c6')
-            b2 = Conv2d(b2, 38, (1, 1), (1, 1), None, 'VALID', name='pafs')
-    return b1, b2
-
-def vgg_network(x):
-    blue, green, red = tf.split(x, 3, 3)
-    bgr = tf.concat([
-        red,
-        green,
-        blue
-    ], axis=3)
-    bgr = bgr / 255.0 - 0.5
-    # input layer
-    net_in = InputLayer(bgr, name='input')
-    # conv1
-    net = Conv2d(net_in, 64, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv1_1')
-    net = Conv2d(net, n_filter=64, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv1_2')
-    net = MaxPool2d(net, filter_size=(2, 2), strides=(2, 2), padding='SAME', name='pool1')
-    # conv2
-    net = Conv2d(net, n_filter=128, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv2_1')
-    net = Conv2d(net, n_filter=128, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv2_2')
-    net = MaxPool2d(net, filter_size=(2, 2), strides=(2, 2), padding='SAME', name='pool2')
-    # conv3
-    net = Conv2d(net, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv3_1')
-    net = Conv2d(net, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv3_2')
-    net = Conv2d(net, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv3_3')
-    net = Conv2d(net, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv3_4')
-    net = MaxPool2d(net, filter_size=(2, 2), strides=(2, 2), padding='SAME', name='pool3')
-    # conv4
-    net = Conv2d(net, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv4_1')
-    net = Conv2d(net, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv4_2')
-    net = Conv2d(net, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv4_3')
-    net = Conv2d(net, n_filter=128, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv4_4')
-
-    return net
-def model(x, n_pos, is_train=False, reuse=None):
-  b1_list = []
-  b2_list = []
-  with tf.variable_scope('model', reuse):
-      # feature extraction part
-      # cnn = tl.models.MobileNetV1(x, end_with='depth5', is_train=is_train, reuse=reuse)  # i.e. vgg16 conv4_2 ~ 4_4
-      cnn=vgg_network(x)
-      with tf.variable_scope('cpm', reuse):
-          # stage 1
-          with tf.variable_scope("stage1"):
-              with tf.variable_scope("branch1"):
-                  b1 = Conv2d(cnn, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', name='c1')
-                  b1 = Conv2d(b1, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', name='c2')
-                  b1 = Conv2d(b1, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', name='c3')
-                  b1 = Conv2d(b1, 512, (1, 1), (1, 1), tf.nn.relu, 'VALID', name='c4')
-                  b1 = Conv2d(b1, n_pos, (1, 1), (1, 1), None, 'VALID', name='confs')
-              with tf.variable_scope("branch2"):
-                  b2 = Conv2d(cnn, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', name='c1')
-                  b2 = Conv2d(b2, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', name='c2')
-                  b2 = Conv2d(b2, 128, (3, 3), (1, 1), tf.nn.relu, 'SAME', name='c3')
-                  b2 = Conv2d(b2, 512, (1, 1), (1, 1), tf.nn.relu, 'VALID', name='c4')
-                  b2 = Conv2d(b2, 38, (1, 1), (1, 1), None, 'VALID', name='pafs')
-              b1_list.append(b1)
-              b2_list.append(b2)
-          # stage 2~6
-          for i in range(2, 7):
-              b1, b2 = _stage(cnn, b1_list[-1], b2_list[-1], n_pos, name='stage%d' % i)
-              b1_list.append(b1)
-              b2_list.append(b2)
-      net = tl.layers.merge_networks([b1_list[-1], b2_list[-1]])
-      return cnn, b1_list, b2_list, net
 
 ###################################
 def _round(v):
@@ -145,12 +54,10 @@ class Human:
 
     def add_pair(self, pair):
         self.pairs.append(pair)
-        self.body_parts[pair.part_idx1] = BodyPart(Human._get_uidx(pair.part_idx1, pair.idx1),
-                                                   pair.part_idx1,
-                                                   pair.coord1[0], pair.coord1[1], pair.score)
-        self.body_parts[pair.part_idx2] = BodyPart(Human._get_uidx(pair.part_idx2, pair.idx2),
-                                                   pair.part_idx2,
-                                                   pair.coord2[0], pair.coord2[1], pair.score)
+        self.body_parts[pair.part_idx1] = BodyPart(
+            Human._get_uidx(pair.part_idx1, pair.idx1), pair.part_idx1, pair.coord1[0], pair.coord1[1], pair.score)
+        self.body_parts[pair.part_idx2] = BodyPart(
+            Human._get_uidx(pair.part_idx2, pair.idx2), pair.part_idx2, pair.coord2[0], pair.coord2[1], pair.score)
         self.uidx_list.add(Human._get_uidx(pair.part_idx1, pair.idx1))
         self.uidx_list.add(Human._get_uidx(pair.part_idx2, pair.idx2))
 
@@ -199,8 +106,7 @@ class Human:
         is_leye, part_leye = _include_part(parts, _LEye)
         if is_reye and is_leye:
             size = max(size, img_w * (part_reye.x - part_leye.x) * 2.0)
-            size = max(size,
-                       img_w * math.sqrt((part_reye.x - part_leye.x) ** 2 + (part_reye.y - part_leye.y) ** 2) * 2.0)
+            size = max(size, img_w * math.sqrt((part_reye.x - part_leye.x)**2 + (part_reye.y - part_leye.y)**2) * 2.0)
 
         if mode == 1:
             if not is_reye and not is_leye:
@@ -237,15 +143,9 @@ class Human:
         if _round(x2 - x) == 0.0 or _round(y2 - y) == 0.0:
             return None
         if mode == 0:
-            return {"x": _round((x + x2) / 2),
-                    "y": _round((y + y2) / 2),
-                    "w": _round(x2 - x),
-                    "h": _round(y2 - y)}
+            return {"x": _round((x + x2) / 2), "y": _round((y + y2) / 2), "w": _round(x2 - x), "h": _round(y2 - y)}
         else:
-            return {"x": _round(x),
-                    "y": _round(y),
-                    "w": _round(x2 - x),
-                    "h": _round(y2 - y)}
+            return {"x": _round(x), "y": _round(y), "w": _round(x2 - x), "h": _round(y2 - y)}
 
     def get_upper_body_box(self, img_w, img_h):
         """
@@ -264,8 +164,9 @@ class Human:
         _LSHOULDER = CocoPart.LShoulder.value
         _THRESHOLD_PART_CONFIDENCE = 0.3
         parts = [part for idx, part in self.body_parts.items() if part.score > _THRESHOLD_PART_CONFIDENCE]
-        part_coords = [(img_w * part.x, img_h * part.y) for part in parts if
-                       part.part_idx in [0, 1, 2, 5, 8, 11, 14, 15, 16, 17]]
+        part_coords = [
+            (img_w * part.x, img_h * part.y) for part in parts if part.part_idx in [0, 1, 2, 5, 8, 11, 14, 15, 16, 17]
+        ]
 
         if len(part_coords) < 5:
             return None
@@ -314,10 +215,7 @@ class Human:
 
         if _round(x2 - x) == 0.0 or _round(y2 - y) == 0.0:
             return None
-        return {"x": _round((x + x2) / 2),
-                "y": _round((y + y2) / 2),
-                "w": _round(x2 - x),
-                "h": _round(y2 - y)}
+        return {"x": _round((x + x2) / 2), "y": _round((y + y2) / 2), "w": _round(x2 - x), "h": _round(y2 - y)}
 
     def __str__(self):
         return ' '.join([str(x) for x in self.body_parts.values()])
@@ -351,6 +249,7 @@ class BodyPart:
 
 
 class PoseEstimator:
+
     def __init__(self):
         pass
 
@@ -369,12 +268,10 @@ class PoseEstimator:
                     continue
 
                 is_added = True
-                human.body_parts[part_idx] = BodyPart(
-                    '%d-%d' % (human_id, part_idx), part_idx,
-                    float(pafprocess.get_part_x(c_idx)) / heat_mat.shape[1],
-                    float(pafprocess.get_part_y(c_idx)) / heat_mat.shape[0],
-                    pafprocess.get_part_score(c_idx)
-                )
+                human.body_parts[part_idx] = BodyPart('%d-%d' % (human_id, part_idx), part_idx,
+                                                      float(pafprocess.get_part_x(c_idx)) / heat_mat.shape[1],
+                                                      float(pafprocess.get_part_y(c_idx)) / heat_mat.shape[0],
+                                                      pafprocess.get_part_score(c_idx))
 
             if is_added:
                 score = pafprocess.get_score(human_id)
@@ -395,8 +292,7 @@ class TfPoseEstimator:
         cnn, b1_list, b2_list, net = model(x, 19, False, False)
 
         tl.layers.initialize_global_variables(self.persistent_sess)
-        tl.files.load_and_assign_npz_dict(graph_path,
-                                          self.persistent_sess)
+        tl.files.load_and_assign_npz_dict(graph_path, self.persistent_sess)
 
         conf_tensor = tl.layers.get_layers_with_name(net, 'model/cpm/stage6/branch1/conf')[0]
         pafs_tensor = tl.layers.get_layers_with_name(net, 'model/cpm/stage6/branch2/pafs')[0]
@@ -409,28 +305,22 @@ class TfPoseEstimator:
         self.tensor_pafMat = pafs_tensor
 
         self.upsample_size = tf.placeholder(dtype=tf.int32, shape=(2,), name='upsample_size')
-        self.tensor_heatMat_up = tf.image.resize_area(conf_tensor, self.upsample_size,
-                                                      align_corners=False, name='upsample_heatmat')
-        self.tensor_pafMat_up = tf.image.resize_area(pafs_tensor, self.upsample_size,
-                                                     align_corners=False, name='upsample_pafmat')
+        self.tensor_heatMat_up = tf.image.resize_area(
+            conf_tensor, self.upsample_size, align_corners=False, name='upsample_heatmat')
+        self.tensor_pafMat_up = tf.image.resize_area(
+            pafs_tensor, self.upsample_size, align_corners=False, name='upsample_pafmat')
         smoother = Smoother({'data': self.tensor_heatMat_up}, 25, 3.0)
         gaussian_heatMat = smoother.get_output()
 
         max_pooled_in_tensor = tf.nn.pool(gaussian_heatMat, window_shape=(3, 3), pooling_type='MAX', padding='SAME')
-        self.tensor_peaks = tf.where(tf.equal(gaussian_heatMat, max_pooled_in_tensor),
-                                     gaussian_heatMat,
-                                     tf.zeros_like(gaussian_heatMat)
-                                     )
+        self.tensor_peaks = tf.where(
+            tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat, tf.zeros_like(gaussian_heatMat))
         self.heatMat = self.pafMat = None
-        print([x.decode('utf-8') for x in
-                                      self.persistent_sess.run(tf.report_uninitialized_variables())])
+        print([x.decode('utf-8') for x in self.persistent_sess.run(tf.report_uninitialized_variables())])
         # warm-up
-        self.persistent_sess.run(tf.variables_initializer(
-            [v for v in tf.global_variables() if
-             v.name.split(':')[0] in ['smoothing/gauss_weight']
-             ])
-        )
-
+        self.persistent_sess.run(
+            tf.variables_initializer(
+                [v for v in tf.global_variables() if v.name.split(':')[0] in ['smoothing/gauss_weight']]))
 
     def __del__(self):
         # self.persistent_sess.close()
@@ -439,7 +329,7 @@ class TfPoseEstimator:
     @staticmethod
     def _quantize_img(npimg):
         npimg_q = npimg + 1.0
-        npimg_q /= (2.0 / 2 ** 8)
+        npimg_q /= (2.0 / 2**8)
         # npimg_q += 0.5
         npimg_q = npimg_q.astype(np.uint8)
         return npimg_q
@@ -591,8 +481,10 @@ class TfPoseEstimator:
         if resize_to_default:
             img = self._get_scaled_img(npimg, None)[0][0]
         peaks, heatMat_up, pafMat_up = self.persistent_sess.run(
-            [self.tensor_peaks, self.tensor_heatMat_up, self.tensor_pafMat_up], feed_dict={
-                self.tensor_image: [img], self.upsample_size: upsample_size
+            [self.tensor_peaks, self.tensor_heatMat_up, self.tensor_pafMat_up],
+            feed_dict={
+                self.tensor_image: [img],
+                self.upsample_size: upsample_size
             })
         peaks = peaks[0]
         # import matplotlib.pyplot as plt
@@ -602,11 +494,11 @@ class TfPoseEstimator:
         # plt.show()
         self.heatMat = heatMat_up[0]
         self.pafMat = pafMat_up[0]
-        logger.debug('inference- heatMat=%dx%d pafMat=%dx%d' % (
-            self.heatMat.shape[1], self.heatMat.shape[0], self.pafMat.shape[1], self.pafMat.shape[0]))
+        logger.debug('inference- heatMat=%dx%d pafMat=%dx%d' % (self.heatMat.shape[1], self.heatMat.shape[0],
+                                                                self.pafMat.shape[1], self.pafMat.shape[0]))
 
         t = time.time()
-        print('SHAPE',peaks.shape)
+        print('SHAPE', peaks.shape)
         humans = PoseEstimator.estimate_paf(peaks, self.heatMat, self.pafMat)
         logger.debug('estimate time=%.5f' % (time.time() - t))
         return humans
@@ -622,6 +514,6 @@ if __name__ == '__main__':
 
     t = time.time()
     humans = PoseEstimator.estimate_paf(data['peaks'], data['heatMat'], data['pafMat'])
-    dt = time.time() - t;
+    dt = time.time() - t
     t = time.time()
     logger.info('elapsed #humans=%d time=%.8f' % (len(humans), dt))
