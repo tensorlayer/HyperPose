@@ -3,7 +3,6 @@ from enum import Enum
 import tensorflow as tf
 import cv2
 
-
 regularizer_conv = 0.004
 regularizer_dsconv = 0.0004
 batchnorm_fused = True
@@ -95,10 +94,9 @@ class MPIIPart(Enum):
             visibilty.append(True)
         return pose_2d_mpii, visibilty
 
-CocoPairs = [
-    (1, 2), (1, 5), (2, 3), (3, 4), (5, 6), (6, 7), (1, 8), (8, 9), (9, 10), (1, 11),
-    (11, 12), (12, 13), (1, 0), (0, 14), (14, 16), (0, 15), (15, 17), (2, 16), (5, 17)
-]   # = 19
+
+CocoPairs = [(1, 2), (1, 5), (2, 3), (3, 4), (5, 6), (6, 7), (1, 8), (8, 9), (9, 10), (1, 11), (11, 12), (12, 13),
+             (1, 0), (0, 14), (14, 16), (0, 15), (15, 17), (2, 16), (5, 17)]  # = 19
 CocoPairsRender = CocoPairs[:-2]
 # CocoPairsNetwork = [
 #     (12, 13), (20, 21), (14, 15), (16, 17), (22, 23), (24, 25), (0, 1), (2, 3), (4, 5),
