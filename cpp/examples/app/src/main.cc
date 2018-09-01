@@ -6,7 +6,7 @@
 #include <tensorflow/examples/pose-inference/pose-detector.h>
 
 #include "input.h"
-#include "timer.h"
+#include "tracer.h"
 
 void camera_example()
 {
@@ -33,7 +33,7 @@ void pose_example(const std::vector<std::string> &image_files)
     std::string graph_path = "checkpoints/freezed";
     std::unique_ptr<PoseDetector> detector;
     {
-        timer_t _("create_pose_detector");
+        tracer_t _("create_pose_detector");
         create_pose_detector(graph_path, detector);
     }
 
@@ -41,7 +41,7 @@ void pose_example(const std::vector<std::string> &image_files)
         const auto img = input_image(f.c_str());
         // detector->detect_pose(image_path);
         {
-            timer_t _("get_detection_tensors");
+            tracer_t _("get_detection_tensors");
             auto results = detector->get_detection_tensors(img);
         }
         // auto results = detector->get_detection_tensors(f);

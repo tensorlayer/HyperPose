@@ -4,15 +4,15 @@
 #include <cstdio>
 #include <string>
 
-class timer_t
+class tracer_t
 {
   public:
-    timer_t(const std::string &name)
+    tracer_t(const std::string &name)
         : name_(name), t0_(std::chrono::system_clock::now())
     {
     }
 
-    ~timer_t()
+    ~tracer_t()
     {
         const auto now = std::chrono::system_clock::now();
         const std::chrono::duration<double> d = now - t0_;
