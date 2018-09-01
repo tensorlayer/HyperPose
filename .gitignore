@@ -12,3 +12,4 @@ cocoapi-master/
 cocoapi/
 inference/*png
 models_*
+.idea
