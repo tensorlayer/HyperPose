@@ -1,6 +1,7 @@
 cython
 numpy
 easydict
+slidingwindow
 opencv-python
 tensorflow
 nltk # required by tensorlayer
