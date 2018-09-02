@@ -15,21 +15,21 @@ measure() {
 }
 
 cd $(dirname $0)/..
-
 ROOT=$(pwd)
 
-TF_ROOT=${ROOT}/cpp/tensorflow
+TF_VERSION=$(python3 -c "import tensorflow as tf; print(tf.__version__)")
+TF_TAG=v${TF_VERSION}
 
-FREEZE_GRAPH_BIN=${TF_ROOT}/tensorflow/python/tools/freeze_graph.py
+FREEZE_GRAPH_URL=https://raw.githubusercontent.com/tensorflow/tensorflow/${TF_TAG}/tensorflow/python/tools/freeze_graph.py
+FREEZE_GRAPH_BIN=${ROOT}/scripts/freeze_graph.py
+
+[ ! -f ${FREEZE_GRAPH_BIN} ] && curl -s ${FREEZE_GRAPH_URL} >${FREEZE_GRAPH_BIN}
 
 GRAPH_FILE=checkpoints/graph.pb.txt
 CHECKPOINT=checkpoints/saved_checkpoint-0
 OUTPUT_GRAPH=checkpoints/freezed
 
-name1=model/cpm/stage6/branch1/conf/BiasAdd
-name2=model/cpm/stage6/branch2/pafs/BiasAdd
-name3=Select # the peek tensor
-OUTPUT_NODE_NAMES=${name1},${name2},${name3}
+OUTPUT_NODE_NAMES=image,upsample_size,upsample_heatmat,tensor_peaks,upsample_pafmat
 
 freeze() {
     python3 ${FREEZE_GRAPH_BIN} \
@@ -39,5 +39,5 @@ freeze() {
         --output_node_names ${OUTPUT_NODE_NAMES}
 }
 
-measure ./export.py
+measure ./inference/export.py
 measure freeze

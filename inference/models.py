@@ -122,11 +122,12 @@ def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):
         return cnn, b1_list, b2_list, net
 
 
-def _get_peek(tensor):
+def _get_peek(tensor, name):
     smoother = Smoother({'data': tensor}, 25, 3.0)
     gaussian_heatMat = smoother.get_output()
     max_pooled_in_tensor = tf.nn.pool(gaussian_heatMat, window_shape=(3, 3), pooling_type='MAX', padding='SAME')
-    return tf.where(tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat, tf.zeros_like(gaussian_heatMat))
+    return tf.where(
+        tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat, tf.zeros_like(gaussian_heatMat), name)
 
 
 def full_model(n_pos, target_size=(368, 368)):
@@ -145,5 +146,5 @@ def full_model(n_pos, target_size=(368, 368)):
     tensor_heatMat_up = upsample(conf_tensor, 'upsample_heatmat')
 
     # TODO: consider use named tuple
-    return (image, upsample_size, tensor_heatMat_up, _get_peek(tensor_heatMat_up),
+    return (image, upsample_size, tensor_heatMat_up, _get_peek(tensor_heatMat_up, 'tensor_peaks'),
             upsample(pafs_tensor, 'upsample_pafmat'))

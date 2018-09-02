@@ -1,4 +1,5 @@
 from enum import Enum
+import time
 
 import tensorflow as tf
 import cv2
@@ -131,3 +132,33 @@ def get_sample_images(w, h):
         read_imgfile('./images/p3_dance.png', w, h),
     ]
     return val_image
+
+
+def load_graph(model_file):
+    """Load a freezed graph from file."""
+    graph_def = tf.GraphDef()
+    with open(model_file, "rb") as f:
+        graph_def.ParseFromString(f.read())
+
+    graph = tf.Graph()
+    with graph.as_default():
+        tf.import_graph_def(graph_def)
+    return graph
+
+
+def get_op(graph, name):
+    return graph.get_operation_by_name('import/%s' % name).outputs[0]
+
+
+def measure(f, name=None):
+    if not name:
+        name = f.__name__
+    t0 = time.time()
+    result = f()
+    print('start %s' % name)
+    duration = time.time() - t0
+    line = '%s took %fs' % (name, duration)
+    print(line)
+    with open('profile.log', 'a') as f:
+        f.write(line + '\n')
+    return result

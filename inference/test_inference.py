@@ -4,23 +4,10 @@ import os
 import sys
 import time
 
-from common import read_imgfile
+from common import read_imgfile, measure
 from estimator2 import TfPoseEstimator as TfPoseEstimator2
 
 TRAVIS_CI = os.getenv('TRAVIS') == 'true'
-
-
-def measure(f, name=None):
-    if not name:
-        name = f.__name__
-    t0 = time.time()
-    result = f()
-    duration = time.time() - t0
-    line = '%s took %fs' % (name, duration)
-    print(line)
-    with open('profile.log', 'a') as f:
-        f.write(line + '\n')
-    return result
 
 
 def inference(input_files):
