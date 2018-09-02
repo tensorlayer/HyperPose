@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 import os
 import numpy as np
@@ -6,7 +8,7 @@ import argparse
 import json, re
 from tqdm import tqdm
 
-from common import read_imgfile
+from common import read_imgfile, plot_humans
 from estimator2 import TfPoseEstimator as TfPoseEstimator2
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -81,44 +83,10 @@ if __name__ == '__main__':
         e = TfPoseEstimator2(path_to_npz, target_size=(w, h))
     imglist = os.listdir(base_dir)
 
-    for idx, i in enumerate(imglist):
-
-        img_name = os.path.join(base_dir, i)
+    for idx, image_name in enumerate(imglist):
+        img_name = os.path.join(base_dir, image_name)
         image = read_imgfile(img_name, None, None)
 
         # inference the image with the specified network
-        humans = e.inference(image, resize_to_default=(w > 0 and h > 0), upsample_size=args.resize_out_ratio)
-
-        if True:
-            # logger.info('score:', k, len(humans), len(anns), avg_score)
-
-            import matplotlib.pyplot as plt
-            fig = plt.figure()
-            a = fig.add_subplot(2, 3, 1)
-
-            plt.imshow(e.draw_humans(image[..., ::-1], humans, True))
-
-            a = fig.add_subplot(2, 3, 2)
-            # plt.imshow(cv2.resize(image, (e.heatMat.shape[1], e.heatMat.shape[0])), alpha=0.5)
-            tmp = np.amax(e.heatMat[:, :, :-1], axis=2)
-            plt.imshow(tmp, cmap=plt.cm.gray, alpha=0.5)
-            plt.colorbar()
-
-            tmp2 = e.pafMat.transpose((2, 0, 1))
-            tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
-            tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
-
-            a = fig.add_subplot(2, 3, 4)
-            a.set_title('Vectormap-x')
-            # plt.imshow(CocoPose.get_bgimg(inp, target_size=(vectmap.shape[1], vectmap.shape[0])), alpha=0.5)
-            plt.imshow(tmp2_odd, cmap=plt.cm.gray, alpha=0.5)
-            plt.colorbar()
-
-            a = fig.add_subplot(2, 3, 5)
-            a.set_title('Vectormap-y')
-            # plt.imshow(CocoPose.get_bgimg(inp, target_size=(vectmap.shape[1], vectmap.shape[0])), alpha=0.5)
-            plt.imshow(tmp2_even, cmap=plt.cm.gray, alpha=0.5)
-            plt.colorbar()
-            # plt.savefig('report_img/' + args.net_type+'test'+str(idx)+ ".png",dpi=300)
-            # plt.cla
-            plt.show()
+        humans = e.inference(image, resize_to_default=(w > 0 and h > 0), resize_out_ratio=args.resize_out_ratio)
+        plot_humans(e, image, humans, '%02d' % (idx + 1))

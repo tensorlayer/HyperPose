@@ -20,10 +20,7 @@ SCRIPT_DIR=$(pwd)
 cd ${SCRIPT_DIR}/../../..
 ROOT=$(pwd)
 
-TF_ROOT=${ROOT}/cpp/tensorflow
-
-export LD_LIBRARY_PATH=${TF_ROOT}
-
-for f in $(find data/media | grep .jpg); do
-    measure ${SCRIPT_DIR}/cmake-build/Darwin/bin/see-pose $f
-done
+batch_limit=2
+measure ${SCRIPT_DIR}/cmake-build/Darwin/bin/see-pose \
+    --graph_path=checkpoints/freezed \
+    --input_images=$(ls data/media/*.jpg | head -n $batch_limit | tr '\n' ',')

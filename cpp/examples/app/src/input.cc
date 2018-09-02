@@ -20,9 +20,9 @@ std::vector<float> input_image(const char *filename)
     for (int i = 0; i < image_height; ++i) {
         for (int j = 0; j < image_width; ++j) {
             const auto pix = dst.at<cv::Vec3b>(i, j);
-            output[idx++] = pix[2] / 255.0;
-            output[idx++] = pix[1] / 255.0;
             output[idx++] = pix[0] / 255.0;
+            output[idx++] = pix[1] / 255.0;
+            output[idx++] = pix[2] / 255.0;
         }
     }
     return output;

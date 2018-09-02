@@ -1,0 +1,2 @@
+INCLUDE_DIRECTORIES(${PROJECT_ROOT}/3rdparty/local/include)
+LINK_DIRECTORIES(${PROJECT_ROOT}/3rdparty/local/lib)

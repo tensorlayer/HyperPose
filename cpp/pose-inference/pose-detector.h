@@ -11,7 +11,7 @@ class PoseDetector
 
     // non stable API
     using vec_t = std::vector<float>;
-    using detection_input_t = vec_t;              // 368 x 432 x 3
+    using detection_input_t = vec_t;  // 368 x 432 x 3 == (46*8) x (54*8) x 3
     using detection_result_t = std::tuple<vec_t,  // 46 x 54 x 19
                                           vec_t,  // 46 x 54 x 19 x 2
                                           vec_t   // 46 x 54 x 19 x 2

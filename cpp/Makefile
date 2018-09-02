@@ -1,6 +1,9 @@
 TF_ROOT = $(CURDIR)/tensorflow
 PKG = tensorflow/examples/pose-inference
 
+# default: opencv_example
+default: all
+
 all: \
 	libpose-inference \
 	opencv_example

@@ -10,7 +10,7 @@ import tensorflow as tf
 import tensorlayer as tl
 
 from estimator2 import TfPoseEstimator as TfPoseEstimator2
-from common import read_imgfile, measure, load_graph, get_op
+from common import read_imgfile, measure, load_graph, get_op, plot_humans
 
 path_to_freezed = 'checkpoints/freezed'
 
@@ -45,14 +45,17 @@ class TfPoseEstimator2Loader(TfPoseEstimator2):
 
 
 def inference(input_files):
-    e = measure(lambda: TfPoseEstimator2Loader(path_to_freezed, target_size=(432, 368)), 'create TfPoseEstimator2')
+    e = measure(lambda: TfPoseEstimator2Loader(path_to_freezed, target_size=(432, 368)),
+                'create TfPoseEstimator2Loader')
 
-    for img_name in input_files:
+    for idx, img_name in enumerate(input_files):
         image = read_imgfile(img_name, None, None)
-        humans = measure(lambda: e.inference(image), 'inference')
+        humans = measure(lambda: e.inference(image, resize_out_ratio=8.0), 'inference')
         print('got %d humans from %s' % (len(humans), img_name))
-        for h in humans:
-            print(h)
+        if humans:
+            for h in humans:
+                print(h)
+            plot_humans(e, image, humans, '%02d' % (idx + 1))
 
 
 def main():
