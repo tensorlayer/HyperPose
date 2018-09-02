@@ -1,8 +1,8 @@
 from enum import Enum
-
-import cv2
+import time
 
 import tensorflow as tf
+import cv2
 
 regularizer_conv = 0.004
 regularizer_dsconv = 0.0004
@@ -86,8 +86,7 @@ class MPIIPart(Enum):
 
         pose_2d_mpii = []
         visibilty = []
-        # for mpi, coco in t:
-        for _, coco in t:
+        for mpi, coco in t:
             if coco.value not in human.body_parts.keys():
                 pose_2d_mpii.append((0, 0))
                 visibilty.append(False)
@@ -97,21 +96,17 @@ class MPIIPart(Enum):
         return pose_2d_mpii, visibilty
 
 
-CocoPairs = [
-    (1, 2), (1, 5), (2, 3), (3, 4), (5, 6), (6, 7), (1, 8), (8, 9), (9, 10), (1, 11), (11, 12), (12, 13), (1, 0),
-    (0, 14), (14, 16), (0, 15), (15, 17), (2, 16), (5, 17)
-]  # = 19
+CocoPairs = [(1, 2), (1, 5), (2, 3), (3, 4), (5, 6), (6, 7), (1, 8), (8, 9), (9, 10), (1, 11), (11, 12), (12, 13),
+             (1, 0), (0, 14), (14, 16), (0, 15), (15, 17), (2, 16), (5, 17)]  # = 19
 CocoPairsRender = CocoPairs[:-2]
 # CocoPairsNetwork = [
 #     (12, 13), (20, 21), (14, 15), (16, 17), (22, 23), (24, 25), (0, 1), (2, 3), (4, 5),
 #     (6, 7), (8, 9), (10, 11), (28, 29), (30, 31), (34, 35), (32, 33), (36, 37), (18, 19), (26, 27)
 #  ]  # = 19
 
-CocoColors = [
-    [255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0], [0, 255, 85],
-    [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255], [170, 0, 255], [255, 0, 255],
-    [255, 0, 170], [255, 0, 85]
-]
+CocoColors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0],
+              [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],
+              [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
 
 
 def read_imgfile(path, width=None, height=None):
@@ -137,3 +132,33 @@ def get_sample_images(w, h):
         read_imgfile('./images/p3_dance.png', w, h),
     ]
     return val_image
+
+
+def load_graph(model_file):
+    """Load a freezed graph from file."""
+    graph_def = tf.GraphDef()
+    with open(model_file, "rb") as f:
+        graph_def.ParseFromString(f.read())
+
+    graph = tf.Graph()
+    with graph.as_default():
+        tf.import_graph_def(graph_def)
+    return graph
+
+
+def get_op(graph, name):
+    return graph.get_operation_by_name('import/%s' % name).outputs[0]
+
+
+def measure(f, name=None):
+    if not name:
+        name = f.__name__
+    t0 = time.time()
+    result = f()
+    print('start %s' % name)
+    duration = time.time() - t0
+    line = '%s took %fs' % (name, duration)
+    print(line)
+    with open('profile.log', 'a') as f:
+        f.write(line + '\n')
+    return result

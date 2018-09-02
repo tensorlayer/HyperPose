@@ -12,9 +12,9 @@ before_install:
 - pip install -r requirements.txt
 - pip install pycocotools  # must be installed after cython is installed
 - pip install git+https://github.com/tensorlayer/tensorlayer.git  # TODO: create a latest release for TL
-- make
+- ./scripts/install-pafprocess.sh
 - ./scripts/download-test-data.sh
 
 script:
-- python inference.py data/media/*.jpg
+- python ./inference/test_inference.py data/media/*.jpg
 # TODO: add move tests
