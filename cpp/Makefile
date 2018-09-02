@@ -1,4 +1,4 @@
-TF_ROOT = $(PWD)/tensorflow
+TF_ROOT = $(CURDIR)/tensorflow
 PKG = tensorflow/examples/pose-inference
 
 all: \
@@ -7,7 +7,7 @@ all: \
 
 libpose-inference: tensorflow
 	rm -fr $(TF_ROOT)/$(PKG)
-	cp -r pose-inference $(TF_ROOT)/$(PKG)
+	cp -r $(CURDIR)/pose-inference $(TF_ROOT)/$(PKG)
 	cd $(TF_ROOT) && bazel build //$(PKG):all
 
 run: libpose-inference
