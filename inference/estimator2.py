@@ -10,7 +10,7 @@ import tensorlayer as tl
 
 import common
 from common import CocoPart
-from models import model
+from models import full_model
 from pafprocess import pafprocess
 from tensblur.smoother import Smoother
 
@@ -286,41 +286,14 @@ class TfPoseEstimator:
 
     def __init__(self, graph_path, target_size=(368, 368), tf_config=None):
         self.target_size = target_size
+        (self.tensor_image, self.upsample_size, self.tensor_heatMat_up, self.tensor_peaks,
+         self.tensor_pafMat_up) = full_model(19, target_size)
+        self._warm_up(graph_path)
 
+    def _warm_up(self, graph_path):
         self.persistent_sess = tf.InteractiveSession()
-        x = tf.placeholder(tf.float32, [None, target_size[1], target_size[0], 3], "image")
-        cnn, b1_list, b2_list, net = model(x, 19, False, False)
-
         self.persistent_sess.run(tf.global_variables_initializer())
         tl.files.load_and_assign_npz_dict(graph_path, self.persistent_sess)
-
-        conf_tensor = tl.layers.get_layers_with_name(net, 'model/cpm/stage6/branch1/conf')[0]
-        pafs_tensor = tl.layers.get_layers_with_name(net, 'model/cpm/stage6/branch2/pafs')[0]
-
-        self.tensor_image = x
-        self.tensor_output1 = conf_tensor
-        self.tensor_output2 = pafs_tensor
-
-        self.tensor_heatMat = conf_tensor
-        self.tensor_pafMat = pafs_tensor
-
-        self.upsample_size = tf.placeholder(dtype=tf.int32, shape=(2,), name='upsample_size')
-        self.tensor_heatMat_up = tf.image.resize_area(
-            conf_tensor, self.upsample_size, align_corners=False, name='upsample_heatmat')
-        self.tensor_pafMat_up = tf.image.resize_area(
-            pafs_tensor, self.upsample_size, align_corners=False, name='upsample_pafmat')
-        smoother = Smoother({'data': self.tensor_heatMat_up}, 25, 3.0)
-        gaussian_heatMat = smoother.get_output()
-
-        max_pooled_in_tensor = tf.nn.pool(gaussian_heatMat, window_shape=(3, 3), pooling_type='MAX', padding='SAME')
-        self.tensor_peaks = tf.where(
-            tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat, tf.zeros_like(gaussian_heatMat))
-        self.heatMat = self.pafMat = None
-        print([x.decode('utf-8') for x in self.persistent_sess.run(tf.report_uninitialized_variables())])
-        # warm-up
-        self.persistent_sess.run(
-            tf.variables_initializer(
-                [v for v in tf.global_variables() if v.name.split(':')[0] in ['smoothing/gauss_weight']]))
 
     def __del__(self):
         # self.persistent_sess.close()
