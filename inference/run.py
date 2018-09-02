@@ -20,14 +20,18 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 eval_size = 100
+
+
 def round_int(val):
     return int(round(val))
+
 
 def model_wh(resolution_str):
     width, height = map(int, resolution_str.split('x'))
     if width % 16 != 0 or height % 16 != 0:
         raise Exception('Width and height should be multiples of 16. w=%d, h=%d' % (width, height))
     return int(width), int(height)
+
 
 def write_coco_json(human, image_w, image_h):
     keypoints = []
@@ -43,8 +47,18 @@ def write_coco_json(human, image_w, image_h):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Tensorflow Openpose Inference')
-    parser.add_argument('--resize', type=str, default='432x368', help='if provided, resize images before they are processed. default=0x0, Recommends : 432x368 or 656x368 or 1312x736 ')
-    parser.add_argument('--resize-out-ratio', type=float, default=8.0, help='if provided, resize heatmaps before they are post-processed. default=8.0')
+    parser.add_argument(
+        '--resize',
+        type=str,
+        default='432x368',
+        help=
+        'if provided, resize images before they are processed. default=0x0, Recommends : 432x368 or 656x368 or 1312x736 '
+    )
+    parser.add_argument(
+        '--resize-out-ratio',
+        type=float,
+        default=8.0,
+        help='if provided, resize heatmaps before they are post-processed. default=8.0')
     parser.add_argument('--model', type=str, default='cmu', help='cmu / mobilenet_thin')
     parser.add_argument('--cocoyear', type=str, default='2017')
     parser.add_argument('--coco-dir', type=str, default='/Users/Joel/Desktop/coco2/')
@@ -53,23 +67,23 @@ if __name__ == '__main__':
     parser.add_argument('--net_type', type=str, default='full_normal')
     args = parser.parse_args()
 
-
     w, h = model_wh(args.resize)
 
     result = []
     #path to npz model
-    path_to_npz='/Users/Joel/Desktop/Log_2108/inf_model255000.npz'
+    desktop = os.path.join(os.getenv('HOME'), 'Desktop')
+    path_to_npz = os.path.join(desktop, 'Log_2108/inf_model255000.npz')
     #path to your image folder
-    base_dir = '/Users/Joel/Desktop/test/'
+    # base_dir = '/Users/Joel/Desktop/test/'
+    base_dir = './data/media/'
 
-    if args.net_type=='full_normal':
-        e= TfPoseEstimator2(path_to_npz, target_size=(w, h))
-    imglist=os.listdir(base_dir)
+    if args.net_type == 'full_normal':
+        e = TfPoseEstimator2(path_to_npz, target_size=(w, h))
+    imglist = os.listdir(base_dir)
 
+    for idx, i in enumerate(imglist):
 
-    for idx,i in enumerate(imglist):
-
-        img_name=os.path.join(base_dir,i)
+        img_name = os.path.join(base_dir, i)
         image = read_imgfile(img_name, None, None)
 
         # inference the image with the specified network
@@ -82,7 +96,7 @@ if __name__ == '__main__':
             fig = plt.figure()
             a = fig.add_subplot(2, 3, 1)
 
-            plt.imshow(e.draw_humans(image[...,::-1], humans, True))
+            plt.imshow(e.draw_humans(image[..., ::-1], humans, True))
 
             a = fig.add_subplot(2, 3, 2)
             # plt.imshow(cv2.resize(image, (e.heatMat.shape[1], e.heatMat.shape[0])), alpha=0.5)
@@ -108,4 +122,3 @@ if __name__ == '__main__':
             # plt.savefig('report_img/' + args.net_type+'test'+str(idx)+ ".png",dpi=300)
             # plt.cla
             plt.show()
-
