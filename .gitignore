@@ -1,6 +1,11 @@
 __pycache__
+.idea
 *.avi
 *.jpg
+*.log
+*.png
+/3rdparty
+/checkpoints
 /coco
 /data
 /models
@@ -10,4 +15,3 @@ cocoapi-master/
 cocoapi/
 inference/*png
 models_*
-.idea

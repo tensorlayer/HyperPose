@@ -274,8 +274,7 @@ class PoseEstimator:
                                                       pafprocess.get_part_score(c_idx))
 
             if is_added:
-                score = pafprocess.get_score(human_id)
-                human.score = score
+                human.score = pafprocess.get_score(human_id)
                 humans.append(human)
 
         return humans
@@ -435,14 +434,17 @@ class TfPoseEstimator:
         else:
             return cropped
 
-    def inference(self, npimg, resize_to_default=True, upsample_size=1.0):
+    def inference(self, npimg, resize_to_default=True, resize_out_ratio=1.0):
         if npimg is None:
             raise Exception('The image is not valid. Please check your image exists.')
 
         if resize_to_default:
-            upsample_size = [int(self.target_size[1] / 8 * upsample_size), int(self.target_size[0] / 8 * upsample_size)]
+            upsample_size = [
+                int(self.target_size[1] / 8 * resize_out_ratio),
+                int(self.target_size[0] / 8 * resize_out_ratio)
+            ]
         else:
-            upsample_size = [int(npimg.shape[0] / 8 * upsample_size), int(npimg.shape[1] / 8 * upsample_size)]
+            upsample_size = [int(npimg.shape[0] / 8 * resize_out_ratio), int(npimg.shape[1] / 8 * resize_out_ratio)]
 
         if self.tensor_image.dtype == tf.quint8:
             # quantize input image
