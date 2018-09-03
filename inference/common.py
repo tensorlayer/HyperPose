@@ -1,5 +1,8 @@
 from enum import Enum
+import time
+from distutils.dir_util import mkpath
 
+import numpy as np
 import tensorflow as tf
 import cv2
 
@@ -131,3 +134,66 @@ def get_sample_images(w, h):
         read_imgfile('./images/p3_dance.png', w, h),
     ]
     return val_image
+
+
+def load_graph(model_file):
+    """Load a freezed graph from file."""
+    graph_def = tf.GraphDef()
+    with open(model_file, "rb") as f:
+        graph_def.ParseFromString(f.read())
+
+    graph = tf.Graph()
+    with graph.as_default():
+        tf.import_graph_def(graph_def)
+    return graph
+
+
+def get_op(graph, name):
+    return graph.get_operation_by_name('import/%s' % name).outputs[0]
+
+
+def measure(f, name=None):
+    if not name:
+        name = f.__name__
+    t0 = time.time()
+    result = f()
+    print('start %s' % name)
+    duration = time.time() - t0
+    line = '%s took %fs' % (name, duration)
+    print(line)
+    with open('profile.log', 'a') as f:
+        f.write(line + '\n')
+    return result
+
+
+def plot_humans(e, image, humans, name):
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    a = fig.add_subplot(2, 3, 1)
+
+    plt.imshow(e.draw_humans(image[..., ::-1], humans, True))
+
+    a = fig.add_subplot(2, 3, 2)
+    # plt.imshow(cv2.resize(image, (e.heatMat.shape[1], e.heatMat.shape[0])), alpha=0.5)
+    tmp = np.amax(e.heatMat[:, :, :-1], axis=2)
+    plt.imshow(tmp, cmap=plt.cm.gray, alpha=0.5)
+    plt.colorbar()
+
+    tmp2 = e.pafMat.transpose((2, 0, 1))
+    tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
+    tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
+
+    a = fig.add_subplot(2, 3, 4)
+    a.set_title('Vectormap-x')
+    # plt.imshow(CocoPose.get_bgimg(inp, target_size=(vectmap.shape[1], vectmap.shape[0])), alpha=0.5)
+    plt.imshow(tmp2_odd, cmap=plt.cm.gray, alpha=0.5)
+    plt.colorbar()
+
+    a = fig.add_subplot(2, 3, 5)
+    a.set_title('Vectormap-y')
+    # plt.imshow(CocoPose.get_bgimg(inp, target_size=(vectmap.shape[1], vectmap.shape[0])), alpha=0.5)
+    plt.imshow(tmp2_even, cmap=plt.cm.gray, alpha=0.5)
+    plt.colorbar()
+    mkpath('vis')
+    plt.savefig('vis/result-%s.png' % name)
+
