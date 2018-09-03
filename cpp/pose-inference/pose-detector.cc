@@ -152,9 +152,10 @@ TFPoseDetector::get_detection_tensors(const detection_input_t &input)
     for (auto &t : outputs) { debug(output_names[idx++], t); }
 
     using T = float;
-    const auto t1 = export4dtensor<T>(1, 46, 54, 19, outputs[0]);
-    const auto t2 = export4dtensor<T>(1, 46, 54, 19, outputs[1]);
-    const auto t3 = export4dtensor<T>(1, 46, 54, 38, outputs[2]);
+    const int n_pos = 19;
+    const auto t1 = export4dtensor<T>(1, image_height, image_width, n_pos, outputs[0]);
+    const auto t2 = export4dtensor<T>(1, image_height, image_width, n_pos, outputs[1]);
+    const auto t3 = export4dtensor<T>(1, image_height, image_width, n_pos * 2, outputs[2]);
 
     return std::make_tuple(t1, t2, t3);
 }

@@ -10,6 +10,7 @@ class tracer_t
     tracer_t(const std::string &name)
         : name_(name), t0_(std::chrono::system_clock::now())
     {
+        fprintf(stderr, "%s started\n", name_.c_str());
     }
 
     ~tracer_t()

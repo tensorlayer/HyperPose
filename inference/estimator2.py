@@ -274,7 +274,7 @@ class PoseEstimator:
                                                       pafprocess.get_part_score(c_idx))
 
             if is_added:
-                human.score = score = pafprocess.get_score(human_id)
+                human.score = pafprocess.get_score(human_id)
                 humans.append(human)
 
         return humans

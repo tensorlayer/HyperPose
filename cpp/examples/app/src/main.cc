@@ -36,24 +36,42 @@ void camera_example()
 
 void pose_example(const std::vector<std::string> &image_files)
 {
+    static const int image_height = 368;
+    static const int image_width = 432;
+
     std::unique_ptr<PoseDetector> detector;
     {
         tracer_t _("create_pose_detector");
         create_pose_detector(FLAGS_graph_path, detector);
     }
 
-    for (auto f : image_files) {
-        const auto img = input_image(f.c_str());
-        const auto result = [&]() {
-            tracer_t _("get_detection_tensors");
-            return detector->get_detection_tensors(img);
-        }();
-        {
-            tracer_t _("draw_results");
-            draw_results(result);
+    {
+        int idx = 0;
+        for (auto f : image_files) {
+            tracer_t _("handle_image");
+
+            const auto img = cv::imread(f);
+            const cv::Size new_size(image_width, image_height);
+            cv::Mat dst(new_size, CV_8UC(3));
+            cv::resize(img, dst, dst.size(), 0, 0);
+
+            const auto pixels = input_image(f.c_str());
+            const auto result = [&]() {
+                tracer_t _("get_detection_tensors");
+                return detector->get_detection_tensors(pixels);
+            }();
+
+            const auto humans = estimate_paf(result);
+            printf("got %lu none-empty humans\n", humans.size());
+            for (const auto &h : humans) {
+                h.print();
+                draw_human(dst, h);
+            }
+
+            // cv::imshow("original", dst);
+            const auto name = "output" + std::to_string(++idx) + ".png";
+            cv::imwrite(name, dst);
         }
-        const auto humans = estimate_paf(result);
-        printf("got %lu humans\n", humans.size());
     }
 }
 
