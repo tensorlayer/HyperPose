@@ -8,10 +8,18 @@ all: \
 	libpose-inference \
 	opencv_example
 
+BAZEL_BUILD_FLAGS = \
+	-c opt \
+	--copt=-mavx \
+	--copt=-mavx2 \
+	--copt=-msse4.1 \
+	--copt=-msse4.2 \
+	--copt=-mfma
+
 libpose-inference: tensorflow
 	rm -fr $(TF_ROOT)/$(PKG)
 	cp -r $(CURDIR)/pose-inference $(TF_ROOT)/$(PKG)
-	cd $(TF_ROOT) && bazel build //$(PKG):all
+	cd $(TF_ROOT) && bazel build $(BAZEL_BUILD_FLAGS) //$(PKG):all
 
 run: libpose-inference
 	$(TF_ROOT)/bazel-bin/$(PKG)/pose-inference
