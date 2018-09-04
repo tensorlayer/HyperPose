@@ -54,7 +54,7 @@ void pose_example(const std::vector<std::string> &image_files)
             cv::Mat resized_image(new_size, CV_8UC(3));
             cv::resize(img, resized_image, resized_image.size(), 0, 0);
 
-            PoseDetector::detection_input_t input;
+            PoseDetector::input_t input;
             {
                 input.dims =
                     std::array<int, 4>({1, image_height, image_width, 3});

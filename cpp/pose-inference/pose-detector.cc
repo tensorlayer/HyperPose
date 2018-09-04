@@ -22,8 +22,7 @@ class TFPoseDetector : public PoseDetector
   public:
     TFPoseDetector(const std::string &graph_path);
 
-    virtual detection_result_t
-    get_detection_tensors(const detection_input_t &) override;
+    virtual output_t get_detection_tensors(const input_t &) override;
 
   private:
     const std::vector<std::string> input_names = {
@@ -91,8 +90,8 @@ template <typename T> tensor_t<float, 4> export4dtensor(const tf::Tensor &t)
     return output;
 }
 
-PoseDetector::detection_result_t
-TFPoseDetector::get_detection_tensors(const detection_input_t &input)
+PoseDetector::output_t
+TFPoseDetector::get_detection_tensors(const input_t &input)
 {
     const auto image_tensor = import4dtensor(input);
     const auto upsample_size = [&]() {
