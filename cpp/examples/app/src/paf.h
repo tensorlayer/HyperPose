@@ -7,4 +7,5 @@
 
 // A simple wraper of
 // https://github.com/ildoonet/tf-pose-estimation/trunk/tf_pose/pafprocess
-std::vector<Human> estimate_paf(const PoseDetector::detection_result_t &);
+std::vector<std::vector<Human>>
+estimate_paf(const PoseDetector::detection_result_t &);

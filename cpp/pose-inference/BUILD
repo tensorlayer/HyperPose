@@ -1,18 +1,5 @@
 load("//tensorflow:tensorflow.bzl", "tf_cc_binary", "tf_cc_shared_object")
 
-tf_cc_binary(
-    name = "pose-inference",
-    srcs = [
-        "main.cc",
-        "pose-detector.cc",
-        "pose-detector.h",
-    ],
-    deps = [
-        "//tensorflow/cc:cc_ops",
-        "//tensorflow/core:tensorflow",
-    ],
-)
-
 tf_cc_shared_object(
     name = "libpose-detector.so",
     srcs = [

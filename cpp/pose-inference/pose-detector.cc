@@ -17,19 +17,6 @@ tf::Status LoadGraph(const std::string &graph_file_name,
     return tf::Status::OK();
 }
 
-void debug(const std::string &name, const tf::Tensor &t)
-{
-    const auto shape = t.shape();
-    std::string dims_str;
-    {
-        const auto dims = shape.dim_sizes();
-        for (auto d : dims) { dims_str = " " + std::to_string(d) + dims_str; }
-    }
-    LOG(INFO) << "tensor: " << name << " :: "
-              << " dtype: " << t.dtype() << " rank: " << shape.dims()
-              << " dims: " << dims_str;
-}
-
 class TFPoseDetector : public PoseDetector
 {
   public:
@@ -39,9 +26,6 @@ class TFPoseDetector : public PoseDetector
     get_detection_tensors(const detection_input_t &) override;
 
   private:
-    static const int image_height = 368;
-    static const int image_width = 432;
-
     const std::vector<std::string> input_names = {
         "image",
         "upsample_size",
@@ -65,73 +49,63 @@ TFPoseDetector::TFPoseDetector(const std::string &graph_path)
     }
 }
 
-template <typename T>
-std::vector<T> export4dtensor(int a, int b, int c, int d, const tf::Tensor &t)
+template <typename T> tf::Tensor import4dtensor(const tensor_t<T, 4> &input)
 {
+    const auto [a, b, c, d] = input.dims;
+    // TODO: infer type from T
+    tf::Tensor t(tf::DT_FLOAT, tf::TensorShape({a, b, c, d}));
     {
-        tf::TensorShape shape;
-        shape.AddDim(a);
-        shape.AddDim(b);
-        shape.AddDim(c);
-        shape.AddDim(d);
-        if (t.shape() != shape) {
-            LOG(ERROR) << "shape miss match, want " << shape << " got "
-                       << t.shape();
-            exit(1);
-        }
-    }
-
-    const auto &tt = t.tensor<T, 4>();
-
-    std::vector<T> v(a * b * c * d);
-    int idx = 0;
-    for (int i = 0; i < a; ++i) {
-        for (int j = 0; j < b; ++j) {
-            for (int k = 0; k < c; ++k) {
-                for (int l = 0; l < d; ++l) { v[idx++] = tt(i, j, k, l); }
+        int idx = 0;
+        for (int i = 0; i < a; ++i) {
+            for (int j = 0; j < b; ++j) {
+                for (int k = 0; k < c; ++k) {
+                    for (int l = 0; l < d; ++l) {
+                        t.tensor<T, 4>()(i, j, k, l) = input.data[idx++];
+                    }
+                }
             }
         }
     }
-    return v;
+    return t;
+}
+
+template <typename T> tensor_t<float, 4> export4dtensor(const tf::Tensor &t)
+{
+    tensor_t<float, 4> output;
+    for (int i = 0; i < 4; ++i) { output.dims[i] = t.shape().dim_size(i); }
+    const auto [a, b, c, d] = output.dims;
+    output.data.resize(a * b * c * d);
+    const auto &tt = t.tensor<T, 4>();
+    {
+        int idx = 0;
+        for (int i = 0; i < a; ++i) {
+            for (int j = 0; j < b; ++j) {
+                for (int k = 0; k < c; ++k) {
+                    for (int l = 0; l < d; ++l) {
+                        output.data[idx++] = tt(i, j, k, l);
+                    }
+                }
+            }
+        }
+    }
+    return output;
 }
 
 PoseDetector::detection_result_t
 TFPoseDetector::get_detection_tensors(const detection_input_t &input)
 {
-    const auto image_tensor = [](const detection_input_t &input) {
-        tf::TensorShape shape;
-        shape.AddDim(1);
-        shape.AddDim(image_height);
-        shape.AddDim(image_width);
-        shape.AddDim(3);
-        tf::Tensor t(tf::DT_FLOAT, shape);
-        {
-            using T = float;
-            int idx = 0;
-            for (int i = 0; i < 1; ++i) {
-                for (int j = 0; j < image_height; ++j) {
-                    for (int k = 0; k < image_width; ++k) {
-                        for (int l = 0; l < 3; ++l) {
-                            t.tensor<T, 4>()(i, j, k, l) = input[idx++];
-                        }
-                    }
-                }
-            }
-        }
-        return t;
-    }(input);
-    const auto upsample_size = []() {
+    const auto image_tensor = import4dtensor(input);
+    const auto upsample_size = [&]() {
+        const auto [_n, height, width, _c] = input.dims;
         const float resize_out_ratio = 8.0;
-        tf::TensorShape shape;
-        shape.AddDim(2);
-        tf::Tensor t(tf::DT_INT32, shape);
-        using T = std::int32_t;
-        t.tensor<T, 1>()(0) = T(image_height / 8 * resize_out_ratio);
-        t.tensor<T, 1>()(1) = T(image_width / 8 * resize_out_ratio);
+        const auto f = [&](int size) {
+            return std::int32_t(size / 8 * resize_out_ratio);
+        };
+        tf::Tensor t(tf::DT_INT32, tf::TensorShape({2}));
+        t.tensor<std::int32_t, 1>()(0) = f(height);
+        t.tensor<std::int32_t, 1>()(1) = f(width);
         return t;
     }();
-    debug("image_tensor", image_tensor);
-    debug("upsample_size", upsample_size);
 
     std::vector<tf::Tensor> outputs;
     {
@@ -148,16 +122,10 @@ TFPoseDetector::get_detection_tensors(const detection_input_t &input)
         }
     }
 
-    int idx = 0;
-    for (auto &t : outputs) { debug(output_names[idx++], t); }
-
     using T = float;
-    const int n_pos = 19;
-    const auto t1 = export4dtensor<T>(1, image_height, image_width, n_pos, outputs[0]);
-    const auto t2 = export4dtensor<T>(1, image_height, image_width, n_pos, outputs[1]);
-    const auto t3 = export4dtensor<T>(1, image_height, image_width, n_pos * 2, outputs[2]);
-
-    return std::make_tuple(t1, t2, t3);
+    return std::make_tuple(export4dtensor<T>(outputs[0]),
+                           export4dtensor<T>(outputs[1]),
+                           export4dtensor<T>(outputs[2]));
 }
 
 void create_pose_detector(const std::string &model_file,

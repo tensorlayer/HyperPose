@@ -6,7 +6,6 @@
 #include <opencv2/opencv.hpp>
 #include <tensorflow/examples/pose-inference/pose-detector.h>
 
-#include "input.h"
 #include "paf.h"
 #include "tracer.h"
 #include "vis.h"
@@ -52,25 +51,44 @@ void pose_example(const std::vector<std::string> &image_files)
 
             const auto img = cv::imread(f);
             const cv::Size new_size(image_width, image_height);
-            cv::Mat dst(new_size, CV_8UC(3));
-            cv::resize(img, dst, dst.size(), 0, 0);
+            cv::Mat resized_image(new_size, CV_8UC(3));
+            cv::resize(img, resized_image, resized_image.size(), 0, 0);
 
-            const auto pixels = input_image(f.c_str());
-            const auto result = [&]() {
+            PoseDetector::detection_input_t input;
+            {
+                input.dims =
+                    std::array<int, 4>({1, image_height, image_width, 3});
+                input.data.resize(1 * image_height * image_width * 3);
+                {
+                    int idx = 0;
+                    for (int i = 0; i < image_height; ++i) {
+                        for (int j = 0; j < image_width; ++j) {
+                            const auto pix = resized_image.at<cv::Vec3b>(i, j);
+                            input.data[idx++] = pix[0] / 255.0;
+                            input.data[idx++] = pix[1] / 255.0;
+                            input.data[idx++] = pix[2] / 255.0;
+                        }
+                    }
+                }
+            }
+
+            const auto results = [&]() {
                 tracer_t _("get_detection_tensors");
-                return detector->get_detection_tensors(pixels);
+                return detector->get_detection_tensors(input);
             }();
 
-            const auto humans = estimate_paf(result);
+            const auto humanss = estimate_paf(results);
+            const auto humans = humanss[0];
+
             printf("got %lu none-empty humans\n", humans.size());
             for (const auto &h : humans) {
                 h.print();
-                draw_human(dst, h);
+                draw_human(resized_image, h);
             }
 
             // cv::imshow("original", dst);
             const auto name = "output" + std::to_string(++idx) + ".png";
-            cv::imwrite(name, dst);
+            cv::imwrite(name, resized_image);
         }
     }
 }
