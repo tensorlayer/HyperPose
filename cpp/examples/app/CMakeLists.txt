@@ -8,6 +8,7 @@ include(cmake/3rdparty.cmake)
 
 # FIND_PACKAGE(opencv REQUIRED)  # FIXME: adding REQUIRED cause error on Linux
 FIND_PACKAGE(opencv)
+FIND_PACKAGE(Threads)
 
 SET(CMAKE_CXX_STANDARD 17)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
@@ -18,6 +19,7 @@ ADD_EXECUTABLE(see-pose ${srcs})
 
 TARGET_LINK_LIBRARIES(see-pose
                       gflags
+                      Threads::Threads
                       opencv_core
                       opencv_imgproc
                       opencv_highgui
