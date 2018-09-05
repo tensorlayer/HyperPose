@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorlayer as tl
 from tensorlayer.layers import ConcatLayer, Conv2d, InputLayer, MaxPool2d
 
-from tensblur.smoother import Smoother
+from inference.tensblur.smoother import Smoother
 
 __all__ = [
     'full_model',

@@ -2,15 +2,16 @@
 """Inference with freezed graph."""
 
 import os
-import time
 import sys
+import time
 
 import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
 
-from estimator2 import TfPoseEstimator as TfPoseEstimator2
-from common import read_imgfile, measure, load_graph, get_op, plot_humans
+from inference.common import measure, plot_humans, read_imgfile
+from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
+from models import full_model
 
 path_to_freezed = 'checkpoints/freezed'
 
@@ -58,10 +59,15 @@ def inference(input_files):
             plot_humans(e, image, humans, '%02d' % (idx + 1))
 
 
+def usage(prog_name):
+    print('Usage:')
+    print('\t%s [<filename>, ...]' % prog_name)
+
+
 def main():
     input_files = sys.argv[1:]
     if len(input_files) <= 0:
-        # TODO: print usage
+        usage(sys.argv[0])
         exit(1)
     inference(input_files)
 

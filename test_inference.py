@@ -4,9 +4,9 @@ import os
 import sys
 import time
 
-from common import read_imgfile, measure, plot_humans
-
-from estimator2 import TfPoseEstimator as TfPoseEstimator2
+from inference.common import measure, plot_humans, read_imgfile
+from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
+from models import full_model
 
 TRAVIS_CI = os.getenv('TRAVIS') == 'true'
 
@@ -17,7 +17,7 @@ def inference(input_files):
     if TRAVIS_CI:
         path_to_npz = ''
 
-    e = measure(lambda: TfPoseEstimator2(path_to_npz, target_size=(432, 368)), 'create TfPoseEstimator2')
+    e = measure(lambda: TfPoseEstimator2(path_to_npz, full_model, target_size=(432, 368)), 'create TfPoseEstimator2')
 
     for idx, img_name in enumerate(input_files):
         image = read_imgfile(img_name, None, None)
@@ -29,12 +29,17 @@ def inference(input_files):
             plot_humans(e, image, humans, '%02d' % (idx + 1))
 
 
+def usage(prog_name):
+    print('Usage:')
+    print('\t%s [<filename>, ...]' % prog_name)
+
+
 if __name__ == '__main__':
     input_files = sys.argv[1:]
     if TRAVIS_CI:
         batch_limit = 5
         input_files = input_files[:batch_limit]
     if len(input_files) <= 0:
-        # TODO: print usage
+        usage(sys.argv[0])
         exit(1)
     inference(input_files)

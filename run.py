@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 
-import sys
-import os
-import numpy as np
-import logging
 import argparse
-import json, re
+import json
+import logging
+import os
+import re
+import sys
+
+import numpy as np
 from tqdm import tqdm
 
-from common import read_imgfile, plot_humans
-from estimator2 import TfPoseEstimator as TfPoseEstimator2
+from inference.common import plot_humans, read_imgfile
+from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
+from models import full_model
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
@@ -80,7 +83,7 @@ if __name__ == '__main__':
     base_dir = './data/media/'
 
     if args.net_type == 'full_normal':
-        e = TfPoseEstimator2(path_to_npz, target_size=(w, h))
+        e = TfPoseEstimator2(path_to_npz, full_model, target_size=(w, h))
     imglist = os.listdir(base_dir)
 
     for idx, image_name in enumerate(imglist):

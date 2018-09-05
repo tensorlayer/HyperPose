@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Export pre-trained openpose model for C++."""
 
+import argparse
 import os
 
 import tensorflow as tf
 import tensorlayer as tl
 
-from common import measure
+from inference.common import measure
 from models import full_model
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
@@ -33,26 +34,30 @@ def save_model(sess, idx=0):
     saver.save(sess, checkpoint_prefix, global_step=0, latest_filename=checkpoint_state_name)
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='model exporter')
+    parser.add_argument('--path_to_npz', type=str, default='', help='path to npz', required=True)
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+
     h, w = 368, 432
     target_size = (w, h)
     n_pos = 19
 
-    desktop = os.path.join(os.getenv('HOME'), 'Desktop')
-    path_to_npz = os.path.join(desktop, 'Log_2108/inf_model255000.npz')
-
     model_parameters = full_model(n_pos, target_size)
-    for p in model_parameters:
-        print('%s :: %s' % (p.name, p.shape))
-    names = [p.name for p in model_parameters]
-    print('names: %s' % ','.join(names))
-    # (tensor_image, upsample_size, tensor_heatMat_up, tensor_peaks, tensor_pafMat_up) = model_parameters
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        measure(lambda: tl.files.load_and_assign_npz_dict(path_to_npz, sess), 'load npz')
+        measure(lambda: tl.files.load_and_assign_npz_dict(args.path_to_npz, sess), 'load npz')
         measure(lambda: save_graph(sess), 'save_graph')
         measure(lambda: save_model(sess), 'save_model')
+
+    print('model_parameters:')
+    for p in model_parameters:
+        print('%s :: %s' % (p.name, p.shape))
 
 
 if __name__ == '__main__':
