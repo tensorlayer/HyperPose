@@ -8,6 +8,7 @@ import tensorflow as tf
 import tensorlayer as tl
 
 from inference.common import measure
+from models import get_full_model_func
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
@@ -30,24 +31,24 @@ def save_model(sess, checkpoint_dir, global_step=0):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='model exporter')
-    parser.add_argument('--checkpoint-dir', type=str, default='checkpoints', help='checkpoint dir')
+    parser.add_argument('--base-model', type=str, default='', help='vgg | mobilenet', required=True)
     parser.add_argument('--path-to-npz', type=str, default='', help='path to npz', required=True)
+    parser.add_argument('--checkpoint-dir', type=str, default='checkpoints', help='checkpoint dir')
     parser.add_argument('--graph-filename', type=str, default='graph.pb.txt', help='graph filename')
 
     return parser.parse_args()
 
 
-def model_original():
-    from models import full_model
-    h, w = 368, 432
-    target_size = (w, h)
-    n_pos = 19
-    return full_model(n_pos, target_size)
+def get_func_func(base_model_name):
 
+    def model_func():
+        h, w = 368, 432
+        target_size = (w, h)
+        n_pos = 19
+        full_model = get_full_model_func(base_model_name)
+        return full_model(n_pos, target_size)
 
-def model_mobile():
-    # TODO: implement
-    pass
+    return model_func
 
 
 def export_model(model_func, checkpoint_dir, path_to_npz, graph_filename):
@@ -67,8 +68,7 @@ def export_model(model_func, checkpoint_dir, path_to_npz, graph_filename):
 
 def main():
     args = parse_args()
-    export_model(model_original, args.checkpoint_dir, args.path_to_npz, args.graph_filename)
-    # export_model(model_mobile, args.checkpoint_dir, args.path_to_npz, args.graph_filename)
+    export_model(get_func_func(args.base_model), args.checkpoint_dir, args.path_to_npz, args.graph_filename)
 
 
 if __name__ == '__main__':
