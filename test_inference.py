@@ -28,7 +28,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='inference')
     parser.add_argument('--path-to-npz', type=str, default='', help='path to npz', required=True)
     parser.add_argument('--images', type=str, default='', help='comma separate list of image filenames', required=True)
-    parser.add_argument('--bsae-model', type=str, default='vgg', help='vgg | mobilenet')
+    parser.add_argument('--base-model', type=str, default='vgg', help='vgg | mobilenet')
 
     return parser.parse_args()
 
