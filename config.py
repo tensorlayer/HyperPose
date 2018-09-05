@@ -24,7 +24,7 @@ config.MODEL.hin = 368  # input size during training , 240
 config.MODEL.win = 368
 config.MODEL.hout = int(config.MODEL.hin / 8)  # output size during training (default 46)
 config.MODEL.wout = int(config.MODEL.win / 8)
-config.MODEL.name = 'vgg'  # vgg, mobilenet 
+config.MODEL.name = 'vgg'  # vgg, vggtiny, mobilenet
 
 if (config.MODEL.hin % 16 != 0) or (config.MODEL.win % 16 != 0):
     raise Exception("image size should be divided by 16")
