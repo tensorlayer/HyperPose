@@ -50,7 +50,12 @@ TFPoseDetector::TFPoseDetector(const std::string &graph_path)
 
 template <typename T> tf::Tensor import4dtensor(const tensor_t<T, 4> &input)
 {
-    const auto [a, b, c, d] = input.dims;
+    // const auto [a, b, c, d] = input.dims; // requires C++17
+    const int a = input.dims[0];
+    const int b = input.dims[1];
+    const int c = input.dims[2];
+    const int d = input.dims[3];
+
     // TODO: infer type from T
     tf::Tensor t(tf::DT_FLOAT, tf::TensorShape({a, b, c, d}));
     {
@@ -72,7 +77,13 @@ template <typename T> tensor_t<float, 4> export4dtensor(const tf::Tensor &t)
 {
     tensor_t<float, 4> output;
     for (int i = 0; i < 4; ++i) { output.dims[i] = t.shape().dim_size(i); }
-    const auto [a, b, c, d] = output.dims;
+
+    // const auto [a, b, c, d] = output.dims; // requires C++17
+    const int a = output.dims[0];
+    const int b = output.dims[1];
+    const int c = output.dims[2];
+    const int d = output.dims[3];
+
     output.data.resize(a * b * c * d);
     const auto &tt = t.tensor<T, 4>();
     {
@@ -95,7 +106,10 @@ TFPoseDetector::get_detection_tensors(const input_t &input)
 {
     const auto image_tensor = import4dtensor(input);
     const auto upsample_size = [&]() {
-        const auto [_n, height, width, _c] = input.dims;
+        // const auto [_n, height, width, _c] = input.dims; // requires C++ 17
+        const int height = input.dims[1];
+        const int width = input.dims[2];
+
         const float resize_out_ratio = 8.0;
         const auto f = [&](int size) {
             return std::int32_t(size / 8 * resize_out_ratio);
