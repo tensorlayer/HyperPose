@@ -9,17 +9,21 @@ __all__ = [
     'full_model',  # the full_model, TODO: deprecated
 ]
 
-
+##=========================== for training ===================================
 def get_base_model_func(name):
     if name == 'vgg':
         from models_vgg import model
+    elif name == 'vggtiny':
+        from models_vggtiny import model
     elif name == 'mobilenet':
         from models_mobilenet import model
     else:
         raise RuntimeError('unknown base model %s' % name)
     return model
 
+model = get_base_model_func(config.MODEL.name)
 
+##=========================== for inference ===================================
 def _get_peek(tensor, name):
     smoother = Smoother({'data': tensor}, 25, 3.0)
     gaussian_heatMat = smoother.get_output()
