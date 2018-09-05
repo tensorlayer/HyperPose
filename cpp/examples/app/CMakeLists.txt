@@ -6,7 +6,8 @@ include(cmake/pafprocess.cmake)
 include(cmake/tensorflow.cmake)
 include(cmake/3rdparty.cmake)
 
-FIND_PACKAGE(opencv REQUIRED)
+# FIND_PACKAGE(opencv REQUIRED)  # FIXME: adding REQUIRED cause error on Linux
+FIND_PACKAGE(opencv)
 
 SET(CMAKE_CXX_STANDARD 17)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
