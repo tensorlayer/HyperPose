@@ -8,11 +8,10 @@ import slidingwindow as sw
 import tensorflow as tf
 import tensorlayer as tl
 
-import common
-from common import CocoPart
-from models import full_model
-from pafprocess import pafprocess
-from tensblur.smoother import Smoother
+from inference import common
+from inference.common import CocoPart
+from inference.pafprocess import pafprocess
+from inference.tensblur.smoother import Smoother
 
 logger = logging.getLogger('TfPoseEstimator')
 logger.setLevel(logging.INFO)
@@ -283,10 +282,11 @@ class PoseEstimator:
 class TfPoseEstimator:
     # TODO : multi-scale
 
-    def __init__(self, graph_path, target_size=(368, 368), tf_config=None):
+    def __init__(self, graph_path, model_func, target_size=(368, 368), tf_config=None):
+        n_pos = 19
         self.target_size = target_size
         (self.tensor_image, self.upsample_size, self.tensor_heatMat_up, self.tensor_peaks,
-         self.tensor_pafMat_up) = full_model(19, target_size)
+         self.tensor_pafMat_up) = model_func(n_pos, target_size)
         self._warm_up(graph_path)
 
     def _warm_up(self, graph_path):

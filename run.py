@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 
-import sys
-import os
-import numpy as np
-import logging
 import argparse
-import json, re
+import json
+import logging
+import os
+import re
+import sys
+
+import numpy as np
 from tqdm import tqdm
 
-from common import read_imgfile, plot_humans
-from estimator2 import TfPoseEstimator as TfPoseEstimator2
+from inference.common import plot_humans, read_imgfile
+from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
+from models import full_model
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
@@ -47,7 +50,7 @@ def write_coco_json(human, image_w, image_h):
     return keypoints
 
 
-if __name__ == '__main__':
+def parse_args():
     parser = argparse.ArgumentParser(description='Tensorflow Openpose Inference')
     parser.add_argument(
         '--resize',
@@ -63,28 +66,25 @@ if __name__ == '__main__':
         help='if provided, resize heatmaps before they are post-processed. default=8.0')
     parser.add_argument('--model', type=str, default='cmu', help='cmu / mobilenet_thin')
     parser.add_argument('--cocoyear', type=str, default='2017')
-    parser.add_argument('--coco-dir', type=str, default='/Users/Joel/Desktop/coco2/')
+    parser.add_argument('--coco-dir', type=str, default='')
     parser.add_argument('--data-idx', type=int, default=-5)
     parser.add_argument('--multi-scale', type=bool, default=True)
     parser.add_argument('--net_type', type=str, default='full_normal')
-    args = parser.parse_args()
+    parser.add_argument('--base_dir', type=str, default='./data/media')
+    parser.add_argument('--path-to-npz', type=str, required=True)
+    return parser.parse_args()
 
+
+if __name__ == '__main__':
+    args = parse_args()
     w, h = model_wh(args.resize)
 
-    result = []
-    #path to npz model
-    desktop = os.path.join(os.getenv('HOME'), 'Desktop')
-    path_to_npz = os.path.join(desktop, 'Log_2108/inf_model255000.npz')
-    #path to your image folder
-    # base_dir = '/Users/Joel/Desktop/test/'
-    base_dir = './data/media/'
-
     if args.net_type == 'full_normal':
-        e = TfPoseEstimator2(path_to_npz, target_size=(w, h))
-    imglist = os.listdir(base_dir)
+        e = TfPoseEstimator2(args.path_to_npz, full_model, target_size=(w, h))
 
+    imglist = os.listdir(args.base_dir)
     for idx, image_name in enumerate(imglist):
-        img_name = os.path.join(base_dir, image_name)
+        img_name = os.path.join(args.base_dir, image_name)
         image = read_imgfile(img_name, None, None)
 
         # inference the image with the specified network

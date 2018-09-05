@@ -25,19 +25,23 @@ FREEZE_GRAPH_BIN=${ROOT}/scripts/freeze_graph.py
 
 [ ! -f ${FREEZE_GRAPH_BIN} ] && curl -s ${FREEZE_GRAPH_URL} >${FREEZE_GRAPH_BIN}
 
-GRAPH_FILE=checkpoints/graph.pb.txt
-CHECKPOINT=checkpoints/saved_checkpoint-0
-OUTPUT_GRAPH=checkpoints/freezed
+CHECKPOINT_DIR=$(pwd)/checkpoints
+
+GRAPH_FILE=${CHECKPOINT_DIR}/graph.pb.txt
+CHECKPOINT=${CHECKPOINT_DIR}/saved_checkpoint-0
+OUTPUT_GRAPH=${CHECKPOINT_DIR}/freezed
 
 OUTPUT_NODE_NAMES=image,upsample_size,upsample_heatmat,tensor_peaks,upsample_pafmat
 
 freeze() {
     python3 ${FREEZE_GRAPH_BIN} \
-        --input_graph ${ROOT}/${GRAPH_FILE} \
-        --input_checkpoint ${ROOT}/${CHECKPOINT} \
-        --output_graph ${ROOT}/${OUTPUT_GRAPH} \
+        --input_graph ${GRAPH_FILE} \
+        --input_checkpoint ${CHECKPOINT} \
+        --output_graph ${OUTPUT_GRAPH} \
         --output_node_names ${OUTPUT_NODE_NAMES}
 }
 
-measure ./inference/export.py
+PATH_TO_NPZ=${HOME}/Downloads/vgg450000.npz
+
+measure ./export.py --path-to-npz=${PATH_TO_NPZ}
 measure freeze
