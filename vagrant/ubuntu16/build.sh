@@ -7,6 +7,6 @@ cd
 cd openpose
 git checkout cpp
 
-export PYTHON_BIN_PATH=$(which python3)
-alias python=${PYTHON_BIN_PATH}
+# TODO: check if it is possible to build without python2
+# export PYTHON_BIN_PATH=$(which python3)
 make
