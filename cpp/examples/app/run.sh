@@ -21,6 +21,6 @@ cd ${SCRIPT_DIR}/../../..
 ROOT=$(pwd)
 
 batch_limit=200
-measure ${SCRIPT_DIR}/cmake-build/Darwin/bin/see-pose \
+measure ${SCRIPT_DIR}/cmake-build/$(uname -s)/bin/see-pose \
     --graph_path=checkpoints/freezed \
     --input_images=$(ls data/media/*.jpg | sort | head -n $batch_limit | tr '\n' ',')
