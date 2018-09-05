@@ -7,7 +7,9 @@ __all__ = [
     'get_base_model_func',
     'get_full_model_func',
     'full_model',  # the full_model, TODO: deprecated
+    'model',  # the base, TODO: deprecated
 ]
+
 
 ##=========================== for training ===================================
 def get_base_model_func(name):
@@ -21,7 +23,9 @@ def get_base_model_func(name):
         raise RuntimeError('unknown base model %s' % name)
     return model
 
+
 model = get_base_model_func(config.MODEL.name)
+
 
 ##=========================== for inference ===================================
 def _get_peek(tensor, name):
