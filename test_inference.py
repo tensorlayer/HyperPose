@@ -7,10 +7,11 @@ import time
 
 from inference.common import measure, plot_humans, read_imgfile
 from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
-from models import full_model
+from models import full_model as create_full_model, get_bsae_model
 
 
-def inference(path_to_npz, input_files):
+def inference(base_model, path_to_npz, input_files):
+    full_model = create_full_model(get_bsae_model(base_model))
     e = measure(lambda: TfPoseEstimator2(path_to_npz, full_model, target_size=(432, 368)), 'create TfPoseEstimator2')
 
     for idx, img_name in enumerate(input_files):
@@ -27,10 +28,12 @@ def parse_args():
     parser = argparse.ArgumentParser(description='inference')
     parser.add_argument('--path-to-npz', type=str, default='', help='path to npz', required=True)
     parser.add_argument('--images', type=str, default='', help='comma separate list of image filenames', required=True)
+    parser.add_argument('--bsae-model', type=str, default='vgg', help='vgg | mobilenet')
+
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_args()
     image_files = [f for f in args.images.split(',') if f]
-    inference(args.path_to_npz, image_files)
+    inference(args.base_model, args.path_to_npz, image_files)
