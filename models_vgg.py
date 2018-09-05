@@ -1,16 +1,14 @@
 import tensorflow as tf
 import tensorlayer as tl
 from tensorlayer.layers import ConcatLayer, Conv2d, InputLayer, MaxPool2d
-from config import config
-from inference.tensblur.smoother import Smoother
 
 __all__ = [
-    'full_model',
     'model',
 ]
 
-W_init = tf.contrib.layers.xavier_initializer() # tf.truncated_normal_initializer(stddev=0.01)
+W_init = tf.contrib.layers.xavier_initializer()  # tf.truncated_normal_initializer(stddev=0.01)
 b_init = tf.constant_initializer(value=0.0)
+
 
 def state1(cnn, n_pos, mask_miss1, mask_miss2, is_train):
     """Define the first stage of openpose."""
@@ -31,6 +29,7 @@ def state1(cnn, n_pos, mask_miss1, mask_miss2, is_train):
         if is_train:
             b2.outputs = b2.outputs * mask_miss2
     return b1, b2
+
 
 def stage2(cnn, b1, b2, n_pos, maskInput1, maskInput2, is_train, scope_name):
     """Define the archuecture of stage 2 and so on."""
@@ -58,6 +57,7 @@ def stage2(cnn, b1, b2, n_pos, maskInput1, maskInput2, is_train, scope_name):
                 b2.outputs = b2.outputs * maskInput2
     return b1, b2
 
+
 def vgg_network(x):
     """VGG19 network for default model."""
 
@@ -70,7 +70,8 @@ def vgg_network(x):
     # input layer
     net_in = InputLayer(bgr, name='input')
     # conv1
-    net = Conv2d(net_in, 64, (3, 3), (1, 1), act=tf.nn.relu, padding='SAME', W_init=W_init, b_init=b_init, name='conv1_1')
+    net = Conv2d(
+        net_in, 64, (3, 3), (1, 1), act=tf.nn.relu, padding='SAME', W_init=W_init, b_init=b_init, name='conv1_1')
     net = Conv2d(net, 64, (3, 3), (1, 1), act=tf.nn.relu, padding='SAME', W_init=W_init, b_init=b_init, name='conv1_2')
     net = MaxPool2d(net, (2, 2), (2, 2), padding='SAME', name='pool1')
     # conv2
@@ -91,6 +92,7 @@ def vgg_network(x):
 
     return net
 
+
 def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):
     """Defines the entire pose estimation model."""
     with tf.variable_scope('model', reuse):
@@ -110,32 +112,3 @@ def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):
 
         net = tl.layers.merge_networks([b1, b2])
         return cnn, b1_list, b2_list, net
-
-
-##=========================== for inferencing ================================##
-def _get_peek(tensor, name):
-    smoother = Smoother({'data': tensor}, 25, 3.0)
-    gaussian_heatMat = smoother.get_output()
-    max_pooled_in_tensor = tf.nn.pool(gaussian_heatMat, window_shape=(3, 3), pooling_type='MAX', padding='SAME')
-    return tf.where(
-        tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat, tf.zeros_like(gaussian_heatMat), name)
-
-
-def full_model(n_pos, target_size=(368, 368)):
-    """Creates the model including the post processing."""
-    image = tf.placeholder(tf.float32, [None, target_size[1], target_size[0], 3], "image")
-    _, _, _, net = model(image, n_pos, False, False)
-
-    conf_tensor = tl.layers.get_layers_with_name(net, 'model/stage6/branch1/conf')[0]
-    pafs_tensor = tl.layers.get_layers_with_name(net, 'model/stage6/branch2/pafs')[0]
-
-    upsample_size = tf.placeholder(dtype=tf.int32, shape=(2,), name='upsample_size')
-
-    def upsample(t, name):
-        return tf.image.resize_area(t, upsample_size, align_corners=False, name=name)
-
-    tensor_heatMat_up = upsample(conf_tensor, 'upsample_heatmat')
-
-    # TODO: consider use named tuple
-    return (image, upsample_size, tensor_heatMat_up, _get_peek(tensor_heatMat_up, 'tensor_peaks'),
-            upsample(pafs_tensor, 'upsample_pafmat'))

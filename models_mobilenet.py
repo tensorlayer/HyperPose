@@ -1,16 +1,15 @@
 import tensorflow as tf
 import tensorlayer as tl
-from tensorlayer.layers import ConcatLayer, Conv2d, InputLayer, MaxPool2d
-from config import config
-from inference.tensblur.smoother import Smoother
+from tensorlayer.layers import (BatchNormLayer, ConcatLayer, Conv2d,
+                                DepthwiseConv2d, InputLayer, MaxPool2d)
 
 __all__ = [
-    'full_model',
     'model',
 ]
 
-W_init = tf.contrib.layers.xavier_initializer() # tf.truncated_normal_initializer(stddev=0.01)
+W_init = tf.contrib.layers.xavier_initializer()  # tf.truncated_normal_initializer(stddev=0.01)
 b_init = tf.constant_initializer(value=0.0)
+
 
 def depthwise_conv_block(n, n_filter, filter_size=(3, 3), strides=(1, 1), is_train=False, name="depth_block"):
     with tf.variable_scope(name):
@@ -19,6 +18,7 @@ def depthwise_conv_block(n, n_filter, filter_size=(3, 3), strides=(1, 1), is_tra
         n = Conv2d(n, n_filter, (1, 1), (1, 1), W_init=W_init, b_init=None, name='conv')
         n = BatchNormLayer(n, act=tf.nn.relu6, is_train=is_train, name='batchnorm2')
     return n
+
 
 def stage(cnn, b1, b2, n_pos, maskInput1, maskInput2, is_train, name='stageX'):
     """Define the archuecture of stage 2 to 6."""
@@ -46,7 +46,8 @@ def stage(cnn, b1, b2, n_pos, maskInput1, maskInput2, is_train, name='stageX'):
                 b2.outputs = b2.outputs * maskInput2
     return b1, b2
 
-def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None): # hao25
+
+def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):  # hao25
     b1_list = []
     b2_list = []
     with tf.variable_scope('model', reuse):
@@ -108,31 +109,3 @@ def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None): # hao25
             b2_list.append(b2)
         net = tl.layers.merge_networks([b1_list[-1], b2_list[-1]])
     return cnn, b1_list, b2_list, net
-
-##=========================== for inferencing ================================##
-def _get_peek(tensor, name):
-    smoother = Smoother({'data': tensor}, 25, 3.0)
-    gaussian_heatMat = smoother.get_output()
-    max_pooled_in_tensor = tf.nn.pool(gaussian_heatMat, window_shape=(3, 3), pooling_type='MAX', padding='SAME')
-    return tf.where(
-        tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat, tf.zeros_like(gaussian_heatMat), name)
-
-
-def full_model(n_pos, target_size=(368, 368)):
-    """Creates the model including the post processing."""
-    image = tf.placeholder(tf.float32, [None, target_size[1], target_size[0], 3], "image")
-    _, _, _, net = model(image, n_pos, False, False)
-
-    conf_tensor = tl.layers.get_layers_with_name(net, 'model/stage6/branch1/conf')[0]
-    pafs_tensor = tl.layers.get_layers_with_name(net, 'model/stage6/branch2/pafs')[0]
-
-    upsample_size = tf.placeholder(dtype=tf.int32, shape=(2,), name='upsample_size')
-
-    def upsample(t, name):
-        return tf.image.resize_area(t, upsample_size, align_corners=False, name=name)
-
-    tensor_heatMat_up = upsample(conf_tensor, 'upsample_heatmat')
-
-    # TODO: consider use named tuple
-    return (image, upsample_size, tensor_heatMat_up, _get_peek(tensor_heatMat_up, 'tensor_peaks'),
-            upsample(pafs_tensor, 'upsample_pafmat'))
