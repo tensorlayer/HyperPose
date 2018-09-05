@@ -36,7 +36,7 @@ def save_model(sess, idx=0):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='model exporter')
-    parser.add_argument('--path_to_npz', type=str, default='', help='path to npz', required=True)
+    parser.add_argument('--path-to-npz', type=str, default='', help='path to npz', required=True)
     return parser.parse_args()
 
 

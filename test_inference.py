@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import sys
 import time
@@ -8,15 +9,8 @@ from inference.common import measure, plot_humans, read_imgfile
 from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
 from models import full_model
 
-TRAVIS_CI = os.getenv('TRAVIS') == 'true'
 
-
-def inference(input_files):
-    desktop = os.path.join(os.getenv('HOME'), 'Desktop')
-    path_to_npz = os.path.join(desktop, 'Log_2108/inf_model255000.npz')
-    if TRAVIS_CI:
-        path_to_npz = ''
-
+def inference(path_to_npz, input_files):
     e = measure(lambda: TfPoseEstimator2(path_to_npz, full_model, target_size=(432, 368)), 'create TfPoseEstimator2')
 
     for idx, img_name in enumerate(input_files):
@@ -29,17 +23,14 @@ def inference(input_files):
             plot_humans(e, image, humans, '%02d' % (idx + 1))
 
 
-def usage(prog_name):
-    print('Usage:')
-    print('\t%s [<filename>, ...]' % prog_name)
+def parse_args():
+    parser = argparse.ArgumentParser(description='inference')
+    parser.add_argument('--path-to-npz', type=str, default='', help='path to npz', required=True)
+    parser.add_argument('--images', type=str, default='', help='comma separate list of image filenames', required=True)
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
-    input_files = sys.argv[1:]
-    if TRAVIS_CI:
-        batch_limit = 5
-        input_files = input_files[:batch_limit]
-    if len(input_files) <= 0:
-        usage(sys.argv[0])
-        exit(1)
-    inference(input_files)
+    args = parse_args()
+    image_files = [f for f in args.images.split(',') if f]
+    inference(args.path_to_npz, image_files)
