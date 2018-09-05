@@ -19,6 +19,7 @@ ADD_EXECUTABLE(see-pose ${srcs})
 
 TARGET_LINK_LIBRARIES(see-pose
                       gflags
+                      glog
                       Threads::Threads
                       opencv_core
                       opencv_imgproc

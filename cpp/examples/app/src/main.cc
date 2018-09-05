@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <opencv2/opencv.hpp>
 #include <tensorflow/examples/pose-inference/pose-detector.h>
 
@@ -48,8 +49,14 @@ void pose_example(const std::vector<std::string> &image_files)
         int idx = 0;
         for (auto f : image_files) {
             tracer_t _("handle_image");
-
             const auto img = cv::imread(f);
+            if (img.empty()) {
+                LOG(ERROR) << "failed to read " << f;
+                continue;
+            }
+            LOG(INFO) << "size: "  //
+                      << img.size().height << " x " << img.size().width;
+
             const cv::Size new_size(image_width, image_height);
             cv::Mat resized_image(new_size, CV_8UC(3));
             cv::resize(img, resized_image, resized_image.size(), 0, 0);
@@ -80,7 +87,7 @@ void pose_example(const std::vector<std::string> &image_files)
             const auto humanss = estimate_paf(results);
             const auto humans = humanss[0];
 
-            printf("got %lu none-empty humans\n", humans.size());
+            LOG(INFO) << "got " << humans.size() << " none-empty humans";
             for (const auto &h : humans) {
                 h.print();
                 draw_human(resized_image, h);
@@ -104,6 +111,7 @@ std::vector<std::string> split(const std::string &text, const char sep)
 
 int main(int argc, char *argv[])
 {
+    google::InitGoogleLogging(argv[0]);
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     const auto image_files = split(FLAGS_input_images, ',');
     pose_example(image_files);
