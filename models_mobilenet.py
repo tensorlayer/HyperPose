@@ -1,3 +1,4 @@
+# hao25
 import tensorflow as tf
 import tensorlayer as tl
 from tensorlayer.layers import (BatchNormLayer, ConcatLayer, Conv2d,
@@ -61,7 +62,7 @@ def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):  # hao2
         n = depthwise_conv_block(n, 128, strides=(2, 2), is_train=is_train, name="conv2_depth1")
         n = depthwise_conv_block(n, 128, is_train=is_train, name="conv2_depth2")
         n1 = n
-        
+
         n = depthwise_conv_block(n, 256, strides=(2, 2), is_train=is_train, name="conv3_depth1")
         n = depthwise_conv_block(n, 256, is_train=is_train, name="conv3_depth2")
         n2 = n
