@@ -5,8 +5,6 @@
     <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
 </p>
 
-⚠️ ⚠️ Only the training part is finished, we are now working on the real-time inferencing part.
-
 
 ## 1. Motivation
 
@@ -14,7 +12,7 @@
 While in practice, developers need to customize their training set, data augmentation methods according to their requirement.
 For this reason, we reimplemented this project in [TensorLayer fashion](https://github.com/tensorlayer/tensorlayer).
 
-⚠️ ⚠️ This repo will be moved into example folder of [tensorlayer](https://github.com/tensorlayer/tensorlayer) for life-cycle management soon. More cool Computer Vision applications such as super resolution and style transfer can be found in this [organization](https://github.com/tensorlayer).
+🚀 This repo will be moved into example folder of [tensorlayer](https://github.com/tensorlayer/tensorlayer) for life-cycle management soon. More cool Computer Vision applications such as super resolution and style transfer can be found in this [organization](https://github.com/tensorlayer).
 
 ## 2. Project files
 
@@ -41,19 +39,18 @@ rm *.so
 
 ## 4. Use pre-trained model
 
-In this project, input images are RGB with 0~1
-
-Runs `xxx.py`, it will automatically download the default VGG19-based model from [here](https://github.com/tensorlayer/pretrained-models),
-and use it for inferencing.
+In this project, input images are RGB with 0~1.
+Runs `train.py`, it will automatically download the default VGG19-based model from [here](https://github.com/tensorlayer/pretrained-models), and use it for inferencing.
 The performance of pre-trained model is as follow:
 
+<!--
 |                  | Speed | AP | xxx |
 |------------------|-------|----|-----|
 | VGG19            | xx    | xx | xx  |
 | Residual Squeeze | xx    | xx | xx  |
 
 - Speed is tested on XXX
-
+-->
 - We follow the [data format of official OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/output.md)
 
 ## 5. Train a model
