@@ -16,5 +16,5 @@ before_install:
 - ./scripts/download-test-data.sh
 
 script:
-- python ./inference/test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',')
+- python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',')
 # TODO: add move tests
