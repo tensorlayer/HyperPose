@@ -4,17 +4,19 @@ from config import config
 from inference.tensblur.smoother import Smoother
 
 __all__ = [
-    'get_bsae_model',
+    'get_base_model_func',
+    'get_full_model_func',
     'full_model',  # the full_model, TODO: deprecated
-    'create_full_model',
 ]
 
 
-def get_bsae_model(name):
+def get_base_model_func(name):
     if name == 'vgg':
         from models_vgg import model
     elif name == 'mobilenet':
         from models_mobilenet import model
+    else:
+        raise RuntimeError('unknown base model %s' % name)
     return model
 
 
@@ -26,7 +28,9 @@ def _get_peek(tensor, name):
         tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat, tf.zeros_like(gaussian_heatMat), name)
 
 
-def create_full_model(base_model):
+def get_full_model_func(base_model_name):
+
+    base_model = get_base_model_func(base_model_name)
 
     def full_model(n_pos, target_size=(368, 368)):
         """Creates the model including the post processing."""
@@ -50,4 +54,4 @@ def create_full_model(base_model):
     return full_model
 
 
-full_model = create_full_model(get_bsae_model(config.MODEL.name))
+full_model = get_full_model_func(config.MODEL.name)

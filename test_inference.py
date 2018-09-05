@@ -7,11 +7,11 @@ import time
 
 from inference.common import measure, plot_humans, read_imgfile
 from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
-from models import full_model as create_full_model, get_bsae_model
+from models import get_full_model_func
 
 
-def inference(base_model, path_to_npz, input_files):
-    full_model = create_full_model(get_bsae_model(base_model))
+def inference(base_model_name, path_to_npz, input_files):
+    full_model = get_full_model_func(base_model_name)
     e = measure(lambda: TfPoseEstimator2(path_to_npz, full_model, target_size=(432, 368)), 'create TfPoseEstimator2')
 
     for idx, img_name in enumerate(input_files):
