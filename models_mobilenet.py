@@ -8,7 +8,8 @@ __all__ = [
 ]
 
 W_init = tf.contrib.layers.xavier_initializer()  # tf.truncated_normal_initializer(stddev=0.01)
-b_init = tf.constant_initializer(value=0.0)
+b_init = None  #tf.constant_initializer(value=0.0)
+b_init2 = tf.constant_initializer(value=0.0)
 
 
 def depthwise_conv_block(n, n_filter, filter_size=(3, 3), strides=(1, 1), is_train=False, name="depth_block"):
@@ -59,7 +60,8 @@ def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):  # hao2
 
         n = depthwise_conv_block(n, 128, strides=(2, 2), is_train=is_train, name="conv2_depth1")
         n = depthwise_conv_block(n, 128, is_train=is_train, name="conv2_depth2")
-
+        n1 = n
+        
         n = depthwise_conv_block(n, 256, strides=(2, 2), is_train=is_train, name="conv3_depth1")
         n = depthwise_conv_block(n, 256, is_train=is_train, name="conv3_depth2")
         n2 = n

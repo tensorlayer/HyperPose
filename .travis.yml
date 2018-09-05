@@ -16,5 +16,6 @@ before_install:
 - ./scripts/download-test-data.sh
 
 script:
-- python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',')
+- python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vgg
+- python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=mobilenet
 # TODO: add move tests
