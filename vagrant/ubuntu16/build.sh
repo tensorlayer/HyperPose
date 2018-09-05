@@ -8,4 +8,5 @@ cd openpose
 git checkout cpp
 
 export PYTHON_BIN_PATH=$(which python3)
+alias python=${PYTHON_BIN_PATH}
 make
