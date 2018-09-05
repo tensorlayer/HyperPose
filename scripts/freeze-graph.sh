@@ -41,7 +41,11 @@ freeze() {
         --output_node_names ${OUTPUT_NODE_NAMES}
 }
 
-PATH_TO_NPZ=${HOME}/Downloads/vgg450000.npz
+# BASE_MODEL=vgg
+# PATH_TO_NPZ=${HOME}/Downloads/vgg450000.npz
 
-measure ./export.py --path-to-npz=${PATH_TO_NPZ}
+BASE_MODEL=mobilenet
+PATH_TO_NPZ=${HOME}/Downloads/mbn28000.npz
+
+measure ./export.py --base-model=${BASE_MODEL} --path-to-npz=${PATH_TO_NPZ}
 measure freeze
