@@ -233,7 +233,8 @@ if __name__ == '__main__':
 
             ## restore pretrained weights
             try:
-                tl.files.load_and_assign_npz(sess, os.path.join(model_path, 'pose.npz'), net)
+                # tl.files.load_and_assign_npz(sess, os.path.join(model_path, 'pose.npz'), net)
+                tl.files.load_and_assign_npz_dict(sess=sess, name=os.path.join(model_path, 'pose.npz'))
             except:
                 print("no pretrained model")
 
@@ -283,9 +284,12 @@ if __name__ == '__main__':
                 ## save intermedian results and model
                 if (step != 0) and (step % save_interval == 0):
                     draw_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train_%d_' % step)
-                    tl.files.save_npz(
-                        net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
-                    tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+                    # tl.files.save_npz(
+                    #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                    # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+                    tl.files.save_npz_dict(
+                         net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                    tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
                 if step == n_step:  # training finished
                     break
 
