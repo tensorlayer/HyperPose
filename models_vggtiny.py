@@ -89,8 +89,13 @@ def vgg_network(x):
     return net
 
 
-def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):
+def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None, data_format='channels_last'):
     """Defines the entire pose estimation model."""
+
+    if data_format != 'channels_last':
+        # TODO: support NCHW
+        print('data_format=%s is ignored' % data_format)
+
     with tf.variable_scope('model', reuse):
         ## Feature extraction part
         cnn = vgg_network(x)

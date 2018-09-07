@@ -1,8 +1,7 @@
 # hao25
 import tensorflow as tf
 import tensorlayer as tl
-from tensorlayer.layers import (BatchNormLayer, ConcatLayer, Conv2d,
-                                DepthwiseConv2d, InputLayer, MaxPool2d)
+from tensorlayer.layers import (BatchNormLayer, ConcatLayer, Conv2d, DepthwiseConv2d, InputLayer, MaxPool2d)
 
 __all__ = [
     'model',
@@ -49,7 +48,11 @@ def stage(cnn, b1, b2, n_pos, maskInput1, maskInput2, is_train, name='stageX'):
     return b1, b2
 
 
-def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):  # hao25
+def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None, data_format='channels_last'):  # hao25
+    if data_format != 'channels_last':
+        # TODO: support NCHW
+        print('data_format=%s is ignored' % data_format)
+
     b1_list = []
     b2_list = []
     with tf.variable_scope('model', reuse):

@@ -14,7 +14,7 @@ from inference.pafprocess import pafprocess
 from inference.tensblur.smoother import Smoother
 
 logger = logging.getLogger('TfPoseEstimator')
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 formatter = logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s')
 ch.setFormatter(formatter)
@@ -288,6 +288,8 @@ class TfPoseEstimator:
         (self.tensor_image, self.upsample_size, self.tensor_heatMat_up, self.tensor_peaks,
          self.tensor_pafMat_up) = model_func(n_pos, target_size)
         self._warm_up(graph_path)
+        logger.info('tensor_heatMat_up :: %s, tensor_pafMat_up :: %s' % (self.tensor_heatMat_up.shape,
+                                                                         self.tensor_pafMat_up.shape))
 
     def _warm_up(self, graph_path):
         self.persistent_sess = tf.InteractiveSession()
@@ -333,91 +335,6 @@ class TfPoseEstimator:
 
         return npimg
 
-    def _get_scaled_img(self, npimg, scale):
-        get_base_scale = lambda s, w, h: max(self.target_size[0] / float(h), self.target_size[1] / float(w)) * s
-        img_h, img_w = npimg.shape[:2]
-
-        if scale is None:
-            if npimg.shape[:2] != (self.target_size[1], self.target_size[0]):
-                # resize
-                npimg = cv2.resize(npimg, self.target_size, interpolation=cv2.INTER_CUBIC)
-            return [npimg], [(0.0, 0.0, 1.0, 1.0)]
-        # elif isinstance(scale, float):
-        #     # scaling with center crop
-        #     base_scale = get_base_scale(scale, img_w, img_h)
-        #     npimg = cv2.resize(npimg, dsize=None, fx=base_scale, fy=base_scale, interpolation=cv2.INTER_CUBIC)
-        #
-        #     o_size_h, o_size_w = npimg.shape[:2]
-        #     if npimg.shape[0] < self.target_size[1] or npimg.shape[1] < self.target_size[0]:
-        #         newimg = np.zeros(
-        #             (max(self.target_size[1], npimg.shape[0]), max(self.target_size[0], npimg.shape[1]), 3),
-        #             dtype=np.uint8)
-        #         newimg[:npimg.shape[0], :npimg.shape[1], :] = npimg
-        #         npimg = newimg
-        #
-        #     windows = sw.generate(npimg, sw.DimOrder.HeightWidthChannel, self.target_size[0], self.target_size[1], 0.2)
-        #
-        #     rois = []
-        #     ratios = []
-        #     for window in windows:
-        #         indices = window.indices()
-        #         roi = npimg[indices]
-        #         rois.append(roi)
-        #         ratio_x, ratio_y = float(indices[1].start) / o_size_w, float(indices[0].start) / o_size_h
-        #         ratio_w, ratio_h = float(indices[1].stop - indices[1].start) / o_size_w, float(
-        #             indices[0].stop - indices[0].start) / o_size_h
-        #         ratios.append((ratio_x, ratio_y, ratio_w, ratio_h))
-        #
-        #     return rois, ratios
-        # elif isinstance(scale, tuple) and len(scale) == 2:
-        #     # scaling with sliding window : (scale, step)
-        #     base_scale = get_base_scale(scale[0], img_w, img_h)
-        #     npimg = cv2.resize(npimg, dsize=None, fx=base_scale, fy=base_scale, interpolation=cv2.INTER_CUBIC)
-        #     o_size_h, o_size_w = npimg.shape[:2]
-        #     if npimg.shape[0] < self.target_size[1] or npimg.shape[1] < self.target_size[0]:
-        #         newimg = np.zeros(
-        #             (max(self.target_size[1], npimg.shape[0]), max(self.target_size[0], npimg.shape[1]), 3),
-        #             dtype=np.uint8)
-        #         newimg[:npimg.shape[0], :npimg.shape[1], :] = npimg
-        #         npimg = newimg
-        #
-        #     window_step = scale[1]
-        #
-        #     windows = sw.generate(npimg, sw.DimOrder.HeightWidthChannel, self.target_size[0], self.target_size[1],
-        #                           window_step)
-        #
-        #     rois = []
-        #     ratios = []
-        #     for window in windows:
-        #         indices = window.indices()
-        #         roi = npimg[indices]
-        #         rois.append(roi)
-        #         ratio_x, ratio_y = float(indices[1].start) / o_size_w, float(indices[0].start) / o_size_h
-        #         ratio_w, ratio_h = float(indices[1].stop - indices[1].start) / o_size_w, float(
-        #             indices[0].stop - indices[0].start) / o_size_h
-        #         ratios.append((ratio_x, ratio_y, ratio_w, ratio_h))
-        #
-        #     return rois, ratios
-        # elif isinstance(scale, tuple) and len(scale) == 3:
-        #     # scaling with ROI : (want_x, want_y, scale_ratio)
-        #     base_scale = get_base_scale(scale[2], img_w, img_h)
-        #     npimg = cv2.resize(npimg, dsize=None, fx=base_scale, fy=base_scale, interpolation=cv2.INTER_CUBIC)
-        #     ratio_w = self.target_size[0] / float(npimg.shape[1])
-        #     ratio_h = self.target_size[1] / float(npimg.shape[0])
-        #
-        #     want_x, want_y = scale[:2]
-        #     ratio_x = want_x - ratio_w / 2.
-        #     ratio_y = want_y - ratio_h / 2.
-        #     ratio_x = max(ratio_x, 0.0)
-        #     ratio_y = max(ratio_y, 0.0)
-        #     if ratio_x + ratio_w > 1.0:
-        #         ratio_x = 1. - ratio_w
-        #     if ratio_y + ratio_h > 1.0:
-        #         ratio_y = 1. - ratio_h
-        #
-        #     roi = self._crop_roi(npimg, ratio_x, ratio_y)
-        #     return [roi], [(ratio_x, ratio_y, ratio_w, ratio_h)]
-
     def _crop_roi(self, npimg, ratio_x, ratio_y):
         target_w, target_h = self.target_size
         h, w = npimg.shape[:2]
@@ -435,47 +352,31 @@ class TfPoseEstimator:
             return cropped
 
     def inference(self, npimg, resize_to_default=True, resize_out_ratio=1.0):
-        if npimg is None:
-            raise Exception('The image is not valid. Please check your image exists.')
-
-        if resize_to_default:
-            upsample_size = [
-                int(self.target_size[1] / 8 * resize_out_ratio),
-                int(self.target_size[0] / 8 * resize_out_ratio)
-            ]
-        else:
-            upsample_size = [int(npimg.shape[0] / 8 * resize_out_ratio), int(npimg.shape[1] / 8 * resize_out_ratio)]
+        upsample_size = [
+            int(self.target_size[1] / 8 * resize_out_ratio),
+            int(self.target_size[0] / 8 * resize_out_ratio)
+        ]
 
         if self.tensor_image.dtype == tf.quint8:
             # quantize input image
             npimg = TfPoseEstimator._quantize_img(npimg)
-            pass
 
-        logger.debug('inference+ original shape=%dx%d' % (npimg.shape[1], npimg.shape[0]))
-        img = npimg
-        if resize_to_default:
-            img = self._get_scaled_img(npimg, None)[0][0]
+        logger.debug('inference+ upsample_size %s' % (upsample_size,))
+        logger.debug('inference+ original shape=%s' % (npimg.shape,))
+
         peaks, heatMat_up, pafMat_up = self.persistent_sess.run(
             [self.tensor_peaks, self.tensor_heatMat_up, self.tensor_pafMat_up],
             feed_dict={
-                self.tensor_image: [img],
+                self.tensor_image: [npimg],
                 self.upsample_size: upsample_size
             })
-        peaks = peaks[0]
-        # import matplotlib.pyplot as plt
-        # tmp = np.amax(peaks[:, :, :-1], axis=2)
-        # plt.imshow(tmp, cmap=plt.cm.gray, alpha=0.5)
-        # plt.colorbar()
-        # plt.show()
-        self.heatMat = heatMat_up[0]
-        self.pafMat = pafMat_up[0]
-        logger.debug('inference- heatMat=%dx%d pafMat=%dx%d' % (self.heatMat.shape[1], self.heatMat.shape[0],
-                                                                self.pafMat.shape[1], self.pafMat.shape[0]))
+
+        self.heatMat = heatMat_up[0]  # FIXME
+        self.pafMat = pafMat_up[0]  # FIXME
 
         t = time.time()
-        print('SHAPE', peaks.shape)
-        humans = PoseEstimator.estimate_paf(peaks, self.heatMat, self.pafMat)
-        logger.debug('estimate time=%.5f' % (time.time() - t))
+        humans = PoseEstimator.estimate_paf(peaks[0], heatMat_up[0], pafMat_up[0])
+        logger.info('estimate time=%.5f' % (time.time() - t))
         return humans
 
 
