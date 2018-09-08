@@ -4,6 +4,7 @@ __pycache__
 *.jpg
 *.log
 *.png
+*.uff
 /3rdparty
 /checkpoints
 /coco
