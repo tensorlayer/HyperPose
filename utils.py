@@ -9,7 +9,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.distance import cdist
-
+import tensorflow as tf
 from config import config
 from pycocotools.coco import COCO, maskUtils
 from tensorlayer import logging

@@ -183,17 +183,17 @@ def make_model_placeholder(img,confs,pafs,img_mask1,img_mask2):
     return total_loss, last_conf, stage_losses, L2, cnn, last_paf, img, confs, pafs, img_mask1, net
 if __name__ == '__main__':
 
-    ## automatically download MSCOCO data to "data/mscoco..."" folder
-    train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
-        load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
-
-    ## read coco training images contains valid people
-    train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
-        get_pose_data_list(train_im_path, train_ann_path)
-
-    ## read coco validating images contains valid people (you can use it for training as well)
-    val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
-        get_pose_data_list(val_im_path, val_ann_path)
+    # ## automatically download MSCOCO data to "data/mscoco..."" folder
+    # train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
+    #     load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
+    #
+    # ## read coco training images contains valid people
+    # train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
+    #     get_pose_data_list(train_im_path, train_ann_path)
+    #
+    # ## read coco validating images contains valid people (you can use it for training as well)
+    # val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
+    #     get_pose_data_list(val_im_path, val_ann_path)
 
     ## read your own images contains valid people
     ## 1. if you only have one folder as follow:
@@ -215,7 +215,10 @@ if __name__ == '__main__':
     #     your_objs_info_list.extend(_objs_info_list)
     #     your_mask_list.extend(_mask_list)
     # print("number of own images found:", len(your_imgs_file_list))
-
+    train_im_path='/Users/Joel/Desktop/coco/images/val2014/'
+    train_ann_path='/Users/Joel/Desktop/coco/annotations/person_keypoints_val2014.json'
+    train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
+        get_pose_data_list(train_im_path, train_ann_path)
     ## choice dataset for training
     ## 1. only coco training set
     imgs_file_list = train_imgs_file_list
