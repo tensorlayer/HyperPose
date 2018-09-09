@@ -203,8 +203,8 @@ if __name__ == '__main__':
         stage_losses = []
         L2 = 0.0
         for idx, (l1, l2) in enumerate(zip(b1_list, b2_list)):
-            loss_l1 = tf.nn.l2_loss((tf.concat(l1.outputs, axis=0) - tf.concat(confs, axis=0)) * img_mask1)
-            loss_l2 = tf.nn.l2_loss((tf.concat(l2.outputs, axis=0) - tf.concat(pafs, axis=0)) * img_mask2)
+            loss_l1 = tf.nn.l2_loss((l1.outputs - confs) * img_mask1)
+            loss_l2 = tf.nn.l2_loss((l2.outputs - pafs ) * img_mask2)
             losses.append(tf.reduce_mean([loss_l1, loss_l2]))
             stage_losses.append(loss_l1 / batch_size)
             stage_losses.append(loss_l2 / batch_size)
