@@ -16,7 +16,7 @@ from models import model
 from pycocotools.coco import maskUtils
 from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
                                 keypoint_random_resize_shortestedge, keypoint_random_rotate)
-from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset)
+from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset,tf_repeat)
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
@@ -98,6 +98,11 @@ def _map_fn(img_list, annos):
     image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
     image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
+
+    image = tf.reshape(image, [hin, win, 3])
+    resultmap = tf.reshape(resultmap, [hout, wout, 57])
+    mask = tf.reshape(mask, [hout, wout, 1])
+
     return image, resultmap, mask
 
 
@@ -118,6 +123,37 @@ def get_pose_data_list(im_path, ann_path):
         print("{} has {} images".format(im_path, len(imgs_file_list)))
     return imgs_file_list, objs_info_list, mask_list, targets
 
+def make_model(img,results,mask):
+    confs=results[:,:,:,:19]
+    pafs = results[:, :, :, 19:]
+    m1=tf_repeat(mask, [1,1,1,19])
+    m2= tf_repeat(mask, [1,1,1,38])
+    cnn, b1_list, b2_list, net = model(img, n_pos, m1, m2, True, False)
+    # define loss
+    losses = []
+    last_losses_l1 = []
+    last_losses_l2 = []
+    stage_losses = []
+
+    for idx, (l1, l2) in enumerate(zip(b1_list, b2_list)):
+        loss_l1 = tf.nn.l2_loss((l1.outputs - confs) * m1)
+        loss_l2 = tf.nn.l2_loss((l2.outputs - pafs) * m2)
+
+        losses.append(tf.reduce_mean([loss_l1, loss_l2]))
+        stage_losses.append(loss_l1 / batch_size)
+        stage_losses.append(loss_l2 / batch_size)
+
+    last_conf = b1_list[-1].outputs
+    last_paf =b2_list[-1].outputs
+    last_losses_l1.append(loss_l1)
+    last_losses_l2.append(loss_l2)
+    L2 = 0.0
+
+    for p in tl.layers.get_variables_with_name('kernel', True, True):
+        L2 += tf.contrib.layers.l2_regularizer(0.0005)(p)
+    total_loss = tf.reduce_sum(losses) / batch_size + L2
+
+    return total_loss,last_conf,stage_losses,L2, cnn, last_paf, img, confs, pafs,m1, net
 
 if __name__ == '__main__':
 
@@ -293,9 +329,67 @@ if __name__ == '__main__':
                 if step == n_step:  # training finished
                     break
 
-    elif config.TRAIN.train_mode == 'datasetapi':  # TODO
+    elif config.TRAIN.train_mode == 'datasetapi':
         ## Train with TensorFlow dataset mode is usually faster than placeholder.
-        raise Exception("TODO")
+        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(
+            *iterator.get_next())
+
+        global_step = tf.Variable(1, trainable=False)
+        print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
+            n_step, batch_size, base_lr, decay_every_step))
+        with tf.variable_scope('learning_rate'):
+            lr_v = tf.Variable(base_lr, trainable=False)
+
+        opt = tf.train.MomentumOptimizer(lr_v, 0.9)
+        train_op = opt.minimize(total_loss, global_step=global_step)
+        config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
+
+        ## start training
+        with tf.Session(config=config) as sess:
+            sess.run(tf.global_variables_initializer())
+
+            ## restore pretrained weights
+            try:
+                # tl.files.load_and_assign_npz(sess, os.path.join(model_path, 'pose.npz'), net)
+                tl.files.load_and_assign_npz_dict(sess=sess, name=os.path.join(model_path, 'pose.npz'))
+            except:
+                print("no pretrained model")
+
+            ## train until the end
+            sess.run(tf.assign(lr_v, base_lr))
+            while (True):
+                tic = time.time()
+                step = sess.run(global_step)
+                if step != 0 and (step % decay_every_step == 0):
+                    new_lr_decay = gamma ** (step // decay_every_step)
+                    sess.run(tf.assign(lr_v, base_lr * new_lr_decay))
+
+                ## save some training data for debugging data augmentation (slow)
+                # draw_results(x_, confs_, None, pafs_, None, mask, 'check_batch_{}_'.format(step))
+
+                [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm, paf_result] = sess.run(
+                    [train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf])
+
+                # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
+                lr = sess.run(lr_v)
+                print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} weight_norm {:10e} Took: {}s'.format(
+                    step, n_step, the_loss, lr, weight_norm, time.time() - tic))
+                for ix, ll in enumerate(loss_ll):
+                    print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
+
+                ## save intermedian results and model
+                if (step != 0) and (step % save_interval == 0):
+                    draw_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train_%d_' % step)
+                    # tl.files.save_npz(
+                    #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                    # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+                    tl.files.save_npz_dict(
+                        net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                    tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+                if step == n_step:  # training finished
+                    break
+
+
     elif config.TRAIN.train_mode == 'distributed':  # TODO
         ## Train with distributed mode.
         raise Exception("TODO tl.distributed.Trainer")
