@@ -16,7 +16,7 @@ from models import model
 from pycocotools.coco import maskUtils
 from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
                                 keypoint_random_resize_shortestedge, keypoint_random_rotate)
-from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset,tf_repeat)
+from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset, tf_repeat)
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
@@ -70,9 +70,10 @@ def _data_aug_fn(image, ground_truth):
     # random left-right flipping
     image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
     # random resize height and width together
-    image, annos, mask_miss = keypoint_random_resize_shortestedge(image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
+    image, annos, mask_miss = keypoint_random_resize_shortestedge(
+        image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
     # random crop
-    image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win)) # with padding
+    image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding
 
     # generate result maps including keypoints heatmap, pafs and mask
     h, w, _ = np.shape(image)
@@ -123,11 +124,12 @@ def get_pose_data_list(im_path, ann_path):
         print("{} has {} images".format(im_path, len(imgs_file_list)))
     return imgs_file_list, objs_info_list, mask_list, targets
 
-def make_model(img,results,mask):
-    confs= results[:,:,:,n_pos]
+
+def make_model(img, results, mask):
+    confs = results[:, :, :, :n_pos]
     pafs = results[:, :, :, n_pos:]
-    m1=tf_repeat(mask, [1,1,1,n_pos])
-    m2= tf_repeat(mask, [1,1,1,n_pos*2])
+    m1 = tf_repeat(mask, [1, 1, 1, n_pos])
+    m2 = tf_repeat(mask, [1, 1, 1, n_pos * 2])
     cnn, b1_list, b2_list, net = model(img, n_pos, m1, m2, True, False)
     # define loss
     losses = []
@@ -144,7 +146,7 @@ def make_model(img,results,mask):
         stage_losses.append(loss_l2 / batch_size)
 
     last_conf = b1_list[-1].outputs
-    last_paf =b2_list[-1].outputs
+    last_paf = b2_list[-1].outputs
     last_losses_l1.append(loss_l1)
     last_losses_l2.append(loss_l2)
     L2 = 0.0
@@ -153,7 +155,8 @@ def make_model(img,results,mask):
         L2 += tf.contrib.layers.l2_regularizer(0.0005)(p)
     total_loss = tf.reduce_sum(losses) / batch_size + L2
 
-    return total_loss,last_conf,stage_losses,L2, cnn, last_paf, img, confs, pafs,m1, net
+    return total_loss, last_conf, stage_losses, L2, cnn, last_paf, img, confs, pafs, m1, net
+
 
 # def make_model_placeholder(img,confs,pafs,img_mask1,img_mask2):
 #
@@ -183,17 +186,17 @@ def make_model(img,results,mask):
 #     return total_loss, last_conf, stage_losses, L2, cnn, last_paf, img, confs, pafs, img_mask1, net
 if __name__ == '__main__':
 
-    ## automatically download MSCOCO data to "data/mscoco..."" folder
-    train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
-        load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
-
-    ## read coco training images contains valid people
-    train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
-        get_pose_data_list(train_im_path, train_ann_path)
-
-    ## read coco validating images contains valid people (you can use it for training as well)
-    val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
-        get_pose_data_list(val_im_path, val_ann_path)
+    # ## automatically download MSCOCO data to "data/mscoco..."" folder
+    # train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
+    #     load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
+    #
+    # ## read coco training images contains valid people
+    # train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
+    #     get_pose_data_list(train_im_path, train_ann_path)
+    #
+    # ## read coco validating images contains valid people (you can use it for training as well)
+    # val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
+    #     get_pose_data_list(val_im_path, val_ann_path)
 
     ## read your own images contains valid people
     ## 1. if you only have one folder as follow:
@@ -220,6 +223,7 @@ if __name__ == '__main__':
     ## 1. only coco training set
     imgs_file_list = train_imgs_file_list
     train_targets = list(zip(train_objs_info_list, train_mask_list))
+
     ## 2. your own data and coco training set
     # imgs_file_list = train_imgs_file_list + your_imgs_file_list
     # train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
@@ -236,7 +240,7 @@ if __name__ == '__main__':
 
     n_epoch = math.ceil(n_step / len(imgs_file_list))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
-    dataset = dataset.shuffle(buffer_size=2046) # shuffle before loading images
+    dataset = dataset.shuffle(buffer_size=2046)  # shuffle before loading images
     dataset = dataset.map(_map_fn, num_parallel_calls=8)
     # dataset = dataset.shuffle(buffer_size=2046)
     dataset = dataset.repeat(n_epoch)
@@ -251,8 +255,8 @@ if __name__ == '__main__':
         x = tf.placeholder(tf.float32, [None, hin, win, 3], "image")
         resultmaps = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 3], "resultmaps")
         # if the people does not have keypoints annotations, ignore the area
-        img_masks = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 2], 'img_masks')
-        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(x, resultmaps,img_masks)
+        img_masks = tf.placeholder(tf.float32, [None, hout, wout, 1], 'img_masks')
+        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element)
 
         global_step = tf.Variable(1, trainable=False)
         print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
@@ -305,14 +309,15 @@ if __name__ == '__main__':
                     [train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf],
                     feed_dict={
                         x: x_,
-                        resultmaps:map_batch,
-                        img_masks:mask
+                        resultmaps: map_batch,
+                        img_masks: mask
                     })
 
                 # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
                 lr = sess.run(lr_v)
                 print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} weight_norm {:10e} Took: {}s'.format(
-                    step, n_step, the_loss, lr, weight_norm, time.time()-tic))
+                    step, n_step, the_loss, lr, weight_norm,
+                    time.time() - tic))
                 for ix, ll in enumerate(loss_ll):
                     print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
@@ -323,15 +328,14 @@ if __name__ == '__main__':
                     #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                     # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
                     tl.files.save_npz_dict(
-                         net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                        net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                     tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
                 if step == n_step:  # training finished
                     break
 
     elif config.TRAIN.train_mode == 'datasetapi':
         ## Train with TensorFlow dataset mode is usually faster than placeholder.
-        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(
-            *one_element)
+        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element)
 
         global_step = tf.Variable(1, trainable=False)
         print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
@@ -360,19 +364,20 @@ if __name__ == '__main__':
                 tic = time.time()
                 step = sess.run(global_step)
                 if step != 0 and (step % decay_every_step == 0):
-                    new_lr_decay = gamma ** (step // decay_every_step)
+                    new_lr_decay = gamma**(step // decay_every_step)
                     sess.run(tf.assign(lr_v, base_lr * new_lr_decay))
 
                 ## save some training data for debugging data augmentation (slow)
                 # draw_results(x_, confs_, None, pafs_, None, mask, 'check_batch_{}_'.format(step))
 
-                [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm, paf_result] = sess.run(
-                    [train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf])
+                [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm,
+                 paf_result] = sess.run([train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf])
 
                 # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
                 lr = sess.run(lr_v)
                 print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} weight_norm {:10e} Took: {}s'.format(
-                    step, n_step, the_loss, lr, weight_norm, time.time() - tic))
+                    step, n_step, the_loss, lr, weight_norm,
+                    time.time() - tic))
                 for ix, ll in enumerate(loss_ll):
                     print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
@@ -387,7 +392,6 @@ if __name__ == '__main__':
                     tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
                 if step == n_step:  # training finished
                     break
-
 
     elif config.TRAIN.train_mode == 'distributed':  # TODO
         ## Train with distributed mode.

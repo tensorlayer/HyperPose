@@ -19,6 +19,7 @@ n_pos = config.MODEL.n_pos
 hout = config.MODEL.hout
 wout = config.MODEL.wout
 
+
 ## download dataset
 def load_mscoco_dataset(path='data', dataset='2017', task='person'):  # TODO move to tl.files later
     """Download MSCOCO Dataset.
@@ -693,7 +694,8 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
         mkpath(config.LOG.vis_path)
         plt.savefig(os.path.join(config.LOG.vis_path, '%s%d.png' % (name, i)), dpi=300)
 
-def vis_annos(image, annos,name=''):
+
+def vis_annos(image, annos, name=''):
     """Save results for debugging.
 
     Parameters
@@ -713,6 +715,8 @@ def vis_annos(image, annos,name=''):
 
     mkpath(config.LOG.vis_path)
     plt.savefig(os.path.join(config.LOG.vis_path, 'keypoints%s%d.png' % (name, i)), dpi=300)
+
+
 def tf_repeat(tensor, repeats):
     """
     Args:
@@ -731,6 +735,7 @@ def tf_repeat(tensor, repeats):
     repeated_tesnor = tf.reshape(tiled_tensor, tf.shape(tensor) * repeats)
 
     return repeated_tesnor
+
 
 if __name__ == '__main__':
     data_dir = '/Users/Joel/Desktop/coco'
