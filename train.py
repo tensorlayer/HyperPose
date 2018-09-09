@@ -332,7 +332,7 @@ if __name__ == '__main__':
     elif config.TRAIN.train_mode == 'datasetapi':
         ## Train with TensorFlow dataset mode is usually faster than placeholder.
         total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(
-            *iterator.get_next())
+            *one_element)
 
         global_step = tf.Variable(1, trainable=False)
         print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
