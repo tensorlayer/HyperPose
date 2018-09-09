@@ -155,6 +155,32 @@ def make_model(img,results,mask):
 
     return total_loss,last_conf,stage_losses,L2, cnn, last_paf, img, confs, pafs,m1, net
 
+def make_model_placeholder(x,confs,pafs,img_mask1,img_mask2):
+
+    cnn, b1_list, b2_list, net = model(x, n_pos, img_mask1, img_mask2, True, False)
+
+    ## define loss
+    losses = []
+    last_losses_l1 = []
+    last_losses_l2 = []
+    stage_losses = []
+    L2 = 0.0
+    for idx, (l1, l2) in enumerate(zip(b1_list, b2_list)):
+        loss_l1 = tf.nn.l2_loss((l1.outputs - confs) * img_mask1)
+        loss_l2 = tf.nn.l2_loss((l2.outputs - pafs) * img_mask2)
+        losses.append(tf.reduce_mean([loss_l1, loss_l2]))
+        stage_losses.append(loss_l1 / batch_size)
+        stage_losses.append(loss_l2 / batch_size)
+    last_losses_l1.append(loss_l1)
+    last_losses_l2.append(loss_l2)
+    last_conf = b1_list[-1].outputs
+    last_paf = b2_list[-1].outputs
+
+    for p in tl.layers.get_variables_with_name('kernel', True, True):
+        L2 += tf.contrib.layers.l2_regularizer(0.0005)(p)
+    total_loss = tf.reduce_sum(losses) / batch_size + L2
+
+    return total_loss, last_conf, stage_losses, L2, cnn, last_paf, img, confs, pafs, m1, net
 if __name__ == '__main__':
 
     ## automatically download MSCOCO data to "data/mscoco..."" folder
@@ -230,28 +256,7 @@ if __name__ == '__main__':
         img_mask2 = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 2], 'img_mask2')
         # num_images = np.shape(imgs_file_list)[0]
 
-        cnn, b1_list, b2_list, net = model(x, n_pos, img_mask1, img_mask2, True, False)
-
-        ## define loss
-        losses = []
-        last_losses_l1 = []
-        last_losses_l2 = []
-        stage_losses = []
-        L2 = 0.0
-        for idx, (l1, l2) in enumerate(zip(b1_list, b2_list)):
-            loss_l1 = tf.nn.l2_loss((l1.outputs - confs) * img_mask1)
-            loss_l2 = tf.nn.l2_loss((l2.outputs - pafs ) * img_mask2)
-            losses.append(tf.reduce_mean([loss_l1, loss_l2]))
-            stage_losses.append(loss_l1 / batch_size)
-            stage_losses.append(loss_l2 / batch_size)
-        last_losses_l1.append(loss_l1)
-        last_losses_l2.append(loss_l2)
-        last_conf = b1_list[-1].outputs
-        last_paf = b2_list[-1].outputs
-
-        for p in tl.layers.get_variables_with_name('kernel', True, True):
-            L2 += tf.contrib.layers.l2_regularizer(0.0005)(p)
-        total_loss = tf.reduce_sum(losses) / batch_size + L2
+        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model_placeholder(x, confs,pafs,img_mask1,img_mask2)
 
         global_step = tf.Variable(1, trainable=False)
         print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
