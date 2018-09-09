@@ -186,17 +186,17 @@ def make_model(img, results, mask):
 #     return total_loss, last_conf, stage_losses, L2, cnn, last_paf, img, confs, pafs, img_mask1, net
 if __name__ == '__main__':
 
-    # ## automatically download MSCOCO data to "data/mscoco..."" folder
-    # train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
-    #     load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
-    #
-    # ## read coco training images contains valid people
-    # train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
-    #     get_pose_data_list(train_im_path, train_ann_path)
-    #
-    # ## read coco validating images contains valid people (you can use it for training as well)
-    # val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
-    #     get_pose_data_list(val_im_path, val_ann_path)
+    ## automatically download MSCOCO data to "data/mscoco..."" folder
+    train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
+        load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
+
+    ## read coco training images contains valid people
+    train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
+        get_pose_data_list(train_im_path, train_ann_path)
+
+    ## read coco validating images contains valid people (you can use it for training as well)
+    val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
+        get_pose_data_list(val_im_path, val_ann_path)
 
     ## read your own images contains valid people
     ## 1. if you only have one folder as follow:
@@ -323,7 +323,12 @@ if __name__ == '__main__':
 
                 ## save intermedian results and model
                 if (step != 0) and (step % save_interval == 0):
-                    draw_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train_%d_' % step)
+                    img_out=tran_batch[0]
+                    confs_ground=tran_batch[1][:,:,:,:n_pos]
+                    pafs_ground=tran_batch[1][:,:,:,n_pos:]
+                    mask_out=tran_batch[2]
+                    draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out,
+                                 'train_%d_' % step)
                     # tl.files.save_npz(
                     #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                     # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
@@ -383,7 +388,8 @@ if __name__ == '__main__':
 
                 ## save intermedian results and model
                 if (step != 0) and (step % save_interval == 0):
-                    draw_results(x_, confs_, conf_result, pafs_, paf_result, mask, 'train_%d_' % step)
+                    [img_out, confs_ground, pafs_ground, mask_out] = sess.run([x_, confs_, pafs_, mask])
+                    draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
                     # tl.files.save_npz(
                     #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                     # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)

@@ -613,7 +613,7 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
         if pafs_result is not None:
             paf_result = pafs_result[i]
         if masks is not None:
-            mask = masks[i]
+            mask = masks[:,:,:,0]
             mask = mask.reshape(hout, wout, 1)
             mask1 = np.repeat(mask, n_pos, 2)
             mask2 = np.repeat(mask, n_pos * 2, 2)
