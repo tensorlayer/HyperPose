@@ -245,7 +245,7 @@ if __name__ == '__main__':
     # dataset = dataset.shuffle(buffer_size=2046)
     dataset = dataset.repeat(n_epoch)
     dataset = dataset.batch(batch_size)
-    dataset = dataset.prefetch(buffer_size=20)
+    dataset = dataset.prefetch(buffer_size=batch_size*4)
     iterator = dataset.make_one_shot_iterator()
     one_element = iterator.get_next()
 
