@@ -19,7 +19,7 @@ For this reason, we reimplemented this project in [TensorLayer fashion](https://
 - `config.py` : to config the directories of dataset, training details and etc.
 - `inference.py`: TODO
 - `models.py`: to define the model structures, currently only VGG19 Based model included
-- `train.py`: to train the model
+- `train.py`: includes try training mode, datasetapi(recommonded), placeholder(slower, used for debugging), distributed (TODO)
 - `utils.py`: to extract databased from cocodataset and groundtruth calculation
 - <s>`visualize.py`: draw the training result</s> (moved to utils.py)
 - `inference` folder:
