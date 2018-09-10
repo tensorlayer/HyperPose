@@ -4,12 +4,12 @@
 class FakeUFFRunnerImpl : public UFFRunner
 {
   public:
-    FakeUFFRunnerImpl(const std::string &model_file) { tracer_t _(__func__); }
+    FakeUFFRunnerImpl(const std::string &model_file) { TRACE(__func__); }
 
     void execute(const std::vector<void *> &inputs,
                  const std::vector<void *> &outputs) override
     {
-        tracer_t _(__func__);
+        TRACE(__func__);
     }
 };
 

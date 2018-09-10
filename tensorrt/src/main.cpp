@@ -21,7 +21,7 @@ const int n_pos = 19;
 
 void inference(bool draw_results = false)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
 
     const std::string home(std::getenv("HOME"));
     auto model_file = home + "/lg/openpose/vgg.uff";
@@ -38,7 +38,7 @@ void inference(bool draw_results = false)
     outputs[1] = paf.data();
 
     {
-        tracer_t _("inference one");
+        TRACE("inference one");
         const auto prefix = home + "/var/data/openpose/examples/media/";
         const auto image_file = prefix + "COCO_val2014_000000000192.jpg";
 
@@ -48,7 +48,7 @@ void inference(bool draw_results = false)
         runner->execute(inputs, outputs);
 
         if (draw_results) {
-            tracer_t _("draw_results");
+            TRACE("draw_results");
 
             tensor_t<float, 3> conf(outputs[0], f_height, f_width, n_pos);
             tensor_t<float, 3> paf(outputs[1], f_height, f_width, n_pos * 2);
@@ -70,7 +70,7 @@ void inference(bool draw_results = false)
 
 int main(int argc, char **argv)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
     inference(true);
     return 0;
 }

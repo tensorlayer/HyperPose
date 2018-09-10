@@ -1,6 +1,12 @@
 # https://docs.bazel.build/versions/master/be/c-cpp.html#cc_library
 
 cc_library(
+    name = "trace",
+    srcs = ["tracer.cpp"],
+    hdrs = ["tracer.h"],
+)
+
+cc_library(
     name = "input",
     srcs = ["input.cpp"],
     hdrs = ["input.h"],
@@ -25,21 +31,26 @@ cc_library(
         "pafprocess/pafprocess.cpp",
     ],
     hdrs = [
+        "constant.h",
         "human.h",
         "paf.h",
         "pafprocess/pafprocess.h",
         "tensor.h",
-        "tracer.h",
     ],
-    deps = ["@opencv"],
+    deps = [
+        "trace",
+        "@opencv",
+    ],
 )
 
 cc_library(
     name = "fake_uff_runner",
     srcs = ["fake_uff-runner.cpp"],
     hdrs = [
-        "tracer.h",
         "uff-runner.h",
+    ],
+    deps = [
+        "trace",
     ],
 )
 

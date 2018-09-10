@@ -41,7 +41,7 @@ inline int64_t memSize(const buffer_info_t &info)
 
 void *safeCudaMalloc(size_t memSize)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
     void *deviceMem;
     CHECK(cudaMalloc(&deviceMem, memSize));
     if (deviceMem == nullptr) {
@@ -68,7 +68,7 @@ int64_t cuda_buffer_t::memSize() const { return ::memSize(info_); }
 
 void cuda_buffer_t::fromHost(void *buffer)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
     fprintf(stderr, "%p@cuda <- %p@mem | size = %lu\n", data_, buffer,
             memSize());
     CHECK(cudaMemcpy(data_, buffer, memSize(), cudaMemcpyHostToDevice));
@@ -76,7 +76,7 @@ void cuda_buffer_t::fromHost(void *buffer)
 
 void cuda_buffer_t::toHost(void *buffer)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
     fprintf(stderr, "%p@mem <- %p@cuda | size = %lu\n", buffer, data_,
             memSize());
     CHECK(cudaMemcpy(buffer, data_, memSize(), cudaMemcpyDeviceToHost));

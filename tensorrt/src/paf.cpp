@@ -6,6 +6,7 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "constant.h"
 #include "pafprocess/pafprocess.h"
 #include "tensor.h"
 #include "tracer.h"
@@ -16,7 +17,7 @@ std::vector<Human> estimate_paf(const tensor_t<float, 3> &conf,
                                 const tensor_t<float, 3> &peak,
                                 const tensor_t<float, 3> &paf)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
 
     const auto p1 = peak.dims[0];
     const auto p2 = peak.dims[1];
@@ -64,7 +65,7 @@ std::vector<Human> estimate_paf(const tensor_t<float, 3> &conf,
 // This is the same as OpenCV's INTER_AREA.
 void resize_area(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
 
     const int height = input.dims[0];
     const int width = input.dims[1];
@@ -95,12 +96,10 @@ void resize_area(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
     }
 }
 
+// FIXME: use a faster impl
 void smooth(const tensor_t<float, 3> &input, tensor_t<float, 3> output)
 {
-    tracer_t _(__func__);
-
-    const int filter_size = 25;
-    const float sigma = 0.3;
+    TRACE(__func__);
 
     const int height = input.dims[0];
     const int width = input.dims[1];
@@ -110,14 +109,30 @@ void smooth(const tensor_t<float, 3> &input, tensor_t<float, 3> output)
     assert(width == output.dims[1]);
     assert(channel == output.dims[2]);
 
-    // TODO
-    std::memcpy((void *)output.data(), input.data(),
-                height * width * channel * sizeof(float));
+    for (int k = 0; k < channel; ++k) {
+        for (int i = 0; i < height; ++i) {
+            // printf("%d\n", i);
+            for (int j = 0; j < width; ++j) {
+                float tmp = 0;
+                for (int dx = 0; dx < ksize; ++dx) {
+                    for (int dy = 0; dy < ksize; ++dy) {
+                        const int nx = i + dx - ksize / 2;
+                        const int ny = i + dy - ksize / 2;
+                        if (0 <= nx && nx < height && 0 <= ny && ny < width) {
+                            tmp +=
+                                input.at(nx, ny, k) * gauss_kernel.at(nx, ny);
+                        }
+                    }
+                }
+                output.at(i, j, k) = tmp;
+            }
+        }
+    }
 }
 
 void maxpool_3x3(const tensor_t<float, 3> &input, tensor_t<float, 3> output)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
 
     const int height = input.dims[0];
     const int width = input.dims[1];
@@ -158,7 +173,7 @@ float delta(float x, float y, bool &flag)
 int select_peak(const tensor_t<float, 3> &smoothed,
                 const tensor_t<float, 3> &peak, tensor_t<float, 3> output)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
 
     const int height = smoothed.dims[0];
     const int width = smoothed.dims[1];
@@ -181,7 +196,7 @@ int select_peak(const tensor_t<float, 3> &smoothed,
 
 void get_peak(const tensor_t<float, 3> &input, tensor_t<float, 3> output)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
 
     const int height = input.dims[0];
     const int width = input.dims[1];
@@ -205,7 +220,7 @@ void get_peak(const tensor_t<float, 3> &input, tensor_t<float, 3> output)
 std::vector<Human> estimate_paf(const tensor_t<float, 3> &conf,
                                 const tensor_t<float, 3> &paf)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
 
     debug("conf :: ", conf);
     debug("paf :: ", paf);

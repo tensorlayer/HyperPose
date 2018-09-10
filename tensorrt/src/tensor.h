@@ -23,7 +23,7 @@ template <typename T, uint8_t r> struct tensor_t {
 
     template <typename... Dims>
     explicit tensor_t(void *data_ptr, const Dims... dims_)
-        : dims({static_cast<int32_t>(dims_)...}), data_(volume<r>(dims))
+        : dims({{static_cast<int32_t>(dims_)...}}), data_(volume<r>(dims))
     {
         static_assert(sizeof...(Dims) == r, "invalid number of dims");
 
@@ -42,7 +42,7 @@ template <typename T, uint8_t r> struct tensor_t {
     template <typename... I> T &at(const I... i)
     {
         static_assert(sizeof...(i) == r, "invalid numer of indexes");
-        const std::array<uint32_t, r> offs{static_cast<uint32_t>(i)...};
+        const std::array<uint32_t, r> offs{{static_cast<uint32_t>(i)...}};
         uint32_t off = 0;
         for (uint8_t i = 0; i < r; ++i) { off = off * dims[i] + offs[i]; }
         return data_[off];
@@ -51,7 +51,7 @@ template <typename T, uint8_t r> struct tensor_t {
     template <typename... I> T at(const I... i) const
     {
         static_assert(sizeof...(i) == r, "invalid numer of indexes");
-        const std::array<uint32_t, r> offs{static_cast<uint32_t>(i)...};
+        const std::array<uint32_t, r> offs{{static_cast<uint32_t>(i)...}};
         uint32_t off = 0;
         for (uint8_t i = 0; i < r; ++i) { off = off * dims[i] + offs[i]; }
         return data_[off];

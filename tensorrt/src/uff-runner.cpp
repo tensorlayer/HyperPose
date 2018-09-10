@@ -92,7 +92,7 @@ nvinfer1::ICudaEngine *loadModelAndCreateEngine(const char *uffFile,
 
 nvinfer1::ICudaEngine *create_engine(const std::string &model_file)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
 
     auto parser = nvuffparser::createUffParser();
     parser->registerInput(
@@ -136,7 +136,7 @@ UFFRunnerImpl::~UFFRunnerImpl()
 
 void UFFRunnerImpl::createBuffers_(int batchSize)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
 
     const int n = engine_->getNbBindings();
     for (int i = 0; i < n; ++i) {
@@ -153,7 +153,7 @@ void UFFRunnerImpl::createBuffers_(int batchSize)
 void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
                             const std::vector<void *> &outputs)
 {
-    tracer_t _(__func__);
+    TRACE(__func__);
 
     {
         tracer_t _("copy input from host");
