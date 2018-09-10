@@ -11,7 +11,6 @@ import tensorlayer as tl
 from inference import common
 from inference.common import CocoPart
 from inference.pafprocess import pafprocess
-from inference.tensblur.smoother import Smoother
 
 logger = logging.getLogger('TfPoseEstimator')
 logger.setLevel(logging.DEBUG)
