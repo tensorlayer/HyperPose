@@ -6,6 +6,7 @@ __pycache__
 *.png
 /3rdparty
 /checkpoints
+/cmake-build
 /coco
 /data
 /models
