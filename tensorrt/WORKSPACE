@@ -1,0 +1,6 @@
+# https://stackoverflow.com/questions/34984290/building-opencv-code-using-bazel
+new_local_repository(
+    name = "opencv",
+    build_file = "opencv.BUILD",
+    path = "/Users/lg/local/opencv",
+)
