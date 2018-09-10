@@ -16,11 +16,11 @@ For this reason, we reimplemented this project in [TensorLayer fashion](https://
 
 ## 2. Project files
 
-- `config.py` : config of the training details and etc.
+- `config.py` : config of the training details.
   -  set training mode : `datasetapi` (single gpu, default), `distributed` (multi-gpus, TODO), `placeholder `(slow, for debug only)
 - `models.py`: defines the model structures.
 - `utils.py`: utility functions.
-- `train.py`: train the model.
+- `train.py`: trains the model.
 - TODO
   - [ ] Provides pretrained models
   - [ ] TensorRT Float16 and Int8 inference
