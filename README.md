@@ -16,13 +16,12 @@ For this reason, we reimplemented this project in [TensorLayer fashion](https://
 
 ## 2. Project files
 
-- `config.py` : to config the directories of dataset, training details and etc.
-- `inference.py`: TODO
-- `models.py`: to define the model structures, currently only VGG19 Based model included
-- `train.py`: includes try training mode, datasetapi(recommonded), placeholder(slower, used for debugging), distributed (TODO)
-- `utils.py`: to extract databased from cocodataset and groundtruth calculation
-- <s>`visualize.py`: draw the training result</s> (moved to utils.py)
-- `inference` folder:
+- `config.py` : config of the training details and etc.
+  -  set training model : datasetapi(recommonded and default), placeholder(slower, used for debugging), distributed (TODO)
+- `models.py`: defines the model structures.
+- `utils.py`: utility functions.
+- `train.py`: trains model.
+
 
 ## 3. Preparation
 
@@ -91,6 +90,3 @@ For TensorRT float16 (half-float) inferencing, xxx
 - [Default COCO model](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_COCO/pose_deploy.prototxt)
 - [Visualizing Caffe model](http://ethereon.github.io/netscope/#/editor)
 
-## License
-
-- This project is for academic use only.
