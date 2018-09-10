@@ -53,7 +53,7 @@ std::vector<Human> estimate_paf(const tensor_t<float, 3> &conf,
                                get_part_score(c_idx)));
         }
         if (!human.empty()) {
-            human.set_scope(get_score(human_idx));
+            human.set_score(get_score(human_idx));
             humans.push_back(human);
         }
     }

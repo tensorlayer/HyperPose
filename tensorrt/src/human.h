@@ -33,7 +33,7 @@ class Human
         body_parts_[part_idx] = body_parts;
     }
 
-    void set_scope(float score) { score_ = score; }
+    void set_score(float score) { score_ = score; }
 
     bool has_part(int part_idx) const
     {
