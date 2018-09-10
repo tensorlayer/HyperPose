@@ -7,7 +7,7 @@ import cv2
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np
-
+import multiprocessing
 import _pickle as cPickle
 import tensorflow as tf
 import tensorlayer as tl
@@ -184,6 +184,7 @@ def make_model(img, results, mask):
 #     total_loss = tf.reduce_sum(losses) / batch_size + L2
 #
 #     return total_loss, last_conf, stage_losses, L2, cnn, last_paf, img, confs, pafs, img_mask1, net
+
 if __name__ == '__main__':
 
     ## automatically download MSCOCO data to "data/mscoco..."" folder
@@ -240,17 +241,110 @@ if __name__ == '__main__':
 
     n_epoch = math.ceil(n_step / len(imgs_file_list))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
-    dataset = dataset.shuffle(buffer_size=2046)  # shuffle before loading images
-    dataset = dataset.map(_map_fn, num_parallel_calls=8)
-    # dataset = dataset.shuffle(buffer_size=2046)
+    dataset = dataset.shuffle(buffer_size=4096)  # shuffle before loading images
+    dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count())
+    dataset = dataset.prefetch(90000)
     dataset = dataset.repeat(n_epoch)
     dataset = dataset.batch(batch_size)
-    dataset = dataset.prefetch(4096)
     iterator = dataset.make_one_shot_iterator()
     one_element = iterator.get_next()
 
-    if config.TRAIN.train_mode == 'placeholder':
-        ## Train with placeholder can help your to check the data easily.
+    ###========================== SINGLE GPU TRAINING =======================###
+    if config.TRAIN.train_mode == 'datasetapi':
+        """Train on single GPU using TensorFlow DatasetAPI."""
+        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element)
+
+        global_step = tf.Variable(1, trainable=False)
+        print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
+            n_step, batch_size, base_lr, decay_every_step))
+        with tf.variable_scope('learning_rate'):
+            lr_v = tf.Variable(base_lr, trainable=False)
+
+        opt = tf.train.MomentumOptimizer(lr_v, 0.9)
+        train_op = opt.minimize(total_loss, global_step=global_step)
+        config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
+
+        ## start training
+        with tf.Session(config=config) as sess:
+            sess.run(tf.global_variables_initializer())
+
+            ## restore pretrained weights
+            try:
+                # tl.files.load_and_assign_npz(sess, os.path.join(model_path, 'pose.npz'), net)
+                tl.files.load_and_assign_npz_dict(sess=sess, name=os.path.join(model_path, 'pose.npz'))
+            except:
+                print("no pretrained model")
+
+            ## train until the end
+            sess.run(tf.assign(lr_v, base_lr))
+            while (True):
+                tic = time.time()
+                step = sess.run(global_step)
+                if step != 0 and (step % decay_every_step == 0):
+                    new_lr_decay = gamma**(step // decay_every_step)
+                    sess.run(tf.assign(lr_v, base_lr * new_lr_decay))
+
+                ## save some training data for debugging data augmentation (slow)
+                # draw_results(x_, confs_, None, pafs_, None, mask, 'check_batch_{}_'.format(step))
+
+                [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm,
+                 paf_result] = sess.run([train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf])
+
+                # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
+                lr = sess.run(lr_v)
+                print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} weight_norm {:10e} Took: {}s'.format(
+                    step, n_step, the_loss, lr, weight_norm,
+                    time.time() - tic))
+                for ix, ll in enumerate(loss_ll):
+                    print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
+
+                ## save intermedian results and model
+                if (step != 0) and (step % save_interval == 0):
+                    ## save some results
+                    # [img_out, confs_ground, pafs_ground, mask_out] = sess.run([x_, confs_, pafs_, mask])
+                    # draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
+                    ## save model
+                    # tl.files.save_npz(
+                    #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                    # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+                    tl.files.save_npz_dict(
+                        net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                    tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+                if step == n_step:  # training finished
+                    break
+
+    ###========================== DISTRIBUTED TRAINING ======================###
+    elif config.TRAIN.train_mode == 'distributed':  # TODO
+        """Train on multiple GPUs using distributed mode."""
+        raise Exception("TODO tl.distributed.Trainer")
+        # Setup the trainer
+        training_dataset = make_dataset(X_train, y_train)
+        training_dataset = training_dataset.map(data_aug_train, num_parallel_calls=multiprocessing.cpu_count())
+        # validation_dataset = make_dataset(X_test, y_test)
+        # validation_dataset = training_dataset.map(data_aug_valid, num_parallel_calls=multiprocessing.cpu_count())
+        trainer = tl.distributed.Trainer(
+            build_training_func=build_train, training_dataset=dataset, optimizer=tf.train.MomentumOptimizer,
+            optimizer_args={'learning_rate': 0.0001}, batch_size=batch_size, num_epochs=n_epoch, prefetch_buffer_size=90000
+            # validation_dataset=validation_dataset, build_validation_func=build_validation
+        )
+
+        # There are multiple ways to use the trainer:
+        # 1. Easiest way to train all data: trainer.train_to_end()
+        # 2. Train with validation in the middle: trainer.train_and_validate_to_end(validate_step_size=100)
+        # 3. Train with full control like follows:
+        while not trainer.session.should_stop():
+            try:
+                # Run a training step synchronously.
+                trainer.train_on_batch()
+                # TODO: do whatever you like to the training session.
+            except tf.errors.OutOfRangeError:
+                # The dataset would throw the OutOfRangeError when it reaches the end
+                break
+
+    ###========================== DEBUG =====================================###
+    elif config.TRAIN.train_mode == 'placeholder':
+        """Train with placeholder can help your to check the data easily,
+        but the training will be very slow."""
         ## define model architecture
         x = tf.placeholder(tf.float32, [None, hin, win, 3], "image")
         resultmaps = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 3], "resultmaps")
@@ -323,12 +417,14 @@ if __name__ == '__main__':
 
                 ## save intermedian results and model
                 if (step != 0) and (step % save_interval == 0):
-                    img_out=tran_batch[0]
-                    confs_ground=tran_batch[1][:,:,:,:n_pos]
-                    pafs_ground=tran_batch[1][:,:,:,n_pos:]
-                    mask_out=tran_batch[2]
-                    draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out,
-                                 'train_%d_' % step)
+                    ## save some results
+                    # img_out=tran_batch[0]
+                    # confs_ground=tran_batch[1][:,:,:,:n_pos]
+                    # pafs_ground=tran_batch[1][:,:,:,n_pos:]
+                    # mask_out=tran_batch[2]
+                    # draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out,
+                    #              'train_%d_' % step)
+                    ## save model
                     # tl.files.save_npz(
                     #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                     # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
@@ -337,68 +433,5 @@ if __name__ == '__main__':
                     tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
                 if step == n_step:  # training finished
                     break
-
-    elif config.TRAIN.train_mode == 'datasetapi':
-        ## Train with TensorFlow dataset mode is usually faster than placeholder.
-        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element)
-
-        global_step = tf.Variable(1, trainable=False)
-        print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
-            n_step, batch_size, base_lr, decay_every_step))
-        with tf.variable_scope('learning_rate'):
-            lr_v = tf.Variable(base_lr, trainable=False)
-
-        opt = tf.train.MomentumOptimizer(lr_v, 0.9)
-        train_op = opt.minimize(total_loss, global_step=global_step)
-        config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
-
-        ## start training
-        with tf.Session(config=config) as sess:
-            sess.run(tf.global_variables_initializer())
-
-            ## restore pretrained weights
-            try:
-                # tl.files.load_and_assign_npz(sess, os.path.join(model_path, 'pose.npz'), net)
-                tl.files.load_and_assign_npz_dict(sess=sess, name=os.path.join(model_path, 'pose.npz'))
-            except:
-                print("no pretrained model")
-
-            ## train until the end
-            sess.run(tf.assign(lr_v, base_lr))
-            while (True):
-                tic = time.time()
-                step = sess.run(global_step)
-                if step != 0 and (step % decay_every_step == 0):
-                    new_lr_decay = gamma**(step // decay_every_step)
-                    sess.run(tf.assign(lr_v, base_lr * new_lr_decay))
-
-                ## save some training data for debugging data augmentation (slow)
-                # draw_results(x_, confs_, None, pafs_, None, mask, 'check_batch_{}_'.format(step))
-
-                [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm,
-                 paf_result] = sess.run([train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf])
-
-                # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
-                lr = sess.run(lr_v)
-                print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} weight_norm {:10e} Took: {}s'.format(
-                    step, n_step, the_loss, lr, weight_norm,
-                    time.time() - tic))
-                for ix, ll in enumerate(loss_ll):
-                    print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
-
-                ## save intermedian results and model
-                if (step != 0) and (step % save_interval == 0):
-                    [img_out, confs_ground, pafs_ground, mask_out] = sess.run([x_, confs_, pafs_, mask])
-                    draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
-                    # tl.files.save_npz(
-                    #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
-                    # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
-                    tl.files.save_npz_dict(
-                        net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
-                    tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
-                if step == n_step:  # training finished
-                    break
-
-    elif config.TRAIN.train_mode == 'distributed':  # TODO
-        ## Train with distributed mode.
-        raise Exception("TODO tl.distributed.Trainer")
+    else:
+        raise Exception("wrong train model")
