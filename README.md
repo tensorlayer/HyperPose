@@ -27,6 +27,7 @@ For this reason, we reimplemented this project in [TensorLayer fashion](https://
   - [ ] Faster C++ post-processing
   - [ ] Distributed training
   - [ ] Faster data augmentation
+  - [ ] Pose Proposal Networks, ECCV 2018
 
 ## 3. Preparation
 
