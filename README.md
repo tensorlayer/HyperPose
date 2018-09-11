@@ -16,13 +16,18 @@ For this reason, we reimplemented this project in [TensorLayer fashion](https://
 
 ## 2. Project files
 
-- `config.py` : to config the directories of dataset, training details and etc.
-- `inference.py`: TODO
-- `models.py`: to define the model structures, currently only VGG19 Based model included
-- `train.py`: includes try training mode, datasetapi(recommonded), placeholder(slower, used for debugging), distributed (TODO)
-- `utils.py`: to extract databased from cocodataset and groundtruth calculation
-- <s>`visualize.py`: draw the training result</s> (moved to utils.py)
-- `inference` folder:
+- `config.py` : config of the training details.
+  -  set training mode : `datasetapi` (single gpu, default), `distributed` (multi-gpus, TODO), `placeholder `(slow, for debug only)
+- `models.py`: defines the model structures.
+- `utils.py`: utility functions.
+- `train.py`: trains the model.
+- TODO
+  - [ ] Provides pretrained models
+  - [ ] TensorRT Float16 and Int8 inference
+  - [ ] Faster C++ post-processing
+  - [ ] Distributed training
+  - [ ] Faster data augmentation
+  - [ ] Pose Proposal Networks, ECCV 2018
 
 ## 3. Preparation
 
@@ -55,42 +60,41 @@ The performance of pre-trained model is as follow:
 
 ## 5. Train a model
 
-For your own training, please put .jpg files into coco_dataset/images/ and put .json into coco_dataset/annotations/
-
 Runs `train.py`, it will automatically download MSCOCO 2017 dataset into `dataset/coco17`.
 The default model in `models.py` is based on VGG19, which is the same with the original paper.
 If you want to customize the model, simply change it in `models.py`.
 And then `train.py` will train the model to the end.
 
+<!--
 ## 6. Evaluate a model
 
-Runs `eval.py` for inference
+Runs `eval.py` for inference.
 
-## 7. Speed up and deployment
+
+## . Speed up and deployment
 
 For TensorRT float16 (half-float) inferencing, xxx
 
-## 8. Customization
+
+## 6. Customization
 
 - Model : change `models.py`.
-- Data augmentation : ....
+- Data augmentation : change `train.py`
 - Train with your own data: ....
-    1. prepare your data following MSCOCO format, you need to ...
+    1. prepare your data following MSCOCO format, you need to .
     2. concatenate the list of your own data JSON into ...
-- Evaluate on your own testing set:
-    1. xx
-
-## 9. Discussion
+-->
+    
+## 6. Discussion
 
 - [TensorLayer Issues 434](https://github.com/tensorlayer/tensorlayer/issues/434)
 - [TensorLayer Issues 416](https://github.com/tensorlayer/tensorlayer/issues/416)
 
+<!--
 ## Paper's Model
 
 - [Default MPII](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_MPI/pose_deploy.prototxt)
 - [Default COCO model](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_COCO/pose_deploy.prototxt)
 - [Visualizing Caffe model](http://ethereon.github.io/netscope/#/editor)
+-->
 
-## License
-
-- This project is for academic use only.
