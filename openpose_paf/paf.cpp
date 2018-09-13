@@ -12,6 +12,43 @@
 
 using tensor_proxy = tensor_proxy_3d_<float>;
 
+const float THRESH_VECTOR_SCORE = 0.05;
+const int THRESH_VECTOR_CNT1 = 8;
+const int THRESH_PART_CNT = 4;
+const float THRESH_HUMAN_SCORE = 0.4;
+
+const int STEP_PAF = 10;
+
+template <typename T> T sqr(T x) { return x * x; }
+
+template <typename T> struct point_2d {
+    T x;
+    T y;
+
+    point_2d<T> operator-(const point_2d<T> &p) const
+    {
+        return point_2d<T>{x - p.x, y - p.y};
+    }
+
+    template <typename S> point_2d<S> cast_to() const
+    {
+        return point_2d<S>{S(x), S(y)};
+    }
+
+    T l2() const { return sqr(x) + sqr(y); }
+};
+
+struct Peak {
+    point_2d<int> pos;
+    float score;
+    int id;
+};
+
+struct VectorXY {
+    float x;
+    float y;
+};
+
 struct paf_processor {
     const float THRESH_HEAT = 0.05;
 
