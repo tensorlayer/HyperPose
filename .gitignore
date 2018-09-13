@@ -1,9 +1,13 @@
 __pycache__
 .idea
+*.a
 *.avi
+*.dylib
 *.jpg
 *.log
+*.out
 *.png
+*.so
 /3rdparty
 /checkpoints
 /coco
