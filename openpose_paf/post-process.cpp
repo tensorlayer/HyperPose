@@ -9,17 +9,18 @@
 
 // tf.image.resize_area
 // This is the same as OpenCV's INTER_AREA.
+// input, output are in [channel, height, width] format
 void resize_area(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
 {
     TRACE(__func__);
 
-    const int height = input.dims[0];
-    const int width = input.dims[1];
-    const int channel = input.dims[2];
+    const int channel = input.dims[0];
+    const int height = input.dims[1];
+    const int width = input.dims[2];
 
-    const int target_height = output.dims[0];
-    const int target_width = output.dims[1];
-    const int target_channel = output.dims[2];
+    const int target_channel = output.dims[0];
+    const int target_height = output.dims[1];
+    const int target_width = output.dims[2];
 
     assert(channel == target_channel);
 
@@ -30,14 +31,14 @@ void resize_area(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
     for (int k = 0; k < channel; ++k) {
         for (int i = 0; i < height; ++i) {
             for (int j = 0; j < width; ++j) {
-                input_image.at<float>(i, j) = input.at(i, j, k);
+                input_image.at<float>(i, j) = input.at(k, i, j);
             }
         }
         cv::resize(input_image, output_image, output_image.size(), 0, 0,
                    CV_INTER_AREA);
         for (int i = 0; i < target_height; ++i) {
             for (int j = 0; j < target_width; ++j) {
-                output.at(i, j, k) = output_image.at<float>(i, j);
+                output.at(k, i, j) = output_image.at<float>(i, j);
             }
         }
     }
@@ -49,13 +50,13 @@ void smooth(const tensor_t<float, 3> &input, tensor_t<float, 3> &output,
     TRACE(__func__);
     const float sigma = 3.0;
 
-    const int height = input.dims[0];
-    const int width = input.dims[1];
-    const int channel = input.dims[2];
+    const int channel = input.dims[0];
+    const int height = input.dims[1];
+    const int width = input.dims[2];
 
-    assert(height == output.dims[0]);
-    assert(width == output.dims[1]);
-    assert(channel == output.dims[2]);
+    assert(channel == output.dims[0]);
+    assert(height == output.dims[1]);
+    assert(width == output.dims[2]);
 
     const cv::Size size(width, height);
     cv::Mat input_image(size, cv::DataType<float>::type);
@@ -64,14 +65,14 @@ void smooth(const tensor_t<float, 3> &input, tensor_t<float, 3> &output,
     for (int k = 0; k < channel; ++k) {
         for (int i = 0; i < height; ++i) {
             for (int j = 0; j < width; ++j) {
-                input_image.at<float>(i, j) = input.at(i, j, k);
+                input_image.at<float>(i, j) = input.at(k, i, j);
             }
         }
         cv::GaussianBlur(input_image, output_image, cv::Size(ksize, ksize),
                          sigma);
         for (int i = 0; i < height; ++i) {
             for (int j = 0; j < width; ++j) {
-                output.at(i, j, k) = output_image.at<float>(i, j);
+                output.at(k, i, j) = output_image.at<float>(i, j);
             }
         }
     }
@@ -81,28 +82,28 @@ void maxpool_3x3(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
 {
     TRACE(__func__);
 
-    const int height = input.dims[0];
-    const int width = input.dims[1];
-    const int channel = input.dims[2];
+    const int channel = input.dims[0];
+    const int height = input.dims[1];
+    const int width = input.dims[2];
 
-    assert(height == output.dims[0]);
-    assert(width == output.dims[1]);
-    assert(channel == output.dims[2]);
+    assert(channel == output.dims[0]);
+    assert(height == output.dims[1]);
+    assert(width == output.dims[2]);
 
     for (int k = 0; k < channel; ++k) {
         for (int i = 0; i < height; ++i) {
             for (int j = 0; j < width; ++j) {
-                float max_val = input.at(i, j, k);
+                float max_val = input.at(k, i, j);
                 for (int dx = 0; dx < 3; ++dx) {
                     for (int dy = 0; dy < 3; ++dy) {
                         const int nx = i + dx - 1;
                         const int ny = j + dy - 1;
                         if (0 <= nx && nx < height && 0 <= ny && ny < width) {
-                            max_val = std::max(max_val, input.at(nx, ny, k));
+                            max_val = std::max(max_val, input.at(k, nx, ny));
                         }
                     }
                 }
-                output.at(i, j, k) = max_val;
+                output.at(k, i, j) = max_val;
             }
         }
     }
@@ -135,16 +136,16 @@ void get_peak(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
 {
     TRACE(__func__);
 
-    const int height = input.dims[0];
-    const int width = input.dims[1];
-    const int channel = input.dims[2];
+    const int channel = input.dims[0];
+    const int height = input.dims[1];
+    const int width = input.dims[2];
 
-    assert(height == output.dims[0]);
-    assert(width == output.dims[1]);
-    assert(channel == output.dims[2]);
+    assert(channel == output.dims[0]);
+    assert(height == output.dims[1]);
+    assert(width == output.dims[2]);
 
-    tensor_t<float, 3> smoothed(nullptr, height, width, channel);
-    tensor_t<float, 3> pooled(nullptr, height, width, channel);
+    tensor_t<float, 3> smoothed(nullptr, channel, height, width);
+    tensor_t<float, 3> pooled(nullptr, channel, height, width);
 
     smooth(input, smoothed);
     // debug("smoothed :: ", smoothed);
@@ -153,6 +154,6 @@ void get_peak(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
     // debug("pooled :: ", pooled);
     // save(pooled, "pooled");
     const int n = select_peak(smoothed, pooled, output);
-    const int tot = height * width * channel;
+    const int tot = channel * height * width;
     printf("%d peaks, %.4f%%\n", n, 100.0 * n / tot);
 }

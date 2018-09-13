@@ -87,6 +87,49 @@ template <typename T, uint8_t r> struct tensor_t {
     int32_t volume() const { return ::volume<r>(dims); }
 };
 
+template <typename T> struct tensor_proxy_3d_ {
+    const T *const data;
+    const int height;
+    const int width;
+    const int channel;
+
+    tensor_proxy_3d_(const T *data, int height, int width, int channel)
+        : data(data), height(height), width(width), channel(channel)
+    {
+    }
+
+    const T &at(int i, int j, int k) const
+    {
+        const int idx = (i * width + j) * channel + k;
+        return data[idx];
+    }
+};
+
+template <typename T>
+void chw_from_hwc(tensor_t<T, 3> &output, const tensor_proxy_3d_<T> &input)
+{
+    const int c = output.dims[0];
+    const int h = output.dims[1];
+    const int w = output.dims[2];
+    for (int k = 0; k < c; ++k) {
+        for (int i = 0; i < h; ++i) {
+            for (int j = 0; j < w; ++j) {
+                output.at(k, i, j) = input.at(i, j, k);
+            }
+        }
+    }
+}
+
+template <typename T> void chw_from_hwc(tensor_t<T, 3> &output, const T *input)
+{
+    const int c = output.dims[0];
+    const int h = output.dims[1];
+    const int w = output.dims[2];
+    chw_from_hwc(output, tensor_proxy_3d_<float>(input, h, w, c));
+}
+
+// debug functions
+
 #include <iostream>
 
 template <typename T, uint8_t r>

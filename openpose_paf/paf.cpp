@@ -7,7 +7,7 @@
 #include "coco.h"
 #include "human.h"
 #include "post-process.h"
-#include "tensor_proxy.h"
+#include "tensor.h"
 #include "tracer.h"
 
 using tensor_proxy = tensor_proxy_3d_<float>;
@@ -67,7 +67,7 @@ struct paf_processor {
     }
 
     std::vector<ConnectionCandidate>
-    getConnectionCandidates(const tensor_proxy &pafmap,
+    getConnectionCandidates(const tensor_t<float, 3> &pafmap,
                             const std::vector<Peak> &all_peaks,
                             const std::vector<int> &peak_index_1,
                             const std::vector<int> &peak_index_2,
@@ -123,7 +123,7 @@ struct paf_processor {
     }
 
     std::vector<Connection>
-    getConnections(const tensor_proxy &pafmap,
+    getConnections(const tensor_t<float, 3> &pafmap,
                    const std::vector<Peak> &all_peaks,
                    const std::vector<std::vector<int>> &peak_ids_by_channel,
                    int pair_id, int height)
@@ -164,7 +164,8 @@ struct paf_processor {
     }
 
     void
-    select_peaks(const tensor_proxy &heatmap, const tensor_proxy &peaks,
+    select_peaks(const tensor_t<float, 3> &heatmap,
+                 const tensor_t<float, 3> &peaks,
                  float threshold,                                    //
                  std::vector<Peak> &all_peaks,                       // output
                  std::vector<std::vector<int>> &peak_ids_by_channel  // output
@@ -175,11 +176,11 @@ struct paf_processor {
         for (int part_id = 0;
              part_id < n_joins - /* the last one is background */ 1;
              ++part_id) {
-            for (int y = 0; y < heatmap.height; y++) {
-                for (int x = 0; x < heatmap.width; x++) {
-                    if (peaks.at(y, x, part_id) > threshold) {
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    if (peaks.at(part_id, y, x) > threshold) {
                         const Peak info =
-                            Peak{point_2d<int>{x, y}, heatmap.at(y, x, part_id),
+                            Peak{point_2d<int>{x, y}, heatmap.at(part_id, y, x),
                                  idx++};
                         all_peaks.push_back(info);
                         peak_ids_by_channel[part_id].push_back(info.id);
@@ -283,7 +284,7 @@ struct paf_processor {
     }
 
     std::vector<std::vector<Connection>>
-    getAllConnections(const tensor_proxy &pafmap,
+    getAllConnections(const tensor_t<float, 3> &pafmap,
                       const std::vector<Peak> &all_peaks,
                       const std::vector<std::vector<int>> &peak_ids_by_channel)
     {
@@ -297,16 +298,12 @@ struct paf_processor {
         return all_connections;
     }
 
-    void operator()(const float *heatmap_,  // [height, width, channel_j]
-                    const float *peaks_,    // [height, width, channel_j]
-                    const float *pafmap_    // [height, width, channel_c * 2]
+    void operator()(const tensor_t<float, 3> &heatmap,  // [j, h, w]
+                    const tensor_t<float, 3> &peaks,    // [j, h, w]
+                    const tensor_t<float, 3> &pafmap    // [2c, h, w]
     )
     {
         TRACE(__func__);
-
-        const tensor_proxy heatmap(heatmap_, height, width, n_joins);
-        const tensor_proxy peaks(peaks_, height, width, n_joins);
-        const tensor_proxy pafmap(pafmap_, height, width, n_connections * 2);
 
         std::vector<Peak> all_peaks;
         std::vector<std::vector<int>> peak_ids_by_channel(n_joins);
@@ -320,7 +317,7 @@ struct paf_processor {
         printf("got %lu humans\n", hs.size());
     }
 
-    std::vector<VectorXY> get_paf_vectors(const tensor_proxy pafmap,
+    std::vector<VectorXY> get_paf_vectors(const tensor_t<float, 3> &pafmap,
                                           const int &ch_id1,           //
                                           const int &ch_id2,           //
                                           const point_2d<int> &peak1,  //
@@ -336,8 +333,8 @@ struct paf_processor {
             int location_y = roundpaf(peak1.y + i * STEP_Y);
 
             VectorXY v;
-            v.x = pafmap.at(location_y, location_x, ch_id1);
-            v.y = pafmap.at(location_y, location_x, ch_id2);
+            v.x = pafmap.at(ch_id1, location_y, location_x);
+            v.y = pafmap.at(ch_id2, location_y, location_x);
             paf_vectors.push_back(v);
         }
 
@@ -346,24 +343,6 @@ struct paf_processor {
 
     int roundpaf(float v) { return (int)(v + 0.5); }
 };
-
-void process_conf_peak_paf(
-    int height, int width,
-    int channel_j,        // channel_j >= n_joins
-    int channel_c,        // channel_c >= n_connections
-    const float *conf_,   // [height, width, channel_j]
-    const float *peaks_,  // [height, width, channel_j]
-    const float *pafmap_  // [height, width, channel_c * 2]
-)
-{
-    TRACE(__func__);
-
-    assert(channel_j == 19);
-    assert(channel_c == 19);
-
-    paf_processor p(height, width, channel_j, channel_c);
-    p(conf_, peaks_, pafmap_);
-}
 
 void process_conf_paf(int height_, int width_,  //
                       int channel_j,            // channel_j = n_joins
@@ -377,23 +356,22 @@ void process_conf_paf(int height_, int width_,  //
     const int height = height_ * 8;
     const int width = width_ * 8;
 
-    tensor_t<float, 3> upsample_conf(nullptr, height, width, channel_j);
+    tensor_t<float, 3> upsample_conf(nullptr, channel_j, height, width);
     {
-        tensor_t<float, 3> conf(conf_, height_, width_, channel_j);
+        tensor_t<float, 3> conf(nullptr, channel_j, height_, width_);
+        chw_from_hwc(conf, conf_);
         resize_area(conf, upsample_conf);
     }
-    tensor_t<float, 3> peaks(nullptr, height, width, channel_j);
+    tensor_t<float, 3> peaks(nullptr, channel_j, height, width);
     get_peak(upsample_conf, peaks);
 
-    tensor_t<float, 3> upsample_paf(nullptr, height, width, channel_c * 2);
+    tensor_t<float, 3> upsample_paf(nullptr, channel_c * 2, height, width);
     {
-        tensor_t<float, 3> paf(paf_, height_, width_, channel_c * 2);
+        tensor_t<float, 3> paf(nullptr, channel_c * 2, height_, width_);
+        chw_from_hwc(paf, paf_);
         resize_area(paf, upsample_paf);
     }
 
-    process_conf_peak_paf(height, width,         //
-                          channel_j, channel_c,  //
-                          upsample_conf.data(),  //
-                          peaks.data(),          //
-                          upsample_paf.data());
+    paf_processor p(height, width, channel_j, channel_c);
+    p(upsample_conf, peaks, upsample_paf);
 }
