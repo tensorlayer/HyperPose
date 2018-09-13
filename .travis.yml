@@ -23,7 +23,6 @@ before_install:
 - ./scripts/download-test-data.sh
 
 script:
-- make
 - docker run --rm -it libopenpose-pdf:builder /src/cmake-build/Linux/test_paf
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vgg
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vggtiny
