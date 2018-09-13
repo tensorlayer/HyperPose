@@ -4,45 +4,9 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "post-process.h"
 #include "tensor.h"
 #include "tracer.h"
-
-// tf.image.resize_area
-// This is the same as OpenCV's INTER_AREA.
-// input, output are in [channel, height, width] format
-void resize_area(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
-{
-    TRACE(__func__);
-
-    const int channel = input.dims[0];
-    const int height = input.dims[1];
-    const int width = input.dims[2];
-
-    const int target_channel = output.dims[0];
-    const int target_height = output.dims[1];
-    const int target_width = output.dims[2];
-
-    assert(channel == target_channel);
-
-    cv::Mat input_image(cv::Size(width, height), cv::DataType<float>::type);
-    cv::Mat output_image(cv::Size(target_width, target_height),
-                         cv::DataType<float>::type);
-
-    for (int k = 0; k < channel; ++k) {
-        for (int i = 0; i < height; ++i) {
-            for (int j = 0; j < width; ++j) {
-                input_image.at<float>(i, j) = input.at(k, i, j);
-            }
-        }
-        cv::resize(input_image, output_image, output_image.size(), 0, 0,
-                   CV_INTER_AREA);
-        for (int i = 0; i < target_height; ++i) {
-            for (int j = 0; j < target_width; ++j) {
-                output.at(k, i, j) = output_image.at<float>(i, j);
-            }
-        }
-    }
-}
 
 template <typename T>
 void smooth(const tensor_t<T, 3> &input, tensor_t<T, 3> &output, int ksize = 17)
@@ -61,9 +25,9 @@ void smooth(const tensor_t<T, 3> &input, tensor_t<T, 3> &output, int ksize = 17)
     const cv::Size size(width, height);
     for (int k = 0; k < channel; ++k) {
         cv::Mat input_image(size, cv::DataType<T>::type,
-                            input.data() + k * width * height);
+                            input.data() + k * area(size));
         cv::Mat output_image(size, cv::DataType<T>::type,
-                             output.data() + k * width * height);
+                             output.data() + k * area(size));
         cv::GaussianBlur(input_image, output_image, cv::Size(ksize, ksize),
                          sigma);
     }
