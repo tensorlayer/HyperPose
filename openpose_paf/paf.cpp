@@ -9,6 +9,7 @@
 #include "post-process.h"
 #include "tensor.h"
 #include "tracer.h"
+#include "vis.h"
 
 const float THRESH_VECTOR_SCORE = 0.05;
 const int THRESH_VECTOR_CNT1 = 8;
@@ -293,9 +294,10 @@ struct paf_processor {
         return all_connections;
     }
 
-    void operator()(const tensor_t<float, 3> &heatmap,  // [j, h, w]
-                    const tensor_t<float, 3> &peaks,    // [j, h, w]
-                    const tensor_t<float, 3> &pafmap    // [2c, h, w]
+    std::vector<human_t>
+    operator()(const tensor_t<float, 3> &heatmap,  // [j, h, w]
+               const tensor_t<float, 3> &peaks,    // [j, h, w]
+               const tensor_t<float, 3> &pafmap    // [2c, h, w]
     )
     {
         TRACE(__func__);
@@ -308,8 +310,25 @@ struct paf_processor {
         const std::vector<std::vector<Connection>> all_connections =
             getAllConnections(pafmap, all_peaks, peak_ids_by_channel);
 
-        const auto hs = getHumans(all_peaks, all_connections);
-        printf("got %lu humans\n", hs.size());
+        const auto human_refs = getHumans(all_peaks, all_connections);
+        printf("got %lu humans\n", human_refs.size());
+
+        std::vector<human_t> humans;
+        for (const auto &hr : human_refs) {
+            human_t human;
+            human.score = hr.score;
+            for (int i = 0; i < 18; ++i) {
+                if (hr.parts[i].id != -1) {
+                    human.parts[i].has_value = true;
+                    const auto p = all_peaks[hr.parts[i].id];
+                    human.parts[i].score = p.score;
+                    human.parts[i].x = p.pos.x;
+                    human.parts[i].y = p.pos.y;
+                }
+            }
+            humans.push_back(human);
+        }
+        return humans;
     }
 
     std::vector<VectorXY> get_paf_vectors(const tensor_t<float, 3> &pafmap,
@@ -368,5 +387,13 @@ void process_conf_paf(int height_, int width_,  //
     }
 
     paf_processor p(height, width, channel_j, channel_c);
-    p(upsample_conf, peaks, upsample_paf);
+    const auto humans = p(upsample_conf, peaks, upsample_paf);
+
+    cv::Mat img(cv::Size(width, height),
+                CV_8UC(3));  // cv::DataType<cv::Vec3b>::type);
+    for (const auto h : humans) {
+        h.print();
+        draw_human(img, h);
+    }
+    cv::imwrite("result.png", img);
 }

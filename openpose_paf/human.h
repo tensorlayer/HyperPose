@@ -3,14 +3,16 @@
 #include <vector>
 
 struct body_part_t {
-    int part_idx;
+    bool has_value;
     float x;
     float y;
     float score;
+
+    body_part_t() : has_value(false), x(0), y(0), score(0) {}
 };
 
 template <int J> struct human_t_ {
-    body_part_t body_parts[J];
+    body_part_t parts[J];
     float score;
 
 #define DEBUG
@@ -18,10 +20,10 @@ template <int J> struct human_t_ {
     void print() const
     {
         for (int i = 0; i < J; ++i) {
-            const auto body_part = body_parts[i];
-            if (body_parts.part_idx >= 0) {
-                printf("BodyPart:%d-(%.2f, %.2f) score=%.2f ", i, body_part.x,
-                       body_part.y, body_part.score);
+            const auto p = parts[i];
+            if (p.has_value) {
+                printf("BodyPart:%d-(%.2f, %.2f) score=%.2f ", i, p.x, p.y,
+                       p.score);
             }
         }
         printf("score=%.2f\n", score);
@@ -29,7 +31,7 @@ template <int J> struct human_t_ {
 #endif
 };
 
-using human_t = human_t_<19>;
+using human_t = human_t_<18>;
 
 struct ConnectionCandidate {
     int idx1;

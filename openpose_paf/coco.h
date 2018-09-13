@@ -4,7 +4,8 @@
 
 constexpr int COCOPAIRS_SIZE = 19;
 
-using coco_pair_list_t = std::vector<std::pair<int, int>>;
+using idx_pair_t = std::pair<int, int>;
+using coco_pair_list_t = std::vector<idx_pair_t>;
 
 const coco_pair_list_t COCOPAIRS_NET = {
     {12, 13},  // 6
