@@ -42,6 +42,7 @@ tracer_ctx_t::~tracer_ctx_t()
     FILE *fp = fopen(filename, "w");
     report(fp);
     fclose(fp);
+    report(stdout);
 }
 
 void tracer_ctx_t::report(FILE *fp) const

@@ -12,9 +12,10 @@ python:
 sudo: required
 
 before_install:
+- nproc
 - docker info
-- cd openpose_paf && make docker
-- sudo apt install -y swig # libopencv-dev
+- make docker -C openpose_paf
+- sudo apt install -y swig
 - pip install -r requirements.txt
 - pip install pycocotools  # must be installed after cython is installed
 - pip install git+https://github.com/tensorlayer/tensorlayer.git  # TODO: create a latest release for TL
@@ -23,6 +24,7 @@ before_install:
 
 script:
 - make
+- docker run --rm -it libopenpose-pdf:builder /src/cmake-build/Linux/test_paf
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vgg
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vggtiny
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=mobilenet
