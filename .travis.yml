@@ -1,6 +1,10 @@
 # https://docs.travis-ci.com/user/languages/python/
 language: python
 
+# https://docs.travis-ci.com/user/docker/
+services:
+- docker
+
 python:
   - '3.6'
   - '2.7'
@@ -8,7 +12,9 @@ python:
 sudo: required
 
 before_install:
-- sudo apt install -y swig libopencv-dev
+- docker info
+- cd openpose_paf && make docker
+- sudo apt install -y swig # libopencv-dev
 - pip install -r requirements.txt
 - pip install pycocotools  # must be installed after cython is installed
 - pip install git+https://github.com/tensorlayer/tensorlayer.git  # TODO: create a latest release for TL

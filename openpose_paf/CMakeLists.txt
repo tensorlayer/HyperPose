@@ -10,7 +10,7 @@ FIND_PACKAGE(opencv)
 
 FILE(GLOB srcs *.cpp)
 ADD_LIBRARY(paf SHARED ${srcs})
-TARGET_LINK_LIBRARIES(paf opencv_core opencv_imgproc opencv_highgui opencv_imgcodecs)
+TARGET_LINK_LIBRARIES(paf opencv_core opencv_imgproc opencv_highgui)
 
 ADD_EXECUTABLE(test_paf ./tests/test_paf.cpp)
 TARGET_LINK_LIBRARIES(test_paf paf)
