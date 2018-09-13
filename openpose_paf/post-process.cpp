@@ -76,27 +76,19 @@ void same_max_pool_3x3(const tensor_t<T, 3> &input, tensor_t<T, 3> &output)
     }
 }
 
-float delta(float x, float y, bool &flag)
+void inplace_select_peak(float &x, float y)
 {
-    if (x == y) {
-        flag = true;
-        return x;
-    }
-    return 0;
+    if (x != y) { x = 0; }
 }
 
-int select_peak(const tensor_t<float, 3> &smoothed,
-                const tensor_t<float, 3> &peak, tensor_t<float, 3> &output)
+void inplace_select_peaks(const tensor_t<float, 3> &output,
+                          const tensor_t<float, 3> &peak)
 {
     TRACE(__func__);
-    const int n = smoothed.volume();
-    int tot = 0;
+    const int n = output.volume();
     for (int i = 0; i < n; ++i) {
-        bool is_peak = false;
-        output.data()[i] = delta(smoothed.data()[i], peak.data()[i], is_peak);
-        if (is_peak) { ++tot; }
+        inplace_select_peak(output.data()[i], peak.data()[i]);
     }
-    return tot;
 }
 
 void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
@@ -111,16 +103,8 @@ void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
     assert(height == output.dims[1]);
     assert(width == output.dims[2]);
 
-    tensor_t<float, 3> smoothed(nullptr, channel, height, width);
     tensor_t<float, 3> pooled(nullptr, channel, height, width);
-
-    smooth(input, smoothed);
-    // debug("smoothed :: ", smoothed);
-    // save(smoothed, "smoothed");
-    same_max_pool_3x3(smoothed, pooled);
-    // debug("pooled :: ", pooled);
-    // save(pooled, "pooled");
-    const int n = select_peak(smoothed, pooled, output);
-    const int tot = channel * height * width;
-    printf("%d peaks, %.4f%%\n", n, 100.0 * n / tot);
+    smooth(input, output);
+    same_max_pool_3x3(output, pooled);
+    inplace_select_peaks(output, pooled);
 }
