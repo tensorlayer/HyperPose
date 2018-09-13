@@ -1,1 +1,3 @@
 /cmake-build
+/network-outputs
+*.idx
