@@ -17,7 +17,9 @@ void test_1()
     load_idx_file(conf, "conf.idx");
     load_idx_file(paf, "paf.idx");
 
-    process_conf_paf(height, width, j + 1, c, conf.data(), paf.data());
+    for (int i = 0; i < 10; ++i) {
+        process_conf_paf(height, width, j + 1, c, conf.data(), paf.data());
+    }
 }
 
 int main()

@@ -44,8 +44,8 @@ void resize_area(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
     }
 }
 
-void smooth(const tensor_t<float, 3> &input, tensor_t<float, 3> &output,
-            int ksize = 25)
+template <typename T>
+void smooth(const tensor_t<T, 3> &input, tensor_t<T, 3> &output, int ksize = 17)
 {
     TRACE(__func__);
     const float sigma = 3.0;
@@ -59,22 +59,13 @@ void smooth(const tensor_t<float, 3> &input, tensor_t<float, 3> &output,
     assert(width == output.dims[2]);
 
     const cv::Size size(width, height);
-    cv::Mat input_image(size, cv::DataType<float>::type);
-    cv::Mat output_image(size, cv::DataType<float>::type);
-
     for (int k = 0; k < channel; ++k) {
-        for (int i = 0; i < height; ++i) {
-            for (int j = 0; j < width; ++j) {
-                input_image.at<float>(i, j) = input.at(k, i, j);
-            }
-        }
+        cv::Mat input_image(size, cv::DataType<T>::type,
+                            input.data() + k * width * height);
+        cv::Mat output_image(size, cv::DataType<T>::type,
+                             output.data() + k * width * height);
         cv::GaussianBlur(input_image, output_image, cv::Size(ksize, ksize),
                          sigma);
-        for (int i = 0; i < height; ++i) {
-            for (int j = 0; j < width; ++j) {
-                output.at(k, i, j) = output_image.at<float>(i, j);
-            }
-        }
     }
 }
 

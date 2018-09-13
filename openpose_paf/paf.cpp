@@ -61,9 +61,6 @@ struct paf_processor {
         : height(height), width(width), n_joins(n_joins),
           n_connections(n_connections)
     {
-        TRACE(__func__);
-        printf("(%d, %d) x [%d, 2 * %d] \n", height, width, n_joins,
-               n_connections);
     }
 
     std::vector<ConnectionCandidate>

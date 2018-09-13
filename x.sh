@@ -11,4 +11,5 @@ fi
 tar -xf network-outputs
 
 make
-./cmake-build/$(uname -s)/test_paf
+./cmake-build/$(uname -s)/test_paf >stdout.log 2>stderr.log
+code trace.log
