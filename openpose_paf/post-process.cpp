@@ -121,23 +121,13 @@ int select_peak(const tensor_t<float, 3> &smoothed,
                 const tensor_t<float, 3> &peak, tensor_t<float, 3> &output)
 {
     TRACE(__func__);
-
-    const int height = smoothed.dims[0];
-    const int width = smoothed.dims[1];
-    const int channel = smoothed.dims[2];
-
+    const int n = smoothed.volume();
     int tot = 0;
-    for (int k = 0; k < channel; ++k) {
-        for (int i = 0; i < height; ++i) {
-            for (int j = 0; j < width; ++j) {
-                bool is_peak = false;
-                output.at(i, j, k) =
-                    delta(smoothed.at(i, j, k), peak.at(i, j, k), is_peak);
-                if (is_peak) { ++tot; }
-            }
-        }
+    for (int i = 0; i < n; ++i) {
+        bool is_peak = false;
+        output.data()[i] = delta(smoothed.data()[i], peak.data()[i], is_peak);
+        if (is_peak) { ++tot; }
     }
-
     return tot;
 }
 

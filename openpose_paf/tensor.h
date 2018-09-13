@@ -37,12 +37,11 @@ template <uint8_t r> int32_t volume(const std::array<int32_t, r> &dims)
 template <typename T, uint8_t r> struct tensor_t {
     const std::array<int32_t, r> dims;
     const std::unique_ptr<T[]> data_;
-    // T *const data;
 
     template <typename... Dims>
     explicit tensor_t(const T *data_ptr, const Dims... dims_)
         : dims({{static_cast<int32_t>(dims_)...}}),
-          data_(new T[volume<r>(dims)])
+          data_(new T[::volume<r>(dims)])
     {
         TRACE(__func__);
 
@@ -52,13 +51,13 @@ template <typename T, uint8_t r> struct tensor_t {
                data_.get());
 
         if (data_ptr) {
-            std::memcpy(data_.get(), data_ptr, sizeof(T) * volume<r>(dims));
+            std::memcpy(data_.get(), data_ptr, sizeof(T) * volume());
         } else {
-            std::memset(data_.get(), 0, sizeof(T) * volume<r>(dims));
+            std::memset(data_.get(), 0, sizeof(T) * volume());
         }
     }
 
-    T *data() const { return data_.get(); }
+    inline T *data() const { return data_.get(); }
 
     template <typename... I> uint32_t offset(const I... i) const
     {
@@ -84,6 +83,8 @@ template <typename T, uint8_t r> struct tensor_t {
     }
 
     virtual ~tensor_t() { printf("%p freed\n", data_.get()); }
+
+    int32_t volume() const { return ::volume<r>(dims); }
 };
 
 #include <iostream>
