@@ -33,7 +33,31 @@ void smooth(const tensor_t<T, 3> &input, tensor_t<T, 3> &output, int ksize = 17)
     }
 }
 
-void maxpool_3x3(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
+template <typename T>
+void same_max_pool_3x3(const int height, const int width,  //
+                       const T *input, T *output)
+{
+    const auto at = [&](int i, int j) { return i * width + j; };
+
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            float max_val = input[at(i, j)];
+            for (int dx = 0; dx < 3; ++dx) {
+                for (int dy = 0; dy < 3; ++dy) {
+                    const int nx = i + dx - 1;
+                    const int ny = j + dy - 1;
+                    if (0 <= nx && nx < height && 0 <= ny && ny < width) {
+                        max_val = std::max(max_val, input[at(nx, ny)]);
+                    }
+                }
+            }
+            output[at(i, j)] = max_val;
+        }
+    }
+}
+
+template <typename T>
+void same_max_pool_3x3(const tensor_t<T, 3> &input, tensor_t<T, 3> &output)
 {
     TRACE(__func__);
 
@@ -45,22 +69,10 @@ void maxpool_3x3(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
     assert(height == output.dims[1]);
     assert(width == output.dims[2]);
 
+    const int offset = height * width;
     for (int k = 0; k < channel; ++k) {
-        for (int i = 0; i < height; ++i) {
-            for (int j = 0; j < width; ++j) {
-                float max_val = input.at(k, i, j);
-                for (int dx = 0; dx < 3; ++dx) {
-                    for (int dy = 0; dy < 3; ++dy) {
-                        const int nx = i + dx - 1;
-                        const int ny = j + dy - 1;
-                        if (0 <= nx && nx < height && 0 <= ny && ny < width) {
-                            max_val = std::max(max_val, input.at(k, nx, ny));
-                        }
-                    }
-                }
-                output.at(k, i, j) = max_val;
-            }
-        }
+        same_max_pool_3x3(height, width, input.data() + k * offset,
+                          output.data() + k * offset);
     }
 }
 
@@ -87,7 +99,7 @@ int select_peak(const tensor_t<float, 3> &smoothed,
     return tot;
 }
 
-void get_peak(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
+void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
 {
     TRACE(__func__);
 
@@ -105,7 +117,7 @@ void get_peak(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
     smooth(input, smoothed);
     // debug("smoothed :: ", smoothed);
     // save(smoothed, "smoothed");
-    maxpool_3x3(smoothed, pooled);
+    same_max_pool_3x3(smoothed, pooled);
     // debug("pooled :: ", pooled);
     // save(pooled, "pooled");
     const int n = select_peak(smoothed, pooled, output);

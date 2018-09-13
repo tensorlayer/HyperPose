@@ -35,4 +35,4 @@ void resize_area(const tensor_t<T, 3> &input, tensor_t<T, 3> &output)
     }
 }
 
-void get_peak(const tensor_t<float, 3> &input, tensor_t<float, 3> &output);
+void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output);

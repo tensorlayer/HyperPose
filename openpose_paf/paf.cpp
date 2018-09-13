@@ -10,8 +10,6 @@
 #include "tensor.h"
 #include "tracer.h"
 
-using tensor_proxy = tensor_proxy_3d_<float>;
-
 const float THRESH_VECTOR_SCORE = 0.05;
 const int THRESH_VECTOR_CNT1 = 8;
 const int THRESH_PART_CNT = 4;
@@ -360,7 +358,7 @@ void process_conf_paf(int height_, int width_,  //
         resize_area(conf, upsample_conf);
     }
     tensor_t<float, 3> peaks(nullptr, channel_j, height, width);
-    get_peak(upsample_conf, peaks);
+    get_peak_map(upsample_conf, peaks);
 
     tensor_t<float, 3> upsample_paf(nullptr, channel_c * 2, height, width);
     {
