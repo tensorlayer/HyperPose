@@ -1,13 +1,13 @@
 # https://docs.travis-ci.com/user/languages/python/
 language: python
 
-https://docs.travis-ci.com/user/docker/
+# https://docs.travis-ci.com/user/docker/
 services:
 - docker
 
 python:
-  - '3.6'
-  - '2.7'
+- '3.6'
+- '2.7'
 
 sudo: required
 
