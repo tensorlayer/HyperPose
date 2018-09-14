@@ -11,13 +11,6 @@
 #include "tracer.h"
 #include "vis.h"
 
-const float THRESH_VECTOR_SCORE = 0.05;
-const int THRESH_VECTOR_CNT1 = 8;
-const int THRESH_PART_CNT = 4;
-const float THRESH_HUMAN_SCORE = 0.4;
-
-const int STEP_PAF = 10;
-
 template <typename T> T sqr(T x) { return x * x; }
 
 template <typename T> struct point_2d {
@@ -48,19 +41,61 @@ struct VectorXY {
     float y;
 };
 
-struct paf_processor {
+class paf_processor_impl : public paf_processor
+{
+  public:
+    paf_processor_impl(int input_height, int input_width,  //
+                       int height, int width,              //
+                       int n_joins, int n_connections)
+        : input_height(input_height), input_width(input_width),  //
+          height(height), width(width),                          //
+          n_joins(n_joins), n_connections(n_connections),
+          conf(nullptr, n_joins, input_height, input_width),
+          upsample_conf(nullptr, n_joins, height, width),
+          peaks(nullptr, n_joins, height, width),
+          paf(nullptr, n_connections * 2, input_height, input_width),
+          upsample_paf(nullptr, n_connections * 2, height, width)
+    {
+    }
+
+    std::vector<human_t>
+    operator()(const float *conf_, /* [height, width, n_joins] */
+               const float *paf_ /* [height, width, n_connections * 2] */)
+    {
+        TRACE(__func__);
+
+        chw_from_hwc(conf, conf_);
+        resize_area(conf, upsample_conf);
+        get_peak_map(upsample_conf, peaks);
+
+        chw_from_hwc(paf, paf_);
+        resize_area(paf, upsample_paf);
+
+        return (*this)(upsample_conf, peaks, upsample_paf);
+    }
+
+  private:
     const float THRESH_HEAT = 0.05;
+    const float THRESH_VECTOR_SCORE = 0.05;
+    const int THRESH_VECTOR_CNT1 = 8;
+    const int THRESH_PART_CNT = 4;
+    const float THRESH_HUMAN_SCORE = 0.4;
+    const int STEP_PAF = 10;
+
+    const int input_height;
+    const int input_width;
 
     const int height;
     const int width;
+
     const int n_joins;        // number of joins == 18 + 1 (background)
     const int n_connections;  // number of connections == 17 + 2 (virtual)
 
-    paf_processor(int height, int width, int n_joins, int n_connections)
-        : height(height), width(width), n_joins(n_joins),
-          n_connections(n_connections)
-    {
-    }
+    tensor_t<float, 3> conf;           // [J, H', W']
+    tensor_t<float, 3> upsample_conf;  // [J, H, W]
+    tensor_t<float, 3> peaks;          // [J, H, W]
+    tensor_t<float, 3> paf;            // [2C, H', W']
+    tensor_t<float, 3> upsample_paf;   // [2C, H, W]
 
     std::vector<ConnectionCandidate>
     getConnectionCandidates(const tensor_t<float, 3> &pafmap,
@@ -269,7 +304,7 @@ struct paf_processor {
         printf("got %lu incomplete humans\n", human_refs.size());
 
         human_refs.erase(std::remove_if(human_refs.begin(), human_refs.end(),
-                                        [](const human_ref_t &hr) {
+                                        [&](const human_ref_t &hr) {
                                             return (hr.n_parts <
                                                         THRESH_PART_CNT ||
                                                     hr.score / hr.n_parts <
@@ -295,12 +330,11 @@ struct paf_processor {
     }
 
     std::vector<human_t>
-    operator()(const tensor_t<float, 3> &heatmap,  // [j, h, w]
-               const tensor_t<float, 3> &peaks,    // [j, h, w]
-               const tensor_t<float, 3> &pafmap    // [2c, h, w]
-    )
+    operator()(const tensor_t<float, 3> &heatmap, /* [j, h, w] */
+               const tensor_t<float, 3> &peaks,   /* [j, h, w] */
+               const tensor_t<float, 3> &pafmap /* [2c, h, w] */)
     {
-        TRACE(__func__);
+        TRACE("operator()::internal");
 
         std::vector<Peak> all_peaks;
         std::vector<std::vector<int>> peak_ids_by_channel(n_joins);
@@ -370,30 +404,25 @@ void process_conf_paf(int height_, int width_,  //
     const int height = height_ * 8;
     const int width = width_ * 8;
 
-    tensor_t<float, 3> upsample_conf(nullptr, channel_j, height, width);
+    std::unique_ptr<paf_processor_impl> impl;
     {
-        tensor_t<float, 3> conf(nullptr, channel_j, height_, width_);
-        chw_from_hwc(conf, conf_);
-        resize_area(conf, upsample_conf);
+        TRACE("new paf_processor_impl");
+        impl.reset(new paf_processor_impl(height_, width_, height, width,
+                                          channel_j, channel_c));
     }
-    tensor_t<float, 3> peaks(nullptr, channel_j, height, width);
-    get_peak_map(upsample_conf, peaks);
+    const auto humans = (*impl)(conf_, paf_);
 
-    tensor_t<float, 3> upsample_paf(nullptr, channel_c * 2, height, width);
-    {
-        tensor_t<float, 3> paf(nullptr, channel_c * 2, height_, width_);
-        chw_from_hwc(paf, paf_);
-        resize_area(paf, upsample_paf);
-    }
-
-    paf_processor p(height, width, channel_j, channel_c);
-    const auto humans = p(upsample_conf, peaks, upsample_paf);
-
-    cv::Mat img(cv::Size(width, height),
-                CV_8UC(3));  // cv::DataType<cv::Vec3b>::type);
+    cv::Mat img(cv::Size(width, height), CV_8UC(3));
     for (const auto h : humans) {
         h.print();
         draw_human(img, h);
     }
     cv::imwrite("result.png", img);
+}
+
+paf_processor *create(int input_height, int input_width, int height, int width,
+                      int n_joins, int n_connections)
+{
+    return new paf_processor_impl(input_height, input_width, height, width,
+                                  n_joins, n_connections);
 }
