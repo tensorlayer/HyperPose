@@ -1,7 +1,8 @@
-#include "../paf.h"
-#include "../tensor.h"
-#include "../vis.h"
 #include <cstdio>
+
+#include "paf.h"
+#include "tensor.h"
+#include "vis.h"
 
 void test_c()
 {
