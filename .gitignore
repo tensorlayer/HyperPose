@@ -10,6 +10,7 @@ __pycache__
 *.so
 /3rdparty
 /checkpoints
+/cmake-build
 /coco
 /data
 /models

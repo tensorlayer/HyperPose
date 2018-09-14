@@ -1,0 +1,5 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
+PROJECT(tensorrt-examples)
+
+SET(CMAKE_CXX_STANDARD 11)
+INCLUDE(tensorrt/src/build.cmake)
