@@ -2,11 +2,11 @@
 
 #include "input.h"
 #include "mem_buffer.h"
-#include "paf/paf.h"
-#include "paf/tensor.h"
-#include "paf/tracer.h"
-#include "paf/vis.h"
+#include "paf.h"
+#include "tensor.h"
+#include "tracer.h"
 #include "uff-runner.h"
+#include "vis.h"
 
 namespace
 {
