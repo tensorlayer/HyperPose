@@ -1,7 +1,8 @@
 MAKEFILE ?= Makefile.config
 include $(MAKEFILE)
 
-default: build_with_cmake
+# default: build_with_cmake
+default: docker-build-gpu
 
 cmake_targets:
 	mkdir -p $(BUILD_DIR)
@@ -19,3 +20,7 @@ docker-build:
 
 docker-run-test: docker-build
 	docker run --rm -it $(TAG) ./cmake-build/Linux/test_paf
+
+
+docker-build-gpu:
+	docker build --rm -t $(TAG) -f docker/Dockerfile.builder-gpu .

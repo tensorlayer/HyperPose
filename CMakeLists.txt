@@ -3,4 +3,7 @@ PROJECT(openpose-plus)
 
 SET(CMAKE_CXX_STANDARD 11)
 INCLUDE(src/build.cmake)
-# INCLUDE(src/build-gpu.cmake)
+
+IF(DEFINED ENV{HAVE_CUDA})
+    INCLUDE(src/build-gpu.cmake)
+ENDIF()

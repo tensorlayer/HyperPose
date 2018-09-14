@@ -3,3 +3,4 @@ ADD_EXECUTABLE(runner
                ${CMAKE_CURRENT_LIST_DIR}/tracer.cpp
                ${CMAKE_CURRENT_LIST_DIR}/main.cpp
                ${CMAKE_CURRENT_LIST_DIR}/cuda_buffer.cpp)
+TARGET_LINK_LIBRARIES(runner input_image paf vis nvinfer cudart nvparsers)
