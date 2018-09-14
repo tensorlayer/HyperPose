@@ -1,4 +1,0 @@
-*.gz
-*.idx
-/cmake-build
-/network-outputs
