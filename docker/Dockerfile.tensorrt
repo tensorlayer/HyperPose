@@ -20,5 +20,9 @@ ADD nv-tensorrt-repo-ubuntu1604-cuda9.0-ga-trt4.0.1.6-20180612_1-1_amd64.deb /tm
 RUN dpkg -i /tmp/nv-tensorrt-repo-ubuntu1604-cuda9.0-ga-trt4.0.1.6-20180612_1-1_amd64.deb \
     && apt update
 
-RUN apt install -y libnvinfer-dev=4.1.2-1+cuda9.0
-RUN apt install -y cuda-cudart-dev-9-0=9.0.176-1
+RUN apt install -y \
+    libnvinfer-dev=4.1.2-1+cuda9.0 && \
+    cuda-cudart-dev-9-0=9.0.176-1 && \
+    cuda-libraries-dev-9-0
+
+RUN apt install -y g++ cmake libopencv-dev
