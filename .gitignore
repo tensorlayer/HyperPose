@@ -3,6 +3,7 @@ __pycache__
 *.a
 *.avi
 *.dylib
+*.gz
 *.jpg
 *.log
 *.out

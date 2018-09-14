@@ -3,3 +3,4 @@ PROJECT(tensorrt-examples)
 
 SET(CMAKE_CXX_STANDARD 11)
 INCLUDE(tensorrt/src/build.cmake)
+# INCLUDE(tensorrt/src/build-gpu.cmake)
