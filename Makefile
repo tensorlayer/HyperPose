@@ -7,9 +7,6 @@ else
 	DEFAULT_TARGET = build_with_cmake
 endif
 
-WORKSPACE = $(CURDIR)/tensorrt
-
-
 default: $(DEFAULT_TARGET)
 
 cmake_targets:
@@ -20,4 +17,11 @@ build_with_cmake: cmake_targets
 	make -C $(BUILD_DIR) -j $(NPROC)
 
 build_with_bazel:
-	cd $(WORKSPACE) && bazel build src/...
+	bazel build src/...
+
+TAG = openpose-plus:builder
+docker-build:
+	docker build --rm -t $(TAG) -f docker/Dockerfile .
+
+docker-run-test: docker-build
+	docker run --rm -it $(TAG) ./cmake-build/Linux/test_paf

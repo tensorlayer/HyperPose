@@ -1,5 +1,0 @@
-/bazel-bin
-/bazel-genfiles
-/bazel-out
-/bazel-tensorrt
-/bazel-testlogs

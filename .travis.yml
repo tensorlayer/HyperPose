@@ -1,9 +1,9 @@
 # https://docs.travis-ci.com/user/languages/python/
 language: python
 
-# https://docs.travis-ci.com/user/docker/
-# services:
-# - docker
+https://docs.travis-ci.com/user/docker/
+services:
+- docker
 
 python:
   - '3.6'
@@ -12,9 +12,8 @@ python:
 sudo: required
 
 before_install:
-# - docker info
-# - make docker -C openpose_paf
-- sudo apt install -y swig libopencv-dev
+- docker info
+- sudo apt install -y swig # FIXME: can't install libopencv-dev on travis CI
 - pip install -r requirements.txt
 - pip install pycocotools  # must be installed after cython is installed
 - pip install git+https://github.com/tensorlayer/tensorlayer.git  # TODO: create a latest release for TL
@@ -22,7 +21,8 @@ before_install:
 - ./scripts/download-test-data.sh
 
 script:
-# - docker run --rm -it libopenpose-pdf:builder /src/cmake-build/Linux/test_paf
+- make docker-build
+- make docker-run-test
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vgg
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vggtiny
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=mobilenet

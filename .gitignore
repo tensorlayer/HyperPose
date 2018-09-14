@@ -10,6 +10,7 @@ __pycache__
 *.png
 *.so
 /3rdparty
+/bazel-*
 /checkpoints
 /cmake-build
 /coco
