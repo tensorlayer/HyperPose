@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdio>
 #include <map>
 #include <vector>
 
@@ -15,8 +16,6 @@ template <int J> struct human_t_ {
     body_part_t parts[J];
     float score;
 
-#define DEBUG
-#ifdef DEBUG
     void print() const
     {
         for (int i = 0; i < J; ++i) {
@@ -28,7 +27,6 @@ template <int J> struct human_t_ {
         }
         printf("score=%.2f\n", score);
     }
-#endif
 };
 
 using human_t = human_t_<18>;

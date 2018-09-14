@@ -2,10 +2,11 @@
 
 #include "input.h"
 #include "mem_buffer.h"
-#include "paf.h"
-#include "tracer.h"
+#include "paf/paf.h"
+#include "paf/tensor.h"
+#include "paf/tracer.h"
+#include "paf/vis.h"
 #include "uff-runner.h"
-#include "vis.h"
 
 namespace
 {
@@ -22,6 +23,7 @@ const int n_pos = 19;
 void inference(bool draw_results = false)
 {
     TRACE(__func__);
+    auto paf_process = create(f_height, f_width, height, width, n_pos, n_pos);
 
     const std::string home(std::getenv("HOME"));
     auto model_file = home + "/lg/openpose/vgg.uff";
@@ -49,11 +51,8 @@ void inference(bool draw_results = false)
 
         if (draw_results) {
             TRACE("draw_results");
-
-            tensor_t<float, 3> conf(outputs[0], f_height, f_width, n_pos);
-            tensor_t<float, 3> paf(outputs[1], f_height, f_width, n_pos * 2);
-
-            const auto humans = estimate_paf(conf, paf);
+            const auto humans =
+                (*paf_process)((float *)outputs[0], (float *)outputs[1]);
 
             std::cout << "got " << humans.size() << " humans" << std::endl;
             for (const auto &h : humans) {
