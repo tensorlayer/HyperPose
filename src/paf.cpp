@@ -47,21 +47,21 @@ class paf_processor_impl : public paf_processor
     paf_processor_impl(
         int input_height, int input_width,  //
         int height, int width,              //
-        int channel_j, /* channel of input heap map, >= COCO_N_PARTS */
-        int n_connections)
+        int channel_j, /* channel of input heatmap tensor, >= COCO_N_PARTS */
+        int channel_c /* 1/2 * channel of input PAF tensor, == COCO_N_PAIRS */)
         : input_height(input_height), input_width(input_width),  //
           height(height), width(width),                          //
           conf(nullptr, channel_j, input_height, input_width),
           upsample_conf(nullptr, channel_j, height, width),
           peaks(nullptr, channel_j, height, width),
-          paf(nullptr, n_connections * 2, input_height, input_width),
-          upsample_paf(nullptr, n_connections * 2, height, width)
+          paf(nullptr, channel_c * 2, input_height, input_width),
+          upsample_paf(nullptr, channel_c * 2, height, width)
     {
     }
 
     std::vector<human_t>
-    operator()(const float *conf_, /* [height, width, n_joins] */
-               const float *paf_ /* [height, width, n_connections * 2] */)
+    operator()(const float *conf_, /* [height, width, channel_j] */
+               const float *paf_ /* [height, width, channel_c * 2] */)
     {
         TRACE(__func__);
 
@@ -88,10 +88,6 @@ class paf_processor_impl : public paf_processor
 
     const int height;
     const int width;
-
-    // const int channel_j;  // number of heatmap channels,  == 18 + 1
-    // (background) const int n_connections;  // number of connections == 17 + 2
-    // (virtual)
 
     tensor_t<float, 3> conf;           // [J, H', W']
     tensor_t<float, 3> upsample_conf;  // [J, H, W]
@@ -247,46 +243,38 @@ class paf_processor_impl : public paf_processor
                 printf("%lu humans touches this connection\n", hr_ids.size());
 
                 if (hr_ids.size() == 1) {
-                    const int humans_idx1 = hr_ids[0];
-
-                    if (human_refs[humans_idx1].parts[part_id2].id !=
-                        conn.cid2) {
-                        human_refs[humans_idx1].parts[part_id2].id = conn.cid2;
-                        ++human_refs[humans_idx1].n_parts;
-                        human_refs[humans_idx1].score +=
-                            all_peaks[conn.cid2].score + conn.score;
+                    auto &hr1 = human_refs[hr_ids[0]];
+                    if (hr1.parts[part_id2].id != conn.cid2) {
+                        hr1.parts[part_id2].id = conn.cid2;
+                        ++hr1.n_parts;
+                        hr1.score += all_peaks[conn.cid2].score + conn.score;
                     }
                 } else if (hr_ids.size() >= 2) {
-                    const int humans_idx1 = hr_ids[0];
-                    const int humans_idx2 = hr_ids[1];
+                    auto &hr1 = human_refs[hr_ids[0]];
+                    auto &hr2 = human_refs[hr_ids[1]];
 
                     int membership = 0;
                     for (int i = 0; i < COCO_N_PARTS; ++i) {
-                        if (human_refs[humans_idx1].parts[i].id > 0 &&
-                            human_refs[humans_idx2].parts[i].id > 0) {
+                        if (hr1.parts[i].id > 0 && hr2.parts[i].id > 0) {
                             membership = 2;
                         }
                     }
 
                     if (membership == 0) {
-                        for (int humans_id = 0; humans_id < COCO_N_PARTS;
-                             humans_id++)
-                            human_refs[humans_idx1].parts[humans_id].id +=
-                                (human_refs[humans_idx2].parts[humans_id].id +
-                                 1);
+                        for (int i = 0; i < COCO_N_PARTS; i++) {
+                            // FIXME: double check!
+                            hr1.parts[i].id += hr2.parts[i].id + 1;
+                        }
 
-                        human_refs[humans_idx1].n_parts +=
-                            human_refs[humans_idx2].n_parts;
-                        human_refs[humans_idx1].score +=
-                            human_refs[humans_idx2].score;
-                        human_refs[humans_idx1].score += conn.score;
+                        hr1.n_parts += hr2.n_parts;
+                        hr1.score += hr2.score;
+                        hr1.score += conn.score;
 
-                        human_refs.erase(human_refs.begin() + humans_idx2);
+                        human_refs.erase(human_refs.begin() + hr_ids[1]);
                     } else {
-                        human_refs[humans_idx1].parts[part_id2].id = conn.cid2;
-                        human_refs[humans_idx1].n_parts += 1;
-                        human_refs[humans_idx1].score +=
-                            all_peaks[conn.cid2].score + conn.score;
+                        hr1.parts[part_id2].id = conn.cid2;
+                        hr1.n_parts += 1;
+                        hr1.score += all_peaks[conn.cid2].score + conn.score;
                     }
                 } else if (hr_ids.size() == 0 && !is_virtual_pair(pair_id)) {
                     human_ref_t h;
