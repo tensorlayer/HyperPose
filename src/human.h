@@ -3,6 +3,8 @@
 #include <map>
 #include <vector>
 
+#include "coco.h"
+
 struct body_part_t {
     bool has_value;
     float x;
@@ -29,7 +31,7 @@ template <int J> struct human_t_ {
     }
 };
 
-using human_t = human_t_<18>;
+using human_t = human_t_<COCO_N_PARTS>;
 
 struct ConnectionCandidate {
     int idx1;
@@ -72,4 +74,4 @@ template <int J> struct human_ref_t_ {
     }
 };
 
-using human_ref_t = human_ref_t_<18>;
+using human_ref_t = human_ref_t_<COCO_N_PARTS>;

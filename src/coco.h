@@ -2,7 +2,8 @@
 #include <utility>
 #include <vector>
 
-constexpr int COCOPAIRS_SIZE = 19;
+constexpr int COCO_N_PARTS = 18;
+constexpr int COCO_N_PAIRS = 19;
 
 using idx_pair_t = std::pair<int, int>;
 using coco_pair_list_t = std::vector<idx_pair_t>;

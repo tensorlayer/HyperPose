@@ -44,15 +44,16 @@ struct VectorXY {
 class paf_processor_impl : public paf_processor
 {
   public:
-    paf_processor_impl(int input_height, int input_width,  //
-                       int height, int width,              //
-                       int n_joins, int n_connections)
+    paf_processor_impl(
+        int input_height, int input_width,  //
+        int height, int width,              //
+        int channel_j, /* channel of input heap map, >= COCO_N_PARTS */
+        int n_connections)
         : input_height(input_height), input_width(input_width),  //
           height(height), width(width),                          //
-          n_joins(n_joins), n_connections(n_connections),
-          conf(nullptr, n_joins, input_height, input_width),
-          upsample_conf(nullptr, n_joins, height, width),
-          peaks(nullptr, n_joins, height, width),
+          conf(nullptr, channel_j, input_height, input_width),
+          upsample_conf(nullptr, channel_j, height, width),
+          peaks(nullptr, channel_j, height, width),
           paf(nullptr, n_connections * 2, input_height, input_width),
           upsample_paf(nullptr, n_connections * 2, height, width)
     {
@@ -88,8 +89,9 @@ class paf_processor_impl : public paf_processor
     const int height;
     const int width;
 
-    const int n_joins;        // number of joins == 18 + 1 (background)
-    const int n_connections;  // number of connections == 17 + 2 (virtual)
+    // const int channel_j;  // number of heatmap channels,  == 18 + 1
+    // (background) const int n_connections;  // number of connections == 17 + 2
+    // (virtual)
 
     tensor_t<float, 3> conf;           // [J, H', W']
     tensor_t<float, 3> upsample_conf;  // [J, H, W]
@@ -204,9 +206,7 @@ class paf_processor_impl : public paf_processor
     {
         TRACE(__func__);
         int idx = 0;
-        for (int part_id = 0;
-             part_id < n_joins - /* the last one is background */ 1;
-             ++part_id) {
+        for (int part_id = 0; part_id < COCO_N_PARTS; ++part_id) {
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
                     if (peaks.at(part_id, y, x) > threshold) {
@@ -228,7 +228,7 @@ class paf_processor_impl : public paf_processor
         TRACE(__func__);
 
         std::vector<human_ref_t> human_refs;
-        for (int pair_id = 0; pair_id < n_connections; pair_id++) {
+        for (int pair_id = 0; pair_id < COCO_N_PAIRS; pair_id++) {
             printf("pair_id: %d, has %lu connections\n", pair_id,
                    all_connections[pair_id].size());
 
@@ -261,7 +261,7 @@ class paf_processor_impl : public paf_processor
                     const int humans_idx2 = hr_ids[1];
 
                     int membership = 0;
-                    for (int i = 0; i < 18; ++i) {
+                    for (int i = 0; i < COCO_N_PARTS; ++i) {
                         if (human_refs[humans_idx1].parts[i].id > 0 &&
                             human_refs[humans_idx2].parts[i].id > 0) {
                             membership = 2;
@@ -269,7 +269,8 @@ class paf_processor_impl : public paf_processor
                     }
 
                     if (membership == 0) {
-                        for (int humans_id = 0; humans_id < 18; humans_id++)
+                        for (int humans_id = 0; humans_id < COCO_N_PARTS;
+                             humans_id++)
                             human_refs[humans_idx1].parts[humans_id].id +=
                                 (human_refs[humans_idx2].parts[humans_id].id +
                                  1);
@@ -322,7 +323,7 @@ class paf_processor_impl : public paf_processor
         TRACE(__func__);
 
         std::vector<std::vector<Connection>> all_connections;
-        for (int pair_id = 0; pair_id < n_connections; pair_id++) {
+        for (int pair_id = 0; pair_id < COCO_N_PAIRS; pair_id++) {
             all_connections.push_back(getConnections(
                 pafmap, all_peaks, peak_ids_by_channel, pair_id, height));
         }
@@ -337,7 +338,7 @@ class paf_processor_impl : public paf_processor
         TRACE("operator()::internal");
 
         std::vector<Peak> all_peaks;
-        std::vector<std::vector<int>> peak_ids_by_channel(n_joins);
+        std::vector<std::vector<int>> peak_ids_by_channel(COCO_N_PARTS);
         select_peaks(heatmap, peaks, THRESH_HEAT, all_peaks,
                      peak_ids_by_channel);
 
@@ -351,7 +352,7 @@ class paf_processor_impl : public paf_processor
         for (const auto &hr : human_refs) {
             human_t human;
             human.score = hr.score;
-            for (int i = 0; i < 18; ++i) {
+            for (int i = 0; i < COCO_N_PARTS; ++i) {
                 if (hr.parts[i].id != -1) {
                     human.parts[i].has_value = true;
                     const auto p = all_peaks[hr.parts[i].id];
