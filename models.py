@@ -75,10 +75,10 @@ def get_full_model_func(base_model_name):
     def full_model(n_pos, target_size=(368, 368), data_format='channels_last'):
         """Creates the model including the post processing."""
         image = _input_image(target_size[1], target_size[0], data_format, 'image')
-        _, _, _, net = base_model(image, n_pos, False, False, data_format=data_format)
+        _, b1_list, b2_list, _ = base_model(image, n_pos, None, None, False, False, data_format=data_format)
 
-        conf_tensor = tl.layers.get_layers_with_name(net, 'model/stage6/branch1/conf')[0]
-        pafs_tensor = tl.layers.get_layers_with_name(net, 'model/stage6/branch2/pafs')[0]
+        conf_tensor = b1_list[-1].outputs
+        pafs_tensor = b2_list[-1].outputs
 
         upsample_size = tf.placeholder(dtype=tf.int32, shape=(2,), name='upsample_size')
 
