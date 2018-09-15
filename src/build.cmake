@@ -21,3 +21,10 @@ ADD_EXECUTABLE(fake-runner
                ${CMAKE_CURRENT_LIST_DIR}/tracer.cpp
                ${CMAKE_CURRENT_LIST_DIR}/main.cpp)
 TARGET_LINK_LIBRARIES(fake-runner input_image paf vis)
+
+
+FIND_PACKAGE(gflags)
+ADD_EXECUTABLE(process-paf
+               ${CMAKE_CURRENT_LIST_DIR}/process-paf.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/tracer.cpp)
+TARGET_LINK_LIBRARIES(process-paf paf vis gflags)

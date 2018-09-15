@@ -225,3 +225,23 @@ void load_idx_file(const tensor_t<T, r> &t, const std::string &filename)
     std::fread(t.data(), sizeof(T), volume<r>(t.dims), fp);
     std::fclose(fp);
 }
+
+template <typename T>
+std::unique_ptr<tensor_t<T, 3>> load_3d_tensor(const std::string &filename)
+{
+    FILE *fp = std::fopen(filename.c_str(), "r");
+    if (fp == nullptr) { exit(1); }
+
+    uint8_t magic[4];
+    std::fread(&magic, 4, 1, fp);  // [0, 0, dtype, rank]
+    if (magic[2] != 0x0d) { exit(1); }
+    if (magic[3] != 3) { exit(1); }
+    uint32_t dims[3];
+    std::fread(&dims, 4, 3, fp);
+    for (int i = 0; i < 3; ++i) { _reverse_byte_order(dims[i]); }
+    std::unique_ptr<tensor_t<float, 3>> p(
+        new tensor_t<float, 3>(nullptr, dims[0], dims[1], dims[2]));
+
+    load_idx_file(*p, filename);
+    return p;
+}
