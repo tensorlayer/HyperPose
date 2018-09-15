@@ -238,7 +238,7 @@ if __name__ == '__main__':
         for _input, _target in zip(imgs_file_list, train_targets):
             yield _input.encode('utf-8'), cPickle.dumps(_target)
 
-    n_epoch = math.ceil(n_step / len(imgs_file_list))
+    n_epoch = math.ceil(n_step / (len(imgs_file_list) / batch_size))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
     dataset = dataset.shuffle(buffer_size=4096)  # shuffle before loading images
     dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count())
