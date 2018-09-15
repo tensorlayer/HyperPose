@@ -19,7 +19,7 @@ config.TRAIN.train_mode = 'datasetapi'  # placeholder (debug), datasetapi (singl
 
 config.MODEL = edict()
 config.MODEL.model_path = 'models'  # save directory
-config.MODEL.n_pos = 19  # number of keypoints
+config.MODEL.n_pos = 19  # number of keypoints + 1 for background
 config.MODEL.hin = 368  # input size during training , 240
 config.MODEL.win = 368
 config.MODEL.hout = int(config.MODEL.hin / 8)  # output size during training (default 46)

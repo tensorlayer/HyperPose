@@ -224,7 +224,6 @@ if __name__ == '__main__':
     ## 1. only coco training set
     imgs_file_list = train_imgs_file_list
     train_targets = list(zip(train_objs_info_list, train_mask_list))
-
     ## 2. your own data and coco training set
     # imgs_file_list = train_imgs_file_list + your_imgs_file_list
     # train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
@@ -239,7 +238,7 @@ if __name__ == '__main__':
         for _input, _target in zip(imgs_file_list, train_targets):
             yield _input.encode('utf-8'), cPickle.dumps(_target)
 
-    n_epoch = math.ceil(n_step / len(imgs_file_list))
+    n_epoch = math.ceil(n_step / (len(imgs_file_list) / batch_size))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
     dataset = dataset.shuffle(buffer_size=4096)  # shuffle before loading images
     dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count())
@@ -284,9 +283,6 @@ if __name__ == '__main__':
                     new_lr_decay = gamma**(step // decay_every_step)
                     sess.run(tf.assign(lr_v, base_lr * new_lr_decay))
 
-                ## save some training data for debugging data augmentation (slow)
-                # draw_results(x_, confs_, None, pafs_, None, mask, 'check_batch_{}_'.format(step))
-
                 [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm,
                  paf_result] = sess.run([train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf])
 
@@ -301,8 +297,8 @@ if __name__ == '__main__':
                 ## save intermedian results and model
                 if (step != 0) and (step % save_interval == 0):
                     ## save some results
-                    # [img_out, confs_ground, pafs_ground, mask_out] = sess.run([x_, confs_, pafs_, mask])
-                    # draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
+                    [img_out, confs_ground, pafs_ground, conf_result, paf_result, mask_out] = sess.run([x_, confs_, pafs_, last_conf, last_paf, mask])
+                    draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
                     ## save model
                     # tl.files.save_npz(
                     #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
@@ -315,15 +311,18 @@ if __name__ == '__main__':
 
     ###========================== DISTRIBUTED TRAINING ======================###
     elif config.TRAIN.train_mode == 'distributed':  # TODO
-        """Train on multiple GPUs using distributed mode."""
+        """Train on multiple GPUs using Horovod distributed mode."""
         raise Exception("TODO tl.distributed.Trainer")
+
+        def make_model_distributed():
+            pass
         # Setup the trainer
         training_dataset = make_dataset(X_train, y_train)
         training_dataset = training_dataset.map(data_aug_train, num_parallel_calls=multiprocessing.cpu_count())
         # validation_dataset = make_dataset(X_test, y_test)
         # validation_dataset = training_dataset.map(data_aug_valid, num_parallel_calls=multiprocessing.cpu_count())
         trainer = tl.distributed.Trainer(
-            build_training_func=build_train, training_dataset=dataset, optimizer=tf.train.MomentumOptimizer,
+            build_training_func=make_model_distributed, training_dataset=dataset, optimizer=tf.train.MomentumOptimizer,
             optimizer_args={'learning_rate': 0.0001}, batch_size=batch_size, num_epochs=n_epoch, prefetch_buffer_size=90000
             # validation_dataset=validation_dataset, build_validation_func=build_validation
         )
