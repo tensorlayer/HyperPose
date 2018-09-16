@@ -326,7 +326,7 @@ if __name__ == '__main__':
         resultmaps = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 3], "resultmaps")
         # if the people does not have keypoints annotations, ignore the area
         img_masks = tf.placeholder(tf.float32, [None, hout, wout, 1], 'img_masks')
-        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element)
+        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element, is_train=True, reuse=False)
 
         global_step = tf.Variable(1, trainable=False)
         print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
