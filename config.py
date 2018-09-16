@@ -30,6 +30,7 @@ if (config.MODEL.hin % 16 != 0) or (config.MODEL.win % 16 != 0):
     raise Exception("image size should be divided by 16")
 
 config.DATA = edict()
+config.DATA.train_data = 'coco_only' # coco_only, yours_only, coco_and_yours
 config.DATA.coco_version = '2017'  # MSCOCO version 2014 or 2017
 config.DATA.data_path = 'data'
 config.DATA.your_images_path = os.path.join('data', 'your_data', 'images')
