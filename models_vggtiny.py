@@ -105,12 +105,14 @@ def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None, data_for
         b1, b2 = state1(cnn, n_pos, mask_miss1, mask_miss2, is_train)
         b1_list.append(b1)
         b2_list.append(b2)
+
         ## stage 2 ~ 6
         # for i in range(2, 7):
-        for i in [5, 6]:  # only 3 stage in total
-            b1, b2 = stage2(cnn, b1, b2, n_pos, mask_miss1, mask_miss2, is_train, scope_name='stage%d' % i)
-            b1_list.append(b1)
-            b2_list.append(b2)
+        with tf.variable_scope("stage1/branch2"):  # TODO: fix indent here and the names in npz
+            for i in [5, 6]:  # only 3 stage in total
+                b1, b2 = stage2(cnn, b1, b2, n_pos, mask_miss1, mask_miss2, is_train, scope_name='stage%d' % i)
+                b1_list.append(b1)
+                b2_list.append(b2)
 
         net = tl.layers.merge_networks([b1, b2])
         return cnn, b1_list, b2_list, net

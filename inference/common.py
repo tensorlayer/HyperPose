@@ -118,7 +118,7 @@ def read_imgfile(path, width=None, height=None, data_format='channels_last'):
         val_image = cv2.resize(val_image, (width, height))
     if data_format == 'channels_first':
         val_image = val_image.transpose([2, 0, 1])
-    return val_image
+    return val_image / 255.0
 
 
 def get_sample_images(w, h):
@@ -235,3 +235,15 @@ def plot_humans(e, image, humans, name):
     plt.colorbar()
     mkpath('vis')
     plt.savefig('vis/result-%s.png' % name)
+
+
+def rename_tensor(x, name):
+    # FIXME: use tf.identity(x, name=name) doesn't work
+    new_shape = []
+    for d in x.shape:
+        try:
+            d = int(d)
+        except:
+            d = -1
+        new_shape.append(d)
+    return tf.reshape(x, new_shape, name=name)

@@ -7,7 +7,7 @@ import os
 import tensorflow as tf
 import tensorlayer as tl
 
-from inference.common import measure
+from inference.common import measure, rename_tensor
 from models import get_full_model_func, get_base_model_func, _input_image
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
@@ -56,12 +56,15 @@ def get_model_func(base_model_name, full):
             base_model = get_base_model_func(base_model_name)
             data_format = 'channels_last'
             image = _input_image(target_size[1], target_size[0], data_format, 'image')
-            _, _, _, net = base_model(image, n_pos, False, False, data_format=data_format)
+            _, b1_list, b2_list, _ = base_model(image, n_pos, None, None, False, False, data_format=data_format)
+            conf_tensor = b1_list[-1].outputs
+            pafs_tensor = b2_list[-1].outputs
 
-            conf_tensor = tl.layers.get_layers_with_name(net, 'model/stage6/branch1/conf')[0]
-            pafs_tensor = tl.layers.get_layers_with_name(net, 'model/stage6/branch2/pafs')[0]
-
-            return [conf_tensor, pafs_tensor]
+            with tf.variable_scope('outputs'):
+                return [
+                    rename_tensor(conf_tensor, 'conf'),
+                    rename_tensor(pafs_tensor, 'paf'),
+                ]
 
     return model_func
 
@@ -70,6 +73,7 @@ def export_model(model_func, checkpoint_dir, path_to_npz, graph_filename, uff_fi
     mkdir_p(checkpoint_dir)
     model_parameters = model_func()
     names = [p.name[:-2] for p in model_parameters]
+    print('name: %s' % ','.join(names))
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
