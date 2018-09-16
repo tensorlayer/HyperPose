@@ -29,11 +29,10 @@ tl.files.exists_or_mkdir(config.MODEL.model_path, verbose=False)  # to save mode
 
 # define hyper-parameters for training
 batch_size = config.TRAIN.batch_size
-# n_epoch = config.TRAIN.n_epoch
 decay_every_step = config.TRAIN.decay_every_step
 n_step = config.TRAIN.n_step
 save_interval = config.TRAIN.save_interval
-weight_decay = config.TRAIN.weight_decay
+weight_decay_factor = config.TRAIN.weight_decay_factor
 base_lr = config.TRAIN.base_lr
 gamma = config.TRAIN.gamma
 
@@ -44,7 +43,6 @@ hin = config.MODEL.hin
 win = config.MODEL.win
 hout = config.MODEL.hout
 wout = config.MODEL.wout
-
 
 def _data_aug_fn(image, ground_truth):
     """Data augmentation function."""
@@ -149,89 +147,68 @@ def make_model(img, results, mask, is_train=True, reuse=False):
     last_paf = b2_list[-1].outputs
     last_losses_l1.append(loss_l1)
     last_losses_l2.append(loss_l2)
-    L2 = 0.0
+    l2_loss = 0.0
 
     for p in tl.layers.get_variables_with_name('kernel', True, True):
-        L2 += tf.contrib.layers.l2_regularizer(0.0005)(p)
-    total_loss = tf.reduce_sum(losses) / batch_size + L2
+       l2_loss += tf.contrib.layers.l2_regularizer(weight_decay_factor)(p)
+    total_loss = tf.reduce_sum(losses) / batch_size + l2_loss
 
-    return total_loss, last_conf, stage_losses, L2, cnn, last_paf, img, confs, pafs, m1, net
-
-
-# def make_model_placeholder(img,confs,pafs,img_mask1,img_mask2):
-#
-#     cnn, b1_list, b2_list, net = model(img, n_pos, img_mask1, img_mask2, True, False)
-#
-#     ## define loss
-#     losses = []
-#     last_losses_l1 = []
-#     last_losses_l2 = []
-#     stage_losses = []
-#     L2 = 0.0
-#     for idx, (l1, l2) in enumerate(zip(b1_list, b2_list)):
-#         loss_l1 = tf.nn.l2_loss((l1.outputs - confs) * img_mask1)
-#         loss_l2 = tf.nn.l2_loss((l2.outputs - pafs) * img_mask2)
-#         losses.append(tf.reduce_mean([loss_l1, loss_l2]))
-#         stage_losses.append(loss_l1 / batch_size)
-#         stage_losses.append(loss_l2 / batch_size)
-#     last_losses_l1.append(loss_l1)
-#     last_losses_l2.append(loss_l2)
-#     last_conf = b1_list[-1].outputs
-#     last_paf = b2_list[-1].outputs
-#
-#     for p in tl.layers.get_variables_with_name('kernel', True, True):
-#         L2 += tf.contrib.layers.l2_regularizer(0.0005)(p)
-#     total_loss = tf.reduce_sum(losses) / batch_size + L2
-#
-#     return total_loss, last_conf, stage_losses, L2, cnn, last_paf, img, confs, pafs, img_mask1, net
+    return total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, img, confs, pafs, m1, net
 
 if __name__ == '__main__':
 
-    ## automatically download MSCOCO data to "data/mscoco..."" folder
-    train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
-        load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
+    if 'coco' in config.DATA.train_data:
+        ## automatically download MSCOCO data to "data/mscoco..."" folder
+        train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
+            load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
 
-    ## read coco training images contains valid people
-    train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
-        get_pose_data_list(train_im_path, train_ann_path)
+        ## read coco training images contains valid people
+        train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
+            get_pose_data_list(train_im_path, train_ann_path)
 
-    ## read coco validating images contains valid people (you can use it for training as well)
-    val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
-        get_pose_data_list(val_im_path, val_ann_path)
+        ## read coco validating images contains valid people (you can use it for training as well)
+        val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
+            get_pose_data_list(val_im_path, val_ann_path)
 
-    ## read your own images contains valid people
-    ## 1. if you only have one folder as follow:
-    #   data/your_data
-    #           /images
-    #               0001.jpeg
-    #               0002.jpeg
-    #           /coco.json
-    # your_imgs_file_list, your_objs_info_list, your_mask_list, your_targets = \
-    #     get_pose_data_list(config.DATA.your_images_path, config.DATA.your_annos_path)
-    ## 2. if you have a folder with many folders: (which is common in industry)
-    # folder_list = tl.files.load_folder_list(path='data/your_data')
-    # your_imgs_file_list, your_objs_info_list, your_mask_list = [], [], []
-    # for folder in folder_list:
-    #     _imgs_file_list, _objs_info_list, _mask_list, _targets = \
-    #         get_pose_data_list(os.path.join(folder, 'images'), os.path.join(folder, 'coco.json'))
-    #     print(len(_imgs_file_list))
-    #     your_imgs_file_list.extend(_imgs_file_list)
-    #     your_objs_info_list.extend(_objs_info_list)
-    #     your_mask_list.extend(_mask_list)
-    # print("number of own images found:", len(your_imgs_file_list))
+    if 'yours' in config.DATA.train_data:
+        ## read your own images contains valid people
+        ## 1. if you only have one folder as follow:
+        ##   data/your_data
+        ##           /images
+        ##               0001.jpeg
+        ##               0002.jpeg
+        ##           /coco.json
+        # your_imgs_file_list, your_objs_info_list, your_mask_list, your_targets = \
+        #     get_pose_data_list(config.DATA.your_images_path, config.DATA.your_annos_path)
+        ## 2. if you have a folder with many folders: (which is common in industry)
+        folder_list = tl.files.load_folder_list(path='data/your_data')
+        your_imgs_file_list, your_objs_info_list, your_mask_list = [], [], []
+        for folder in folder_list:
+            _imgs_file_list, _objs_info_list, _mask_list, _targets = \
+                get_pose_data_list(os.path.join(folder, 'images'), os.path.join(folder, 'coco.json'))
+            print(len(_imgs_file_list))
+            your_imgs_file_list.extend(_imgs_file_list)
+            your_objs_info_list.extend(_objs_info_list)
+            your_mask_list.extend(_mask_list)
+        print("number of own images found:", len(your_imgs_file_list))
 
     ## choice dataset for training
-    ## 1. only coco training set
-    imgs_file_list = train_imgs_file_list
-    train_targets = list(zip(train_objs_info_list, train_mask_list))
-    ## 2. your own data and coco training set
-    # imgs_file_list = train_imgs_file_list + your_imgs_file_list
-    # train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
-    ## 3. only your own data
-    # imgs_file_list = your_imgs_file_list
-    # train_targets = list(zip(your_objs_info_list, your_mask_list))
+    if config.DATA.train_data == 'coco_only':
+        ## 1. only coco training set
+        imgs_file_list = train_imgs_file_list
+        train_targets = list(zip(train_objs_info_list, train_mask_list))
+    elif config.DATA.train_data == 'yours_only':
+        ## 2. only your own data
+        imgs_file_list = your_imgs_file_list
+        train_targets = list(zip(your_objs_info_list, your_mask_list))
+    elif config.DATA.train_data == 'coco_and_yours':
+        ## 3. your own data and coco training set
+        imgs_file_list = train_imgs_file_list + your_imgs_file_list
+        train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
+    else:
+        raise Exception('please choice a correct config.DATA.train_data setting.')
 
-    # define data augmentation
+    ## define data augmentation
     def generator():
         """TF Dataset generartor."""
         assert len(imgs_file_list) == len(train_targets)
@@ -248,10 +225,10 @@ if __name__ == '__main__':
     iterator = dataset.make_one_shot_iterator()
     one_element = iterator.get_next()
 
-    ###========================== SINGLE GPU TRAINING =======================###
     if config.TRAIN.train_mode == 'datasetapi':
-        """Train on single GPU using TensorFlow DatasetAPI."""
-        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element)
+        """ ======================== SINGLE GPU TRAINING ======================= """
+        """ Train on single GPU using TensorFlow DatasetAPI. """
+        total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element)
 
         global_step = tf.Variable(1, trainable=False)
         print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
@@ -283,15 +260,15 @@ if __name__ == '__main__':
                     new_lr_decay = gamma**(step // decay_every_step)
                     sess.run(tf.assign(lr_v, base_lr * new_lr_decay))
 
-                [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm,
-                 paf_result] = sess.run([train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf])
+                [_, _loss, _stage_losses, _l2, conf_result, paf_result] = \
+                    sess.run([train_op, total_loss, stage_losses, l2_loss, last_conf, last_paf])
 
                 # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
                 lr = sess.run(lr_v)
-                print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} weight_norm {:10e} Took: {}s'.format(
-                    step, n_step, the_loss, lr, weight_norm,
+                print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} l2_loss {:10e} Took: {}s'.format(
+                    step, n_step, _loss, lr, _l2,
                     time.time() - tic))
-                for ix, ll in enumerate(loss_ll):
+                for ix, ll in enumerate(_stage_losses):
                     print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
                 ## save intermedian results and model
@@ -309,41 +286,41 @@ if __name__ == '__main__':
                 if step == n_step:  # training finished
                     break
 
-    ###========================== DISTRIBUTED TRAINING ======================###
     elif config.TRAIN.train_mode == 'distributed':  # TODO
-        """Train on multiple GPUs using Horovod distributed mode."""
+        """ ======================== DISTRIBUTED TRAINING ====================== """
+        """ Train on multiple GPUs using Horovod distributed mode. """
         raise Exception("TODO tl.distributed.Trainer")
 
         def make_model_distributed():
             pass
-        # Setup the trainer
-        training_dataset = make_dataset(X_train, y_train)
-        training_dataset = training_dataset.map(data_aug_train, num_parallel_calls=multiprocessing.cpu_count())
-        # validation_dataset = make_dataset(X_test, y_test)
-        # validation_dataset = training_dataset.map(data_aug_valid, num_parallel_calls=multiprocessing.cpu_count())
-        trainer = tl.distributed.Trainer(
-            build_training_func=make_model_distributed, training_dataset=dataset, optimizer=tf.train.MomentumOptimizer,
-            optimizer_args={'learning_rate': 0.0001}, batch_size=batch_size, num_epochs=n_epoch, prefetch_buffer_size=90000
-            # validation_dataset=validation_dataset, build_validation_func=build_validation
-        )
+        # # Setup the trainer
+        # training_dataset = make_dataset(X_train, y_train)
+        # training_dataset = training_dataset.map(data_aug_train, num_parallel_calls=multiprocessing.cpu_count())
+        # # validation_dataset = make_dataset(X_test, y_test)
+        # # validation_dataset = training_dataset.map(data_aug_valid, num_parallel_calls=multiprocessing.cpu_count())
+        # trainer = tl.distributed.Trainer(
+        #     build_training_func=make_model_distributed, training_dataset=dataset, optimizer=tf.train.MomentumOptimizer,
+        #     optimizer_args={'learning_rate': lr}, batch_size=batch_size, num_epochs=n_epoch, prefetch_buffer_size=90000
+        #     # validation_dataset=validation_dataset, build_validation_func=build_validation
+        # )
+        #
+        # # There are multiple ways to use the trainer:
+        # # 1. Easiest way to train all epochs: trainer.train_to_end()
+        # # 2. Train with validation in the middle: trainer.train_and_validate_to_end(validate_step_size=100)
+        # # 3. Train with full control like follows:
+        # while not trainer.session.should_stop():
+        #     try:
+        #         # Run a training step synchronously.
+        #         trainer.train_on_batch()
+        #         # TODO: do whatever you like to the training session.
+        #     except tf.errors.OutOfRangeError:
+        #         # The dataset would throw the OutOfRangeError when it reaches the end
+        #         break
 
-        # There are multiple ways to use the trainer:
-        # 1. Easiest way to train all data: trainer.train_to_end()
-        # 2. Train with validation in the middle: trainer.train_and_validate_to_end(validate_step_size=100)
-        # 3. Train with full control like follows:
-        while not trainer.session.should_stop():
-            try:
-                # Run a training step synchronously.
-                trainer.train_on_batch()
-                # TODO: do whatever you like to the training session.
-            except tf.errors.OutOfRangeError:
-                # The dataset would throw the OutOfRangeError when it reaches the end
-                break
-
-    ###========================== DEBUG =====================================###
     elif config.TRAIN.train_mode == 'placeholder':
-        """Train with placeholder can help your to check the data easily,
-        but the training will be very slow."""
+        """ ========================= DEBUG ONLY ================================"""
+        """ Train with placeholder can help your to check the data easily,
+        but the training will be very slow. """
         ## define model architecture
         x = tf.placeholder(tf.float32, [None, hin, win, 3], "image")
         resultmaps = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 3], "resultmaps")
@@ -433,4 +410,4 @@ if __name__ == '__main__':
                 if step == n_step:  # training finished
                     break
     else:
-        raise Exception("wrong train model")
+        raise Exception("wrong train mode")
