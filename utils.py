@@ -9,7 +9,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.distance import cdist
-
+import tensorflow as tf
 from config import config
 from pycocotools.coco import COCO, maskUtils
 from tensorlayer import logging
@@ -18,6 +18,7 @@ from tensorlayer.files.utils import (del_file, folder_exists, maybe_download_and
 n_pos = config.MODEL.n_pos
 hout = config.MODEL.hout
 wout = config.MODEL.wout
+
 
 ## download dataset
 def load_mscoco_dataset(path='data', dataset='2017', task='person'):  # TODO move to tl.files later
@@ -612,11 +613,15 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
         if pafs_result is not None:
             paf_result = pafs_result[i]
         if masks is not None:
-            mask = masks[i]
-            mask = mask.reshape(hout, wout, 1)
+            # print(masks.shape)
+            mask = masks[i,:,:,0]
+            # print(mask.shape)
+            mask = mask[:,:,np.newaxis]
+            # mask = masks[:,:,:,0]
+            # mask = mask.reshape(hout, wout, 1)
             mask1 = np.repeat(mask, n_pos, 2)
             mask2 = np.repeat(mask, n_pos * 2, 2)
-
+            # print(mask1.shape, mask2.shape)
         image = images[i]
 
         fig = plt.figure(figsize=(8, 8))
@@ -693,7 +698,8 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
         mkpath(config.LOG.vis_path)
         plt.savefig(os.path.join(config.LOG.vis_path, '%s%d.png' % (name, i)), dpi=300)
 
-def vis_annos(image, annos,name=''):
+
+def vis_annos(image, annos, name=''):
     """Save results for debugging.
 
     Parameters
@@ -713,6 +719,27 @@ def vis_annos(image, annos,name=''):
 
     mkpath(config.LOG.vis_path)
     plt.savefig(os.path.join(config.LOG.vis_path, 'keypoints%s%d.png' % (name, i)), dpi=300)
+
+
+def tf_repeat(tensor, repeats):
+    """
+    Args:
+
+    input: A Tensor. 1-D or higher.
+    repeats: A list. Number of repeat for each dimension, length must be the same as the number of dimensions in input
+
+    Returns:
+
+    A Tensor. Has the same type as input. Has the shape of tensor.shape * repeats
+    """
+
+    expanded_tensor = tf.expand_dims(tensor, -1)
+    multiples = [1] + repeats
+    tiled_tensor = tf.tile(expanded_tensor, multiples=multiples)
+    repeated_tesnor = tf.reshape(tiled_tensor, tf.shape(tensor) * repeats)
+
+    return repeated_tesnor
+
 
 if __name__ == '__main__':
     data_dir = '/Users/Joel/Desktop/coco'

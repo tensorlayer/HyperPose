@@ -16,3 +16,4 @@ cocoapi-master/
 cocoapi/
 inference/*png
 models_hao*
+test.py

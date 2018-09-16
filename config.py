@@ -15,11 +15,11 @@ config.TRAIN.base_lr = 4e-5  # initial learning rate
 config.TRAIN.gamma = 0.333  # decay lr factor
 config.TRAIN.weight_decay = 5e-4
 config.TRAIN.distributed = False
-config.TRAIN.train_mode = 'placeholder'  # placeholder, datasetapi, distributed
+config.TRAIN.train_mode = 'datasetapi'  # placeholder (debug), datasetapi (single-gpu), distributed (multi-gpus)
 
 config.MODEL = edict()
 config.MODEL.model_path = 'models'  # save directory
-config.MODEL.n_pos = 19  # number of keypoints
+config.MODEL.n_pos = 19  # number of keypoints + 1 for background
 config.MODEL.hin = 368  # input size during training , 240
 config.MODEL.win = 368
 config.MODEL.hout = int(config.MODEL.hin / 8)  # output size during training (default 46)
