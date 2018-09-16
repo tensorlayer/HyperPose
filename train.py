@@ -33,7 +33,7 @@ batch_size = config.TRAIN.batch_size
 decay_every_step = config.TRAIN.decay_every_step
 n_step = config.TRAIN.n_step
 save_interval = config.TRAIN.save_interval
-weight_decay = config.TRAIN.weight_decay
+weight_decay_factor = config.TRAIN.weight_decay_factor
 base_lr = config.TRAIN.base_lr
 gamma = config.TRAIN.gamma
 
@@ -151,7 +151,7 @@ def make_model(img, results, mask):
     L2 = 0.0
 
     for p in tl.layers.get_variables_with_name('kernel', True, True):
-        L2 += tf.contrib.layers.l2_regularizer(0.0005)(p)
+        L2 += tf.contrib.layers.l2_regularizer(weight_decay_factor)(p)
     total_loss = tf.reduce_sum(losses) / batch_size + L2
 
     return total_loss, last_conf, stage_losses, L2, cnn, last_paf, img, confs, pafs, m1, net
