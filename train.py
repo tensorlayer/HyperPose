@@ -45,8 +45,6 @@ win = config.MODEL.win
 hout = config.MODEL.hout
 wout = config.MODEL.wout
 
-train_data = config.DATA.train_data
-
 def _data_aug_fn(image, ground_truth):
     """Data augmentation function."""
     ground_truth = cPickle.loads(ground_truth)
@@ -188,7 +186,7 @@ def make_model(img, results, mask):
 
 if __name__ == '__main__':
 
-    if 'coco' in train_data:
+    if 'coco' in config.DATA.train_data:
         ## automatically download MSCOCO data to "data/mscoco..."" folder
         train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
             load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
@@ -203,7 +201,7 @@ if __name__ == '__main__':
     else:
         pass
 
-    if 'yours' in train_data:
+    if 'yours' in config.DATA.train_data:
         ## read your own images contains valid people
         ## 1. if you only have one folder as follow:
         ##   data/your_data
@@ -228,20 +226,20 @@ if __name__ == '__main__':
         pass
 
     ## choice dataset for training
-    if train_data == 'coco_only':
+    if config.DATA.train_data == 'coco_only':
         ## 1. only coco training set
         imgs_file_list = train_imgs_file_list
         train_targets = list(zip(train_objs_info_list, train_mask_list))
-    elif train_data == 'yours_only':
+    elif config.DATA.train_data == 'yours_only':
         ## 2. only your own data
         imgs_file_list = your_imgs_file_list
         train_targets = list(zip(your_objs_info_list, your_mask_list))
-    elif train_data == 'coco_and_yours':
+    elif config.DATA.train_data == 'coco_and_yours':
         ## 3. your own data and coco training set
         imgs_file_list = train_imgs_file_list + your_imgs_file_list
         train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
     else:
-        raise Exception('please choice a correct train_data setting.')
+        raise Exception('please choice a correct config.DATA.train_data setting.')
 
     ## define data augmentation
     def generator():
