@@ -29,7 +29,6 @@ tl.files.exists_or_mkdir(config.MODEL.model_path, verbose=False)  # to save mode
 
 # define hyper-parameters for training
 batch_size = config.TRAIN.batch_size
-# n_epoch = config.TRAIN.n_epoch
 decay_every_step = config.TRAIN.decay_every_step
 n_step = config.TRAIN.n_step
 save_interval = config.TRAIN.save_interval
@@ -148,41 +147,13 @@ def make_model(img, results, mask):
     last_paf = b2_list[-1].outputs
     last_losses_l1.append(loss_l1)
     last_losses_l2.append(loss_l2)
-    L2 = 0.0
+    l2_loss = 0.0
 
     for p in tl.layers.get_variables_with_name('kernel', True, True):
-        L2 += tf.contrib.layers.l2_regularizer(weight_decay_factor)(p)
-    total_loss = tf.reduce_sum(losses) / batch_size + L2
+       l2_loss += tf.contrib.layers.l2_regularizer(weight_decay_factor)(p)
+    total_loss = tf.reduce_sum(losses) / batch_size + l2_loss
 
-    return total_loss, last_conf, stage_losses, L2, cnn, last_paf, img, confs, pafs, m1, net
-
-
-# def make_model_placeholder(img,confs,pafs,img_mask1,img_mask2):
-#
-#     cnn, b1_list, b2_list, net = model(img, n_pos, img_mask1, img_mask2, True, False)
-#
-#     ## define loss
-#     losses = []
-#     last_losses_l1 = []
-#     last_losses_l2 = []
-#     stage_losses = []
-#     L2 = 0.0
-#     for idx, (l1, l2) in enumerate(zip(b1_list, b2_list)):
-#         loss_l1 = tf.nn.l2_loss((l1.outputs - confs) * img_mask1)
-#         loss_l2 = tf.nn.l2_loss((l2.outputs - pafs) * img_mask2)
-#         losses.append(tf.reduce_mean([loss_l1, loss_l2]))
-#         stage_losses.append(loss_l1 / batch_size)
-#         stage_losses.append(loss_l2 / batch_size)
-#     last_losses_l1.append(loss_l1)
-#     last_losses_l2.append(loss_l2)
-#     last_conf = b1_list[-1].outputs
-#     last_paf = b2_list[-1].outputs
-#
-#     for p in tl.layers.get_variables_with_name('kernel', True, True):
-#         L2 += tf.contrib.layers.l2_regularizer(0.0005)(p)
-#     total_loss = tf.reduce_sum(losses) / batch_size + L2
-#
-#     return total_loss, last_conf, stage_losses, L2, cnn, last_paf, img, confs, pafs, img_mask1, net
+    return total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, img, confs, pafs, m1, net
 
 if __name__ == '__main__':
 
@@ -198,8 +169,6 @@ if __name__ == '__main__':
         ## read coco validating images contains valid people (you can use it for training as well)
         val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
             get_pose_data_list(val_im_path, val_ann_path)
-    else:
-        pass
 
     if 'yours' in config.DATA.train_data:
         ## read your own images contains valid people
@@ -222,8 +191,6 @@ if __name__ == '__main__':
             your_objs_info_list.extend(_objs_info_list)
             your_mask_list.extend(_mask_list)
         print("number of own images found:", len(your_imgs_file_list))
-    else:
-        pass
 
     ## choice dataset for training
     if config.DATA.train_data == 'coco_only':
@@ -261,7 +228,7 @@ if __name__ == '__main__':
     if config.TRAIN.train_mode == 'datasetapi':
         """ ======================== SINGLE GPU TRAINING ======================= """
         """ Train on single GPU using TensorFlow DatasetAPI. """
-        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element)
+        total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element)
 
         global_step = tf.Variable(1, trainable=False)
         print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
@@ -293,15 +260,15 @@ if __name__ == '__main__':
                     new_lr_decay = gamma**(step // decay_every_step)
                     sess.run(tf.assign(lr_v, base_lr * new_lr_decay))
 
-                [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm,
-                 paf_result] = sess.run([train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf])
+                [_, _loss, _stage_losses, _l2, conf_result, paf_result] = \
+                    sess.run([train_op, total_loss, stage_losses, l2_loss, last_conf, last_paf])
 
                 # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
                 lr = sess.run(lr_v)
-                print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} weight_norm {:10e} Took: {}s'.format(
-                    step, n_step, the_loss, lr, weight_norm,
+                print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} l2_loss {:10e} Took: {}s'.format(
+                    step, n_step, _loss, lr, _l2,
                     time.time() - tic))
-                for ix, ll in enumerate(loss_ll):
+                for ix, ll in enumerate(_stage_losses):
                     print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
                 ## save intermedian results and model
@@ -326,29 +293,29 @@ if __name__ == '__main__':
 
         def make_model_distributed():
             pass
-        # Setup the trainer
-        training_dataset = make_dataset(X_train, y_train)
-        training_dataset = training_dataset.map(data_aug_train, num_parallel_calls=multiprocessing.cpu_count())
-        # validation_dataset = make_dataset(X_test, y_test)
-        # validation_dataset = training_dataset.map(data_aug_valid, num_parallel_calls=multiprocessing.cpu_count())
-        trainer = tl.distributed.Trainer(
-            build_training_func=make_model_distributed, training_dataset=dataset, optimizer=tf.train.MomentumOptimizer,
-            optimizer_args={'learning_rate': 0.0001}, batch_size=batch_size, num_epochs=n_epoch, prefetch_buffer_size=90000
-            # validation_dataset=validation_dataset, build_validation_func=build_validation
-        )
-
-        # There are multiple ways to use the trainer:
-        # 1. Easiest way to train all data: trainer.train_to_end()
-        # 2. Train with validation in the middle: trainer.train_and_validate_to_end(validate_step_size=100)
-        # 3. Train with full control like follows:
-        while not trainer.session.should_stop():
-            try:
-                # Run a training step synchronously.
-                trainer.train_on_batch()
-                # TODO: do whatever you like to the training session.
-            except tf.errors.OutOfRangeError:
-                # The dataset would throw the OutOfRangeError when it reaches the end
-                break
+        # # Setup the trainer
+        # training_dataset = make_dataset(X_train, y_train)
+        # training_dataset = training_dataset.map(data_aug_train, num_parallel_calls=multiprocessing.cpu_count())
+        # # validation_dataset = make_dataset(X_test, y_test)
+        # # validation_dataset = training_dataset.map(data_aug_valid, num_parallel_calls=multiprocessing.cpu_count())
+        # trainer = tl.distributed.Trainer(
+        #     build_training_func=make_model_distributed, training_dataset=dataset, optimizer=tf.train.MomentumOptimizer,
+        #     optimizer_args={'learning_rate': lr}, batch_size=batch_size, num_epochs=n_epoch, prefetch_buffer_size=90000
+        #     # validation_dataset=validation_dataset, build_validation_func=build_validation
+        # )
+        #
+        # # There are multiple ways to use the trainer:
+        # # 1. Easiest way to train all epochs: trainer.train_to_end()
+        # # 2. Train with validation in the middle: trainer.train_and_validate_to_end(validate_step_size=100)
+        # # 3. Train with full control like follows:
+        # while not trainer.session.should_stop():
+        #     try:
+        #         # Run a training step synchronously.
+        #         trainer.train_on_batch()
+        #         # TODO: do whatever you like to the training session.
+        #     except tf.errors.OutOfRangeError:
+        #         # The dataset would throw the OutOfRangeError when it reaches the end
+        #         break
 
     elif config.TRAIN.train_mode == 'placeholder':
         """ ========================= DEBUG ONLY ================================"""
