@@ -125,12 +125,12 @@ def get_pose_data_list(im_path, ann_path):
     return imgs_file_list, objs_info_list, mask_list, targets
 
 
-def make_model(img, results, mask):
+def make_model(img, results, mask, is_train=True, reuse=False):
     confs = results[:, :, :, :n_pos]
     pafs = results[:, :, :, n_pos:]
     m1 = tf_repeat(mask, [1, 1, 1, n_pos])
     m2 = tf_repeat(mask, [1, 1, 1, n_pos * 2])
-    cnn, b1_list, b2_list, net = model(img, n_pos, m1, m2, True, False)
+    cnn, b1_list, b2_list, net = model(img, n_pos, m1, m2, is_train, reuse)
     # define loss
     losses = []
     last_losses_l1 = []
