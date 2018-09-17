@@ -12,7 +12,7 @@ test_vgg_model(){
     ./uff-runner.py --base-model=vgg --path-to-npz=$HOME/Downloads/vgg450000_no_cpm.npz --image=$1
 }
 
-# test_vgg_model ${DATA_DIR}/cam0_27.png  # UFF has no result at all
+# test_vgg_model ${DATA_DIR}/acam0_27.png  # UFF has no result at all
 # test_vgg_model ./data/media/COCO_val2014_000000000192.jpg  # UFF has worse result than TF
 
 test_hao28_model(){
@@ -20,4 +20,5 @@ test_hao28_model(){
 }
 
 
-test_hao28_model ${DATA_DIR}/cam0_27.png
+test_hao28_model ./data/media/COCO_val2014_000000000192.jpg  # UFF has no result
+test_hao28_model ${DATA_DIR}/cam0_27.png  # UFF has no result
