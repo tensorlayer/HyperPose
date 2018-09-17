@@ -8,6 +8,7 @@ import tensorlayer as tl
 import tensorrt as trt
 import uff
 from tensorrt.parsers import uffparser
+import matplotlib.pyplot as plt
 
 from inference.common import measure, rename_tensor, read_imgfile
 from inference.estimator2 import PoseEstimator
@@ -118,13 +119,47 @@ def parse_args():
         default=os.path.join(os.getenv('HOME'), 'Downloads/vgg450000_no_cpm.npz'),
         help='path to npz',
         required=False)
-    parser.add_argument('--image', type=str, default='', help='image filename', required=True)
+    parser.add_argument(
+        '--image',
+        type=str,
+        default='./data/media/COCO_val2014_000000000192.jpg',
+        help='image filename',
+        required=False)
     parser.add_argument('--base-model', type=str, default='vgg', help='vgg | mobilenet')
     parser.add_argument('--data-format', type=str, default='channels_last', help='channels_last | channels_first.')
     parser.add_argument('--plot', type=bool, default=False, help='draw the results')
     parser.add_argument('--repeat', type=int, default=1, help='repeat the images for n times for profiling.')
     parser.add_argument('--limit', type=int, default=100, help='max number of images.')
     return parser.parse_args()
+
+
+def draw_results(image, heats_result, pafs_result, name='result.png'):
+    fig = plt.figure(figsize=(8, 8))
+    a = fig.add_subplot(2, 3, 1)
+    plt.imshow(image)
+
+    if pafs_result is not None:
+        a = fig.add_subplot(2, 3, 3)
+        a.set_title('Vectormap result')
+        vectormap = pafs_result
+        tmp2 = vectormap.transpose((2, 0, 1))
+        tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
+        tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
+        plt.imshow(tmp2_odd, alpha=0.3)
+        plt.colorbar()
+        plt.imshow(tmp2_even, alpha=0.3)
+
+    if heats_result is not None:
+        a = fig.add_subplot(2, 3, 4)
+        a.set_title('Heatmap result')
+        heatmap = heats_result
+        tmp = heatmap
+        tmp = np.amax(heatmap[:, :, :-1], axis=2)
+
+        plt.colorbar()
+        plt.imshow(tmp, alpha=0.3)
+
+    plt.savefig(name, dpi=300)
 
 
 def main():
@@ -175,6 +210,8 @@ def main():
 
     save_hwc('paf', paf)
     save_hwc('conf', conf)
+
+    draw_results(x, conf, paf)
 
 
 main()
