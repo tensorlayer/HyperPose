@@ -35,7 +35,7 @@ def get_model_func(base_model_name):
         pafs_tensor = b2_list[-1].outputs
 
         with tf.variable_scope('outputs'):
-            return [
+            return [image], [
                 rename_tensor(conf_tensor, 'conf'),
                 rename_tensor(pafs_tensor, 'paf'),
             ]
@@ -112,7 +112,7 @@ def save_hwc(prefix, t):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='inference')
+    parser = argparse.ArgumentParser(description='UFF Runner')
     parser.add_argument(
         '--path-to-npz',
         type=str,
@@ -127,9 +127,6 @@ def parse_args():
         required=False)
     parser.add_argument('--base-model', type=str, default='vgg', help='vgg | mobilenet')
     parser.add_argument('--data-format', type=str, default='channels_last', help='channels_last | channels_first.')
-    parser.add_argument('--plot', type=bool, default=False, help='draw the results')
-    parser.add_argument('--repeat', type=int, default=1, help='repeat the images for n times for profiling.')
-    parser.add_argument('--limit', type=int, default=100, help='max number of images.')
     return parser.parse_args()
 
 
@@ -167,51 +164,60 @@ def main():
     height, width, channel = 368, 432, 3
     x = read_imgfile(args.image, width, height)
 
-    model_func = get_model_func('vgg')
-    model_parameters = model_func()
-    output_names = [p.name[:-2] for p in model_parameters]
+    model_func = get_model_func(args.base_model)
+    model_inputs, model_outputs = model_func()
+    output_names = [p.name[:-2] for p in model_outputs]
 
     print('output names: %s' % ','.join(output_names))
 
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        measure(lambda: tl.files.load_and_assign_npz_dict(args.path_to_npz, sess), 'load npz')
+    # with tf.Session() as sess:
+    sess = tf.InteractiveSession()
+    measure(lambda: tl.files.load_and_assign_npz_dict(args.path_to_npz, sess), 'load npz')
+
+    run_uff = True
+    # BEGIN UFF
+    if run_uff:
         frozen_graph = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, output_names)
         tf_model = tf.graph_util.remove_training_nodes(frozen_graph)
         uff_model = uff.from_tensorflow(tf_model, output_names)
         print('uff model created')
 
-    parser = uffparser.create_uff_parser()
-    parser.register_input(
-        'image',
-        (channel, height, width),
-        0  # this value doesn't affect result in Python
-    )
-    for name in output_names:
-        parser.register_output(name)
+        parser = uffparser.create_uff_parser()
+        parser.register_input(
+            'image',
+            (channel, height, width),
+            1  # this value doesn't affect result in Python
+        )
+        for name in output_names:
+            parser.register_output(name)
 
-    G_LOGGER = trt.infer.ConsoleLogger(trt.infer.LogSeverity.INFO)
-    engine = trt.utils.uff_to_trt_engine(G_LOGGER, uff_model, parser, 1, 1 << 30)
-    print('engine created')
+        G_LOGGER = trt.infer.ConsoleLogger(trt.infer.LogSeverity.INFO)
+        engine = trt.utils.uff_to_trt_engine(G_LOGGER, uff_model, parser, 1, 1 << 30)
+        print('engine created')
 
-    conf, paf = infer(engine, x, 1)
-    conf_f = conf[:, :, :18]
-    conf_b = conf[:, :, 18:]
+        conf, paf = infer(engine, x, 1)
+        draw_results(x, conf, paf, 'uff-result.png')
+    # END of UFF
 
-    write_idx('uff-conf.idx', conf)
-    write_idx('uff-conf_f.idx', conf_f)
-    write_idx('uff-conf_b.idx', conf_b)
-    write_idx('uff-paf.idx', paf)
+    # conf_f = conf[:, :, :18]
+    # conf_b = conf[:, :, 18:]
+    # write_idx('uff-conf.idx', conf)
+    # write_idx('uff-conf_f.idx', conf_f)
+    # write_idx('uff-conf_b.idx', conf_b)
+    # write_idx('uff-paf.idx', paf)
+    # debug_tensor(conf, 'conf')
+    # debug_tensor(conf_f, 'conf_f')
+    # debug_tensor(conf_b, 'conf_b')
+    # debug_tensor(paf, 'paf')
+    # save_hwc('paf', paf)
+    # save_hwc('conf', conf)
 
-    debug_tensor(conf, 'conf')
-    debug_tensor(conf_f, 'conf_f')
-    debug_tensor(conf_b, 'conf_b')
-    debug_tensor(paf, 'paf')
-
-    save_hwc('paf', paf)
-    save_hwc('conf', conf)
-
-    draw_results(x, conf, paf)
+    run_tf = True
+    # begin TF inference
+    if run_tf:
+        conf, paf = sess.run(model_outputs, {model_inputs[0]: [x]})
+        draw_results(x, conf[0], paf[0], 'tf-result.png')
+    # END of TF
 
 
 main()

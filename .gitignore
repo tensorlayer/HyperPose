@@ -17,3 +17,4 @@ cocoapi/
 inference/*png
 models_hao*
 test.py
+*.idx
