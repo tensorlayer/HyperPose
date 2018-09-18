@@ -1,5 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
-PROJECT(tensorrt-examples)
+PROJECT(openpose-plus)
 
 SET(CMAKE_CXX_STANDARD 11)
-INCLUDE(tensorrt/src/build.cmake)
+INCLUDE(src/build.cmake)
+
+IF(DEFINED ENV{HAVE_CUDA})
+    INCLUDE(src/build-gpu.cmake)
+ENDIF()

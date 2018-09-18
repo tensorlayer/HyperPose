@@ -1,9 +1,48 @@
-# https://docs.bazel.build/versions/master/be/c-cpp.html#cc_library
-
 cc_library(
-    name = "trace",
+    name = "tracer",
     srcs = ["tracer.cpp"],
     hdrs = ["tracer.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "vis",
+    srcs = ["vis.cpp"],
+    hdrs = [
+        "coco.h",
+        "human.h",
+        "tensor.h",
+        "vis.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = ["@opencv"],
+)
+
+cc_library(
+    name = "tensor",
+    hdrs = ["tensor.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "paf",
+    srcs = [
+        "paf.cpp",
+        "post-process.cpp",
+    ],
+    hdrs = [
+        "coco.h",
+        "human.h",
+        "paf.h",
+        "post-process.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "tensor",
+        "tracer",
+        "vis",
+        "@opencv",
+    ],
 )
 
 cc_library(
@@ -14,43 +53,13 @@ cc_library(
 )
 
 cc_library(
-    name = "vis",
-    srcs = ["vis.cpp"],
-    hdrs = [
-        "human.h",
-        "tensor.h",
-        "vis.h",
-    ],
-    deps = ["@opencv"],
-)
-
-cc_library(
-    name = "paf",
-    srcs = [
-        "paf.cpp",
-        "pafprocess/pafprocess.cpp",
-    ],
-    hdrs = [
-        "constant.h",
-        "human.h",
-        "paf.h",
-        "pafprocess/pafprocess.h",
-        "tensor.h",
-    ],
-    deps = [
-        "trace",
-        "@opencv",
-    ],
-)
-
-cc_library(
     name = "fake_uff_runner",
     srcs = ["fake_uff-runner.cpp"],
     hdrs = [
         "uff-runner.h",
     ],
     deps = [
-        "trace",
+        "tracer",
     ],
 )
 
@@ -69,6 +78,7 @@ cc_binary(
         "input",
         "mem_buffer",
         "paf",
+        "tensor",
         "vis",
         "@opencv",
     ],

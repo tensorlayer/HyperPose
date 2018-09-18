@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <tuple>
 #include <vector>
 
@@ -41,6 +42,7 @@ tracer_ctx_t::~tracer_ctx_t()
     FILE *fp = fopen(filename, "w");
     report(fp);
     fclose(fp);
+    report(stdout);
 }
 
 void tracer_ctx_t::report(FILE *fp) const
@@ -60,16 +62,17 @@ void tracer_ctx_t::report(FILE *fp) const
     fprintf(fp, "\tsummary of %s::%s (%f)\n", "tracer_ctx_t",  //
             name.c_str(), total.count());
     fprintf(fp, "%s\n", hr.c_str());
-    fprintf(fp, "%8s    %16s    %12s    %s\n",  //
-            "count", "cumulative (s)", "%", "call site");
+    fprintf(fp, "%8s    %16s    %12s    %12s    %s\n",  //
+            "count", "cumulative (s)", "%", "mean (ms)", "call site");
     fprintf(fp, "%s\n", hr.c_str());
     // for (const auto &[duration, count, name] : list) {
     for (const auto &it : list) {
         const auto duration = std::get<0>(it);
         const auto count = std::get<1>(it);
         const auto name = std::get<2>(it);
-        fprintf(fp, "%8d    %16f    %12.2f    %s\n",  //
-                count, duration.count(), duration * 100 / total, name.c_str());
+        fprintf(fp, "%8d    %16f    %12.2f    %12.4f    %s\n",  //
+                count, duration.count(), duration * 100 / total,
+                1000 * duration.count() / count, name.c_str());
     }
 }
 
@@ -101,7 +104,15 @@ tracer_t::~tracer_t()
     const auto d = since<double>(t0);
     ctx.out(name, d);
     char buffer[128];
-    sprintf(buffer, "[%s] took %fs", name.c_str(), d.count());
+    sprintf(buffer, "[%s] took ", name.c_str());
+    [&](double t) {
+        if (t < 1) {
+            sprintf(buffer + strlen(buffer), "%.2fms", t * 1000);
+        } else {
+            sprintf(buffer + strlen(buffer), "%.2fs", t);
+        }
+    }(d.count());
+
     ctx.indent();
     WITH_XTERM(1, 32, printf("} // %s", buffer));
     putchar('\n');

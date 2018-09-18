@@ -1,28 +1,26 @@
 MAKEFILE ?= Makefile.config
 include $(MAKEFILE)
 
-ifeq ($(shell uname), Darwin)
-	DEFAULT_TARGET = build_with_bazel
-else
-	DEFAULT_TARGET = build_with_cmake
-endif
-
-WORKSPACE = $(CURDIR)/tensorrt
-
-
-default: $(DEFAULT_TARGET)
-
-cmake: build_with_cmake
+default: build_with_cmake
+# default: docker-build-gpu
 
 cmake_targets:
 	mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR); cmake $(CMAKE_FLAGS) $(CURDIR)
 
-build_with_cmake: $(WORKSPACE)/src/pafprocess cmake_targets
+build_with_cmake: cmake_targets
 	make -C $(BUILD_DIR) -j $(NPROC)
 
-build_with_bazel: $(WORKSPACE)/src/pafprocess
-	cd $(WORKSPACE) && bazel build src/...
+build_with_bazel:
+	bazel build src/...
 
-$(WORKSPACE)/src/pafprocess:
-	$(WORKSPACE)/src/download-pafprocess.sh
+CPU_TAG = openpose-plus:builder
+docker-build:
+	docker build --rm -t $(CPU_TAG) -f docker/Dockerfile.builder-cpu .
+
+docker-run-test: docker-build
+	docker run --rm -it $(CPU_TAG) ./cmake-build/Linux/test_paf
+
+GPU_TAG = openpose-plus:builder-gpu
+docker-build-gpu:
+	docker build --rm -t $(GPU_TAG) -f docker/Dockerfile.builder-gpu .

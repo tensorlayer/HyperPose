@@ -1,10 +1,16 @@
 __pycache__
 .idea
+*.a
 *.avi
+*.dylib
+*.gz
 *.jpg
 *.log
+*.out
 *.png
+*.so
 /3rdparty
+/bazel-*
 /checkpoints
 /cmake-build
 /coco

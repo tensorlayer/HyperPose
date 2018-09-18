@@ -156,7 +156,7 @@ void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
     TRACE(__func__);
 
     {
-        tracer_t _("copy input from host");
+        TRACE("copy input from host");
         int idx = 0;
         for (int i = 0; i < buffers_.size(); ++i) {
             if (engine_->bindingIsInput(i)) {
@@ -166,7 +166,7 @@ void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
     }
 
     {
-        tracer_t _("context->execute");
+        TRACE("context->execute");
         auto context = engine_->createExecutionContext();
         std::vector<void *> buffer_ptrs_(buffers_.size());
         for (int i = 0; i < buffers_.size(); ++i) {
@@ -177,7 +177,7 @@ void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
     }
 
     {
-        tracer_t _("copy output to host");
+        TRACE("copy output to host");
         int idx = 0;
         for (int i = 0; i < buffers_.size(); ++i) {
             if (!engine_->bindingIsInput(i)) {
