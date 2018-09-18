@@ -1,7 +1,8 @@
 #!/usr/bin/python3
+import matplotlib
+matplotlib.use('Agg')
 import argparse
 import os
-
 import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
@@ -168,7 +169,7 @@ def main():
     model_inputs, model_outputs = model_func()
     output_names = [p.name[:-2] for p in model_outputs]
 
-    print('output names: %s' % ','.join(output_names))
+    print('output names: %s' % ','.join(output_names)) # outputs/conf,outputs/paf
 
     # with tf.Session() as sess:
     sess = tf.InteractiveSession()
@@ -186,6 +187,7 @@ def main():
         parser.register_input(
             'image',
             (channel, height, width),
+            # (height, width, channel),
             1  # this value doesn't affect result in Python
         )
         for name in output_names:
