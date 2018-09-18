@@ -12,7 +12,15 @@
 While in practice, developers need to customize their training set, data augmentation methods according to their requirement.
 For this reason, we reimplemented this project in [TensorLayer fashion](https://github.com/tensorlayer/tensorlayer).
 
-🚀 This repo will be moved into example folder of [tensorlayer](https://github.com/tensorlayer/tensorlayer) for life-cycle management soon. More cool Computer Vision applications such as super resolution and style transfer can be found in this [organization](https://github.com/tensorlayer).
+🚀🚀 **This repo will be moved into [here](https://github.com/tensorlayer/tensorlayer/tree/master/examples) for life-cycle management soon. More cool Computer Vision applications such as super resolution and style transfer can be found in this [organization](https://github.com/tensorlayer).**
+
+- TODO
+  - [ ] Provides pretrained models
+  - [ ] TensorRT Float16 and Int8 inference
+  - [ ] Faster C++ post-processing
+  - [ ] Distributed training
+  - [ ] Faster data augmentation
+  - [ ] Pose Proposal Networks, ECCV 2018
 
 ## 2. Project files
 
@@ -21,13 +29,6 @@ For this reason, we reimplemented this project in [TensorLayer fashion](https://
 - `models.py`: defines the model structures.
 - `utils.py`: utility functions.
 - `train.py`: trains the model.
-- TODO
-  - [ ] Provides pretrained models
-  - [ ] TensorRT Float16 and Int8 inference
-  - [ ] Faster C++ post-processing
-  - [ ] Distributed training
-  - [ ] Faster data augmentation
-  - [ ] Pose Proposal Networks, ECCV 2018
 
 ## 3. Preparation
 
@@ -42,28 +43,51 @@ rm -rf build
 rm *.so
 ```
 
-## 4. Use pre-trained model
+## 4. Train a model
+
+Runs `train.py`, it will automatically download MSCOCO 2017 dataset into `dataset/coco17`.
+The default model in `models.py` is based on VGG19, which is the same with the original paper.
+If you want to customize the model, simply change it in `models.py`.
+And then `train.py` will train the model to the end.
+
+In `config.py`:
+
+- `config.DATA.train_data` can be:
+   * `coco_only`: training data is COCO dataset only (default)
+   * `yours_only`: training data is your dataset specified by `config.DATA.your_xxx`
+   * `coco_and_yours`: training data is COCO and your datasets
+
+- `config.MODEL.name` can be:
+   * `vgg`: VGG19 version (default), slow  
+	* `vggtiny`: VGG tiny version, faster
+	* `mobilenet`: MobileNet version, faster
+
+- `config.TRAIN.train_mode` can be:
+   * `datasetapi`: single GPU with TF dataset api pipeline (default)
+   * `distributed`: multiple GPUs with TF dataset api pipeline, fast (you may need to change the hyper parameters according to your hardware)
+   * `placeholder`: single GPU with placeholder, for debug only, slow
+
+<!---
+## 5. Inference 
 
 In this project, input images are RGB with 0~1.
 Runs `train.py`, it will automatically download the default VGG19-based model from [here](https://github.com/tensorlayer/pretrained-models), and use it for inferencing.
 The performance of pre-trained model is as follow:
 
-<!--
+
 |                  | Speed | AP | xxx |
 |------------------|-------|----|-----|
 | VGG19            | xx    | xx | xx  |
 | Residual Squeeze | xx    | xx | xx  |
 
 - Speed is tested on XXX
--->
+
 - We follow the [data format of official OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/output.md)
 
-## 5. Train a model
+To use the pre-trained models
 
-Runs `train.py`, it will automatically download MSCOCO 2017 dataset into `dataset/coco17`.
-The default model in `models.py` is based on VGG19, which is the same with the original paper.
-If you want to customize the model, simply change it in `models.py`.
-And then `train.py` will train the model to the end.
+-->
+
 
 <!--
 ## 6. Evaluate a model
@@ -85,8 +109,10 @@ For TensorRT float16 (half-float) inferencing, xxx
     2. concatenate the list of your own data JSON into ...
 -->
     
-## 6. Discussion
+## Discussion
 
+- [TensorLayer Slack](https://join.slack.com/t/tensorlayer/shared_invite/enQtMjUyMjczMzU2Njg4LWI0MWU0MDFkOWY2YjQ4YjVhMzI5M2VlZmE4YTNhNGY1NjZhMzUwMmQ2MTc0YWRjMjQzMjdjMTg2MWQ2ZWJhYzc)
+- [TensorLayer WeChat](https://github.com/tensorlayer/tensorlayer-chinese/blob/master/docs/wechat_group.md)
 - [TensorLayer Issues 434](https://github.com/tensorlayer/tensorlayer/issues/434)
 - [TensorLayer Issues 416](https://github.com/tensorlayer/tensorlayer/issues/416)
 
