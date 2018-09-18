@@ -80,10 +80,13 @@ def infer(engine, x, batch_size):
 
     for i in inputs_ids:
         cuda.memcpy_htod_async(d_mems[i], mems[i], stream)
+    stream.synchronize()
     context = engine.create_execution_context()
     context.enqueue(batch_size, [int(p) for p in d_mems], stream.handle, None)
+    # context.destroy()
     for i in outputs_ids:
         cuda.memcpy_dtoh_async(mems[i], d_mems[i], stream)
+    stream.synchronize()
     return [mems[i].reshape(shapes[i]) for i in outputs_ids]
 
 
