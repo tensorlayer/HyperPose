@@ -111,10 +111,12 @@ CocoColors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255
               [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
 
 
-def read_imgfile(path, width=None, height=None):
+def read_imgfile(path, width=None, height=None, data_format='channels_last'):
     val_image = cv2.imread(path, cv2.IMREAD_COLOR)
     if width is not None and height is not None:
         val_image = cv2.resize(val_image, (width, height))
+    if data_format == 'channels_first':
+        val_image = val_image.transpose([2, 0, 1])
     return val_image
 
 
@@ -152,17 +154,51 @@ def get_op(graph, name):
     return graph.get_operation_by_name('import/%s' % name).outputs[0]
 
 
+class Profiler(object):
+
+    def __init__(self):
+        self.count = dict()
+        self.total = dict()
+
+    def __del__(self):
+        pass
+        # TODO: make sure __def__ is only called on exit
+        # self.report()
+
+    def report(self):
+        sorted_costs = sorted([(t, name) for name, t in self.total.items()])
+        sorted_costs.reverse()
+        names = [name for _, name in sorted_costs]
+        print('%-12s %-12s %-12s %s' % ('tot (s)', 'count', 'mean (s)', 'name'))
+        for name in names:
+            tot, cnt = self.total[name], self.count[name]
+            mean = tot / cnt
+            print('%-12f %-12d %-12f %s' % (tot, cnt, mean, name))
+
+    def __call__(self, name, duration):
+        if name in self.count:
+            self.count[name] += 1
+            self.total[name] += duration
+        else:
+            self.count[name] = 1
+            self.total[name] = duration
+
+
+_default_profiler = Profiler()
+
+
 def measure(f, name=None):
     if not name:
         name = f.__name__
     t0 = time.time()
     result = f()
-    print('start %s' % name)
+    # print('start %s' % name)
     duration = time.time() - t0
-    line = '%s took %fs' % (name, duration)
-    print(line)
-    with open('profile.log', 'a') as f:
-        f.write(line + '\n')
+    _default_profiler(name, duration)
+    # line = '%s took %fs' % (name, duration)
+    # print(line)
+    # with open('profile.log', 'a') as f:
+    #     f.write(line + '\n')
     return result
 
 
@@ -196,4 +232,3 @@ def plot_humans(e, image, humans, name):
     plt.colorbar()
     mkpath('vis')
     plt.savefig('vis/result-%s.png' % name)
-

@@ -12,17 +12,23 @@
 While in practice, developers need to customize their training set, data augmentation methods according to their requirement.
 For this reason, we reimplemented this project in [TensorLayer fashion](https://github.com/tensorlayer/tensorlayer).
 
-🚀 This repo will be moved into example folder of [tensorlayer](https://github.com/tensorlayer/tensorlayer) for life-cycle management soon. More cool Computer Vision applications such as super resolution and style transfer can be found in this [organization](https://github.com/tensorlayer).
+🚀🚀 **This repo will be moved into [here](https://github.com/tensorlayer/tensorlayer/tree/master/examples) for life-cycle management soon. More cool Computer Vision applications such as super resolution and style transfer can be found in this [organization](https://github.com/tensorlayer).**
+
+- TODO
+  - [ ] Provides pretrained models
+  - [ ] TensorRT Float16 and Int8 inference
+  - [ ] Faster C++ post-processing
+  - [ ] Distributed training
+  - [ ] Faster data augmentation
+  - [ ] Pose Proposal Networks, ECCV 2018
 
 ## 2. Project files
 
-- `config.py` : to config the directories of dataset, training details and etc.
-- `inference.py`: TODO
-- `models.py`: to define the model structures, currently only VGG19 Based model included
-- `train.py`: to train the model
-- `utils.py`: to extract databased from cocodataset and groundtruth calculation
-- <s>`visualize.py`: draw the training result</s> (moved to utils.py)
-- `inference` folder:
+- `config.py` : config of the training details.
+  -  set training mode : `datasetapi` (single gpu, default), `distributed` (multi-gpus, TODO), `placeholder `(slow, for debug only)
+- `models.py`: defines the model structures.
+- `utils.py`: utility functions.
+- `train.py`: trains the model.
 
 ## 3. Preparation
 
@@ -37,60 +43,84 @@ rm -rf build
 rm *.so
 ```
 
-## 4. Use pre-trained model
-
-In this project, input images are RGB with 0~1.
-Runs `train.py`, it will automatically download the default VGG19-based model from [here](https://github.com/tensorlayer/pretrained-models), and use it for inferencing.
-The performance of pre-trained model is as follow:
-
-<!--
-|                  | Speed | AP | xxx |
-|------------------|-------|----|-----|
-| VGG19            | xx    | xx | xx  |
-| Residual Squeeze | xx    | xx | xx  |
-
-- Speed is tested on XXX
--->
-- We follow the [data format of official OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/output.md)
-
-## 5. Train a model
-
-For your own training, please put .jpg files into coco_dataset/images/ and put .json into coco_dataset/annotations/
+## 4. Train a model
 
 Runs `train.py`, it will automatically download MSCOCO 2017 dataset into `dataset/coco17`.
 The default model in `models.py` is based on VGG19, which is the same with the original paper.
 If you want to customize the model, simply change it in `models.py`.
 And then `train.py` will train the model to the end.
 
+In `config.py`:
+
+- `config.DATA.train_data` can be:
+   * `coco_only`: training data is COCO dataset only (default)
+   * `yours_only`: training data is your dataset specified by `config.DATA.your_xxx`
+   * `coco_and_yours`: training data is COCO and your datasets
+
+- `config.MODEL.name` can be:
+   * `vgg`: VGG19 version (default), slow  
+	* `vggtiny`: VGG tiny version, faster
+	* `mobilenet`: MobileNet version, faster
+
+- `config.TRAIN.train_mode` can be:
+   * `datasetapi`: single GPU with TF dataset api pipeline (default)
+   * `distributed`: multiple GPUs with TF dataset api pipeline, fast (you may need to change the hyper parameters according to your hardware)
+   * `placeholder`: single GPU with placeholder, for debug only, slow
+
+<!---
+## 5. Inference 
+
+In this project, input images are RGB with 0~1.
+Runs `train.py`, it will automatically download the default VGG19-based model from [here](https://github.com/tensorlayer/pretrained-models), and use it for inferencing.
+The performance of pre-trained model is as follow:
+
+
+|                  | Speed | AP | xxx |
+|------------------|-------|----|-----|
+| VGG19            | xx    | xx | xx  |
+| Residual Squeeze | xx    | xx | xx  |
+
+- Speed is tested on XXX
+
+- We follow the [data format of official OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/output.md)
+
+To use the pre-trained models
+
+-->
+
+
+<!--
 ## 6. Evaluate a model
 
-Runs `eval.py` for inference
+Runs `eval.py` for inference.
 
-## 7. Speed up and deployment
+
+## . Speed up and deployment
 
 For TensorRT float16 (half-float) inferencing, xxx
 
-## 8. Customization
+
+## 6. Customization
 
 - Model : change `models.py`.
-- Data augmentation : ....
+- Data augmentation : change `train.py`
 - Train with your own data: ....
-    1. prepare your data following MSCOCO format, you need to ...
+    1. prepare your data following MSCOCO format, you need to .
     2. concatenate the list of your own data JSON into ...
-- Evaluate on your own testing set:
-    1. xx
+-->
+    
+## Discussion
 
-## 9. Discussion
-
+- [TensorLayer Slack](https://join.slack.com/t/tensorlayer/shared_invite/enQtMjUyMjczMzU2Njg4LWI0MWU0MDFkOWY2YjQ4YjVhMzI5M2VlZmE4YTNhNGY1NjZhMzUwMmQ2MTc0YWRjMjQzMjdjMTg2MWQ2ZWJhYzc)
+- [TensorLayer WeChat](https://github.com/tensorlayer/tensorlayer-chinese/blob/master/docs/wechat_group.md)
 - [TensorLayer Issues 434](https://github.com/tensorlayer/tensorlayer/issues/434)
 - [TensorLayer Issues 416](https://github.com/tensorlayer/tensorlayer/issues/416)
 
+<!--
 ## Paper's Model
 
 - [Default MPII](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_MPI/pose_deploy.prototxt)
 - [Default COCO model](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_COCO/pose_deploy.prototxt)
 - [Visualizing Caffe model](http://ethereon.github.io/netscope/#/editor)
+-->
 
-## License
-
-- This project is for academic use only.

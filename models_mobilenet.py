@@ -1,8 +1,7 @@
 # hao25
 import tensorflow as tf
 import tensorlayer as tl
-from tensorlayer.layers import (BatchNormLayer, ConcatLayer, Conv2d,
-                                DepthwiseConv2d, InputLayer, MaxPool2d)
+from tensorlayer.layers import (BatchNormLayer, ConcatLayer, Conv2d, DepthwiseConv2d, InputLayer, MaxPool2d)
 
 __all__ = [
     'model',
@@ -11,14 +10,14 @@ __all__ = [
 W_init = tf.contrib.layers.xavier_initializer()  # tf.truncated_normal_initializer(stddev=0.01)
 b_init = None  #tf.constant_initializer(value=0.0)
 b_init2 = tf.constant_initializer(value=0.0)
-
+decay = 0.99
 
 def depthwise_conv_block(n, n_filter, filter_size=(3, 3), strides=(1, 1), is_train=False, name="depth_block"):
     with tf.variable_scope(name):
         n = DepthwiseConv2d(n, filter_size, strides, W_init=W_init, b_init=None, name='depthwise')
-        n = BatchNormLayer(n, act=tf.nn.relu6, is_train=is_train, name='batchnorm1')
+        n = BatchNormLayer(n, decay=decay, act=tf.nn.relu6, is_train=is_train, name='batchnorm1')
         n = Conv2d(n, n_filter, (1, 1), (1, 1), W_init=W_init, b_init=None, name='conv')
-        n = BatchNormLayer(n, act=tf.nn.relu6, is_train=is_train, name='batchnorm2')
+        n = BatchNormLayer(n, decay=decay, act=tf.nn.relu6, is_train=is_train, name='batchnorm2')
     return n
 
 
@@ -49,14 +48,18 @@ def stage(cnn, b1, b2, n_pos, maskInput1, maskInput2, is_train, name='stageX'):
     return b1, b2
 
 
-def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None):  # hao25
+def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None, data_format='channels_last'):  # hao25
+    if data_format != 'channels_last':
+        # TODO: support NCHW
+        print('data_format=%s is ignored' % data_format)
+
     b1_list = []
     b2_list = []
     with tf.variable_scope('model', reuse):
         x = x - 0.5
         n = InputLayer(x, name='in')
         n = Conv2d(n, 32, (3, 3), (1, 1), None, 'SAME', W_init=W_init, b_init=b_init, name='conv1_1')
-        n = BatchNormLayer(n, is_train, act=tf.nn.relu, name='bn1')
+        n = BatchNormLayer(n, decay=decay, is_train=is_train, act=tf.nn.relu, name='bn1')
         n = depthwise_conv_block(n, 64, is_train=is_train, name="conv1_depth1")
 
         n = depthwise_conv_block(n, 128, strides=(2, 2), is_train=is_train, name="conv2_depth1")
