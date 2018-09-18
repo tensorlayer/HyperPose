@@ -100,12 +100,14 @@ nvinfer1::ICudaEngine *create_engine(const std::string &model_file)
         // Always provide your dimensions in CHW even if your
         // network input was in HWC in yout original framework.
         nvinfer1::Dims3(channel, height, width),
+        // nvuffparser::UffInputOrder::kNCHW
         nvuffparser::UffInputOrder::kNHWC);
 
     const std::vector<std::string> output_names = {
-        "model/stage6/branch1/conf/BiasAdd",
-        "model/stage6/branch2/pafs/BiasAdd",
+        "outputs/conf",
+        "outputs/paf",
     };
+
     for (auto &name : output_names) { parser->registerOutput(name.c_str()); }
 
     const int maxBatchSize = 1;
@@ -142,7 +144,10 @@ void UFFRunnerImpl::createBuffers_(int batchSize)
     for (int i = 0; i < n; ++i) {
         const nvinfer1::Dims dims = engine_->getBindingDimensions(i);
         const nvinfer1::DataType dtype = engine_->getBindingDataType(i);
-        std::cout << "binding " << i << ": type" << to_string(dtype)
+        const std::string name(engine_->getBindingName(i));
+
+        std::cout << "binding " << i << ":"
+                  << " name: " << name << " type" << to_string(dtype)
                   << to_string(dims) << std::endl;
         const auto info = buffer_info_t{volume(dims) * batchSize, dtype};
         buffers_.push_back(

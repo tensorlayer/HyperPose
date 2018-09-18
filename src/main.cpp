@@ -1,58 +1,73 @@
+#include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
 
 #include "input.h"
-#include "mem_buffer.h"
 #include "paf.h"
 #include "tensor.h"
 #include "tracer.h"
 #include "uff-runner.h"
 #include "vis.h"
 
+DEFINE_string(model_file, "vgg.uff", "Path to uff model.");
+DEFINE_string(image_file, "", "Path to image.");
+DEFINE_int32(input_height, 368, "Height of input image.");
+DEFINE_int32(input_width, 432, "Width of input image.");
+
 namespace
 {
-const int height = 368;
-const int width = 432;
 const int channel = 3;
 
-const int f_height = height / 8;
-const int f_width = width / 8;
-const int n_pos = 19;
+const int n_joins = 18 + 1;
+const int n_connections = 17 + 2;
 
 }  // namespace
 
 void inference(bool draw_results = false)
 {
     TRACE(__func__);
-    auto paf_process = create(f_height, f_width, height, width, n_pos, n_pos);
+    const int height = FLAGS_input_height;
+    const int width = FLAGS_input_width;
+    const int f_height = FLAGS_input_height / 8;
+    const int f_width = FLAGS_input_width / 8;
+    auto paf_process =
+        create(f_height, f_width, height, width, n_joins, n_connections);
 
-    const std::string home(std::getenv("HOME"));
-    auto model_file = home + "/lg/openpose/vgg.uff";
-    std::unique_ptr<UFFRunner> runner(create_runner(model_file));
+    std::unique_ptr<UFFRunner> runner(create_runner(FLAGS_model_file));
 
     std::vector<void *> inputs(1);
-    mem_buffer_t<float> image(height * width * channel);
+    tensor_t<float, 3> image(nullptr, height, width, channel);
     inputs[0] = image.data();
 
     std::vector<void *> outputs(2);
-    mem_buffer_t<float> conf(f_height * f_width * n_pos);
-    mem_buffer_t<float> paf(f_height * f_width * n_pos * 2);
+    tensor_t<float, 3> conf(nullptr, f_height, f_width, n_joins);
+    tensor_t<float, 3> paf(nullptr, f_height, f_width, n_connections * 2);
     outputs[0] = conf.data();
     outputs[1] = paf.data();
 
-    {
+    int n = 1;
+    for (int i = 0; i < n; ++i) {
         TRACE("inference one");
-        const auto prefix = home + "/var/data/openpose/examples/media/";
-        const auto image_file = prefix + "COCO_val2014_000000000192.jpg";
+        auto resized_image = input_image(FLAGS_image_file.c_str(), height,
+                                         width, (float *)inputs[0]);
 
-        auto resized_image =
-            input_image(image_file.c_str(), height, width, (float *)inputs[0]);
-
-        runner->execute(inputs, outputs);
+        {
+            debug("input :: ", image);
+            {
+                TRACE("run tensorRT");
+                runner->execute(inputs, outputs);
+            }
+            debug("outputs/conf :: ", conf);
+            debug("outputs/paf :: ", paf);
+            save(conf, "output-conf");
+            save(paf, "output-paf");
+        }
 
         if (draw_results) {
             TRACE("draw_results");
-            const auto humans =
-                (*paf_process)((float *)outputs[0], (float *)outputs[1]);
+            const auto humans = [&]() {
+                TRACE("run paf_process");
+                return (*paf_process)((float *)outputs[0], (float *)outputs[1]);
+            }();
 
             std::cout << "got " << humans.size() << " humans" << std::endl;
             for (const auto &h : humans) {
@@ -67,9 +82,10 @@ void inference(bool draw_results = false)
     }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     TRACE(__func__);
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
     inference(true);
     return 0;
 }

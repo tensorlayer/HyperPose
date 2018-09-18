@@ -21,16 +21,19 @@ void draw_detections_resuls(const std::string &heatmap_filename,
     TRACE(__func__);
 
     const auto conf = load_3d_tensor<float>(heatmap_filename);
-    const auto paf = load_3d_tensor<float>(paf_filename);
     debug("conf", *conf);
-    debug("paf", *paf);
-    auto image = cv::imread(image_filename);
     const int height = conf->dims[0];
     const int width = conf->dims[1];
     const int j = conf->dims[2];
+
+    const auto paf = load_3d_tensor<float>(paf_filename);
+    debug("paf", *paf);
+
+    auto image = cv::imread(image_filename);
     const int c = paf->dims[2];
 
     if (image.empty()) {
+        fprintf(stderr, "using blank image\n");
         image = cv::Mat(cv::Size(8 * width, 8 * height), CV_8UC(3));
     }
     const cv::Size up_size = image.size();
@@ -41,6 +44,7 @@ void draw_detections_resuls(const std::string &heatmap_filename,
         h.print();
         draw_human(image, h);
     }
+    printf("saved to %s\n", output_filename.c_str());
     cv::imwrite(output_filename, image);
 }
 

@@ -49,8 +49,7 @@ class paf_processor_impl : public paf_processor
         int height, int width,              //
         int channel_j, /* channel of input heatmap tensor, >= COCO_N_PARTS */
         int channel_c /* 1/2 * channel of input PAF tensor, == COCO_N_PAIRS */)
-        : input_height(input_height), input_width(input_width),  //
-          height(height), width(width),                          //
+        : height(height), width(width),  //
           conf(nullptr, channel_j, input_height, input_width),
           upsample_conf(nullptr, channel_j, height, width),
           peaks(nullptr, channel_j, height, width),
@@ -59,9 +58,9 @@ class paf_processor_impl : public paf_processor
     {
     }
 
-    std::vector<human_t>
-    operator()(const float *conf_, /* [height, width, channel_j] */
-               const float *paf_ /* [height, width, channel_c * 2] */)
+    std::vector<human_t> operator()(
+        const float *conf_, /* [input_height, input_width, channel_j] */
+        const float *paf_ /* [input_height, input_width, channel_c * 2] */)
     {
         TRACE(__func__);
 
@@ -76,15 +75,13 @@ class paf_processor_impl : public paf_processor
     }
 
   private:
+    // const float THRESH_HEAT = 0.002;
     const float THRESH_HEAT = 0.05;
     const float THRESH_VECTOR_SCORE = 0.05;
     const int THRESH_VECTOR_CNT1 = 8;
     const int THRESH_PART_CNT = 4;
     const float THRESH_HUMAN_SCORE = 0.4;
     const int STEP_PAF = 10;
-
-    const int input_height;
-    const int input_width;
 
     const int height;
     const int width;
@@ -215,6 +212,8 @@ class paf_processor_impl : public paf_processor
                 }
             }
         }
+        printf("selected %lu peaks with value > %f\n", all_peaks.size(),
+               threshold);
     }
 
     std::vector<human_ref_t>
@@ -324,6 +323,9 @@ class paf_processor_impl : public paf_processor
                const tensor_t<float, 3> &pafmap /* [2c, h, w] */)
     {
         TRACE("operator()::internal");
+        debug("heatmap", heatmap);
+        debug("peaks", peaks);
+        debug("pafmap", pafmap);
 
         std::vector<Peak> all_peaks;
         std::vector<std::vector<int>> peak_ids_by_channel(COCO_N_PARTS);

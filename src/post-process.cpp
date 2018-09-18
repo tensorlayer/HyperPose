@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <limits>
 
 #include <opencv2/opencv.hpp>
 
@@ -76,19 +77,40 @@ void same_max_pool_3x3(const tensor_t<T, 3> &input, tensor_t<T, 3> &output)
     }
 }
 
-void inplace_select_peak(float &x, float y)
+inline void inplace_select_peak(float &x, float y)
 {
     if (x != y) { x = 0; }
 }
 
 void inplace_select_peaks(const tensor_t<float, 3> &output,
-                          const tensor_t<float, 3> &peak)
+                          const tensor_t<float, 3> &pooled)
 {
     TRACE(__func__);
     const int n = output.volume();
     for (int i = 0; i < n; ++i) {
-        inplace_select_peak(output.data()[i], peak.data()[i]);
+        inplace_select_peak(output.data()[i], pooled.data()[i]);
     }
+}
+
+template <typename T, uint8_t r>
+void show_peak_info(const tensor_proxy_t<T, r> &t, const char *prefix)
+{
+    const int n = t.volume();
+    T min = std::numeric_limits<T>::max();
+    T max = std::numeric_limits<T>::lowest();
+    T sum = 0;
+    int cnt = 0;
+    for (int i = 0; i < n; ++i) {
+        if (t.data()[i] != 0) {
+            ++cnt;
+            min = std::min(min, t.data()[i]);
+            max = std::max(max, t.data()[i]);
+            sum += t.data()[i];
+        }
+    }
+    printf("[peak info :: %s] got %d from %d, %%%.4f, min: %f, mean: %f, max: "
+           "%f\n",
+           prefix, cnt, n, 100.0 * cnt / n, min, sum / cnt, max);
 }
 
 void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
@@ -107,4 +129,11 @@ void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
     smooth(input, output);
     same_max_pool_3x3(output, pooled);
     inplace_select_peaks(output, pooled);
+
+    {
+        tensor_proxy_t<float, 3> t1(output.data(), channel - 1, height, width);
+        tensor_proxy_t<float, 2> t2(output.data() + t1.volume(), height, width);
+        show_peak_info(t1, "forefront");
+        show_peak_info(t2, "background");
+    }
 }

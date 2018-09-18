@@ -63,20 +63,12 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "mem_buffer",
-    hdrs = [
-        "mem_buffer.h",
-    ],
-)
-
 cc_binary(
     name = "test_main",
     srcs = ["main.cpp"],
     deps = [
         "fake_uff_runner",
         "input",
-        "mem_buffer",
         "paf",
         "tensor",
         "vis",

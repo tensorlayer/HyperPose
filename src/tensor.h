@@ -33,6 +33,22 @@ template <uint8_t r> int32_t volume(const std::array<int32_t, r> &dims)
 }
 }  // namespace
 
+template <uint8_t r, typename... I>
+int32_t offset(const std::array<int32_t, r> &dims, const I... i)
+{
+    static_assert(sizeof...(i) == r, "invalid numer of indexes");
+    const std::array<int32_t, r> offs{{static_cast<int32_t>(i)...}};
+    int32_t off = 0;
+    for (uint8_t i = 0; i < r; ++i) {
+        if (offs[i] >= dims[i]) {
+            printf("out of range\n");
+            exit(1);
+        }
+        off = off * dims[i] + offs[i];
+    }
+    return off;
+}
+
 // A simple struct for tensor
 template <typename T, uint8_t r> struct tensor_t {
     const std::array<int32_t, r> dims;
@@ -59,27 +75,14 @@ template <typename T, uint8_t r> struct tensor_t {
 
     inline T *data() const { return data_.get(); }
 
-    template <typename... I> uint32_t offset(const I... i) const
+    template <typename... I> T &at(const I... i)
     {
-        static_assert(sizeof...(i) == r, "invalid numer of indexes");
-        const std::array<uint32_t, r> offs{{static_cast<uint32_t>(i)...}};
-        uint32_t off = 0;
-        for (uint8_t i = 0; i < r; ++i) {
-            if (offs[i] >= dims[i]) {
-                printf("out of range\n");
-                exit(1);
-            }
-            off = off * dims[i] + offs[i];
-        }
-        // printf("off=%lu\n", off);
-        return off;
+        return data_[offset<r>(dims, i...)];
     }
-
-    template <typename... I> T &at(const I... i) { return data_[offset(i...)]; }
 
     template <typename... I> T at(const I... i) const
     {
-        return data_[offset(i...)];
+        return data_[offset<r>(dims, i...)];
     }
 
     virtual ~tensor_t() { printf("%p freed\n", data_.get()); }
@@ -87,26 +90,32 @@ template <typename T, uint8_t r> struct tensor_t {
     int32_t volume() const { return ::volume<r>(dims); }
 };
 
-template <typename T> struct tensor_proxy_3d_ {
-    const T *const data;
-    const int height;
-    const int width;
-    const int channel;
+template <typename T, uint8_t r> struct tensor_proxy_t {
+    const std::array<int32_t, r> dims;
+    T *const data_;
 
-    tensor_proxy_3d_(const T *data, int height, int width, int channel)
-        : data(data), height(height), width(width), channel(channel)
+    template <typename... Dims>
+    tensor_proxy_t(T *data, const Dims... dims_)
+        : dims({{static_cast<int32_t>(dims_)...}}), data_(data)
     {
     }
 
-    const T &at(int i, int j, int k) const
+    inline T *data() const { return data_; }
+
+    template <typename... I> T &at(const I... i)
     {
-        const int idx = (i * width + j) * channel + k;
-        return data[idx];
+        return data_[offset<r>(dims, i...)];
     }
+    template <typename... I> T at(const I... i) const
+    {
+        return data_[offset<r>(dims, i...)];
+    }
+
+    int32_t volume() const { return ::volume<r>(dims); }
 };
 
 template <typename T>
-void chw_from_hwc(tensor_t<T, 3> &output, const tensor_proxy_3d_<T> &input)
+void chw_from_hwc(tensor_t<T, 3> &output, const tensor_proxy_t<T, 3> &input)
 {
     const int c = output.dims[0];
     const int h = output.dims[1];
@@ -125,7 +134,8 @@ template <typename T> void chw_from_hwc(tensor_t<T, 3> &output, const T *input)
     const int c = output.dims[0];
     const int h = output.dims[1];
     const int w = output.dims[2];
-    chw_from_hwc(output, tensor_proxy_3d_<float>(input, h, w, c));
+    tensor_proxy_t<float, 3> tmp((T *)input, h, w, c);
+    chw_from_hwc(output, tmp);
 }
 
 // debug functions
@@ -140,8 +150,8 @@ void debug(const std::string &prefix, const tensor_t<T, r> &t)
     T max = *std::max_element(t.data(), t.data() + n);
     T sum = std::accumulate(t.data(), t.data() + n, (T)0);
 
-    std::cout << prefix << show_dim<r>(t.dims) << " min: " << min
-              << " max: " << max << " mean: " << sum / n << std::endl;
+    std::cout << "[debug] " << prefix << " :: " << show_dim<r>(t.dims) << " ["
+              << min << "," << max << "] ~ " << sum / n << std::endl;
 }
 
 template <typename T>
@@ -207,7 +217,10 @@ void load_idx_file(const tensor_t<T, r> &t, const std::string &filename)
     TRACE(__func__);
 
     FILE *fp = std::fopen(filename.c_str(), "r");
-    if (fp == nullptr) { exit(1); }
+    if (fp == nullptr) {
+        fprintf(stderr, "file NOT Found: %s\n", filename.c_str());
+        exit(1);
+    }
 
     uint8_t magic[4];
     std::fread(&magic, 4, 1, fp);  // [0, 0, dtype, rank]
@@ -229,13 +242,25 @@ void load_idx_file(const tensor_t<T, r> &t, const std::string &filename)
 template <typename T>
 std::unique_ptr<tensor_t<T, 3>> load_3d_tensor(const std::string &filename)
 {
+    TRACE(__func__);
+
     FILE *fp = std::fopen(filename.c_str(), "r");
-    if (fp == nullptr) { exit(1); }
+    if (fp == nullptr) {
+        fprintf(stderr, "file NOT Found: %s\n", filename.c_str());
+        exit(1);
+    }
 
     uint8_t magic[4];
     std::fread(&magic, 4, 1, fp);  // [0, 0, dtype, rank]
-    if (magic[2] != 0x0d) { exit(1); }
-    if (magic[3] != 3) { exit(1); }
+    if (magic[2] != 0x0d) {
+        fprintf(stderr, "only float is supported, want: %u, got %u", 0x0d,
+                magic[2]);
+        exit(1);
+    }
+    if (magic[3] != 3) {
+        fprintf(stderr, "invalid rank, want 3, got %u\n", magic[3]);
+        exit(1);
+    }
     uint32_t dims[3];
     std::fread(&dims, 4, 3, fp);
     for (int i = 0; i < 3; ++i) { _reverse_byte_order(dims[i]); }

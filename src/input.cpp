@@ -2,6 +2,11 @@
 
 #include <opencv2/opencv.hpp>
 
+std::string show_size(const cv::Size &s)
+{
+    return std::to_string(s.width) + " x " + std::to_string(s.height);
+}
+
 cv::Mat input_image(const char *filename, int target_height, int target_width,
                     float *buffer)
 {
@@ -13,13 +18,14 @@ cv::Mat input_image(const char *filename, int target_height, int target_width,
     const auto img = cv::imread(filename);
 
     if (img.empty()) {
-        debug << "failed to read " << filename;
-        return img;
+        debug << "failed to read " << filename << std::endl;
+        exit(1);
     }
-    debug << "input image size: " << img.size().height << " x "
-          << img.size().width << std::endl;
 
     cv::resize(img, resized_image, resized_image.size(), 0, 0);
+
+    debug << "original input image size: " << show_size(img.size())
+          << ", resized to " << show_size(resized_image.size()) << std::endl;
 
     if (buffer) {
         int idx = 0;
