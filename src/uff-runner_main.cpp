@@ -34,7 +34,8 @@ void inference(const std::vector<std::string> &image_files,
     auto paf_process =
         create(f_height, f_width, height, width, n_joins, n_connections);
 
-    std::unique_ptr<UFFRunner> runner(create_runner(FLAGS_model_file));
+    std::unique_ptr<UFFRunner> runner;
+    create_openpose_runner(FLAGS_model_file, runner);
 
     std::vector<void *> inputs(1);
     tensor_t<float, 3> image(nullptr, height, width, channel);

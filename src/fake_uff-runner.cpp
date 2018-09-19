@@ -13,7 +13,8 @@ class FakeUFFRunnerImpl : public UFFRunner
     }
 };
 
-UFFRunner *create_runner(const std::string &model_file)
+void create_openpose_runner(const std::string &model_file,
+                            std::unique_ptr<UFFRunner> &p)
 {
-    return new FakeUFFRunnerImpl(model_file);
+    p.reset(new FakeUFFRunnerImpl(model_file));
 }

@@ -30,43 +30,26 @@ inline int64_t volume(const nvinfer1::Dims &d)
     return v;
 }
 
-class UFFRunnerImpl : public UFFRunner
-{
-  public:
-    UFFRunnerImpl(const std::string &model_file, const input_info_t &input_info,
-                  const std::vector<std::string> &output_names,
-                  int maxBatchSize);
-    ~UFFRunnerImpl() override;
-
-    void execute(const std::vector<void *> &inputs,
-                 const std::vector<void *> &outputs, int batchSize) override;
-
-  private:
-    nvinfer1::ICudaEngine *engine_;
-    std::vector<std::unique_ptr<cuda_buffer_t>> buffers_;
-
-    void createBuffers_(int batchSize);
-};
-
 nvinfer1::ICudaEngine *loadModelAndCreateEngine(const char *uffFile,
                                                 int maxBatchSize,
-                                                nvuffparser::IUffParser *parser)
+                                                nvuffparser::IUffParser *parser,
+                                                bool use_f16 = false)
 {
     nvinfer1::IBuilder *builder = nvinfer1::createInferBuilder(gLogger);
     nvinfer1::INetworkDefinition *network = builder->createNetwork();
 
-#if 1
-    if (!parser->parse(uffFile, *network, nvinfer1::DataType::kFLOAT)) {
-        // RETURN_AND_LOG(nullptr, ERROR, "Fail to parse");
-        return nullptr;
+    if (use_f16) {
+        if (!parser->parse(uffFile, *network, nvinfer1::DataType::kHALF)) {
+            // RETURN_AND_LOG(nullptr, ERROR, "Fail to parse");
+            return nullptr;
+        }
+        builder->setFp16Mode(true);
+    } else {
+        if (!parser->parse(uffFile, *network, nvinfer1::DataType::kFLOAT)) {
+            // RETURN_AND_LOG(nullptr, ERROR, "Fail to parse");
+            return nullptr;
+        }
     }
-#else
-    if (!parser->parse(uffFile, *network, nvinfer1::DataType::kHALF)) {
-        // RETURN_AND_LOG(nullptr, ERROR, "Fail to parse");
-        return nullptr;
-    }
-    builder->setFp16Mode(true);
-#endif
 
     /* we create the engine */
     builder->setMaxBatchSize(maxBatchSize);
@@ -116,6 +99,24 @@ create_engine(const std::string &model_file, const input_info_t &input_info,
     parser->destroy();
     return engine;
 }
+
+class UFFRunnerImpl : public UFFRunner
+{
+  public:
+    UFFRunnerImpl(const std::string &model_file, const input_info_t &input_info,
+                  const std::vector<std::string> &output_names,
+                  int maxBatchSize);
+    ~UFFRunnerImpl() override;
+
+    void execute(const std::vector<void *> &inputs,
+                 const std::vector<void *> &outputs, int batchSize) override;
+
+  private:
+    nvinfer1::ICudaEngine *engine_;
+    std::vector<std::unique_ptr<cuda_buffer_t>> buffers_;
+
+    void createBuffers_(int batchSize);
+};
 
 UFFRunnerImpl::UFFRunnerImpl(const std::string &model_file,
                              const input_info_t &input_info,
@@ -188,7 +189,8 @@ void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
     }
 }
 
-UFFRunner *create_runner(const std::string &model_file)
+void create_openpose_runner(const std::string &model_file,
+                            std::unique_ptr<UFFRunner> &p)
 {
     const int height = 368;
     const int width = 432;
@@ -206,6 +208,7 @@ UFFRunner *create_runner(const std::string &model_file)
     };
 
     const int maxBatchSize = 1;
-    return new UFFRunnerImpl(model_file, input_info, output_names,
-                             maxBatchSize);
+
+    p.reset(
+        new UFFRunnerImpl(model_file, input_info, output_names, maxBatchSize));
 }
