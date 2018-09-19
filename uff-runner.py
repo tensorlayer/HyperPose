@@ -1,26 +1,33 @@
 #!/usr/bin/python3
-import matplotlib
-matplotlib.use('Agg')
+"""Run a tensorflow model using tensorRT."""
+
 import argparse
 import os
+
+import matplotlib
+matplotlib.use('Agg')
+
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
+from cv2 import imwrite
+
 import tensorrt as trt
 import uff
-from tensorrt.parsers import uffparser
-import matplotlib.pyplot as plt
-
-from inference.common import measure, rename_tensor, read_imgfile
+from idx import write_idx
+from inference.common import measure, read_imgfile, rename_tensor
 from inference.estimator2 import PoseEstimator
 from models import _input_image, get_base_model_func, get_full_model_func
-from idx import write_idx
+from tensorrt.parsers import uffparser
+import pycuda.autoinit as _
+import pycuda.driver as cuda
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
 
 
-def get_model_func(base_model_name, data_format):
+def get_model_func(base_model_name):
 
     h, w = 368, 432
     target_size = (w, h)
@@ -29,8 +36,8 @@ def get_model_func(base_model_name, data_format):
     def model_func():
 
         base_model = get_base_model_func(base_model_name)
-        image = _input_image(target_size[1], target_size[0], data_format, 'image')
-        _, b1_list, b2_list, _ = base_model(image, n_pos, None, None, False, False, data_format=data_format)
+        image = _input_image(target_size[1], target_size[0], 'channels_first', 'image')
+        _, b1_list, b2_list, _ = base_model(image, n_pos, None, None, False, False, data_format='channels_first')
         conf_tensor = b1_list[-1].outputs
         pafs_tensor = b2_list[-1].outputs
 
@@ -51,8 +58,6 @@ def volume(shape):
 
 
 def infer(engine, x, batch_size):
-    import pycuda.autoinit as _
-    import pycuda.driver as cuda
     n = engine.get_nb_bindings()
     print('%d bindings' % n)
 
@@ -80,39 +85,13 @@ def infer(engine, x, batch_size):
 
     for i in inputs_ids:
         cuda.memcpy_htod_async(d_mems[i], mems[i], stream)
-    stream.synchronize()
     context = engine.create_execution_context()
     context.enqueue(batch_size, [int(p) for p in d_mems], stream.handle, None)
-    # context.destroy()
+    context.destroy()
     for i in outputs_ids:
         cuda.memcpy_dtoh_async(mems[i], d_mems[i], stream)
     stream.synchronize()
     return [mems[i].reshape(shapes[i]) for i in outputs_ids]
-
-
-def debug_tensor(t, name):
-    print('%s :: %s, min: %f, mean: %f, max: %f, std: %f' % (name, t.shape, t.min(), t.mean(), t.max(), t.std()))
-
-
-from cv2 import imwrite
-
-
-def _normalize(t):
-    t -= t.mean()
-    r = t.max() - t.min()
-    if r > 0:
-        t /= r
-    return t
-
-
-def save_hwc(prefix, t):
-    h, w, c = t.shape
-    for i in range(c):
-        name = '%s-%d.png' % (prefix, i)
-        img = _normalize(t[:, :, i]) * 255.0
-        # debug_tensor(img)
-        imwrite(name, img)
-        print('saved %s' % name)
 
 
 def parse_args():
@@ -130,20 +109,10 @@ def parse_args():
         help='image filename',
         required=False)
     parser.add_argument('--base-model', type=str, default='vgg', help='vgg | mobilenet')
-    parser.add_argument('--data-format', type=str, default='channels_last', help='channels_last | channels_first.')
     return parser.parse_args()
 
 
-def draw_results(image, heats_result, pafs_result, name, data_format):
-    if data_format == 'channels_first':
-        def chw2hwc(x):
-            return x.transpose([1, 2, 0])
-        heats_result = chw2hwc(heats_result)
-        pafs_result = chw2hwc(pafs_result)
-        image = chw2hwc(image)
-
-    print('%s, %s' % (heats_result.shape, pafs_result.shape))
-
+def draw_results(image, heats_result, pafs_result, name):
     fig = plt.figure(figsize=(8, 8))
     a = fig.add_subplot(2, 3, 1)
     plt.imshow(image)
@@ -151,23 +120,18 @@ def draw_results(image, heats_result, pafs_result, name, data_format):
     if pafs_result is not None:
         a = fig.add_subplot(2, 3, 3)
         a.set_title('Vectormap result')
-        vectormap = pafs_result
-        tmp2 = vectormap.transpose((2, 0, 1))
-        tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
-        tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
-        plt.imshow(tmp2_odd, alpha=0.3)
+        paf_x = np.amax(np.absolute(pafs_result[::2, :, :]), axis=0)
+        paf_y = np.amax(np.absolute(pafs_result[1::2, :, :]), axis=0)
+        plt.imshow(paf_x, alpha=0.3)
+        plt.imshow(paf_y, alpha=0.3)
         plt.colorbar()
-        plt.imshow(tmp2_even, alpha=0.3)
 
     if heats_result is not None:
         a = fig.add_subplot(2, 3, 4)
         a.set_title('Heatmap result')
-        heatmap = heats_result
-        tmp = heatmap
-        tmp = np.amax(heatmap[:, :, :-1], axis=2)
-
-        plt.colorbar()
+        tmp = np.amax(heats_result[:-1, :, :], axis=0)
         plt.imshow(tmp, alpha=0.3)
+        plt.colorbar()
 
     plt.savefig(name, dpi=300)
 
@@ -175,65 +139,36 @@ def draw_results(image, heats_result, pafs_result, name, data_format):
 def main():
     args = parse_args()
     height, width, channel = 368, 432, 3
-    x = read_imgfile(args.image, width, height, args.data_format)
+    x = read_imgfile(args.image, width, height, 'channels_first')  # channels_first is required for tensorRT
 
-    model_func = get_model_func(args.base_model, args.data_format)
+    model_func = get_model_func(args.base_model)
     model_inputs, model_outputs = model_func()
+    input_names = [p.name[:-2] for p in model_inputs]
     output_names = [p.name[:-2] for p in model_outputs]
 
-    print('output names: %s' % ','.join(output_names)) # outputs/conf,outputs/paf
+    print('output names: %s' % ','.join(output_names))  # outputs/conf,outputs/paf
 
-    # with tf.Session() as sess:
-    sess = tf.InteractiveSession()
-    measure(lambda: tl.files.load_and_assign_npz_dict(args.path_to_npz, sess), 'load npz')
-    # return
-
-    run_uff = True
-    # run_uff = False
-    # BEGIN UFF
-    if run_uff:
+    with tf.Session() as sess:
+        measure(lambda: tl.files.load_and_assign_npz_dict(args.path_to_npz, sess), 'load npz')
         frozen_graph = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, output_names)
         tf_model = tf.graph_util.remove_training_nodes(frozen_graph)
         uff_model = uff.from_tensorflow(tf_model, output_names)
         print('uff model created')
 
-        parser = uffparser.create_uff_parser()
+    parser = uffparser.create_uff_parser()
+    inputOrder = 0  # NCHW, https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/c_api/_nv_uff_parser_8h_source.html
+    parser.register_input(input_names[0], (channel, height, width), inputOrder)
+    for name in output_names:
+        parser.register_output(name)
 
-        # https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/c_api/_nv_uff_parser_8h_source.html
-        # 69     kNCHW = 0,
-        # 70     kNHWC = 1,
-        # 71     kNC = 2
-        inputOrder = 0  # NCHW
-        # inputOrder = 1
-        parser.register_input(
-            'image',
-            (channel, height, width),
-            # (height, width, channel),
-            # 1  # this value doesn't affect result in Python
-            inputOrder
-        )
-        for name in output_names:
-            parser.register_output(name)
+    G_LOGGER = trt.infer.ConsoleLogger(trt.infer.LogSeverity.INFO)
+    max_batch_size = 1
+    max_workspace_size = 1 << 30
+    engine = trt.utils.uff_to_trt_engine(G_LOGGER, uff_model, parser, max_batch_size, max_workspace_size)
+    print('engine created')
 
-        G_LOGGER = trt.infer.ConsoleLogger(trt.infer.LogSeverity.INFO)
-        max_batch_size = 1
-        max_workspace_size = 1 << 30
-        engine = trt.utils.uff_to_trt_engine(G_LOGGER, uff_model, parser, max_batch_size, max_workspace_size)
-        print('engine created')
-
-        conf, paf = infer(engine, x, 1)
-        draw_results(x, conf, paf, 'uff-result.png', args.data_format)
-    # END of UFF
-
-
-    # run_tf = True
-    run_tf = False
-    # begin TF inference
-    if run_tf:
-        print('running with TF')
-        conf, paf = sess.run(model_outputs, {model_inputs[0]: [x]})
-        draw_results(x, conf[0], paf[0], 'tf-result.png', args.data_format)
-    # END of TF
+    conf, paf = infer(engine, x, 1)
+    draw_results(x, conf, paf, 'uff-result.png')
 
 
 main()
