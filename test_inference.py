@@ -40,9 +40,10 @@ def inference(base_model_name, path_to_npz, data_format, input_files, plot):
     mean = tot / len(input_files)
     tl.logging.info('inference all took: %f, mean: %f, FPS: %f' % (tot, mean, 1.0 / mean))
 
+
 def debug_tensor(t, name):
-    print('%s :: %s, min: %f, mean: %f, max: %f, std: %f' % (
-        name, t.shape, t.min(), t.mean(), t.max(), t.std()))
+    print('%s :: %s, min: %f, mean: %f, max: %f, std: %f' % (name, t.shape, t.min(), t.mean(), t.max(), t.std()))
+
 
 def inference_base_model(base_model_name, path_to_npz, data_format, input_files, plot):
     """Only run the base model and outputs conf and PAF."""
@@ -62,7 +63,6 @@ def inference_base_model(base_model_name, path_to_npz, data_format, input_files,
                 rename_tensor(pafs_tensor, 'paf'),
             ]
 
-
     height, width = (368, 432)
     target_size = (width, height)
     x, conf, paf = model_func(19, target_size)
@@ -71,15 +71,12 @@ def inference_base_model(base_model_name, path_to_npz, data_format, input_files,
         sess.run(tf.global_variables_initializer())
         measure(lambda: tl.files.load_and_assign_npz_dict(path_to_npz, sess), 'load npz')
 
-        t0 = time.time()
         for idx, img_name in enumerate(input_files):
             image = measure(lambda: read_imgfile(img_name, width, height, data_format=data_format), 'read_imgfile')
             c, p = sess.run([conf, paf], {x: [image]})
             debug_tensor(c, 'conf tensor')
             debug_tensor(p, 'PAF')
-            from idx import write_idx
-            write_idx('conf.idx', c[0])
-            write_idx('paf.idx', p[0])
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='inference')
@@ -103,4 +100,3 @@ def main():
 
 if __name__ == '__main__':
     measure(main)
-    _default_profiler.report()
