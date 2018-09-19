@@ -50,10 +50,12 @@ class paf_processor_impl : public paf_processor
         int channel_j, /* channel of input heatmap tensor, >= COCO_N_PARTS */
         int channel_c /* 1/2 * channel of input PAF tensor, == COCO_N_PAIRS */)
         : height(height), width(width),  //
-          conf(nullptr, channel_j, input_height, input_width),
+          input_height(input_height), input_width(input_width),
+          channel_j(channel_j), channel_c(channel_c),
+          //   conf(nullptr, channel_j, input_height, input_width),
           upsample_conf(nullptr, channel_j, height, width),
           peaks(nullptr, channel_j, height, width),
-          paf(nullptr, channel_c * 2, input_height, input_width),
+          //   paf(nullptr, channel_c * 2, input_height, input_width),
           upsample_paf(nullptr, channel_c * 2, height, width)
     {
     }
@@ -64,12 +66,14 @@ class paf_processor_impl : public paf_processor
     {
         TRACE(__func__);
 
-        chw_from_hwc(conf, conf_);
-        resize_area(conf, upsample_conf);
+        resize_area(tensor_proxy_t<float, 3>((float *)conf_, channel_j,
+                                             input_height, input_width),
+                    upsample_conf);
         get_peak_map(upsample_conf, peaks);
 
-        chw_from_hwc(paf, paf_);
-        resize_area(paf, upsample_paf);
+        resize_area(tensor_proxy_t<float, 3>((float *)paf_, channel_c * 2,
+                                             input_height, input_width),
+                    upsample_paf);
 
         return (*this)(upsample_conf, peaks, upsample_paf);
     }
@@ -85,12 +89,16 @@ class paf_processor_impl : public paf_processor
 
     const int height;
     const int width;
+    const int input_height;
+    const int input_width;
+    const int channel_j;
+    const int channel_c;
 
-    tensor_t<float, 3> conf;           // [J, H', W']
+    // tensor_t<float, 3> conf;           // [J, H', W']
     tensor_t<float, 3> upsample_conf;  // [J, H, W]
     tensor_t<float, 3> peaks;          // [J, H, W]
-    tensor_t<float, 3> paf;            // [2C, H', W']
-    tensor_t<float, 3> upsample_paf;   // [2C, H, W]
+    // tensor_t<float, 3> paf;            // [2C, H', W']
+    tensor_t<float, 3> upsample_paf;  // [2C, H, W]
 
     std::vector<ConnectionCandidate>
     getConnectionCandidates(const tensor_t<float, 3> &pafmap,

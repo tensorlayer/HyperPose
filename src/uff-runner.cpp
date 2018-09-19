@@ -100,8 +100,9 @@ nvinfer1::ICudaEngine *create_engine(const std::string &model_file)
         // Always provide your dimensions in CHW even if your
         // network input was in HWC in yout original framework.
         nvinfer1::Dims3(channel, height, width),
-        // nvuffparser::UffInputOrder::kNCHW
-        nvuffparser::UffInputOrder::kNHWC);
+        nvuffparser::UffInputOrder::kNCHW
+        // nvuffparser::UffInputOrder::kNHWC
+    );
 
     const std::vector<std::string> output_names = {
         "outputs/conf",

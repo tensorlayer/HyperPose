@@ -39,8 +39,8 @@ void inference(bool draw_results = false)
     inputs[0] = image.data();
 
     std::vector<void *> outputs(2);
-    tensor_t<float, 3> conf(nullptr, f_height, f_width, n_joins);
-    tensor_t<float, 3> paf(nullptr, f_height, f_width, n_connections * 2);
+    tensor_t<float, 3> conf(nullptr, n_joins, f_height, f_width);
+    tensor_t<float, 3> paf(nullptr, n_connections * 2, f_height, f_width);
     outputs[0] = conf.data();
     outputs[1] = paf.data();
 
@@ -56,10 +56,10 @@ void inference(bool draw_results = false)
                 TRACE("run tensorRT");
                 runner->execute(inputs, outputs);
             }
-            debug("outputs/conf :: ", conf);
-            debug("outputs/paf :: ", paf);
-            save(conf, "output-conf");
-            save(paf, "output-paf");
+            // debug("outputs/conf :: ", conf);
+            // debug("outputs/paf :: ", paf);
+            // save(conf, "output-conf");
+            // save(paf, "output-paf");
         }
 
         if (draw_results) {

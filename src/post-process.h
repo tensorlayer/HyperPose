@@ -9,7 +9,7 @@ inline int area(const cv::Size &size) { return size.height * size.width; }
 // This is the same as OpenCV's INTER_AREA.
 // input, output are in [channel, height, width] format
 template <typename T>
-void resize_area(const tensor_t<T, 3> &input, tensor_t<T, 3> &output)
+void resize_area(const tensor_proxy_t<T, 3> &input, tensor_t<T, 3> &output)
 {
     TRACE(__func__);
 

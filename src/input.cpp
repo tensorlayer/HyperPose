@@ -2,6 +2,8 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "tensor.h"
+
 std::string show_size(const cv::Size &s)
 {
     return std::to_string(s.width) + " x " + std::to_string(s.height);
@@ -28,13 +30,11 @@ cv::Mat input_image(const char *filename, int target_height, int target_width,
           << ", resized to " << show_size(resized_image.size()) << std::endl;
 
     if (buffer) {
-        int idx = 0;
+        tensor_proxy_t<float, 3> t(buffer, 3, target_height, target_width);
         for (int i = 0; i < target_height; ++i) {
             for (int j = 0; j < target_width; ++j) {
                 const auto pix = resized_image.at<cv::Vec3b>(i, j);
-                buffer[idx++] = pix[0] / 255.0;
-                buffer[idx++] = pix[1] / 255.0;
-                buffer[idx++] = pix[2] / 255.0;
+                for (int k = 0; k < 3; ++k) { t.at(k, i, j) = pix[k] / 255.0; }
             }
         }
     }
