@@ -31,7 +31,7 @@ GRAPH_FILE=${CHECKPOINT_DIR}/graph.pb.txt
 CHECKPOINT=${CHECKPOINT_DIR}/saved_checkpoint-0
 OUTPUT_GRAPH=${CHECKPOINT_DIR}/freezed
 
-OUTPUT_NODE_NAMES=image,upsample_size,upsample_heatmat,tensor_peaks,upsample_pafmat
+OUTPUT_NODE_NAMES=image,outputs/conf,outputs/paf
 
 freeze() {
     python3 ${FREEZE_GRAPH_BIN} \
@@ -41,11 +41,11 @@ freeze() {
         --output_node_names ${OUTPUT_NODE_NAMES}
 }
 
-# BASE_MODEL=vgg
-# PATH_TO_NPZ=${HOME}/Downloads/vgg450000.npz
+BASE_MODEL=vgg
+PATH_TO_NPZ=${HOME}/Downloads/vgg450000_no_cpm.npz
 
-BASE_MODEL=mobilenet
-PATH_TO_NPZ=${HOME}/Downloads/mbn28000.npz
+# BASE_MODEL=mobilenet
+# PATH_TO_NPZ=${HOME}/Downloads/mbn28000.npz
 
 measure ./export.py --base-model=${BASE_MODEL} --path-to-npz=${PATH_TO_NPZ}
 measure freeze

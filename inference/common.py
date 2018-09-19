@@ -232,3 +232,15 @@ def plot_humans(e, image, humans, name):
     plt.colorbar()
     mkpath('vis')
     plt.savefig('vis/result-%s.png' % name)
+
+
+def rename_tensor(x, name):
+    # FIXME: use tf.identity(x, name=name) doesn't work
+    new_shape = []
+    for d in x.shape:
+        try:
+            d = int(d)
+        except:
+            d = -1
+        new_shape.append(d)
+    return tf.reshape(x, new_shape, name=name)
