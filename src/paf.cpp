@@ -61,8 +61,8 @@ class paf_processor_impl : public paf_processor
     }
 
     std::vector<human_t> operator()(
-        const float *conf_, /* [input_height, input_width, channel_j] */
-        const float *paf_ /* [input_height, input_width, channel_c * 2] */)
+        const float *conf_, /* [channel_j, input_height, input_width] */
+        const float *paf_ /* [channel_c * 2, input_height, input_width] */)
     {
         TRACE(__func__);
 
@@ -331,9 +331,6 @@ class paf_processor_impl : public paf_processor
                const tensor_t<float, 3> &pafmap /* [2c, h, w] */)
     {
         TRACE("operator()::internal");
-        debug("heatmap", heatmap);
-        debug("peaks", peaks);
-        debug("pafmap", pafmap);
 
         std::vector<Peak> all_peaks;
         std::vector<std::vector<int>> peak_ids_by_channel(COCO_N_PARTS);
@@ -346,22 +343,25 @@ class paf_processor_impl : public paf_processor
         const auto human_refs = getHumans(all_peaks, all_connections);
         printf("got %lu humans\n", human_refs.size());
 
-        std::vector<human_t> humans;
-        for (const auto &hr : human_refs) {
-            human_t human;
-            human.score = hr.score;
-            for (int i = 0; i < COCO_N_PARTS; ++i) {
-                if (hr.parts[i].id != -1) {
-                    human.parts[i].has_value = true;
-                    const auto p = all_peaks[hr.parts[i].id];
-                    human.parts[i].score = p.score;
-                    human.parts[i].x = p.pos.x;
-                    human.parts[i].y = p.pos.y;
+        {
+            TRACE("generate output");
+            std::vector<human_t> humans;
+            for (const auto &hr : human_refs) {
+                human_t human;
+                human.score = hr.score;
+                for (int i = 0; i < COCO_N_PARTS; ++i) {
+                    if (hr.parts[i].id != -1) {
+                        human.parts[i].has_value = true;
+                        const auto p = all_peaks[hr.parts[i].id];
+                        human.parts[i].score = p.score;
+                        human.parts[i].x = p.pos.x;
+                        human.parts[i].y = p.pos.y;
+                    }
                 }
+                humans.push_back(human);
             }
-            humans.push_back(human);
+            return humans;
         }
-        return humans;
     }
 
     std::vector<VectorXY> get_paf_vectors(const tensor_t<float, 3> &pafmap,
@@ -394,8 +394,8 @@ class paf_processor_impl : public paf_processor
 void process_conf_paf(int height_, int width_,  //
                       int channel_j,            // channel_j = n_joins
                       int channel_c,            // channel_c = n_connections
-                      const float *conf_,       // [height, width, channel_j]
-                      const float *paf_  // [height, width, channel_c * 2]
+                      const float *conf_,       // [channel_j, height, width]
+                      const float *paf_  // [channel_c * 2, height, width]
 )
 {
     TRACE(__func__);

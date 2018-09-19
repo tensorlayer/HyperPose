@@ -44,39 +44,27 @@ void inference(bool draw_results = false)
     outputs[0] = conf.data();
     outputs[1] = paf.data();
 
-    int n = 1;
+    int n = 10;
     for (int i = 0; i < n; ++i) {
         TRACE("inference one");
         auto resized_image = input_image(FLAGS_image_file.c_str(), height,
                                          width, (float *)inputs[0]);
-
         {
-            debug("input :: ", image);
-            {
-                TRACE("run tensorRT");
-                runner->execute(inputs, outputs);
-            }
-            // debug("outputs/conf :: ", conf);
-            // debug("outputs/paf :: ", paf);
-            // save(conf, "output-conf");
-            // save(paf, "output-paf");
+            TRACE("run tensorRT");
+            runner->execute(inputs, outputs);
         }
-
+        const auto humans = [&]() {
+            TRACE("run paf_process");
+            return (*paf_process)((float *)outputs[0], (float *)outputs[1]);
+        }();
         if (draw_results) {
             TRACE("draw_results");
-            const auto humans = [&]() {
-                TRACE("run paf_process");
-                return (*paf_process)((float *)outputs[0], (float *)outputs[1]);
-            }();
-
             std::cout << "got " << humans.size() << " humans" << std::endl;
             for (const auto &h : humans) {
                 h.print();
                 draw_human(resized_image, h);
             }
-
-            int idx = 0;
-            const auto name = "output" + std::to_string(idx) + ".png";
+            const auto name = "output" + std::to_string(i) + ".png";
             cv::imwrite(name, resized_image);
         }
     }

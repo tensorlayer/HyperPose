@@ -22,15 +22,15 @@ void draw_detections_resuls(const std::string &heatmap_filename,
 
     const auto conf = load_3d_tensor<float>(heatmap_filename);
     debug("conf", *conf);
-    const int height = conf->dims[0];
-    const int width = conf->dims[1];
-    const int j = conf->dims[2];
+    const int j = conf->dims[0];
+    const int height = conf->dims[1];
+    const int width = conf->dims[2];
 
     const auto paf = load_3d_tensor<float>(paf_filename);
     debug("paf", *paf);
 
     auto image = cv::imread(image_filename);
-    const int c = paf->dims[2];
+    const int c = paf->dims[0];
 
     if (image.empty()) {
         fprintf(stderr, "using blank image\n");

@@ -6,7 +6,6 @@ default: build_with_cmake
 
 cmake_targets:
 	mkdir -p $(BUILD_DIR)
-	./configure-tf.py
 	cd $(BUILD_DIR); cmake $(CMAKE_FLAGS) $(CURDIR)
 
 build_with_cmake: cmake_targets
