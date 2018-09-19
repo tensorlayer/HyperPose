@@ -17,7 +17,15 @@ tf::Status LoadGraph(const std::string &graph_file_name,
     return tf::Status::OK();
 }
 
-using bind_info_t = std::map<std::string, std::vector<int>>;
+using bind_info_t = std::vector<std::pair<std::string, std::vector<int>>>;
+
+template <typename T, typename S>
+std::vector<T> get_firsts(const std::vector<std::pair<T, S>> &ps)
+{
+    std::vector<T> v;
+    for (const auto &it : ps) { v.push_back(it.first); }
+    return v;
+}
 
 class OpenposeRunnerImpl : public TFRunner
 {
@@ -26,19 +34,23 @@ class OpenposeRunnerImpl : public TFRunner
                        const bind_info_t &input_names,
                        const bind_info_t &output_names);
 
-    virtual void operator()(const std::vector<void *> &inputs,
-                            const std::vector<void *> &outputs) override;
+    virtual void operator()(const std::vector<void *> &input_info,
+                            const std::vector<void *> &output_info) override;
 
   private:
-    const bind_info_t input_names;
-    const bind_info_t output_names;
+    const bind_info_t input_info;
+    const bind_info_t output_info;
+
+    const std::vector<std::string> output_names;
+
     std::unique_ptr<tensorflow::Session> session_;
 };
 
 OpenposeRunnerImpl::OpenposeRunnerImpl(const std::string &graph_path,
-                                       const bind_info_t &input_names,
-                                       const bind_info_t &output_names)
-    : input_names(input_names), output_names(output_names)
+                                       const bind_info_t &input_info,
+                                       const bind_info_t &output_info)
+    : input_info(input_info), output_info(output_info),
+      output_names(get_firsts(output_info))
 {
     auto status = LoadGraph(graph_path, session_);
     if (!status.ok()) {
@@ -50,42 +62,27 @@ OpenposeRunnerImpl::OpenposeRunnerImpl(const std::string &graph_path,
 void OpenposeRunnerImpl::operator()(const std::vector<void *> &inputs,
                                     const std::vector<void *> &outputs)
 {
-    // const auto image_tensor = import4dtensor(input);
-    // const auto upsample_size = [&]() {
-    //     // const auto [_n, height, width, _c] = input.dims; // requires C++
-    //     17 const int height = input.dims[1]; const int width = input.dims[2];
+    std::vector<std::pair<std::string, tf::Tensor>> feed_dict;
+    for (int i = 0; i < input_info.size(); ++i) {
+        const auto t =
+            import_tensor<float>((float *)inputs[i], input_info[i].second);
+        feed_dict.push_back(std::make_pair(input_info[i].first, t));
+    }
 
-    //     const float resize_out_ratio = 8.0;
-    //     const auto f = [&](int size) {
-    //         return std::int32_t(size / 8 * resize_out_ratio);
-    //     };
-    //     tf::Tensor t(tf::DT_INT32, tf::TensorShape({2}));
-    //     t.tensor<std::int32_t, 1>()(0) = f(height);
-    //     t.tensor<std::int32_t, 1>()(1) = f(width);
-    //     return t;
-    // }();
+    std::vector<tf::Tensor> output_tensors;
+    {
+        const auto status =
+            session_->Run(feed_dict, output_names, {}, &output_tensors);
+        if (!status.ok()) {
+            // TODO: handle error
+            LOG(ERROR) << status;
+            exit(1);
+        }
+    }
 
-    // std::vector<tf::Tensor> outputs;
-    // {
-    //     auto status = session_->Run(
-    //         {
-    //             {input_names[0], image_tensor},
-    //             {input_names[1], upsample_size},
-    //         },
-    //         output_names, {}, &outputs);
-    //     if (!status.ok()) {
-    //         // TODO: handle error
-    //         LOG(ERROR) << status;
-    //         exit(1);
-    //     }
-    // }
-
-    // using T = float;
-    // return std::make_tuple(export4dtensor<T>(outputs[0]),
-    //                        export4dtensor<T>(outputs[1]),
-    //                        export4dtensor<T>(outputs[2]));
-
-    //
+    for (int i = 0; i < output_info.size(); ++i) {
+        export_tensor(output_tensors[i], (float *)outputs[i]);
+    }
 }
 
 void create_openpose_runner(const std::string &model_file, const int height,

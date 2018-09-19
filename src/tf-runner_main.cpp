@@ -4,7 +4,6 @@
 
 #include "input.h"
 #include "paf.h"
-// #include "tensor.h"
 #include "tf-runner.h"
 #include "tracer.h"
 #include "vis.h"

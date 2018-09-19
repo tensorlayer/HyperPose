@@ -3,54 +3,36 @@
 #include <tensorflow/core/framework/tensor.h>
 #include <tensorflow/core/public/session.h>
 
-#include "tensor.h"
-
 namespace tf = tensorflow;
 
-template <typename T> tf::Tensor import4dtensor(const tensor_t<T, 4> &input)
+template <typename T> tf::TensorShape to_tf_shape(const std::vector<T> &dims)
 {
-    // const auto [a, b, c, d] = input.dims; // requires C++17
-    const int a = input.dims[0];
-    const int b = input.dims[1];
-    const int c = input.dims[2];
-    const int d = input.dims[3];
+    tf::TensorShape shape;
+    for (auto d : dims) { shape.AddDim(d); }
+    return shape;
+}
 
-    // TODO: infer type from T
-    tf::Tensor t(tf::DT_FLOAT, tf::TensorShape({a, b, c, d}));
-    {
-        int idx = 0;
-        for (int i = 0; i < a; ++i) {
-            for (int j = 0; j < b; ++j) {
-                for (int k = 0; k < c; ++k) {
-                    for (int l = 0; l < d; ++l) {
-                        t.tensor<T, 4>()(i, j, k, l) = input.data()[idx++];
-                    }
-                }
-            }
-        }
-    }
+int volume(const tf::TensorShape &shape)
+{
+    int v = 1;
+    for (auto d : shape.dim_sizes()) { v *= d; }
+    return v;
+}
+
+template <typename T>
+tf::Tensor import_tensor(const T *input, const std::vector<int> &dims)
+{
+    const auto shape = to_tf_shape(dims);
+    const int n = volume(shape);
+    tf::Tensor t(tf::DT_FLOAT, shape);  // TODO: infer shape from T
+    T *data = t.flat<T>().data();
+    for (int i = 0; i < n; ++i) { data[i] = input[i]; }
     return t;
 }
 
-template <typename T> void export4dtensor(const tf::Tensor &t, T *data)
+template <typename T> void export_tensor(const tf::Tensor &t, T *output)
 {
-    // const auto [a, b, c, d] = output.dims; // requires C++17
-    const int a = t.shape().dim_size(0);
-    const int b = t.shape().dim_size(1);
-    const int c = t.shape().dim_size(2);
-    const int d = t.shape().dim_size(3);
-
-    const auto &tt = t.tensor<T, 4>();
-    {
-        int idx = 0;
-        for (int i = 0; i < a; ++i) {
-            for (int j = 0; j < b; ++j) {
-                for (int k = 0; k < c; ++k) {
-                    for (int l = 0; l < d; ++l) {
-                        data[idx++] = tt(i, j, k, l);
-                    }
-                }
-            }
-        }
-    }
+    const int n = volume(t.shape());
+    const T *data = t.flat<T>().data();
+    for (int i = 0; i < n; ++i) { output[i] = data[i]; }
 }
