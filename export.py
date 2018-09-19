@@ -36,7 +36,7 @@ def save_uff(sess, names, filename):
     uff.from_tensorflow(tf_model, names, output_filename=filename)
 
 
-def get_model_func(base_model_name, full):
+def get_model_func(base_model_name, full, data_format):
 
     h, w = 368, 432
     target_size = (w, h)
@@ -54,7 +54,6 @@ def get_model_func(base_model_name, full):
         def model_func():
 
             base_model = get_base_model_func(base_model_name)
-            data_format = 'channels_last'
             image = _input_image(target_size[1], target_size[0], data_format, 'image')
             _, b1_list, b2_list, _ = base_model(image, n_pos, None, None, False, False, data_format=data_format)
             conf_tensor = b1_list[-1].outputs
@@ -99,13 +98,14 @@ def parse_args():
     parser.add_argument('--checkpoint-dir', type=str, default='checkpoints', help='checkpoint dir')
     parser.add_argument('--graph-filename', type=str, default='', help='graph filename')
     parser.add_argument('--uff-filename', type=str, default='', help='uff filename')
+    parser.add_argument('--data-format', type=str, default='channels_last', help='channels_last | channels_first.')
 
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    model_func = get_model_func(args.base_model, args.full)
+    model_func = get_model_func(args.base_model, args.full, args.data_format)
     export_model(model_func, args.checkpoint_dir, args.path_to_npz, args.graph_filename, args.uff_filename)
 
 
