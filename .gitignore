@@ -22,4 +22,5 @@ cocoapi-master/
 cocoapi/
 inference/*png
 models_hao*
+src/tensorflow.cmake
 test.py
