@@ -56,7 +56,7 @@ const std::vector<cv::Scalar> coco_colors =
 
 void draw_human(cv::Mat &img, const human_t &human)
 {
-    const int thickness = 3;
+    const int thickness = 2;
 
     // draw lines
     for (int pair_id = 0; pair_id < COCO_N_PAIRS; ++pair_id) {

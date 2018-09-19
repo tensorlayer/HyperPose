@@ -7,7 +7,7 @@ class FakeUFFRunnerImpl : public UFFRunner
     FakeUFFRunnerImpl(const std::string &model_file) { TRACE(__func__); }
 
     void execute(const std::vector<void *> &inputs,
-                 const std::vector<void *> &outputs) override
+                 const std::vector<void *> &outputs, int batchSize) override
     {
         TRACE(__func__);
     }

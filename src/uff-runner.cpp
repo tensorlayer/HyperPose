@@ -19,14 +19,9 @@
 
 Logger gLogger;
 
-const uint64_t Gi = 1 << 30;
+constexpr uint64_t Gi = 1 << 30;
 
-namespace
-{
-int height = 368;
-int width = 432;
-int channel = 3;
-}  // namespace
+using input_info_t = std::vector<std::pair<std::string, std::vector<int>>>;
 
 inline int64_t volume(const nvinfer1::Dims &d)
 {
@@ -38,15 +33,15 @@ inline int64_t volume(const nvinfer1::Dims &d)
 class UFFRunnerImpl : public UFFRunner
 {
   public:
-    UFFRunnerImpl(const std::string &model_file);
+    UFFRunnerImpl(const std::string &model_file, const input_info_t &input_info,
+                  const std::vector<std::string> &output_names,
+                  int maxBatchSize);
     ~UFFRunnerImpl() override;
 
     void execute(const std::vector<void *> &inputs,
-                 const std::vector<void *> &outputs) override;
+                 const std::vector<void *> &outputs, int batchSize) override;
 
   private:
-    constexpr static int batchSize = 1;
-
     nvinfer1::ICudaEngine *engine_;
     std::vector<std::unique_ptr<cuda_buffer_t>> buffers_;
 
@@ -90,27 +85,25 @@ nvinfer1::ICudaEngine *loadModelAndCreateEngine(const char *uffFile,
     return engine;
 }
 
-nvinfer1::ICudaEngine *create_engine(const std::string &model_file)
+nvinfer1::ICudaEngine *
+create_engine(const std::string &model_file, const input_info_t &input_info,
+              const std::vector<std::string> &output_names, int maxBatchSize)
 {
     TRACE(__func__);
 
     auto parser = nvuffparser::createUffParser();
-    parser->registerInput(
-        "image",
-        // Always provide your dimensions in CHW even if your
-        // network input was in HWC in yout original framework.
-        nvinfer1::Dims3(channel, height, width),
-        nvuffparser::UffInputOrder::kNCHW  //
-    );
-
-    const std::vector<std::string> output_names = {
-        "outputs/conf",
-        "outputs/paf",
-    };
-
+    for (const auto &info : input_info) {
+        const auto dims = info.second;
+        parser->registerInput(
+            info.first.c_str(),
+            // Always provide your dimensions in CHW even if your
+            // network input was in HWC in yout original framework.
+            nvinfer1::Dims3(dims[0], dims[1], dims[2]),
+            nvuffparser::UffInputOrder::kNCHW  //
+        );
+    }
     for (auto &name : output_names) { parser->registerOutput(name.c_str()); }
 
-    const int maxBatchSize = 1;
     nvinfer1::ICudaEngine *engine =
         loadModelAndCreateEngine(model_file.c_str(), maxBatchSize, parser);
 
@@ -124,10 +117,13 @@ nvinfer1::ICudaEngine *create_engine(const std::string &model_file)
     return engine;
 }
 
-UFFRunnerImpl::UFFRunnerImpl(const std::string &model_file)
-    : engine_(create_engine(model_file))
+UFFRunnerImpl::UFFRunnerImpl(const std::string &model_file,
+                             const input_info_t &input_info,
+                             const std::vector<std::string> &output_names,
+                             int maxBatchSize)
+    : engine_(create_engine(model_file, input_info, output_names, maxBatchSize))
 {
-    createBuffers_(batchSize);
+    createBuffers_(maxBatchSize);
 }
 
 UFFRunnerImpl::~UFFRunnerImpl()
@@ -156,7 +152,7 @@ void UFFRunnerImpl::createBuffers_(int batchSize)
 }
 
 void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
-                            const std::vector<void *> &outputs)
+                            const std::vector<void *> &outputs, int batchSize)
 {
     TRACE(__func__);
 
@@ -194,5 +190,22 @@ void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
 
 UFFRunner *create_runner(const std::string &model_file)
 {
-    return new UFFRunnerImpl(model_file);
+    const int height = 368;
+    const int width = 432;
+
+    const input_info_t input_info = {
+        {
+            "image",
+            {3, height, width} /* must be (C, H, W) */,
+        },
+    };
+
+    const std::vector<std::string> output_names = {
+        "outputs/conf",
+        "outputs/paf",
+    };
+
+    const int maxBatchSize = 1;
+    return new UFFRunnerImpl(model_file, input_info, output_names,
+                             maxBatchSize);
 }

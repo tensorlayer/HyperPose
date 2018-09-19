@@ -9,7 +9,8 @@
 #include "vis.h"
 
 DEFINE_string(model_file, "vgg.uff", "Path to uff model.");
-DEFINE_string(image_file, "", "Path to image.");
+DEFINE_string(image_files, "", "Comma separated list of pathes to image.");
+
 DEFINE_int32(input_height, 368, "Height of input image.");
 DEFINE_int32(input_width, 432, "Width of input image.");
 
@@ -22,7 +23,8 @@ const int n_connections = 17 + 2;
 
 }  // namespace
 
-void inference(bool draw_results = false)
+void inference(const std::vector<std::string> &image_files,
+               bool draw_results = false)
 {
     TRACE(__func__);
     const int height = FLAGS_input_height;
@@ -44,11 +46,11 @@ void inference(bool draw_results = false)
     outputs[0] = conf.data();
     outputs[1] = paf.data();
 
-    int n = 10;
-    for (int i = 0; i < n; ++i) {
+    int idx = 0;
+    for (const auto &filename : image_files) {
         TRACE("inference one");
-        auto resized_image = input_image(FLAGS_image_file.c_str(), height,
-                                         width, (float *)inputs[0]);
+        auto resized_image =
+            input_image(filename.c_str(), height, width, (float *)inputs[0]);
         {
             TRACE("run tensorRT");
             runner->execute(inputs, outputs);
@@ -64,16 +66,26 @@ void inference(bool draw_results = false)
                 h.print();
                 draw_human(resized_image, h);
             }
-            const auto name = "output" + std::to_string(i) + ".png";
+            const auto name = "output" + std::to_string(++idx) + ".png";
             cv::imwrite(name, resized_image);
         }
     }
+}
+
+std::vector<std::string> split(const std::string &text, const char sep)
+{
+    std::vector<std::string> lines;
+    std::string line;
+    std::istringstream ss(text);
+    while (std::getline(ss, line, sep)) { lines.push_back(line); }
+    return lines;
 }
 
 int main(int argc, char *argv[])
 {
     TRACE(__func__);
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    inference(true);
+    const auto image_files = split(FLAGS_image_files, ',');
+    inference(image_files, true);
     return 0;
 }
