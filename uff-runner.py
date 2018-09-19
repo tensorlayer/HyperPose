@@ -34,7 +34,10 @@ def get_model_func(base_model_name):
     n_pos = 19
 
     def model_func():
+        """Creates the openpose model.
 
+        Returns a pair of lists: (inputs, outputs).
+        """
         base_model = get_base_model_func(base_model_name)
         image = _input_image(target_size[1], target_size[0], 'channels_first', 'image')
         _, b1_list, b2_list, _ = base_model(image, n_pos, None, None, False, False, data_format='channels_first')
@@ -42,10 +45,11 @@ def get_model_func(base_model_name):
         pafs_tensor = b2_list[-1].outputs
 
         with tf.variable_scope('outputs'):
-            return [image], [
+            outputs = [
                 rename_tensor(conf_tensor, 'conf'),
                 rename_tensor(pafs_tensor, 'paf'),
             ]
+        return [image], outputs
 
     return model_func
 
@@ -103,10 +107,10 @@ def parse_args():
         help='path to npz',
         required=False)
     parser.add_argument(
-        '--image',
+        '--images',
         type=str,
         default='./data/media/COCO_val2014_000000000192.jpg',
-        help='image filename',
+        help='comma separated list of image filenames',
         required=False)
     parser.add_argument('--base-model', type=str, default='vgg', help='vgg | mobilenet')
     return parser.parse_args()
@@ -139,21 +143,26 @@ def draw_results(image, heats_result, pafs_result, name):
 def main():
     args = parse_args()
     height, width, channel = 368, 432, 3
-    x = read_imgfile(args.image, width, height, 'channels_first')  # channels_first is required for tensorRT
+    images = []
+    for name in args.images.split(','):
+        x = read_imgfile(name, width, height, 'channels_first')  # channels_first is required for tensorRT
+        images.append(x)
 
     model_func = get_model_func(args.base_model)
     model_inputs, model_outputs = model_func()
     input_names = [p.name[:-2] for p in model_inputs]
     output_names = [p.name[:-2] for p in model_outputs]
 
+    print('input names: %s' % ','.join(input_names))
     print('output names: %s' % ','.join(output_names))  # outputs/conf,outputs/paf
 
-    with tf.Session() as sess:
-        measure(lambda: tl.files.load_and_assign_npz_dict(args.path_to_npz, sess), 'load npz')
-        frozen_graph = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, output_names)
-        tf_model = tf.graph_util.remove_training_nodes(frozen_graph)
-        uff_model = uff.from_tensorflow(tf_model, output_names)
-        print('uff model created')
+    # with tf.Session() as sess:
+    sess = tf.InteractiveSession()
+    measure(lambda: tl.files.load_and_assign_npz_dict(args.path_to_npz, sess), 'load npz')
+    frozen_graph = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, output_names)
+    tf_model = tf.graph_util.remove_training_nodes(frozen_graph)
+    uff_model = measure(lambda: uff.from_tensorflow(tf_model, output_names), 'uff.from_tensorflow')
+    print('uff model created')
 
     parser = uffparser.create_uff_parser()
     inputOrder = 0  # NCHW, https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/c_api/_nv_uff_parser_8h_source.html
@@ -164,11 +173,14 @@ def main():
     G_LOGGER = trt.infer.ConsoleLogger(trt.infer.LogSeverity.INFO)
     max_batch_size = 1
     max_workspace_size = 1 << 30
-    engine = trt.utils.uff_to_trt_engine(G_LOGGER, uff_model, parser, max_batch_size, max_workspace_size)
+    engine = measure(
+        lambda: trt.utils.uff_to_trt_engine(G_LOGGER, uff_model, parser, max_batch_size, max_workspace_size),
+        'trt.utils.uff_to_trt_engine')
     print('engine created')
 
-    conf, paf = infer(engine, x, 1)
-    draw_results(x, conf, paf, 'uff-result.png')
+    for idx, x in enumerate(images):
+        conf, paf = measure(lambda: infer(engine, x, 1), 'infer')
+        draw_results(x.transpose([1, 2, 0]), conf, paf, 'uff-result-%02d.png' % idx)
 
 
 main()
