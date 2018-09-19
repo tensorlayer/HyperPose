@@ -18,6 +18,7 @@ mkdir -p ${BAZEL_PKG}
 cd ${BAZEL_PKG}
 
 cp ${ROOT}/src/tf-* .
+cp ${ROOT}/src/tracer.h .
 cp ${SCRIPT_DIR}/BUILD .
 
 bazel build :all

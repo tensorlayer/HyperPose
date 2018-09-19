@@ -1,7 +1,7 @@
 #pragma once
 
-#include <tensorflow/core/framework/tensor.h>
-#include <tensorflow/core/public/session.h>
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow/core/public/session.h"
 
 namespace tf = tensorflow;
 

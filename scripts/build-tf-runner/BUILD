@@ -5,6 +5,8 @@ tf_cc_shared_object(
     srcs = [
         "tf-runner.cpp",
         "tf-runner.h",
+        "tf-utils.h",
+        "tracer.h",
     ],
     linkopts = ["-shared"],
     deps = [
