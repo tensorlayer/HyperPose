@@ -20,7 +20,7 @@ tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
 
 
-def get_model_func(base_model_name):
+def get_model_func(base_model_name, data_format):
 
     h, w = 368, 432
     target_size = (w, h)
@@ -29,7 +29,6 @@ def get_model_func(base_model_name):
     def model_func():
 
         base_model = get_base_model_func(base_model_name)
-        data_format = 'channels_last'
         image = _input_image(target_size[1], target_size[0], data_format, 'image')
         _, b1_list, b2_list, _ = base_model(image, n_pos, None, None, False, False, data_format=data_format)
         conf_tensor = b1_list[-1].outputs
@@ -63,6 +62,7 @@ def infer(engine, x, batch_size):
     for i in range(n):
         dims = engine.get_binding_dimensions(i)
         shape = dims.shape()
+        print('bind %d :: %s' % (i, shape))
         cnt = volume(shape) * batch_size
         mem = cuda.pagelocked_empty(cnt, dtype=np.float32)
         d_mem = cuda.mem_alloc(cnt * mem.dtype.itemsize)
@@ -134,7 +134,16 @@ def parse_args():
     return parser.parse_args()
 
 
-def draw_results(image, heats_result, pafs_result, name='result.png'):
+def draw_results(image, heats_result, pafs_result, name, data_format):
+    if data_format == 'channels_first':
+        def chw2hwc(x):
+            return x.transpose([1, 2, 0])
+        heats_result = chw2hwc(heats_result)
+        pafs_result = chw2hwc(pafs_result)
+        image = chw2hwc(image)
+
+    print('%s, %s' % (heats_result.shape, pafs_result.shape))
+
     fig = plt.figure(figsize=(8, 8))
     a = fig.add_subplot(2, 3, 1)
     plt.imshow(image)
@@ -166,9 +175,9 @@ def draw_results(image, heats_result, pafs_result, name='result.png'):
 def main():
     args = parse_args()
     height, width, channel = 368, 432, 3
-    x = read_imgfile(args.image, width, height)
+    x = read_imgfile(args.image, width, height, args.data_format)
 
-    model_func = get_model_func(args.base_model)
+    model_func = get_model_func(args.base_model, args.data_format)
     model_inputs, model_outputs = model_func()
     output_names = [p.name[:-2] for p in model_outputs]
 
@@ -177,8 +186,10 @@ def main():
     # with tf.Session() as sess:
     sess = tf.InteractiveSession()
     measure(lambda: tl.files.load_and_assign_npz_dict(args.path_to_npz, sess), 'load npz')
+    # return
 
     run_uff = True
+    # run_uff = False
     # BEGIN UFF
     if run_uff:
         frozen_graph = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, output_names)
@@ -187,41 +198,41 @@ def main():
         print('uff model created')
 
         parser = uffparser.create_uff_parser()
+
+        # https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/c_api/_nv_uff_parser_8h_source.html
+        # 69     kNCHW = 0,
+        # 70     kNHWC = 1,
+        # 71     kNC = 2
+        inputOrder = 0  # NCHW
+        # inputOrder = 1
         parser.register_input(
             'image',
             (channel, height, width),
             # (height, width, channel),
-            1  # this value doesn't affect result in Python
+            # 1  # this value doesn't affect result in Python
+            inputOrder
         )
         for name in output_names:
             parser.register_output(name)
 
         G_LOGGER = trt.infer.ConsoleLogger(trt.infer.LogSeverity.INFO)
-        engine = trt.utils.uff_to_trt_engine(G_LOGGER, uff_model, parser, 1, 1 << 30)
+        max_batch_size = 1
+        max_workspace_size = 1 << 30
+        engine = trt.utils.uff_to_trt_engine(G_LOGGER, uff_model, parser, max_batch_size, max_workspace_size)
         print('engine created')
 
         conf, paf = infer(engine, x, 1)
-        draw_results(x, conf, paf, 'uff-result.png')
+        draw_results(x, conf, paf, 'uff-result.png', args.data_format)
     # END of UFF
 
-    # conf_f = conf[:, :, :18]
-    # conf_b = conf[:, :, 18:]
-    # write_idx('uff-conf.idx', conf)
-    # write_idx('uff-conf_f.idx', conf_f)
-    # write_idx('uff-conf_b.idx', conf_b)
-    # write_idx('uff-paf.idx', paf)
-    # debug_tensor(conf, 'conf')
-    # debug_tensor(conf_f, 'conf_f')
-    # debug_tensor(conf_b, 'conf_b')
-    # debug_tensor(paf, 'paf')
-    # save_hwc('paf', paf)
-    # save_hwc('conf', conf)
 
-    run_tf = True
+    # run_tf = True
+    run_tf = False
     # begin TF inference
     if run_tf:
+        print('running with TF')
         conf, paf = sess.run(model_outputs, {model_inputs[0]: [x]})
-        draw_results(x, conf[0], paf[0], 'tf-result.png')
+        draw_results(x, conf[0], paf[0], 'tf-result.png', args.data_format)
     # END of TF
 
 
