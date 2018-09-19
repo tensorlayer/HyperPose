@@ -1,7 +1,7 @@
 #include "tf-runner.h"
 
-#include <tensorflow/core/framework/tensor.h>
-#include <tensorflow/core/public/session.h>
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow/core/public/session.h"
 
 #include "tf-utils.h"
 #include "tracer.h"
