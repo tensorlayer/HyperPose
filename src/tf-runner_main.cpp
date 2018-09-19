@@ -15,6 +15,8 @@ DEFINE_int32(input_width, 432, "Width of input image.");
 
 int main()
 {
+    TRACE(__func__);
+
     std::unique_ptr<TFRunner> runner;
     create_openpose_runner(FLAGS_tf_model, FLAGS_input_height,
                            FLAGS_input_width, runner);

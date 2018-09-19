@@ -1,14 +1,18 @@
 #include "tf-runner.h"
-#include "tf-utils.h"
 
 #include <tensorflow/core/framework/tensor.h>
 #include <tensorflow/core/public/session.h>
+
+#include "tf-utils.h"
+#include "tracer.h"
 
 namespace tf = tensorflow;
 
 tf::Status LoadGraph(const std::string &graph_file_name,
                      std::unique_ptr<tf::Session> &session)
 {
+    TRACE(__func__);
+
     tf::GraphDef graph_def;
     TF_RETURN_IF_ERROR(
         tf::ReadBinaryProto(tf::Env::Default(), graph_file_name, &graph_def));
@@ -27,12 +31,11 @@ std::vector<T> get_firsts(const std::vector<std::pair<T, S>> &ps)
     return v;
 }
 
-class OpenposeRunnerImpl : public TFRunner
+class TFRunnerImpl : public TFRunner
 {
   public:
-    OpenposeRunnerImpl(const std::string &graph_path,
-                       const bind_info_t &input_names,
-                       const bind_info_t &output_names);
+    TFRunnerImpl(const std::string &graph_path, const bind_info_t &input_names,
+                 const bind_info_t &output_names);
 
     virtual void operator()(const std::vector<void *> &input_info,
                             const std::vector<void *> &output_info) override;
@@ -46,12 +49,14 @@ class OpenposeRunnerImpl : public TFRunner
     std::unique_ptr<tensorflow::Session> session_;
 };
 
-OpenposeRunnerImpl::OpenposeRunnerImpl(const std::string &graph_path,
-                                       const bind_info_t &input_info,
-                                       const bind_info_t &output_info)
+TFRunnerImpl::TFRunnerImpl(const std::string &graph_path,
+                           const bind_info_t &input_info,
+                           const bind_info_t &output_info)
     : input_info(input_info), output_info(output_info),
       output_names(get_firsts(output_info))
 {
+    TRACE(__func__);
+
     auto status = LoadGraph(graph_path, session_);
     if (!status.ok()) {
         LOG(ERROR) << status;
@@ -59,9 +64,11 @@ OpenposeRunnerImpl::OpenposeRunnerImpl(const std::string &graph_path,
     }
 }
 
-void OpenposeRunnerImpl::operator()(const std::vector<void *> &inputs,
-                                    const std::vector<void *> &outputs)
+void TFRunnerImpl::operator()(const std::vector<void *> &inputs,
+                              const std::vector<void *> &outputs)
 {
+    TRACE(__func__);
+
     std::vector<std::pair<std::string, tf::Tensor>> feed_dict;
     for (int i = 0; i < input_info.size(); ++i) {
         const auto t =
@@ -71,6 +78,7 @@ void OpenposeRunnerImpl::operator()(const std::vector<void *> &inputs,
 
     std::vector<tf::Tensor> output_tensors;
     {
+        TRACE("session->Run");
         const auto status =
             session_->Run(feed_dict, output_names, {}, &output_tensors);
         if (!status.ok()) {
@@ -88,6 +96,8 @@ void OpenposeRunnerImpl::operator()(const std::vector<void *> &inputs,
 void create_openpose_runner(const std::string &model_file, const int height,
                             const int width, std::unique_ptr<TFRunner> &p)
 {
+    TRACE(__func__);
+
     const int n_joins = 18 + 1;
     const int n_connections = 17 + 2;
 
@@ -102,5 +112,5 @@ void create_openpose_runner(const std::string &model_file, const int height,
         {"outputs/conf", {f_height, f_width, n_joins}},
         {"outputs/paf", {f_height, f_width, 2 * n_connections}},
     };
-    p.reset(new OpenposeRunnerImpl(model_file, input_names, output_names));
+    p.reset(new TFRunnerImpl(model_file, input_names, output_names));
 }
