@@ -17,13 +17,12 @@ measure() {
 cd $(dirname $0)/..
 
 export PYTHONUNBUFFERED=1
+# DATA_DIR=$(pwd)/data/media
 
 MODEL_DIR=${HOME}/Downloads
-DATA_DIR=${HOME}/Downloads/new-tests
-IMAGES=$(ls ${DATA_DIR}/*.png | sort | tr '\n' ',')
+DATA_DIR=$HOME/var/data/openpose
 
-# DATA_DIR=$(pwd)/data/media
-# IMAGES=$(ls ${DATA_DIR}/*.jpg | sort | tr '\n' ',')
+IMAGES=$(ls ${DATA_DIR}/examples/media/*.png | sort | tr '\n' ',')
 
 LIMIT=100
 
@@ -54,10 +53,11 @@ profile_model() {
 }
 
 mkdir -p logs
-measure profile_model vggtiny new-models/hao18/pose350000.npz NHWC
+# measure profile_model vggtiny new-models/hao18/pose350000.npz NHWC
 # measure profile_model mobilenet mbn280000.npz NHWC
 # measure profile_model vgg vgg450000_no_cpm.npz NHWC
 # measure profile_model vgg vgg450000_no_cpm.npz NCHW # npz shape, is the same, but inference doesn't work yet
 # measure profile_model hao28_experimental hao28/pose345000.npz NHWC
 
+# measure profile_model hao28_experimental hao28/pose345000.npz NHWC
 measure profile_model hao28_experimental hao28/pose345000.npz NCHW

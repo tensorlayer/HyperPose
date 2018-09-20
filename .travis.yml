@@ -1,14 +1,19 @@
 # https://docs.travis-ci.com/user/languages/python/
 language: python
 
+# https://docs.travis-ci.com/user/docker/
+services:
+- docker
+
 python:
-  - '3.6'
-  - '2.7'
+- '3.6'
+- '2.7'
 
 sudo: required
 
 before_install:
-- sudo apt install -y swig
+- docker info
+- sudo apt install -y swig # FIXME: can't install libopencv-dev on travis CI
 - pip install -r requirements.txt
 - pip install pycocotools  # must be installed after cython is installed
 - pip install git+https://github.com/tensorlayer/tensorlayer.git  # TODO: create a latest release for TL
@@ -16,7 +21,10 @@ before_install:
 - ./scripts/download-test-data.sh
 
 script:
+- make docker-build
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vgg
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vggtiny
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=mobilenet
+# TODO: reenable when data_format is supported in BN
+# - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=hao28_experimental
 # TODO: add move tests
