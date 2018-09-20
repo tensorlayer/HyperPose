@@ -34,8 +34,8 @@ def inference(base_model_name, path_to_npz, data_format, input_files, plot):
         if humans:
             for h in humans:
                 tl.logging.debug(h)
-            if plot:
-                plot_humans(e, image, humans, '%02d' % (idx + 1))
+        if plot:
+            plot_humans(e, image, humans, '%02d' % (idx + 1))
     tot = time.time() - t0
     mean = tot / len(input_files)
     tl.logging.info('inference all took: %f, mean: %f, FPS: %f' % (tot, mean, 1.0 / mean))
