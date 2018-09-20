@@ -9,12 +9,11 @@ config.TRAIN.batch_size = 8
 config.TRAIN.save_interval = 5000
 config.TRAIN.log_interval = 1
 # config.TRAIN.n_epoch = 80
-config.TRAIN.decay_every_step = 136106  # evey number of step to decay lr
 config.TRAIN.n_step = 600000  # total number of step
-config.TRAIN.base_lr = 4e-5  # initial learning rate
-config.TRAIN.gamma = 0.333  # decay lr factor
+config.TRAIN.lr_init = 4e-5  # initial learning rate
+config.TRAIN.lr_decay_every_step = 136106  # evey number of step to decay lr
+config.TRAIN.lr_decay_factor = 0.333  # decay lr factor
 config.TRAIN.weight_decay_factor = 5e-4
-config.TRAIN.distributed = False
 config.TRAIN.train_mode = 'datasetapi'  # placeholder (debug), datasetapi (single-gpu), distributed (multi-gpus)
 
 config.MODEL = edict()
