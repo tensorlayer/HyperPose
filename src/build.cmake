@@ -13,35 +13,8 @@ TARGET_LINK_LIBRARIES(paf opencv_core opencv_imgproc opencv_highgui)
 ADD_LIBRARY(vis ${CMAKE_CURRENT_LIST_DIR}/vis.cpp)
 TARGET_LINK_LIBRARIES(vis opencv_core opencv_imgproc opencv_highgui)
 
-ADD_EXECUTABLE(test_paf
-               ${CMAKE_CURRENT_LIST_DIR}/test_paf.cpp
-               ${CMAKE_CURRENT_LIST_DIR}/tracer.cpp)
-TARGET_LINK_LIBRARIES(test_paf paf vis)
-
 ADD_EXECUTABLE(fake-runner
                ${CMAKE_CURRENT_LIST_DIR}/fake_uff-runner.cpp
                ${CMAKE_CURRENT_LIST_DIR}/tracer.cpp
                ${CMAKE_CURRENT_LIST_DIR}/uff-runner_main.cpp)
 TARGET_LINK_LIBRARIES(fake-runner input_image paf vis gflags)
-
-
-
-ADD_EXECUTABLE(process-paf
-               ${CMAKE_CURRENT_LIST_DIR}/process-paf.cpp
-               ${CMAKE_CURRENT_LIST_DIR}/tracer.cpp)
-TARGET_LINK_LIBRARIES(process-paf paf vis gflags)
-
-
-# include(${CMAKE_CURRENT_LIST_DIR}/tensorflow.cmake)
-# ADD_LIBRARY(tf-runner
-#             ${CMAKE_CURRENT_LIST_DIR}/tf-runner.cpp
-#             ${CMAKE_CURRENT_LIST_DIR}/tracer.cpp)
-# TARGET_LINK_LIBRARIES(tf-runner tensorflow_framework
-#                       opencv_core opencv_imgproc opencv_highgui)
-
-
-
-# ADD_EXECUTABLE(tf-runner_main
-#                ${CMAKE_CURRENT_LIST_DIR}/tf-runner_main.cpp
-#                ${CMAKE_CURRENT_LIST_DIR}/tracer.cpp)
-# TARGET_LINK_LIBRARIES(tf-runner_main input_image gflags tf-runner)
