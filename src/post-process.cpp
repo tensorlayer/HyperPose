@@ -92,27 +92,6 @@ void inplace_select_peaks(const tensor_t<float, 3> &output,
     }
 }
 
-template <typename T, uint8_t r>
-void show_peak_info(const tensor_proxy_t<T, r> &t, const char *prefix)
-{
-    const int n = t.volume();
-    T min = std::numeric_limits<T>::max();
-    T max = std::numeric_limits<T>::lowest();
-    T sum = 0;
-    int cnt = 0;
-    for (int i = 0; i < n; ++i) {
-        if (t.data()[i] != 0) {
-            ++cnt;
-            min = std::min(min, t.data()[i]);
-            max = std::max(max, t.data()[i]);
-            sum += t.data()[i];
-        }
-    }
-    printf("[peak info :: %s] got %d from %d, %%%.4f, min: %f, mean: %f, max: "
-           "%f\n",
-           prefix, cnt, n, 100.0 * cnt / n, min, sum / cnt, max);
-}
-
 void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
 {
     TRACE(__func__);
