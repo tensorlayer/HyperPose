@@ -47,5 +47,5 @@ PATH_TO_NPZ=${HOME}/Downloads/vgg450000_no_cpm.npz
 # BASE_MODEL=mobilenet
 # PATH_TO_NPZ=${HOME}/Downloads/mbn28000.npz
 
-measure ./export.py --base-model=${BASE_MODEL} --path-to-npz=${PATH_TO_NPZ}
+measure ./export.py --base-model=${BASE_MODEL} --full=True --path-to-npz=${PATH_TO_NPZ}
 measure freeze

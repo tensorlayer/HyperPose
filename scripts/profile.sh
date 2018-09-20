@@ -29,6 +29,15 @@ IMAGES=$(ls ${DATA_DIR}/*.png | sort | tr '\n' ',')
 
 LIMIT=100
 
+MODEL_DIR=${HOME}/Downloads
+DATA_DIR=${HOME}/Downloads/new-tests
+IMAGES=$(ls ${DATA_DIR}/*.png | sort | tr '\n' ',')
+
+# DATA_DIR=$(pwd)/data/media
+# IMAGES=$(ls ${DATA_DIR}/*.jpg | sort | tr '\n' ',')
+
+LIMIT=100
+
 profile_model() {
     local model=$1
     local npz=$2
