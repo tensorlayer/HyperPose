@@ -8,7 +8,7 @@ __pycache__
 *.log
 *.out
 *.png
-*.so
+*.uff
 /3rdparty
 /bazel-*
 /checkpoints
@@ -22,5 +22,6 @@ cocoapi-master/
 cocoapi/
 inference/*png
 models_hao*
-src/tensorflow.cmake
+test.py
+*.idx
 test.py
