@@ -17,7 +17,6 @@ import tensorrt as trt
 import uff
 from idx import write_idx
 from inference.common import measure, read_imgfile, rename_tensor
-from inference.estimator2 import PoseEstimator
 from models import _input_image, get_base_model_func, get_full_model_func
 from tensorrt.parsers import uffparser
 import pycuda.autoinit as _

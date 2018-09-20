@@ -129,11 +129,4 @@ void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
     smooth(input, output);
     same_max_pool_3x3(output, pooled);
     inplace_select_peaks(output, pooled);
-
-    {
-        tensor_proxy_t<float, 3> t1(output.data(), channel - 1, height, width);
-        tensor_proxy_t<float, 2> t2(output.data() + t1.volume(), height, width);
-        show_peak_info(t1, "forefront");
-        show_peak_info(t2, "background");
-    }
 }
