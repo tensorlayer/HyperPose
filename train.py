@@ -29,12 +29,12 @@ tl.files.exists_or_mkdir(config.MODEL.model_path, verbose=False)  # to save mode
 
 # define hyper-parameters for training
 batch_size = config.TRAIN.batch_size
-decay_every_step = config.TRAIN.decay_every_step
+lr_decay_every_step = config.TRAIN.lr_decay_every_step
 n_step = config.TRAIN.n_step
 save_interval = config.TRAIN.save_interval
 weight_decay_factor = config.TRAIN.weight_decay_factor
-base_lr = config.TRAIN.base_lr
-gamma = config.TRAIN.gamma
+lr_init = config.TRAIN.lr_init
+lr_decay_factor = config.TRAIN.lr_decay_factor
 
 # define hyper-parameters for model
 model_path = config.MODEL.model_path
@@ -231,10 +231,10 @@ if __name__ == '__main__':
         total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element)
 
         global_step = tf.Variable(1, trainable=False)
-        print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
-            n_step, batch_size, base_lr, decay_every_step))
+        print('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
+            n_step, batch_size, lr_init, lr_decay_every_step))
         with tf.variable_scope('learning_rate'):
-            lr_v = tf.Variable(base_lr, trainable=False)
+            lr_v = tf.Variable(lr_init, trainable=False)
 
         opt = tf.train.MomentumOptimizer(lr_v, 0.9)
         train_op = opt.minimize(total_loss, global_step=global_step)
@@ -252,13 +252,13 @@ if __name__ == '__main__':
                 print("no pretrained model")
 
             ## train until the end
-            sess.run(tf.assign(lr_v, base_lr))
+            sess.run(tf.assign(lr_v, lr_init))
             while (True):
                 tic = time.time()
                 step = sess.run(global_step)
-                if step != 0 and (step % decay_every_step == 0):
-                    new_lr_decay = gamma**(step // decay_every_step)
-                    sess.run(tf.assign(lr_v, base_lr * new_lr_decay))
+                if step != 0 and (step % lr_decay_every_step == 0):
+                    new_lr_decay = lr_decay_factor**(step // lr_decay_every_step)
+                    sess.run(tf.assign(lr_v, lr_init * new_lr_decay))
 
                 [_, _loss, _stage_losses, _l2, conf_result, paf_result] = \
                     sess.run([train_op, total_loss, stage_losses, l2_loss, last_conf, last_paf])
@@ -329,10 +329,10 @@ if __name__ == '__main__':
         total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element, is_train=True, reuse=False)
 
         global_step = tf.Variable(1, trainable=False)
-        print('Start - n_step: {} batch_size: {} base_lr: {} decay_every_step: {}'.format(
-            n_step, batch_size, base_lr, decay_every_step))
+        print('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
+            n_step, batch_size, lr_init, lr_decay_every_step))
         with tf.variable_scope('learning_rate'):
-            lr_v = tf.Variable(base_lr, trainable=False)
+            lr_v = tf.Variable(lr_init, trainable=False)
 
         opt = tf.train.MomentumOptimizer(lr_v, 0.9)
         train_op = opt.minimize(total_loss, global_step=global_step)
@@ -350,13 +350,13 @@ if __name__ == '__main__':
                 print("no pretrained model")
 
             ## train until the end
-            sess.run(tf.assign(lr_v, base_lr))
+            sess.run(tf.assign(lr_v, lr_init))
             while (True):
                 tic = time.time()
                 step = sess.run(global_step)
-                if step != 0 and (step % decay_every_step == 0):
-                    new_lr_decay = gamma**(step // decay_every_step)
-                    sess.run(tf.assign(lr_v, base_lr * new_lr_decay))
+                if step != 0 and (step % lr_decay_every_step == 0):
+                    new_lr_decay = lr_decay_factor**(step // lr_lr_decay_every_step)
+                    sess.run(tf.assign(lr_v, lr_init * new_lr_decay))
 
                 # get a batch of training data. TODO change to direct feed without using placeholder
                 tran_batch = sess.run(one_element)
