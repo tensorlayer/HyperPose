@@ -18,13 +18,14 @@ cd $(dirname $0)/..
 
 export PYTHONUNBUFFERED=1
 
+MODEL_DIR=${HOME}/Downloads
 DATA_DIR=${HOME}/Downloads/new-tests
 IMAGES=$(ls ${DATA_DIR}/*.png | sort | tr '\n' ',')
 
 # DATA_DIR=$(pwd)/data/media
 # IMAGES=$(ls ${DATA_DIR}/*.jpg | sort | tr '\n' ',')
 
-LIMIT=1
+LIMIT=100
 
 profile_model() {
     local model=$1
@@ -40,7 +41,7 @@ profile_model() {
         return
     fi
 
-    ./test_inference.py --path-to-npz=$HOME/Downloads/$npz \
+    ./test_inference.py --path-to-npz=${MODEL_DIR}/$npz \
         --base-model=$model \
         --images=${IMAGES} \
         --data-format=$data_format \
@@ -48,8 +49,8 @@ profile_model() {
         --repeat=1 \
         --limit=${LIMIT}
 
-        #  \
-        # >logs/$log_name.stdout.log 2>logs/$log_name.stderr.log
+    #  \
+    # >logs/$log_name.stdout.log 2>logs/$log_name.stderr.log
 }
 
 mkdir -p logs
@@ -57,3 +58,6 @@ measure profile_model vggtiny new-models/hao18/pose350000.npz NHWC
 # measure profile_model mobilenet mbn280000.npz NHWC
 # measure profile_model vgg vgg450000_no_cpm.npz NHWC
 # measure profile_model vgg vgg450000_no_cpm.npz NCHW # npz shape, is the same, but inference doesn't work yet
+# measure profile_model hao28_experimental hao28/pose345000.npz NHWC
+
+measure profile_model hao28_experimental hao28/pose345000.npz NCHW

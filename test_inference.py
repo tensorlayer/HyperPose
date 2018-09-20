@@ -50,7 +50,6 @@ def inference_base_model(base_model_name, path_to_npz, data_format, input_files,
 
     def model_func(n_pos, target_size):
         base_model = get_base_model_func(base_model_name)
-        data_format = 'channels_last'
         image = _input_image(target_size[1], target_size[0], data_format, 'image')
         _, b1_list, b2_list, _ = base_model(image, n_pos, None, None, False, False, data_format=data_format)
         conf_tensor = b1_list[-1].outputs

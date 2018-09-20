@@ -22,16 +22,29 @@ test_vgg_model() {
         --images=${images}
 }
 
+test_vggtiny_model() {
+    local images=$(echo $@ | tr ' ' ',')
+    echo ${images}
+    ./uff-runner.py \
+        --base-model=vggtiny \
+        --path-to-npz=${MODEL_DIR}/new-models/hao18/pose350000.npz \
+        --images=${images}
+}
+
 test_hao28_model() {
     local images=$(echo $@ | tr ' ' ',')
     echo ${images}
     ./uff-runner.py \
-        --base-model=hao28 \
-        --path-to-npz=models/pose345000.npz \
+        --base-model=hao28_experimental \
+        --path-to-npz=${MODEL_DIR}/hao28/pose345000.npz \
         --images=${images}
 }
 
-test_vgg_model \
+# test_vgg_model \
+#     ./data/media/COCO_val2014_000000000192.jpg \
+#     ${DATA_DIR}/cam0_27.png
+
+test_vggtiny_model \
     ./data/media/COCO_val2014_000000000192.jpg \
     ${DATA_DIR}/cam0_27.png
 
