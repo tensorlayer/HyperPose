@@ -8,7 +8,7 @@ import time
 import tensorflow as tf
 import tensorlayer as tl
 
-from inference.common import measure, plot_humans, read_imgfile, _default_profiler, rename_tensor
+from inference.common import measure, plot_humans, read_imgfile, rename_tensor
 from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
 from models import get_full_model_func, get_base_model_func, _input_image
 
@@ -72,7 +72,7 @@ def inference_base_model(base_model_name, path_to_npz, data_format, input_files,
 
         for idx, img_name in enumerate(input_files):
             image = measure(lambda: read_imgfile(img_name, width, height, data_format=data_format), 'read_imgfile')
-            c, p = sess.run([conf, paf], {x: [image]})
+            c, p = measure(lambda: sess.run([conf, paf], {x: [image]}), 'sess.run base_model')
             debug_tensor(c, 'conf tensor')
             debug_tensor(p, 'PAF')
 
