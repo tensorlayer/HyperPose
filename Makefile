@@ -15,9 +15,6 @@ CPU_TAG = openpose-plus:builder
 docker-build:
 	docker build --rm -t $(CPU_TAG) -f docker/Dockerfile.builder-cpu .
 
-docker-run-test: docker-build
-	docker run --rm -it $(CPU_TAG) ./cmake-build/Linux/test_paf
-
 GPU_TAG = openpose-plus:builder-gpu
 docker-build-gpu:
 	docker build --rm -t $(GPU_TAG) -f docker/Dockerfile.builder-gpu .
