@@ -12,22 +12,36 @@
 #include <NvUtils.h>
 
 #include "cuda_buffer.h"
-#include "debug.h"
 #include "logger.h"
 #include "tracer.h"
 #include "uff-runner.h"
 
-Logger gLogger;
-
 constexpr uint64_t Gi = 1 << 30;
 
 using input_info_t = std::vector<std::pair<std::string, std::vector<int>>>;
+
+Logger gLogger;
 
 inline int64_t volume(const nvinfer1::Dims &d)
 {
     int64_t v = 1;
     for (int i = 0; i < d.nbDims; i++) v *= d.d[i];
     return v;
+}
+
+std::string to_string(const nvinfer1::Dims &d)
+{
+    std::string s;
+    for (int64_t i = 0; i < d.nbDims; i++) {
+        if (!s.empty()) { s += ", "; }
+        s += std::to_string(d.d[i]);
+    }
+    return "(" + s + ")";
+}
+
+std::string to_string(const nvinfer1::DataType dtype)
+{
+    return std::to_string(int(dtype));
 }
 
 nvinfer1::ICudaEngine *loadModelAndCreateEngine(const char *uffFile,
