@@ -4,6 +4,7 @@ __pycache__
 *.jpg
 *.log
 *.png
+*.uff
 /3rdparty
 /checkpoints
 /coco
@@ -14,4 +15,7 @@ __pycache__
 cocoapi-master/
 cocoapi/
 inference/*png
+models_hao*
+test.py
+*.idx
 test.py

@@ -80,12 +80,12 @@ def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None, data_for
 
         # input x: 0~1
         # bgr: -0.5~0.5 for InputLayer
-        red, green, blue = tf.split(axis=3, num_or_size_splits=3, value=x)
-        bgr = tf.concat(axis=3, values=[blue, green, red])
-        bgr = bgr - 0.5
+        # red, green, blue = tf.split(axis=3, num_or_size_splits=3, value=x)
+        # bgr = tf.concat(axis=3, values=[blue, green, red])
+        # bgr = bgr - 0.5
 
         # input layer
-        net_in = InputLayer(bgr, name='input')
+        net_in = InputLayer(x, name='input')
 
         # conv1
         net = _conv2d(net_in, 64, (3, 3), (1, 1), act=tf.nn.relu, padding='SAME', name='conv1_1')

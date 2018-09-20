@@ -98,8 +98,9 @@ class MPIIPart(Enum):
         return pose_2d_mpii, visibilty
 
 
-CocoPairs = [(1, 2), (1, 5), (2, 3), (3, 4), (5, 6), (6, 7), (1, 8), (8, 9), (9, 10), (1, 11), (11, 12), (12, 13),
-             (1, 0), (0, 14), (14, 16), (0, 15), (15, 17), (2, 16), (5, 17)]  # = 19
+CocoPairs = [(1, 2), (1, 5), (2, 3), (3, 4), (5, 6), (6, 7), (1, 8), (8, 9), (9, 10), (1, 11), (11, 12), (12, 13), (1,
+                                                                                                                    0),
+             (0, 14), (14, 16), (0, 15), (15, 17), (2, 16), (5, 17)]  # = 19
 CocoPairsRender = CocoPairs[:-2]
 # CocoPairsNetwork = [
 #     (12, 13), (20, 21), (14, 15), (16, 17), (22, 23), (24, 25), (0, 1), (2, 3), (4, 5),
@@ -117,7 +118,7 @@ def read_imgfile(path, width=None, height=None, data_format='channels_last'):
         val_image = cv2.resize(val_image, (width, height))
     if data_format == 'channels_first':
         val_image = val_image.transpose([2, 0, 1])
-    return val_image
+    return val_image / 255.0
 
 
 def get_sample_images(w, h):
@@ -161,15 +162,17 @@ class Profiler(object):
         self.total = dict()
 
     def __del__(self):
-        pass
-        # TODO: make sure __def__ is only called on exit
-        # self.report()
+        if self.count:
+            self.report()
 
     def report(self):
         sorted_costs = sorted([(t, name) for name, t in self.total.items()])
         sorted_costs.reverse()
         names = [name for _, name in sorted_costs]
+        hr = '-' * 80
+        print(hr)
         print('%-12s %-12s %-12s %s' % ('tot (s)', 'count', 'mean (s)', 'name'))
+        print(hr)
         for name in names:
             tot, cnt = self.total[name], self.count[name]
             mean = tot / cnt
@@ -232,3 +235,15 @@ def plot_humans(e, image, humans, name):
     plt.colorbar()
     mkpath('vis')
     plt.savefig('vis/result-%s.png' % name)
+
+
+def rename_tensor(x, name):
+    # FIXME: use tf.identity(x, name=name) doesn't work
+    new_shape = []
+    for d in x.shape:
+        try:
+            d = int(d)
+        except:
+            d = -1
+        new_shape.append(d)
+    return tf.reshape(x, new_shape, name=name)
