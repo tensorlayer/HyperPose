@@ -41,21 +41,20 @@ class TfPoseEstimator2Loader(TfPoseEstimator2):
 
     def _warm_up(self, graph):
         self.persistent_sess = tf.InteractiveSession(graph=graph)
-        # self.persistent_sess.run(tf.global_variables_initializer())
 
 
 def inference(path_to_freezed_model, input_files):
-    e = measure(lambda: TfPoseEstimator2Loader(path_to_freezed_model, target_size=(432, 368)),
+    h, w = 368, 432
+    e = measure(lambda: TfPoseEstimator2Loader(path_to_freezed_model, target_size=(w, h)),
                 'create TfPoseEstimator2Loader')
-
     for idx, img_name in enumerate(input_files):
-        image = read_imgfile(img_name, None, None)
-        humans, heatMap, pafMap = measure(lambda: e.inference(image, resize_out_ratio=8.0), 'inference')
+        image = read_imgfile(img_name, w, h)
+        humans, heatMap, pafMap = measure(lambda: e.inference(image), 'inference')
         print('got %d humans from %s' % (len(humans), img_name))
         if humans:
             for h in humans:
                 print(h)
-            plot_humans(image, heatMap, pafMap, humans, '%02d' % (idx + 1))
+        plot_humans(image, heatMap, pafMap, humans, '%02d' % (idx + 1))
 
 
 def parse_args():

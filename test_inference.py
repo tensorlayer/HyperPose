@@ -29,7 +29,7 @@ def inference(base_model_name, path_to_npz, data_format, input_files, plot):
     t0 = time.time()
     for idx, img_name in enumerate(input_files):
         image = measure(lambda: read_imgfile(img_name, width, height, data_format=data_format), 'read_imgfile')
-        humans, heatMap, pafMap = measure(lambda: e.inference(image, resize_out_ratio=8.0), 'e.inference')
+        humans, heatMap, pafMap = measure(lambda: e.inference(image), 'e.inference')
         tl.logging.info('got %d humans from %s' % (len(humans), img_name))
         if humans:
             for h in humans:

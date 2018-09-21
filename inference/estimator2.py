@@ -107,26 +107,13 @@ class TfPoseEstimator:
         tl.files.load_and_assign_npz_dict(graph_path, self.persistent_sess)
 
     def __del__(self):
-        # self.persistent_sess.close()
-        pass
+        self.persistent_sess.close()
 
-    @staticmethod
-    def _quantize_img(npimg):
-        npimg_q = npimg + 1.0
-        npimg_q /= (2.0 / 2**8)
-        # npimg_q += 0.5
-        npimg_q = npimg_q.astype(np.uint8)
-        return npimg_q
-
-    def inference(self, npimg, resize_to_default=True, resize_out_ratio=1.0):
+    def inference(self, npimg):
         upsample_size = [
-            int(self.target_size[1] / 8 * resize_out_ratio),
-            int(self.target_size[0] / 8 * resize_out_ratio)
+            int(self.target_size[1]),
+            int(self.target_size[0]),
         ]
-
-        if self.tensor_image.dtype == tf.quint8:
-            # quantize input image
-            npimg = TfPoseEstimator._quantize_img(npimg)
 
         logger.debug('inference+ upsample_size %s' % (upsample_size,))
         logger.debug('inference+ original shape=%s' % (npimg.shape,))

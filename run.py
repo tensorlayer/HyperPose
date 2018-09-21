@@ -59,11 +59,6 @@ def parse_args():
         help=
         'if provided, resize images before they are processed. default=0x0, Recommends : 432x368 or 656x368 or 1312x736 '
     )
-    parser.add_argument(
-        '--resize-out-ratio',
-        type=float,
-        default=8.0,
-        help='if provided, resize heatmaps before they are post-processed. default=8.0')
     parser.add_argument('--model', type=str, default='cmu', help='cmu / mobilenet_thin')
     parser.add_argument('--cocoyear', type=str, default='2017')
     parser.add_argument('--coco-dir', type=str, default='')
@@ -85,8 +80,6 @@ if __name__ == '__main__':
     imglist = os.listdir(args.base_dir)
     for idx, image_name in enumerate(imglist):
         img_name = os.path.join(args.base_dir, image_name)
-        image = read_imgfile(img_name, None, None)
-
-        # inference the image with the specified network
-        humans, heatMap, pafMap = e.inference(image, resize_to_default=(w > 0 and h > 0), resize_out_ratio=args.resize_out_ratio)
+        image = read_imgfile(img_name, w, h)
+        humans, heatMap, pafMap = e.inference(image)
         plot_humans(image, heatMap, pafMap, humans, '%02d' % (idx + 1))

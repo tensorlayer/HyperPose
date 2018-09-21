@@ -112,7 +112,8 @@ CocoColors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255
               [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
 
 
-def read_imgfile(path, width=None, height=None, data_format='channels_last'):
+def read_imgfile(path, width, height, data_format='channels_last'):
+    """Read image file and resize to network input size."""
     val_image = cv2.imread(path, cv2.IMREAD_COLOR)
     if width is not None and height is not None:
         val_image = cv2.resize(val_image, (width, height))
@@ -171,12 +172,12 @@ class Profiler(object):
         names = [name for _, name in sorted_costs]
         hr = '-' * 80
         print(hr)
-        print('%-12s %-12s %-12s %s' % ('tot (s)', 'count', 'mean (s)', 'name'))
+        print('%-12s %-12s %-12s %s' % ('tot (s)', 'count', 'mean (ms)', 'name'))
         print(hr)
         for name in names:
             tot, cnt = self.total[name], self.count[name]
             mean = tot / cnt
-            print('%-12f %-12d %-12f %s' % (tot, cnt, mean, name))
+            print('%-12f %-12d %-12f %s' % (tot, cnt, mean * 1000, name))
 
     def __call__(self, name, duration):
         if name in self.count:
