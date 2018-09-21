@@ -44,10 +44,10 @@ test_hao28_model() {
 #     ${DATA_DIR}/examples/media/COCO_val2014_000000000192.jpg \
 #     ${DATA_DIR}/new-tests/cam0_27.png
 
-# test_vggtiny_model \
-#     ${DATA_DIR}/examples/media/COCO_val2014_000000000192.jpg \
-#     ${DATA_DIR}/new-tests/cam0_27.png
-
-test_hao28_model \
+test_vggtiny_model \
     ${DATA_DIR}/examples/media/COCO_val2014_000000000192.jpg \
     ${DATA_DIR}/new-tests/cam0_27.png
+
+# test_hao28_model \
+#     ${DATA_DIR}/examples/media/COCO_val2014_000000000192.jpg \
+#     ${DATA_DIR}/new-tests/cam0_27.png

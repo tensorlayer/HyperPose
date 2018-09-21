@@ -12,6 +12,7 @@ b_init = None  #tf.constant_initializer(value=0.0)
 b_init2 = tf.constant_initializer(value=0.0)
 decay = 0.99
 
+
 def depthwise_conv_block(n, n_filter, filter_size=(3, 3), strides=(1, 1), is_train=False, name="depth_block"):
     with tf.variable_scope(name):
         n = DepthwiseConv2d(n, filter_size, strides, W_init=W_init, b_init=None, name='depthwise')

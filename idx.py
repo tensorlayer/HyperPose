@@ -26,7 +26,7 @@ def write_idx_header(f, a):
         f.write(pack('>I', dim))
 
 
-def write_idx(name, a : np.ndarray):
+def write_idx(name, a: np.ndarray):
     print('saving to %s' % name)
     with open(name, 'wb') as f:
         write_idx_header(f, a)

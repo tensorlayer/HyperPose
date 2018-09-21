@@ -25,7 +25,7 @@ DATA_DIR=$HOME/var/data/openpose
 IMAGES=$(ls ${DATA_DIR}/examples/media/*.png | sort | tr '\n' ',')
 
 REPEAT=10
-LIMIT=100
+LIMIT=1
 
 profile_model() {
     local model=$1
@@ -56,5 +56,5 @@ mkdir -p logs
 # measure profile_model mobilenet mbn280000.npz NHWC
 # measure profile_model vgg vgg450000_no_cpm.npz NHWC
 # measure profile_model vgg vgg450000_no_cpm.npz NCHW
-measure profile_model hao28_experimental hao28/pose345000.npz NHWC
-# measure profile_model hao28_experimental hao28/pose345000.npz NCHW
+# measure profile_model hao28_experimental hao28/pose345000.npz NHWC
+measure profile_model hao28_experimental hao28/pose345000.npz NCHW
