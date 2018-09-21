@@ -4,13 +4,11 @@ import time
 
 import cv2
 import numpy as np
-import slidingwindow as sw
 import tensorflow as tf
 import tensorlayer as tl
 
 from inference import common
 from inference.common import CocoPart
-from inference.pafprocess import pafprocess
 
 logger = logging.getLogger('TfPoseEstimator')
 logger.setLevel(logging.DEBUG)
@@ -65,40 +63,34 @@ class BodyPart:
         return self.__str__()
 
 
-class PoseEstimator:
+def estimate_paf(peaks, heat_mat, paf_mat):
+    from inference.pafprocess import pafprocess  # TODO: don't depend on it
+    pafprocess.process_paf(peaks, heat_mat, paf_mat)
 
-    def __init__(self):
-        pass
+    humans = []
+    for human_id in range(pafprocess.get_num_humans()):
+        human = Human([])
+        is_added = False
 
-    @staticmethod
-    def estimate_paf(peaks, heat_mat, paf_mat):
-        pafprocess.process_paf(peaks, heat_mat, paf_mat)
+        for part_idx in range(18):
+            c_idx = int(pafprocess.get_part_cid(human_id, part_idx))
+            if c_idx < 0:
+                continue
 
-        humans = []
-        for human_id in range(pafprocess.get_num_humans()):
-            human = Human([])
-            is_added = False
+            is_added = True
+            human.body_parts[part_idx] = BodyPart('%d-%d' % (human_id, part_idx), part_idx,
+                                                    float(pafprocess.get_part_x(c_idx)) / heat_mat.shape[1],
+                                                    float(pafprocess.get_part_y(c_idx)) / heat_mat.shape[0],
+                                                    pafprocess.get_part_score(c_idx))
 
-            for part_idx in range(18):
-                c_idx = int(pafprocess.get_part_cid(human_id, part_idx))
-                if c_idx < 0:
-                    continue
+        if is_added:
+            human.score = pafprocess.get_score(human_id)
+            humans.append(human)
 
-                is_added = True
-                human.body_parts[part_idx] = BodyPart('%d-%d' % (human_id, part_idx), part_idx,
-                                                      float(pafprocess.get_part_x(c_idx)) / heat_mat.shape[1],
-                                                      float(pafprocess.get_part_y(c_idx)) / heat_mat.shape[0],
-                                                      pafprocess.get_part_score(c_idx))
-
-            if is_added:
-                human.score = pafprocess.get_score(human_id)
-                humans.append(human)
-
-        return humans
+    return humans
 
 
 class TfPoseEstimator:
-    # TODO : multi-scale
 
     def __init__(self, graph_path, model_func, target_size=(368, 368), tf_config=None):
         n_pos = 19
@@ -177,6 +169,6 @@ class TfPoseEstimator:
         self.pafMat = pafMat_up[0]  # FIXME
 
         t = time.time()
-        humans = PoseEstimator.estimate_paf(peaks[0], heatMat_up[0], pafMat_up[0])
+        humans = estimate_paf(peaks[0], heatMat_up[0], pafMat_up[0])
         logger.info('estimate time=%.5f' % (time.time() - t))
         return humans
