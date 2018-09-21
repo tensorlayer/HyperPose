@@ -614,9 +614,9 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
             paf_result = pafs_result[i]
         if masks is not None:
             # print(masks.shape)
-            mask = masks[i,:,:,0]
+            mask = masks[i, :, :, 0]
             # print(mask.shape)
-            mask = mask[:,:,np.newaxis]
+            mask = mask[:, :, np.newaxis]
             # mask = masks[:,:,:,0]
             # mask = mask.reshape(hout, wout, 1)
             mask1 = np.repeat(mask, n_pos, 2)

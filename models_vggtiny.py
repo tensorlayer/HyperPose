@@ -21,9 +21,6 @@ def model(x, n_pos, mask_miss1, mask_miss2, is_train=False, reuse=None, data_for
     def _maxpool2d(x, name):
         return MaxPool2d(x, (2, 2), (2, 2), padding='SAME', name=name, data_format=data_format)
 
-    def bn(x, name):
-        return BatchNormLayer(x, is_train=is_train, act=tf.nn.relu, decay=decay, name=name, data_format=data_format)
-
     def concat(inputs, name):
         if data_format == 'channels_last':
             concat_dim = -1

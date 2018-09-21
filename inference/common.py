@@ -112,7 +112,8 @@ CocoColors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255
               [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
 
 
-def read_imgfile(path, width=None, height=None, data_format='channels_last'):
+def read_imgfile(path, width, height, data_format='channels_last'):
+    """Read image file and resize to network input size."""
     val_image = cv2.imread(path, cv2.IMREAD_COLOR)
     if width is not None and height is not None:
         val_image = cv2.resize(val_image, (width, height))
@@ -171,12 +172,12 @@ class Profiler(object):
         names = [name for _, name in sorted_costs]
         hr = '-' * 80
         print(hr)
-        print('%-12s %-12s %-12s %s' % ('tot (s)', 'count', 'mean (s)', 'name'))
+        print('%-12s %-12s %-12s %s' % ('tot (s)', 'count', 'mean (ms)', 'name'))
         print(hr)
         for name in names:
             tot, cnt = self.total[name], self.count[name]
             mean = tot / cnt
-            print('%-12f %-12d %-12f %s' % (tot, cnt, mean, name))
+            print('%-12f %-12d %-12f %s' % (tot, cnt, mean * 1000, name))
 
     def __call__(self, name, duration):
         if name in self.count:
@@ -195,42 +196,58 @@ def measure(f, name=None):
         name = f.__name__
     t0 = time.time()
     result = f()
-    # print('start %s' % name)
     duration = time.time() - t0
     _default_profiler(name, duration)
-    # line = '%s took %fs' % (name, duration)
-    # print(line)
-    # with open('profile.log', 'a') as f:
-    #     f.write(line + '\n')
     return result
 
 
-def plot_humans(e, image, humans, name):
+def draw_humans(npimg, humans):
+    npimg = np.copy(npimg)
+    image_h, image_w = npimg.shape[:2]
+    centers = {}
+    for human in humans:
+        # draw point
+        for i in range(CocoPart.Background.value):
+            if i not in human.body_parts.keys():
+                continue
+
+            body_part = human.body_parts[i]
+            center = (int(body_part.x * image_w + 0.5), int(body_part.y * image_h + 0.5))
+            centers[i] = center
+            cv2.circle(npimg, center, 3, CocoColors[i], thickness=3, lineType=8, shift=0)
+
+        # draw line
+        for pair_order, pair in enumerate(CocoPairsRender):
+            if pair[0] not in human.body_parts.keys() or pair[1] not in human.body_parts.keys():
+                continue
+            cv2.line(npimg, centers[pair[0]], centers[pair[1]], CocoColors[pair_order], 3)
+
+    return npimg
+
+
+def plot_humans(image, heatMat, pafMat, humans, name):
     import matplotlib.pyplot as plt
     fig = plt.figure()
     a = fig.add_subplot(2, 3, 1)
 
-    plt.imshow(e.draw_humans(image[..., ::-1], humans, True))
+    plt.imshow(draw_humans(image, humans))
 
     a = fig.add_subplot(2, 3, 2)
-    # plt.imshow(cv2.resize(image, (e.heatMat.shape[1], e.heatMat.shape[0])), alpha=0.5)
-    tmp = np.amax(e.heatMat[:, :, :-1], axis=2)
+    tmp = np.amax(heatMat[:, :, :-1], axis=2)
     plt.imshow(tmp, cmap=plt.cm.gray, alpha=0.5)
     plt.colorbar()
 
-    tmp2 = e.pafMat.transpose((2, 0, 1))
+    tmp2 = pafMat.transpose((2, 0, 1))
     tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
     tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
 
     a = fig.add_subplot(2, 3, 4)
     a.set_title('Vectormap-x')
-    # plt.imshow(CocoPose.get_bgimg(inp, target_size=(vectmap.shape[1], vectmap.shape[0])), alpha=0.5)
     plt.imshow(tmp2_odd, cmap=plt.cm.gray, alpha=0.5)
     plt.colorbar()
 
     a = fig.add_subplot(2, 3, 5)
     a.set_title('Vectormap-y')
-    # plt.imshow(CocoPose.get_bgimg(inp, target_size=(vectmap.shape[1], vectmap.shape[0])), alpha=0.5)
     plt.imshow(tmp2_even, cmap=plt.cm.gray, alpha=0.5)
     plt.colorbar()
     mkpath('vis')

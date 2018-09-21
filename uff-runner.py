@@ -16,8 +16,8 @@ from cv2 import imwrite
 import tensorrt as trt
 import uff
 from idx import write_idx
-from inference.common import measure, read_imgfile, rename_tensor
-from models import _input_image, get_base_model_func, get_full_model_func
+from inference.common import measure, read_imgfile
+from models import _input_image, get_model_func
 from tensorrt.parsers import uffparser
 import pycuda.autoinit as _
 import pycuda.driver as cuda
@@ -26,29 +26,18 @@ tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
 
 
-def get_model_func(base_model_name):
+def _get_model_func(base_model_name):
 
     h, w = 368, 432
     target_size = (w, h)
-    n_pos = 19
 
     def model_func():
         """Creates the openpose model.
 
         Returns a pair of lists: (inputs, outputs).
         """
-        base_model = get_base_model_func(base_model_name)
-        image = _input_image(target_size[1], target_size[0], 'channels_first', 'image')
-        _, b1_list, b2_list, _ = base_model(image, n_pos, None, None, False, False, data_format='channels_first')
-        conf_tensor = b1_list[-1].outputs
-        pafs_tensor = b2_list[-1].outputs
-
-        with tf.variable_scope('outputs'):
-            outputs = [
-                rename_tensor(conf_tensor, 'conf'),
-                rename_tensor(pafs_tensor, 'paf'),
-            ]
-        return [image], outputs
+        image, conf, paf = get_model_func(base_model_name)(target_size, 'channels_first')
+        return [image], [conf, paf]
 
     return model_func
 
@@ -147,7 +136,7 @@ def main():
         x = read_imgfile(name, width, height, 'channels_first')  # channels_first is required for tensorRT
         images.append(x)
 
-    model_func = get_model_func(args.base_model)
+    model_func = _get_model_func(args.base_model)
     model_inputs, model_outputs = model_func()
     input_names = [p.name[:-2] for p in model_inputs]
     output_names = [p.name[:-2] for p in model_outputs]

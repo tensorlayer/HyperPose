@@ -24,7 +24,8 @@ DATA_DIR=$HOME/var/data/openpose
 
 IMAGES=$(ls ${DATA_DIR}/examples/media/*.png | sort | tr '\n' ',')
 
-LIMIT=100
+REPEAT=10
+LIMIT=1
 
 profile_model() {
     local model=$1
@@ -45,19 +46,15 @@ profile_model() {
         --images=${IMAGES} \
         --data-format=$data_format \
         --plot='1' \
-        --repeat=1 \
+        --repeat=${REPEAT} \
         --limit=${LIMIT}
-
-    #  \
-    # >logs/$log_name.stdout.log 2>logs/$log_name.stderr.log
 }
 
 mkdir -p logs
 # measure profile_model vggtiny new-models/hao18/pose350000.npz NHWC
+# measure profile_model vggtiny new-models/hao18/pose350000.npz NCHW
 # measure profile_model mobilenet mbn280000.npz NHWC
 # measure profile_model vgg vgg450000_no_cpm.npz NHWC
-# measure profile_model vgg vgg450000_no_cpm.npz NCHW # npz shape, is the same, but inference doesn't work yet
-# measure profile_model hao28_experimental hao28/pose345000.npz NHWC
-
+# measure profile_model vgg vgg450000_no_cpm.npz NCHW
 # measure profile_model hao28_experimental hao28/pose345000.npz NHWC
 measure profile_model hao28_experimental hao28/pose345000.npz NCHW
