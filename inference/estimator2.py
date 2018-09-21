@@ -118,33 +118,6 @@ class TfPoseEstimator:
         npimg_q = npimg_q.astype(np.uint8)
         return npimg_q
 
-    @staticmethod
-    def draw_humans(npimg, humans, imgcopy=False):
-        if imgcopy:
-            npimg = np.copy(npimg)
-        image_h, image_w = npimg.shape[:2]
-        centers = {}
-        for human in humans:
-            # draw point
-            for i in range(common.CocoPart.Background.value):
-                if i not in human.body_parts.keys():
-                    continue
-
-                body_part = human.body_parts[i]
-                center = (int(body_part.x * image_w + 0.5), int(body_part.y * image_h + 0.5))
-                centers[i] = center
-                cv2.circle(npimg, center, 3, common.CocoColors[i], thickness=3, lineType=8, shift=0)
-
-            # draw line
-            for pair_order, pair in enumerate(common.CocoPairsRender):
-                if pair[0] not in human.body_parts.keys() or pair[1] not in human.body_parts.keys():
-                    continue
-
-                # npimg = cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
-                cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
-
-        return npimg
-
     def inference(self, npimg, resize_to_default=True, resize_out_ratio=1.0):
         upsample_size = [
             int(self.target_size[1] / 8 * resize_out_ratio),
@@ -165,10 +138,7 @@ class TfPoseEstimator:
                 self.upsample_size: upsample_size
             })
 
-        self.heatMat = heatMat_up[0]  # FIXME
-        self.pafMat = pafMat_up[0]  # FIXME
-
         t = time.time()
         humans = estimate_paf(peaks[0], heatMat_up[0], pafMat_up[0])
         logger.info('estimate time=%.5f' % (time.time() - t))
-        return humans
+        return humans, heatMat_up[0], pafMat_up[0]

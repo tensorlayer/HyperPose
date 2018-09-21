@@ -50,12 +50,12 @@ def inference(path_to_freezed_model, input_files):
 
     for idx, img_name in enumerate(input_files):
         image = read_imgfile(img_name, None, None)
-        humans = measure(lambda: e.inference(image, resize_out_ratio=8.0), 'inference')
+        humans, heatMap, pafMap = measure(lambda: e.inference(image, resize_out_ratio=8.0), 'inference')
         print('got %d humans from %s' % (len(humans), img_name))
         if humans:
             for h in humans:
                 print(h)
-            plot_humans(e, image, humans, '%02d' % (idx + 1))
+            plot_humans(image, heatMap, pafMap, humans, '%02d' % (idx + 1))
 
 
 def parse_args():

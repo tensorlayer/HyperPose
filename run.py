@@ -88,5 +88,5 @@ if __name__ == '__main__':
         image = read_imgfile(img_name, None, None)
 
         # inference the image with the specified network
-        humans = e.inference(image, resize_to_default=(w > 0 and h > 0), resize_out_ratio=args.resize_out_ratio)
-        plot_humans(e, image, humans, '%02d' % (idx + 1))
+        humans, heatMap, pafMap = e.inference(image, resize_to_default=(w > 0 and h > 0), resize_out_ratio=args.resize_out_ratio)
+        plot_humans(image, heatMap, pafMap, humans, '%02d' % (idx + 1))
