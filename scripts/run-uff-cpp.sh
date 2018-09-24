@@ -5,14 +5,19 @@ export HAVE_CUDA=1
 
 make
 
-D=$HOME/var/data/openpose/126
+MODEL_DIR=$HOME/Downloads
+D=$HOME/var/data/openpose
 
-# IMAGE=$HOME/Downloads/new-tests/cam0_27.png
-IMAGES=$D/cam2_3938.png,$D/cam1_2386.png
+run_uff_cpp() {
+    local MODEL_FILE=${MODEL_DIR}/hao28.uff
+    local IMAGES=$(echo $@ | tr ' ' ',')
+    ./cmake-build/$(uname -s)/uff-runner_main \
+        --model_file=${MODEL_FILE} \
+        --image_files=${IMAGES}
+}
 
-# MODEL_FILE=$HOME/Downloads/vgg.uff
-MODEL_FILE=$HOME/Downloads/vggtiny.uff
-
-./cmake-build/$(uname -s)/uff-runner_main \
-    --model_file=${MODEL_FILE} \
-    --image_files=${IMAGES}
+run_uff_cpp \
+    $D/examples/media/COCO_val2014_000000000192.png \
+    $D/new-tests/cam0_27.png \
+    $D/126/cam2_3938.png \
+    $D/126/cam1_2386.png
