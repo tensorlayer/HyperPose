@@ -136,26 +136,16 @@ class PostProcessor(object):
         self.sess.close()
 
     def __call__(self, heatmap_input, pafmap_input):
-        print('%s %s' % ('heatmap_input', heatmap_input.shape))
-        print('%s %s' % ('pafmap_input', pafmap_input.shape))
-
         if self.data_format == 'channels_first':
             p = [1, 2, 0]
             heatmap_input = heatmap_input.transpose(p)
             pafmap_input = pafmap_input.transpose(p)
-
-        print('%s %s' % ('heatmap_input', heatmap_input.shape))
-        print('%s %s' % ('pafmap_input', pafmap_input.shape))
 
         peaks, heatmap, pafmap = self.sess.run([self.peaks, self.heapmap_upsample, self.paf_upsample],
                                                feed_dict={
                                                    self.heatmap_input: [heatmap_input],
                                                    self.paf_input: [pafmap_input],
                                                })
-
-        print('%s %s' % ('peaks', peaks.shape))
-        print('%s %s' % ('heatmap', heatmap.shape))
-        print('%s %s' % ('pafmap', pafmap.shape))
 
         humans = estimate_paf(peaks[0], heatmap[0], pafmap[0])
         return humans, heatmap[0], pafmap[0]

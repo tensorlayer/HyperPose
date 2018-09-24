@@ -4,23 +4,19 @@
 import argparse
 import os
 
-import matplotlib
-matplotlib.use('Agg')
-
-import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
-import tensorlayer as tl
-from cv2 import imwrite
-
-import tensorrt as trt
-import uff
-from idx import write_idx
-from inference.common import measure, read_imgfile
-from models import _input_image, get_model_func
-from tensorrt.parsers import uffparser
 import pycuda.autoinit as _
 import pycuda.driver as cuda
+import tensorflow as tf
+import tensorlayer as tl
+import tensorrt as trt
+import uff
+from cv2 import imwrite
+from tensorrt.parsers import uffparser
+
+from inference.common import measure, plot_humans, read_imgfile
+from inference.post_process import PostProcessor
+from models import _input_image, get_model_func
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
@@ -104,30 +100,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def draw_results(image, heats_result, pafs_result, name):
-    fig = plt.figure(figsize=(8, 8))
-    a = fig.add_subplot(2, 3, 1)
-    plt.imshow(image)
-
-    if pafs_result is not None:
-        a = fig.add_subplot(2, 3, 3)
-        a.set_title('Vectormap result')
-        paf_x = np.amax(np.absolute(pafs_result[::2, :, :]), axis=0)
-        paf_y = np.amax(np.absolute(pafs_result[1::2, :, :]), axis=0)
-        plt.imshow(paf_x, alpha=0.3)
-        plt.imshow(paf_y, alpha=0.3)
-        plt.colorbar()
-
-    if heats_result is not None:
-        a = fig.add_subplot(2, 3, 4)
-        a.set_title('Heatmap result')
-        tmp = np.amax(heats_result[:-1, :, :], axis=0)
-        plt.imshow(tmp, alpha=0.3)
-        plt.colorbar()
-
-    plt.savefig(name, dpi=300)
-
-
 def main():
     args = parse_args()
     height, width, channel = 368, 432, 3
@@ -166,9 +138,14 @@ def main():
         'trt.utils.uff_to_trt_engine')
     print('engine created')
 
+    f_height, f_width = (height / 8, width / 8)  #  TODO: derive from model_outputs
+    post_process = PostProcessor((height, width), (f_height, f_width), 'channels_first')
+
     for idx, x in enumerate(images):
         conf, paf = measure(lambda: infer(engine, x, 1), 'infer')
-        draw_results(x.transpose([1, 2, 0]), conf, paf, 'uff-result-%02d.png' % idx)
+        humans, heat_up, paf_up = measure(lambda: post_process(conf, paf), 'post_process')
+        print('got %d humans' % (len(humans)))
+        plot_humans(x.transpose([1, 2, 0]), heat_up, paf_up, humans, '%02d' % (idx + 1))
 
 
 main()
