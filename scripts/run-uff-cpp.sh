@@ -8,10 +8,15 @@ make
 MODEL_DIR=$HOME/Downloads
 D=$HOME/var/data/openpose
 
+batch_size=4
+repeat=100
+
 run_uff_cpp() {
     local MODEL_FILE=${MODEL_DIR}/hao28.uff
     local IMAGES=$(echo $@ | tr ' ' ',')
     ./cmake-build/$(uname -s)/uff-runner_main \
+        --batch_size ${batch_size} \
+        --repeat ${repeat} \
         --model_file=${MODEL_FILE} \
         --image_files=${IMAGES}
 }

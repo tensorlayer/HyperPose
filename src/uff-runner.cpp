@@ -203,16 +203,14 @@ void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
     }
 }
 
-void create_openpose_runner(const std::string &model_file,
-                            std::unique_ptr<UFFRunner> &p)
+UFFRunner *create_openpose_runner(const std::string &model_file,
+                                  int input_height, int input_width,
+                                  int maxBatchSize)
 {
-    const int height = 368;
-    const int width = 432;
-
     const input_info_t input_info = {
         {
             "image",
-            {3, height, width} /* must be (C, H, W) */,
+            {3, input_height, input_width} /* must be (C, H, W) */,
         },
     };
 
@@ -220,9 +218,6 @@ void create_openpose_runner(const std::string &model_file,
         "outputs/conf",
         "outputs/paf",
     };
-
-    const int maxBatchSize = 1;
-
-    p.reset(
-        new UFFRunnerImpl(model_file, input_info, output_names, maxBatchSize));
+    return new UFFRunnerImpl(model_file, input_info, output_names,
+                             maxBatchSize);
 }
