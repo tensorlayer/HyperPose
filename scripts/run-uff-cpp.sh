@@ -12,9 +12,11 @@ repeat=20
 BIN=$(pwd)/cmake-build/$(uname -s)/example
 
 run_uff_cpp() {
-    local MODEL_FILE=${MODEL_DIR}/hao28.uff
+    local MODEL_FILE=${MODEL_DIR}/hao28-256x384.uff
     local IMAGES=$(echo $@ | tr ' ' ',')
     ${BIN} \
+        --input_height=256 \
+        --input_width=384 \
         --batch_size ${batch_size} \
         --repeat ${repeat} \
         --model_file=${MODEL_FILE} \
