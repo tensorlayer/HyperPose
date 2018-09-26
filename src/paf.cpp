@@ -45,18 +45,19 @@ class paf_processor_impl : public paf_processor
 {
   public:
     paf_processor_impl(
-        int input_height, int input_width,  //
-        int height, int width,              //
+        int input_height, int input_width, int height, int width,
         int channel_j, /* channel of input heatmap tensor, >= COCO_N_PARTS */
         int channel_c /* 1/2 * channel of input PAF tensor, == COCO_N_PAIRS */)
-        : height(height), width(width),  //
-          input_height(input_height), input_width(input_width),
-          channel_j(channel_j), channel_c(channel_c),
-          //   conf(nullptr, channel_j, input_height, input_width),
+        : height(height),
+          width(width),
+          input_height(input_height),
+          input_width(input_width),
+          channel_j(channel_j),
+          channel_c(channel_c),
           upsample_conf(nullptr, channel_j, height, width),
           peaks(nullptr, channel_j, height, width),
-          //   paf(nullptr, channel_c * 2, input_height, input_width),
-          upsample_paf(nullptr, channel_c * 2, height, width)
+          upsample_paf(nullptr, channel_c * 2, height, width),
+          get_peak_map_gpu(new get_peak_map_gpu_op_t(channel_j, height, width))
     {
     }
 
@@ -72,8 +73,7 @@ class paf_processor_impl : public paf_processor
 
         const bool use_gpu = true;
         if (use_gpu) {
-            get_peak_map_gpu(upsample_conf, peaks);
-
+            (*get_peak_map_gpu)(upsample_conf, peaks);
         } else {
             get_peak_map(upsample_conf, peaks);
         }
@@ -101,11 +101,12 @@ class paf_processor_impl : public paf_processor
     const int channel_j;
     const int channel_c;
 
-    // tensor_t<float, 3> conf;           // [J, H', W']
     tensor_t<float, 3> upsample_conf;  // [J, H, W]
     tensor_t<float, 3> peaks;          // [J, H, W]
-    // tensor_t<float, 3> paf;            // [2C, H', W']
-    tensor_t<float, 3> upsample_paf;  // [2C, H, W]
+    tensor_t<float, 3> upsample_paf;   // [2C, H, W]
+
+    using get_peak_map_gpu_op_t = get_peak_map_gpu_op_impl<float>;
+    std::unique_ptr<get_peak_map_gpu_op_t> get_peak_map_gpu;
 
     std::vector<ConnectionCandidate>
     getConnectionCandidates(const tensor_t<float, 3> &pafmap,

@@ -9,7 +9,7 @@ ADD_LIBRARY(cuda-buffer ${CMAKE_CURRENT_LIST_DIR}/cuda_buffer.cpp)
 TARGET_LINK_LIBRARIES(cuda-buffer cudart)
 
 ADD_LIBRARY(cudnn++ ${CMAKE_CURRENT_LIST_DIR}/cudnn.cpp)
-TARGET_LINK_LIBRARIES(cudnn++ cudnn)
+TARGET_LINK_LIBRARIES(cudnn++ cudnn cudart)
 
 ADD_LIBRARY(post-process_cpu ${CMAKE_CURRENT_LIST_DIR}/post-process.cpp)
 TARGET_LINK_LIBRARIES(post-process_cpu)
@@ -24,7 +24,7 @@ ADD_LIBRARY(uff-runner ${CMAKE_CURRENT_LIST_DIR}/uff-runner.cpp)
 TARGET_LINK_LIBRARIES(uff-runner cuda-buffer nvinfer nvparsers)
 
 ADD_LIBRARY(pose-detetor ${CMAKE_CURRENT_LIST_DIR}/pose_detector.cpp)
-TARGET_LINK_LIBRARIES(pose-detetor uff-runner input_image paf)
+TARGET_LINK_LIBRARIES(pose-detetor uff-runner post-process_gpu input_image paf)
 
 ADD_EXECUTABLE(example ${CMAKE_CURRENT_LIST_DIR}/example.cpp)
 TARGET_LINK_LIBRARIES(example tracer pose-detetor vis gflags)
