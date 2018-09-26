@@ -112,7 +112,7 @@ def tf_keypoint_random_crop(image, annos, mask=None, size=(368, 368)):
                             adjust_joint.append((-1000, -1000))
                             continue
                         new_x, new_y = joint[i][0] - x, joint[i][1] - y
-                        if new_x > size[0] or new_y > size[1]:
+                        if new_x > w - 1 or new_y > h - 1:
                             adjust_joint.append((-1000, -1000))
                             continue
                         adjust_joint.append((new_x, new_y))
