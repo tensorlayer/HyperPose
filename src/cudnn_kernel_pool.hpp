@@ -9,9 +9,9 @@ template <typename T> class Pool_NCHW_PaddingSame_Max
 {
   public:
     Pool_NCHW_PaddingSame_Max(int n, int c, int h, int w, int r, int s)
-        : handle(createHandle()),                       //
-          poolDesc(createPoolDesc(r, s)),               //
-          xDesc(createInputTensorDesc<T>(n, c, h, w)),  //
+        : handle(createHandle()),
+          poolDesc(createPoolDesc(r, s)),
+          xDesc(createInputTensorDesc<T>(n, c, h, w)),
           yDesc(createOutputTensorDesc(poolDesc.get(), xDesc.get()))
     {
     }

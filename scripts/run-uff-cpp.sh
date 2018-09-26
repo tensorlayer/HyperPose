@@ -6,7 +6,7 @@ HAVE_CUDA=1 make
 MODEL_DIR=$HOME/Downloads
 D=$HOME/var/data/openpose
 
-batch_size=1
+batch_size=4
 repeat=20
 
 BIN=$(pwd)/cmake-build/$(uname -s)/example

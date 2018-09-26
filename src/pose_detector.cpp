@@ -52,16 +52,18 @@ pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
                                        int input_height, int input_width,  //
                                        int feature_height, int feature_width,
                                        int batch_size)
-    : height(input_height), width(input_width),  //
-      feature_height(feature_height), feature_width(feature_width),
-      batch_size(batch_size),  //
+    : height(input_height),
+      width(input_width),
+      feature_height(feature_height),
+      feature_width(feature_width),
+      batch_size(batch_size),
       images(nullptr, batch_size, 3, height, width),
       confs(nullptr, batch_size, n_joins, feature_height, feature_width),
       pafs(nullptr, batch_size, n_connections * 2, feature_height,
            feature_width),
-      paf_process(create_paf_processor(feature_height, feature_width,  //
-                                       input_height, input_width,      //
-                                       n_joins, n_connections)),
+      paf_process(create_paf_processor(feature_height, feature_width,
+                                       input_height, input_width, n_joins,
+                                       n_connections)),
       runner(create_openpose_runner(model_file, height, width, batch_size))
 {
 }
