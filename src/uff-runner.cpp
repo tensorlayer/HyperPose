@@ -97,7 +97,7 @@ create_engine(const std::string &model_file, const input_info_t &input_info,
             info.first.c_str(),
             // Always provide your dimensions in CHW even if your
             // network input was in HWC in yout original framework.
-            nvinfer1::Dims3(dims[0], dims[1], dims[2]),
+            nvinfer1::DimsCHW(dims[0], dims[1], dims[2]),
             nvuffparser::UffInputOrder::kNCHW  //
         );
     }
