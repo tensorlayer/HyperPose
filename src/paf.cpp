@@ -7,6 +7,7 @@
 #include "coco.h"
 #include "human.h"
 #include "post-process.h"
+#include "post-process_gpu.h"
 #include "tensor.h"
 #include "tracer.h"
 
@@ -68,7 +69,14 @@ class paf_processor_impl : public paf_processor
         resize_area(tensor_proxy_t<float, 3>((float *)conf_, channel_j,
                                              input_height, input_width),
                     upsample_conf);
-        get_peak_map(upsample_conf, peaks);
+
+        const bool use_gpu = true;
+        if (use_gpu) {
+            get_peak_map_gpu(upsample_conf, peaks);
+
+        } else {
+            get_peak_map(upsample_conf, peaks);
+        }
 
         resize_area(tensor_proxy_t<float, 3>((float *)paf_, channel_c * 2,
                                              input_height, input_width),

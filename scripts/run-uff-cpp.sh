@@ -1,15 +1,13 @@
 #!/bin/sh
 set -e
 
-export HAVE_CUDA=1
-
-make
+HAVE_CUDA=1 make
 
 MODEL_DIR=$HOME/Downloads
 D=$HOME/var/data/openpose
 
-batch_size=4
-repeat=100
+batch_size=1
+repeat=20
 
 run_uff_cpp() {
     local MODEL_FILE=${MODEL_DIR}/hao28.uff

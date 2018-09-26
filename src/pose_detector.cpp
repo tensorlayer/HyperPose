@@ -44,8 +44,8 @@ class pose_detector_impl : public pose_detector
     tensor_t<float, 4> confs;
     tensor_t<float, 4> pafs;
 
-    std::unique_ptr<UFFRunner> runner;
     std::unique_ptr<paf_processor> paf_process;
+    std::unique_ptr<UFFRunner> runner;
 };
 
 pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
@@ -59,10 +59,10 @@ pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
       confs(nullptr, batch_size, n_joins, feature_height, feature_width),
       pafs(nullptr, batch_size, n_connections * 2, feature_height,
            feature_width),
-      runner(create_openpose_runner(model_file, height, width, batch_size)),
       paf_process(create_paf_processor(feature_height, feature_width,  //
                                        input_height, input_width,      //
-                                       n_joins, n_connections))
+                                       n_joins, n_connections)),
+      runner(create_openpose_runner(model_file, height, width, batch_size))
 {
 }
 
