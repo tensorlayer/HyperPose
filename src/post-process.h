@@ -2,6 +2,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "tensor.h"
+#include "tracer.h"
 
 inline int area(const cv::Size &size) { return size.height * size.width; }
 
@@ -32,6 +33,31 @@ void resize_area(const tensor_proxy_t<T, 3> &input, tensor_t<T, 3> &output)
                              output.data() + k * area(target_size));
         cv::resize(input_image, output_image, output_image.size(), 0, 0,
                    CV_INTER_AREA);
+    }
+}
+
+template <typename T>
+void smooth(const tensor_t<T, 3> &input, tensor_t<T, 3> &output, int ksize = 17)
+{
+    TRACE(__func__);
+    const T sigma = 3.0;
+
+    const int channel = input.dims[0];
+    const int height = input.dims[1];
+    const int width = input.dims[2];
+
+    assert(channel == output.dims[0]);
+    assert(height == output.dims[1]);
+    assert(width == output.dims[2]);
+
+    const cv::Size size(width, height);
+    for (int k = 0; k < channel; ++k) {
+        cv::Mat input_image(size, cv::DataType<T>::type,
+                            input.data() + k * area(size));
+        cv::Mat output_image(size, cv::DataType<T>::type,
+                             output.data() + k * area(size));
+        cv::GaussianBlur(input_image, output_image, cv::Size(ksize, ksize),
+                         sigma);
     }
 }
 

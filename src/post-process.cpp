@@ -10,31 +10,6 @@
 #include "tracer.h"
 
 template <typename T>
-void smooth(const tensor_t<T, 3> &input, tensor_t<T, 3> &output, int ksize = 17)
-{
-    TRACE(__func__);
-    const float sigma = 3.0;
-
-    const int channel = input.dims[0];
-    const int height = input.dims[1];
-    const int width = input.dims[2];
-
-    assert(channel == output.dims[0]);
-    assert(height == output.dims[1]);
-    assert(width == output.dims[2]);
-
-    const cv::Size size(width, height);
-    for (int k = 0; k < channel; ++k) {
-        cv::Mat input_image(size, cv::DataType<T>::type,
-                            input.data() + k * area(size));
-        cv::Mat output_image(size, cv::DataType<T>::type,
-                             output.data() + k * area(size));
-        cv::GaussianBlur(input_image, output_image, cv::Size(ksize, ksize),
-                         sigma);
-    }
-}
-
-template <typename T>
 void same_max_pool_3x3(const int height, const int width,  //
                        const T *input, T *output)
 {

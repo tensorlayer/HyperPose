@@ -1,4 +1,6 @@
 #pragma once
+#include <memory>
+
 #include <cudnn.h>
 
 #include "cudnn_traits.hpp"
