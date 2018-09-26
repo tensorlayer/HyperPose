@@ -104,6 +104,7 @@ def tf_keypoint_random_crop(image, annos, mask=None, size=(368, 368)):
                 print("=================TF API code=====================")
                 for joint in annos:
                     adjust_joint = []
+                    # 需要讨论 TF API 的使用怎么加速
                     lessArr = tf.less(joint, (-10, -10)).eval()
                     less_len = len(lessArr)
                     for i in range(less_len):
