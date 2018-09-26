@@ -9,10 +9,12 @@ D=$HOME/var/data/openpose
 batch_size=1
 repeat=20
 
+BIN=$(pwd)/cmake-build/$(uname -s)/example
+
 run_uff_cpp() {
     local MODEL_FILE=${MODEL_DIR}/hao28.uff
     local IMAGES=$(echo $@ | tr ' ' ',')
-    ./cmake-build/$(uname -s)/uff-runner_main \
+    ${BIN} \
         --batch_size ${batch_size} \
         --repeat ${repeat} \
         --model_file=${MODEL_FILE} \

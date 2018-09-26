@@ -26,5 +26,5 @@ TARGET_LINK_LIBRARIES(uff-runner cuda-buffer nvinfer nvparsers)
 ADD_LIBRARY(pose-detetor ${CMAKE_CURRENT_LIST_DIR}/pose_detector.cpp)
 TARGET_LINK_LIBRARIES(pose-detetor uff-runner input_image paf)
 
-ADD_EXECUTABLE(uff-runner_main ${CMAKE_CURRENT_LIST_DIR}/uff-runner_main.cpp)
-TARGET_LINK_LIBRARIES(uff-runner_main tracer pose-detetor vis gflags)
+ADD_EXECUTABLE(example ${CMAKE_CURRENT_LIST_DIR}/example.cpp)
+TARGET_LINK_LIBRARIES(example tracer pose-detetor vis gflags)
