@@ -61,9 +61,11 @@ int main(int argc, char *argv[])
         const int n = files.size();
         const duration_t d = clock_t::now() - t0;
         double mean = d.count() / n;
-        printf("// inferenced %d images, took %fs, mean: %fms, FPS: %f, batch "
+        printf("// inferenced %d images of %d x %d, took %fs, mean: %fms, FPS: "
+               "%f, batch "
                "size: %d\n",
-               n, d.count(), mean * 1000, 1 / mean, FLAGS_batch_size);
+               n, FLAGS_input_height, FLAGS_input_width, d.count(), mean * 1000,
+               1 / mean, FLAGS_batch_size);
     }
 
     return 0;
