@@ -4,6 +4,8 @@
 
 #include <cudnn.h>
 
+#include "tracer.h"
+
 /* status checker */
 
 struct cudnn_status_checker {
@@ -104,6 +106,8 @@ struct PoolingDescriptorDeleter {
 
 inline cudnnHandle_t createHandle()
 {
+    TRACE(__func__);
+
     cudnnHandle_t handle;
     check << cudnnCreate(&handle);
     return handle;

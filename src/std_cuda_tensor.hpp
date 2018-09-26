@@ -6,6 +6,7 @@
 #include <cuda_runtime.h>
 
 #include "std_shape.hpp"
+#include "tracer.h"
 
 template <typename T> struct cuda_mem_allocator {
     T *operator()(int count)
@@ -35,12 +36,14 @@ template <typename R, rank_t r> class basic_cuda_tensor
 
     void fromHost(void *buffer)
     {
+        TRACE("basic_cuda_tensor::fromHost");
         cudaMemcpy(data_.get(), buffer, count * sizeof(R),
                    cudaMemcpyHostToDevice);
     }
 
     void toHost(void *buffer)
     {
+        TRACE("basic_cuda_tensor::toHost");
         cudaMemcpy(buffer, data_.get(), count * sizeof(R),
                    cudaMemcpyDeviceToHost);
     }

@@ -44,20 +44,34 @@ void get_peak_map_gpu_tpl(const tensor_t<T, 3> &input, tensor_t<T, 3> &output)
     tensor_t<T, 3> pooled(nullptr, channel, height, width);
     cuda_tensor<T, 2> gk_gpu(ksize, ksize);
 
-    input_gpu.fromHost(input.data());
-    gk_gpu.fromHost(gk.data());
-
     // conv :: [n, c, h, w], [d, c, r, s] -> [n, d, h, w]
     Conv conv(channel, 1, height, width, 1, ksize, ksize);
     Pool pool(1, channel, height, width, 3, 3);
 
-    conv(input_gpu.data(), gk_gpu.data(), smoothed_gpu.data());
-    pool(smoothed_gpu.data(), pooled_gpu.data());
+    {
+        TRACE("get_peak_map_gpu_tpl::real");
+        {
+            TRACE("input, gk to device");
+            input_gpu.fromHost(input.data());
+            gk_gpu.fromHost(gk.data());
+        }
 
-    smoothed_gpu.toHost(output.data());
-    pooled_gpu.toHost(pooled.data());
+        {
+            TRACE("conv::op");
+            conv(input_gpu.data(), gk_gpu.data(), smoothed_gpu.data());
+        }
+        {
+            TRACE("pool::op");
+            pool(smoothed_gpu.data(), pooled_gpu.data());
+        }
+        {
+            TRACE("smooth, pooled to host");
+            smoothed_gpu.toHost(output.data());
+            pooled_gpu.toHost(pooled.data());
+        }
 
-    inplace_select_peaks(output, pooled);
+        inplace_select_peaks(output, pooled);
+    }
 }
 
 void get_peak_map_gpu(const tensor_t<float, 3> &input,
