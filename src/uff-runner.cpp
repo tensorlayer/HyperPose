@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -11,8 +12,8 @@
 #include <NvUffParser.h>
 #include <NvUtils.h>
 
-#include "cuda_buffer.h"
 #include "logger.h"
+#include "std_cuda_tensor.hpp"
 #include "tracer.h"
 #include "uff-runner.h"
 
@@ -27,6 +28,23 @@ inline int64_t volume(const nvinfer1::Dims &d)
     int64_t v = 1;
     for (int i = 0; i < d.nbDims; i++) v *= d.d[i];
     return v;
+}
+
+inline size_t elementSize(nvinfer1::DataType t)
+{
+    switch (t) {
+    // TODO: check nvinfer1 version
+    // case nvinfer1::DataType::kINT32:
+    //     return 4;
+    case nvinfer1::DataType::kFLOAT:
+        return 4;
+    case nvinfer1::DataType::kHALF:
+        return 2;
+    case nvinfer1::DataType::kINT8:
+        return 1;
+    }
+    assert(0);
+    return 0;
 }
 
 std::string to_string(const nvinfer1::Dims &d)
@@ -61,11 +79,13 @@ nvinfer1::ICudaEngine *loadModelAndCreateEngine(const char *uffFile,
     destroy_ptr<nvinfer1::INetworkDefinition> network(builder->createNetwork());
 
     if (use_f16) {
-        if (!parser->parse(uffFile, *network, nvinfer1::DataType::kHALF)) {
-            // RETURN_AND_LOG(nullptr, ERROR, "Fail to parse");
-            return nullptr;
-        }
-        builder->setFp16Mode(true);
+        return nullptr;
+        // TODO: check nvinfer VERSION
+        // if (!parser->parse(uffFile, *network, nvinfer1::DataType::kHALF)) {
+        //     // RETURN_AND_LOG(nullptr, ERROR, "Fail to parse");
+        //     return nullptr;
+        // }
+        // builder->setFp16Mode(true);
     } else {
         if (!parser->parse(uffFile, *network, nvinfer1::DataType::kFLOAT)) {
             // RETURN_AND_LOG(nullptr, ERROR, "Fail to parse");
@@ -125,6 +145,8 @@ class UFFRunnerImpl : public UFFRunner
 
   private:
     destroy_ptr<nvinfer1::ICudaEngine> engine_;
+
+    using cuda_buffer_t = cuda_tensor<char, 1>;
     std::vector<std::unique_ptr<cuda_buffer_t>> buffers_;
 
     void createBuffers_(int batchSize);
@@ -154,9 +176,9 @@ void UFFRunnerImpl::createBuffers_(int batchSize)
         std::cout << "binding " << i << ":"
                   << " name: " << name << " type" << to_string(dtype)
                   << to_string(dims) << std::endl;
-        const auto info = buffer_info_t{volume(dims) * batchSize, dtype};
+        const size_t mem_size = batchSize * volume(dims) * elementSize(dtype);
         buffers_.push_back(
-            std::unique_ptr<cuda_buffer_t>(new cuda_buffer_t(info)));
+            std::unique_ptr<cuda_buffer_t>(new cuda_buffer_t(mem_size)));
     }
 }
 
