@@ -8,6 +8,7 @@ D=$HOME/var/data/openpose
 
 batch_size=4
 repeat=20
+gksize=13
 
 BIN=$(pwd)/cmake-build/$(uname -s)/example
 
@@ -17,7 +18,9 @@ run_uff_cpp() {
     ${BIN} \
         --input_height=256 \
         --input_width=384 \
-        --batch_size ${batch_size} \
+        --batch_size=${batch_size} \
+        --use_f16 \
+        --gauss_kernel_size=${gksize} \
         --repeat ${repeat} \
         --model_file=${MODEL_FILE} \
         --image_files=${IMAGES}

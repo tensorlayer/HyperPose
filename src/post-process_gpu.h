@@ -12,7 +12,7 @@
 template <typename T> class get_peak_map_gpu_op_impl
 {
   public:
-    get_peak_map_gpu_op_impl(int channel, int height, int width, int ksize = 17)
+    get_peak_map_gpu_op_impl(int channel, int height, int width, int ksize)
         : smoothed_gpu(channel, height, width),
           pooled_gpu(channel, height, width),
           pooled_cpu(nullptr, channel, height, width),

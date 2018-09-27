@@ -14,7 +14,7 @@ class paf_processor
 
 paf_processor *create_paf_processor(int input_height, int input_width,
                                     int height, int width, int n_joins,
-                                    int n_connections);
+                                    int n_connections, int gauss_kernel_size);
 #endif
 
 #ifdef __cplusplus

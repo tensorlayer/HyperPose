@@ -72,42 +72,32 @@ using destroy_ptr = std::unique_ptr<T, destroy_deleter<T>>;
 nvinfer1::ICudaEngine *loadModelAndCreateEngine(const char *uffFile,
                                                 int maxBatchSize,
                                                 nvuffparser::IUffParser *parser,
-                                                bool use_f16 = false)
+                                                bool use_f16)
 {
     destroy_ptr<nvinfer1::IBuilder> builder(
         nvinfer1::createInferBuilder(gLogger));
     destroy_ptr<nvinfer1::INetworkDefinition> network(builder->createNetwork());
 
     if (use_f16) {
-        return nullptr;
-        // TODO: check nvinfer VERSION
-        // if (!parser->parse(uffFile, *network, nvinfer1::DataType::kHALF)) {
-        //     // RETURN_AND_LOG(nullptr, ERROR, "Fail to parse");
-        //     return nullptr;
-        // }
+        if (!parser->parse(uffFile, *network, nvinfer1::DataType::kHALF)) {
+            return nullptr;
+        }
         // builder->setFp16Mode(true);
+        builder->setHalf2Mode(true);  // For older version of tensorRT
     } else {
         if (!parser->parse(uffFile, *network, nvinfer1::DataType::kFLOAT)) {
-            // RETURN_AND_LOG(nullptr, ERROR, "Fail to parse");
             return nullptr;
         }
     }
-
-    /* we create the engine */
     builder->setMaxBatchSize(maxBatchSize);
     builder->setMaxWorkspaceSize(1 * Gi);
-
-    nvinfer1::ICudaEngine *engine = builder->buildCudaEngine(*network);
-    if (!engine) {
-        return nullptr;
-        // RETURN_AND_LOG(nullptr, ERROR, "Unable to create engine");
-    }
-    return engine;
+    return builder->buildCudaEngine(*network);
 }
 
 nvinfer1::ICudaEngine *
 create_engine(const std::string &model_file, const input_info_t &input_info,
-              const std::vector<std::string> &output_names, int maxBatchSize)
+              const std::vector<std::string> &output_names, int maxBatchSize,
+              bool use_f16)
 {
     TRACE(__func__);
     destroy_ptr<nvuffparser::IUffParser> parser(nvuffparser::createUffParser());
@@ -122,8 +112,8 @@ create_engine(const std::string &model_file, const input_info_t &input_info,
         );
     }
     for (auto &name : output_names) { parser->registerOutput(name.c_str()); }
-    nvinfer1::ICudaEngine *engine = loadModelAndCreateEngine(
-        model_file.c_str(), maxBatchSize, parser.get());
+    auto engine = loadModelAndCreateEngine(model_file.c_str(), maxBatchSize,
+                                           parser.get(), use_f16);
     if (!engine) {
         gLogger.log(nvinfer1::ILogger::Severity::kERROR,
                     "failed to created engine");
@@ -137,7 +127,7 @@ class UFFRunnerImpl : public UFFRunner
   public:
     UFFRunnerImpl(const std::string &model_file, const input_info_t &input_info,
                   const std::vector<std::string> &output_names,
-                  int maxBatchSize);
+                  int maxBatchSize, bool use_f16);
     ~UFFRunnerImpl() override;
 
     void execute(const std::vector<void *> &inputs,
@@ -155,8 +145,9 @@ class UFFRunnerImpl : public UFFRunner
 UFFRunnerImpl::UFFRunnerImpl(const std::string &model_file,
                              const input_info_t &input_info,
                              const std::vector<std::string> &output_names,
-                             int maxBatchSize)
-    : engine_(create_engine(model_file, input_info, output_names, maxBatchSize))
+                             int maxBatchSize, bool use_f16)
+    : engine_(create_engine(model_file, input_info, output_names, maxBatchSize,
+                            use_f16))
 {
     createBuffers_(maxBatchSize);
 }
@@ -221,7 +212,7 @@ void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
 
 UFFRunner *create_openpose_runner(const std::string &model_file,
                                   int input_height, int input_width,
-                                  int maxBatchSize)
+                                  int maxBatchSize, bool use_f16)
 {
     const input_info_t input_info = {
         {
@@ -234,6 +225,6 @@ UFFRunner *create_openpose_runner(const std::string &model_file,
         "outputs/conf",
         "outputs/paf",
     };
-    return new UFFRunnerImpl(model_file, input_info, output_names,
-                             maxBatchSize);
+    return new UFFRunnerImpl(model_file, input_info, output_names, maxBatchSize,
+                             use_f16);
 }

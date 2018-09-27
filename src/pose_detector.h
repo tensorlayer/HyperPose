@@ -13,4 +13,5 @@ class pose_detector
 pose_detector *create_pose_detector(const std::string &model_file,      //
                                     int input_height, int input_width,  //
                                     int feature_height, int feature_width,
-                                    int batch_size = 1);
+                                    int batch_size, bool use_f16,
+                                    int gauss_kernel_size);

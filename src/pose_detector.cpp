@@ -26,7 +26,7 @@ class pose_detector_impl : public pose_detector
     pose_detector_impl(const std::string &model_file,          //
                        int input_height, int input_width,      //
                        int feature_height, int feature_width,  //
-                       int batch_size);
+                       int batch_size, bool use_f16, int gauss_kernel_size);
 
     void one_batch(const std::vector<std::string> &image_files, int start_idx);
 
@@ -51,7 +51,8 @@ class pose_detector_impl : public pose_detector
 pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
                                        int input_height, int input_width,  //
                                        int feature_height, int feature_width,
-                                       int batch_size)
+                                       int batch_size, bool use_f16,
+                                       int gauss_kernel_size)
     : height(input_height),
       width(input_width),
       feature_height(feature_height),
@@ -63,8 +64,9 @@ pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
            feature_width),
       paf_process(create_paf_processor(feature_height, feature_width,
                                        input_height, input_width, n_joins,
-                                       n_connections)),
-      runner(create_openpose_runner(model_file, height, width, batch_size))
+                                       n_connections, gauss_kernel_size)),
+      runner(create_openpose_runner(model_file, height, width, batch_size,
+                                    use_f16))
 {
 }
 
@@ -122,8 +124,10 @@ void pose_detector_impl::inference(const std::vector<std::string> &image_files)
 pose_detector *create_pose_detector(const std::string &model_file,      //
                                     int input_height, int input_width,  //
                                     int feature_height, int feature_width,
-                                    int batch_size)
+                                    int batch_size, bool use_f16,
+                                    int gauss_kernel_size)
 {
     return new pose_detector_impl(model_file, input_height, input_width,
-                                  feature_height, feature_width, batch_size);
+                                  feature_height, feature_width, batch_size,
+                                  use_f16, gauss_kernel_size);
 }

@@ -46,8 +46,9 @@ class paf_processor_impl : public paf_processor
   public:
     paf_processor_impl(
         int input_height, int input_width, int height, int width,
-        int channel_j, /* channel of input heatmap tensor, >= COCO_N_PARTS */
-        int channel_c /* 1/2 * channel of input PAF tensor, == COCO_N_PAIRS */)
+        int channel_j /* channel of input heatmap tensor, >= COCO_N_PARTS */,
+        int channel_c /* 1/2 * channel of input PAF tensor, == COCO_N_PAIRS */,
+        int gauss_kernel_size)
         : height(height),
           width(width),
           input_height(input_height),
@@ -57,7 +58,8 @@ class paf_processor_impl : public paf_processor
           upsample_conf(nullptr, channel_j, height, width),
           peaks(nullptr, channel_j, height, width),
           upsample_paf(nullptr, channel_c * 2, height, width),
-          get_peak_map_gpu(new get_peak_map_gpu_op_t(channel_j, height, width))
+          get_peak_map_gpu(new get_peak_map_gpu_op_t(channel_j, height, width,
+                                                     gauss_kernel_size))
     {
     }
 
@@ -402,8 +404,8 @@ class paf_processor_impl : public paf_processor
 
 paf_processor *create_paf_processor(int input_height, int input_width,
                                     int height, int width, int n_joins,
-                                    int n_connections)
+                                    int n_connections, int gauss_kernel_size)
 {
     return new paf_processor_impl(input_height, input_width, height, width,
-                                  n_joins, n_connections);
+                                  n_joins, n_connections, gauss_kernel_size);
 }
