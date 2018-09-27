@@ -14,4 +14,4 @@ class uff_runner
 
 uff_runner *create_openpose_runner(const std::string &model_file,
                                    int input_height, int input_width,
-                                   int maxBatchSize, bool use_f16);
+                                   int max_batch_size, bool use_f16);
