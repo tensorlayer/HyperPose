@@ -45,7 +45,7 @@ class pose_detector_impl : public pose_detector
     tensor_t<float, 4> pafs;
 
     std::unique_ptr<paf_processor> paf_process;
-    std::unique_ptr<UFFRunner> runner;
+    std::unique_ptr<uff_runner> runner;
 };
 
 pose_detector_impl::pose_detector_impl(const std::string &model_file,      //

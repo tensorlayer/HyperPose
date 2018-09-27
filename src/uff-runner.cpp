@@ -119,13 +119,14 @@ create_engine(const std::string &model_file, const input_info_t &input_info,
     return engine;
 }
 
-class UFFRunnerImpl : public UFFRunner
+class uff_runner_impl : public uff_runner
 {
   public:
-    UFFRunnerImpl(const std::string &model_file, const input_info_t &input_info,
-                  const std::vector<std::string> &output_names,
-                  int maxBatchSize, bool use_f16);
-    ~UFFRunnerImpl() override;
+    uff_runner_impl(const std::string &model_file,
+                    const input_info_t &input_info,
+                    const std::vector<std::string> &output_names,
+                    int maxBatchSize, bool use_f16);
+    ~uff_runner_impl() override;
 
     void execute(const std::vector<void *> &inputs,
                  const std::vector<void *> &outputs, int batchSize) override;
@@ -139,19 +140,19 @@ class UFFRunnerImpl : public UFFRunner
     void createBuffers_(int batchSize);
 };
 
-UFFRunnerImpl::UFFRunnerImpl(const std::string &model_file,
-                             const input_info_t &input_info,
-                             const std::vector<std::string> &output_names,
-                             int maxBatchSize, bool use_f16)
+uff_runner_impl::uff_runner_impl(const std::string &model_file,
+                                 const input_info_t &input_info,
+                                 const std::vector<std::string> &output_names,
+                                 int maxBatchSize, bool use_f16)
     : engine_(create_engine(model_file, input_info, output_names, maxBatchSize,
                             use_f16))
 {
     createBuffers_(maxBatchSize);
 }
 
-UFFRunnerImpl::~UFFRunnerImpl() { nvuffparser::shutdownProtobufLibrary(); }
+uff_runner_impl::~uff_runner_impl() { nvuffparser::shutdownProtobufLibrary(); }
 
-void UFFRunnerImpl::createBuffers_(int batchSize)
+void uff_runner_impl::createBuffers_(int batchSize)
 {
     TRACE(__func__);
 
@@ -170,8 +171,8 @@ void UFFRunnerImpl::createBuffers_(int batchSize)
     }
 }
 
-void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
-                            const std::vector<void *> &outputs, int batchSize)
+void uff_runner_impl::execute(const std::vector<void *> &inputs,
+                              const std::vector<void *> &outputs, int batchSize)
 {
     TRACE(__func__);
 
@@ -207,9 +208,9 @@ void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
     }
 }
 
-UFFRunner *create_openpose_runner(const std::string &model_file,
-                                  int input_height, int input_width,
-                                  int maxBatchSize, bool use_f16)
+uff_runner *create_openpose_runner(const std::string &model_file,
+                                   int input_height, int input_width,
+                                   int maxBatchSize, bool use_f16)
 {
     const input_info_t input_info = {
         {
@@ -222,6 +223,6 @@ UFFRunner *create_openpose_runner(const std::string &model_file,
         "outputs/conf",
         "outputs/paf",
     };
-    return new UFFRunnerImpl(model_file, input_info, output_names, maxBatchSize,
-                             use_f16);
+    return new uff_runner_impl(model_file, input_info, output_names,
+                               maxBatchSize, use_f16);
 }
