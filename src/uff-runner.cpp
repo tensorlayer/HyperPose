@@ -17,8 +17,6 @@
 #include "tracer.h"
 #include "uff-runner.h"
 
-constexpr uint64_t Gi = 1 << 30;
-
 using input_info_t = std::vector<std::pair<std::string, std::vector<int>>>;
 
 Logger gLogger;
@@ -90,7 +88,6 @@ nvinfer1::ICudaEngine *loadModelAndCreateEngine(const char *uffFile,
         }
     }
     builder->setMaxBatchSize(maxBatchSize);
-    builder->setMaxWorkspaceSize(1 * Gi);
     return builder->buildCudaEngine(*network);
 }
 
