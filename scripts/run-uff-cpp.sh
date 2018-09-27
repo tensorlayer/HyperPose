@@ -1,17 +1,27 @@
 #!/bin/sh
 set -e
 
-export HAVE_CUDA=1
-
-make
+HAVE_CUDA=1 make
 
 MODEL_DIR=$HOME/Downloads
 D=$HOME/var/data/openpose
 
+batch_size=4
+repeat=20
+gksize=13
+
+BIN=$(pwd)/cmake-build/$(uname -s)/example
+
 run_uff_cpp() {
-    local MODEL_FILE=${MODEL_DIR}/hao28.uff
+    local MODEL_FILE=${MODEL_DIR}/hao28-256x384.uff
     local IMAGES=$(echo $@ | tr ' ' ',')
-    ./cmake-build/$(uname -s)/uff-runner_main \
+    ${BIN} \
+        --input_height=256 \
+        --input_width=384 \
+        --batch_size=${batch_size} \
+        --use_f16 \
+        --gauss_kernel_size=${gksize} \
+        --repeat ${repeat} \
         --model_file=${MODEL_FILE} \
         --image_files=${IMAGES}
 }

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -13,5 +12,6 @@ class UFFRunner
     virtual ~UFFRunner() {}
 };
 
-void create_openpose_runner(const std::string &model_file,
-                            std::unique_ptr<UFFRunner> &);
+UFFRunner *create_openpose_runner(const std::string &model_file,
+                                  int input_height, int input_width,
+                                  int maxBatchSize, bool use_f16);

@@ -7,9 +7,9 @@
 #include "coco.h"
 #include "human.h"
 #include "post-process.h"
+#include "post-process_gpu.h"
 #include "tensor.h"
 #include "tracer.h"
-#include "vis.h"
 
 template <typename T> T sqr(T x) { return x * x; }
 
@@ -45,18 +45,22 @@ class paf_processor_impl : public paf_processor
 {
   public:
     paf_processor_impl(
-        int input_height, int input_width,  //
-        int height, int width,              //
-        int channel_j, /* channel of input heatmap tensor, >= COCO_N_PARTS */
-        int channel_c /* 1/2 * channel of input PAF tensor, == COCO_N_PAIRS */)
-        : height(height), width(width),  //
-          input_height(input_height), input_width(input_width),
-          channel_j(channel_j), channel_c(channel_c),
-          //   conf(nullptr, channel_j, input_height, input_width),
+        int input_height, int input_width, int height, int width,
+        int channel_j /* channel of input heatmap tensor, >= COCO_N_PARTS */,
+        int channel_c /* 1/2 * channel of input PAF tensor, == COCO_N_PAIRS */,
+        int gauss_kernel_size)
+        : height(height),
+          width(width),
+          input_height(input_height),
+          input_width(input_width),
+          channel_j(channel_j),
+          channel_c(channel_c),
           upsample_conf(nullptr, channel_j, height, width),
           peaks(nullptr, channel_j, height, width),
-          //   paf(nullptr, channel_c * 2, input_height, input_width),
-          upsample_paf(nullptr, channel_c * 2, height, width)
+          upsample_paf(nullptr, channel_c * 2, height, width),
+          get_peak_map_gpu(new get_peak_map_gpu_op_t(channel_j, height, width,
+                                                     gauss_kernel_size)),
+          gauss_kernel_size(gauss_kernel_size)
     {
     }
 
@@ -69,7 +73,13 @@ class paf_processor_impl : public paf_processor
         resize_area(tensor_proxy_t<float, 3>((float *)conf_, channel_j,
                                              input_height, input_width),
                     upsample_conf);
-        get_peak_map(upsample_conf, peaks);
+
+        const bool use_gpu = true;
+        if (use_gpu) {
+            (*get_peak_map_gpu)(upsample_conf, peaks);
+        } else {
+            get_peak_map(upsample_conf, peaks, gauss_kernel_size);
+        }
 
         resize_area(tensor_proxy_t<float, 3>((float *)paf_, channel_c * 2,
                                              input_height, input_width),
@@ -94,11 +104,13 @@ class paf_processor_impl : public paf_processor
     const int channel_j;
     const int channel_c;
 
-    // tensor_t<float, 3> conf;           // [J, H', W']
     tensor_t<float, 3> upsample_conf;  // [J, H, W]
     tensor_t<float, 3> peaks;          // [J, H, W]
-    // tensor_t<float, 3> paf;            // [2C, H', W']
-    tensor_t<float, 3> upsample_paf;  // [2C, H, W]
+    tensor_t<float, 3> upsample_paf;   // [2C, H, W]
+
+    using get_peak_map_gpu_op_t = get_peak_map_gpu_op_impl<float>;
+    std::unique_ptr<get_peak_map_gpu_op_t> get_peak_map_gpu;
+    const int gauss_kernel_size;
 
     std::vector<ConnectionCandidate>
     getConnectionCandidates(const tensor_t<float, 3> &pafmap,
@@ -232,8 +244,8 @@ class paf_processor_impl : public paf_processor
 
         std::vector<human_ref_t> human_refs;
         for (int pair_id = 0; pair_id < COCO_N_PAIRS; pair_id++) {
-            printf("pair_id: %d, has %lu connections\n", pair_id,
-                   all_connections[pair_id].size());
+            // printf("pair_id: %d, has %lu connections\n", pair_id,
+            //        all_connections[pair_id].size());
 
             const auto coco_pair = COCOPAIRS[pair_id];
             const int part_id1 = coco_pair.first;
@@ -247,7 +259,8 @@ class paf_processor_impl : public paf_processor
                         hr_ids.push_back(hr.id);
                     }
                 }
-                printf("%lu humans touches this connection\n", hr_ids.size());
+                // printf("%lu humans touches this connection\n",
+                // hr_ids.size());
 
                 if (hr_ids.size() == 1) {
                     auto &hr1 = human_refs[hr_ids[0]];
@@ -391,37 +404,10 @@ class paf_processor_impl : public paf_processor
     int roundpaf(float v) { return (int)(v + 0.5); }
 };
 
-void process_conf_paf(int height_, int width_,  //
-                      int channel_j,            // channel_j = n_joins
-                      int channel_c,            // channel_c = n_connections
-                      const float *conf_,       // [channel_j, height, width]
-                      const float *paf_  // [channel_c * 2, height, width]
-)
-{
-    TRACE(__func__);
-
-    const int height = height_ * 8;
-    const int width = width_ * 8;
-
-    std::unique_ptr<paf_processor_impl> impl;
-    {
-        TRACE("new paf_processor_impl");
-        impl.reset(new paf_processor_impl(height_, width_, height, width,
-                                          channel_j, channel_c));
-    }
-    const auto humans = (*impl)(conf_, paf_);
-
-    cv::Mat img(cv::Size(width, height), CV_8UC(3));
-    for (const auto h : humans) {
-        h.print();
-        draw_human(img, h);
-    }
-    cv::imwrite("result.png", img);
-}
-
-paf_processor *create(int input_height, int input_width, int height, int width,
-                      int n_joins, int n_connections)
+paf_processor *create_paf_processor(int input_height, int input_width,
+                                    int height, int width, int n_joins,
+                                    int n_connections, int gauss_kernel_size)
 {
     return new paf_processor_impl(input_height, input_width, height, width,
-                                  n_joins, n_connections);
+                                  n_joins, n_connections, gauss_kernel_size);
 }

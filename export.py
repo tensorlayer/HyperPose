@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.5
 """Export pre-trained openpose model for C++/TensorRT."""
 
 import argparse
@@ -66,6 +66,8 @@ def parse_args():
     parser.add_argument('--graph-filename', type=str, default='', help='graph filename')
     parser.add_argument('--uff-filename', type=str, default='', help='uff filename')
     parser.add_argument('--data-format', type=str, default='channels_last', help='channels_last | channels_first.')
+    parser.add_argument('--height', type=int, default='368', help='input height.')
+    parser.add_argument('--width', type=int, default='432', help='input width.')
 
     return parser.parse_args()
 
@@ -74,8 +76,7 @@ def main():
     args = parse_args()
 
     def model_func():
-        h, w = 368, 432
-        target_size = (w, h)
+        target_size = (args.width, args.height)
         return get_model_func(args.base_model)(target_size, args.data_format)
 
     export_model(model_func, args.checkpoint_dir, args.path_to_npz, args.graph_filename, args.uff_filename)

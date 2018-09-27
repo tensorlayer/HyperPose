@@ -1,11 +1,28 @@
-# FIXME: use TARGET_LINK_DIRECTORIES and TARGET_INCLUDE_DIRECTORIES
-LINK_DIRECTORIES(/usr/local/cuda-9.0/targets/x86_64-linux/lib)
-INCLUDE_DIRECTORIES(/usr/local/cuda-9.0/targets/x86_64-linux/include
-                    /usr/local/cuda-9.0/targets/x86_64-linux/include/crt)
+FIND_PACKAGE(CUDA REQUIRED)
 
-ADD_EXECUTABLE(uff-runner_main
-               ${CMAKE_CURRENT_LIST_DIR}/uff-runner.cpp
-               ${CMAKE_CURRENT_LIST_DIR}/tracer.cpp
-               ${CMAKE_CURRENT_LIST_DIR}/uff-runner_main.cpp
-               ${CMAKE_CURRENT_LIST_DIR}/cuda_buffer.cpp)
-TARGET_LINK_LIBRARIES(uff-runner_main input_image paf vis gflags nvinfer cudart nvparsers)
+INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
+
+EXECUTE_PROCESS(COMMAND arch COMMAND tr -d '\n' OUTPUT_VARIABLE ARCH)
+SET(CUDA_RT /usr/local/cuda-9.0/targets/${ARCH}-linux)
+
+# FIXME: use TARGET_LINK_DIRECTORIES and TARGET_INCLUDE_DIREC TORIES
+LINK_DIRECTORIES(${CUDA_RT}/lib)
+INCLUDE_DIRECTORIES(${CUDA_RT}/include ${CUDA_RT}/include/crt)
+
+ADD_LIBRARY(cudnn++ ${CMAKE_CURRENT_LIST_DIR}/cudnn.cpp)
+TARGET_LINK_LIBRARIES(cudnn++ cudnn cudart)
+
+ADD_LIBRARY(post-process_cpu ${CMAKE_CURRENT_LIST_DIR}/post-process.cpp)
+TARGET_LINK_LIBRARIES(post-process_cpu)
+
+ADD_LIBRARY(paf ${CMAKE_CURRENT_LIST_DIR}/paf.cpp)
+TARGET_LINK_LIBRARIES(paf tracer post-process_cpu cudnn++)
+
+ADD_LIBRARY(uff-runner ${CMAKE_CURRENT_LIST_DIR}/uff-runner.cpp)
+TARGET_LINK_LIBRARIES(uff-runner nvinfer nvparsers)
+
+ADD_LIBRARY(pose-detetor ${CMAKE_CURRENT_LIST_DIR}/pose_detector.cpp)
+TARGET_LINK_LIBRARIES(pose-detetor uff-runner input_image paf)
+
+ADD_EXECUTABLE(example ${CMAKE_CURRENT_LIST_DIR}/example.cpp)
+TARGET_LINK_LIBRARIES(example tracer pose-detetor vis gflags)
