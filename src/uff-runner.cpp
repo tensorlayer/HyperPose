@@ -129,7 +129,7 @@ class uff_runner_impl : public uff_runner
     ~uff_runner_impl() override;
 
     void execute(const std::vector<void *> &inputs,
-                 const std::vector<void *> &outputs, int batchSize) override;
+                 const std::vector<void *> &outputs, int batch_size) override;
 
   private:
     destroy_ptr<nvinfer1::ICudaEngine> engine_;
@@ -137,7 +137,7 @@ class uff_runner_impl : public uff_runner
     using cuda_buffer_t = cuda_tensor<char, 1>;
     std::vector<std::unique_ptr<cuda_buffer_t>> buffers_;
 
-    void createBuffers_(int batchSize);
+    void createBuffers_(int batch_size);
 };
 
 uff_runner_impl::uff_runner_impl(const std::string &model_file,
@@ -152,7 +152,7 @@ uff_runner_impl::uff_runner_impl(const std::string &model_file,
 
 uff_runner_impl::~uff_runner_impl() { nvuffparser::shutdownProtobufLibrary(); }
 
-void uff_runner_impl::createBuffers_(int batchSize)
+void uff_runner_impl::createBuffers_(int batch_size)
 {
     TRACE(__func__);
 
@@ -165,14 +165,14 @@ void uff_runner_impl::createBuffers_(int batchSize)
         std::cout << "binding " << i << ":"
                   << " name: " << name << " type" << to_string(dtype)
                   << to_string(dims) << std::endl;
-        const size_t mem_size = batchSize * volume(dims) * elementSize(dtype);
+        const size_t mem_size = batch_size * volume(dims) * elementSize(dtype);
         buffers_.push_back(
             std::unique_ptr<cuda_buffer_t>(new cuda_buffer_t(mem_size)));
     }
 }
 
 void uff_runner_impl::execute(const std::vector<void *> &inputs,
-                              const std::vector<void *> &outputs, int batchSize)
+                              const std::vector<void *> &outputs, int batch_size)
 {
     TRACE(__func__);
 
@@ -193,7 +193,7 @@ void uff_runner_impl::execute(const std::vector<void *> &inputs,
         for (int i = 0; i < buffers_.size(); ++i) {
             buffer_ptrs_[i] = buffers_[i]->data();
         }
-        context->execute(batchSize, buffer_ptrs_.data());
+        context->execute(batch_size, buffer_ptrs_.data());
         context->destroy();
     }
 
