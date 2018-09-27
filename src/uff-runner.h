@@ -3,15 +3,15 @@
 #include <string>
 #include <vector>
 
-class UFFRunner
+class uff_runner
 {
   public:
     virtual void execute(const std::vector<void *> &inputs,
                          const std::vector<void *> &outputs,
                          int batchSize = 1) = 0;
-    virtual ~UFFRunner() {}
+    virtual ~uff_runner() {}
 };
 
-UFFRunner *create_openpose_runner(const std::string &model_file,
-                                  int input_height, int input_width,
-                                  int maxBatchSize, bool use_f16);
+uff_runner *create_openpose_runner(const std::string &model_file,
+                                   int input_height, int input_width,
+                                   int max_batch_size, bool use_f16);
