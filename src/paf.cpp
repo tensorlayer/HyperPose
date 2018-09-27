@@ -44,33 +44,32 @@ struct VectorXY {
 class paf_processor_impl : public paf_processor
 {
   public:
-    paf_processor_impl(
-        int input_height, int input_width, int height, int width,
-        int channel_j /* channel of input heatmap tensor, >= COCO_N_PARTS */,
-        int channel_c /* 1/2 * channel of input PAF tensor, == COCO_N_PAIRS */,
-        int gauss_kernel_size)
+    paf_processor_impl(int input_height, int input_width, int height, int width,
+                       int n_joins /* COCO_N_PARTS */,
+                       int n_connections /* COCO_N_PAIRS */,
+                       int gauss_kernel_size)
         : height(height),
           width(width),
           input_height(input_height),
           input_width(input_width),
-          channel_j(channel_j),
-          channel_c(channel_c),
-          upsample_conf(nullptr, channel_j, height, width),
-          peaks(nullptr, channel_j, height, width),
-          upsample_paf(nullptr, channel_c * 2, height, width),
-          get_peak_map_gpu(new get_peak_map_gpu_op_t(channel_j, height, width,
+          n_joins(n_joins),
+          n_connections(n_connections),
+          upsample_conf(nullptr, n_joins, height, width),
+          peaks(nullptr, n_joins, height, width),
+          upsample_paf(nullptr, n_connections * 2, height, width),
+          get_peak_map_gpu(new get_peak_map_gpu_op_t(n_joins, height, width,
                                                      gauss_kernel_size)),
           gauss_kernel_size(gauss_kernel_size)
     {
     }
 
     std::vector<human_t> operator()(
-        const float *conf_, /* [channel_j, input_height, input_width] */
-        const float *paf_ /* [channel_c * 2, input_height, input_width] */)
+        const float *conf_, /* [n_joins, input_height, input_width] */
+        const float *paf_ /* [n_connections * 2, input_height, input_width] */)
     {
         TRACE(__func__);
 
-        resize_area(tensor_proxy_t<float, 3>((float *)conf_, channel_j,
+        resize_area(tensor_proxy_t<float, 3>((float *)conf_, n_joins,
                                              input_height, input_width),
                     upsample_conf);
 
@@ -81,7 +80,7 @@ class paf_processor_impl : public paf_processor
             get_peak_map(upsample_conf, peaks, gauss_kernel_size);
         }
 
-        resize_area(tensor_proxy_t<float, 3>((float *)paf_, channel_c * 2,
+        resize_area(tensor_proxy_t<float, 3>((float *)paf_, n_connections * 2,
                                              input_height, input_width),
                     upsample_paf);
 
@@ -101,8 +100,8 @@ class paf_processor_impl : public paf_processor
     const int width;
     const int input_height;
     const int input_width;
-    const int channel_j;
-    const int channel_c;
+    const int n_joins;
+    const int n_connections;
 
     tensor_t<float, 3> upsample_conf;  // [J, H, W]
     tensor_t<float, 3> peaks;          // [J, H, W]
