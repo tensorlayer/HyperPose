@@ -75,38 +75,42 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
 {
     TRACE(__func__);
     assert(image_files.size() <= batch_size);
-
     std::vector<cv::Mat> resized_images;
-    for (int i = 0; i < image_files.size(); ++i) {
-        resized_images.push_back(
-            input_image(image_files[i].c_str(), height, width,
-                        images.data() + i * 3 * height * width));
+    {
+        TRACE("batch read images");
+        for (int i = 0; i < image_files.size(); ++i) {
+            resized_images.push_back(
+                input_image(image_files[i].c_str(), height, width,
+                            images.data() + i * 3 * height * width));
+        }
     }
-
     {
         TRACE("batch run tensorRT");
         runner->execute({images.data()}, {confs.data(), pafs.data()},
                         image_files.size());
     }
-
-    const int feature_size = feature_height * feature_width;
-    for (int i = 0; i < image_files.size(); ++i) {
-        const auto humans = [&]() {
-            TRACE("run paf_process");
-            return (*paf_process)(confs.data() + i * n_joins * feature_size,
-                                  pafs.data() +
-                                      i * 2 * n_connections * feature_size);
-        }();
-        auto resized_image = resized_images[i];
-        {
-            TRACE("draw_results");
-            std::cout << "got " << humans.size() << " humans" << std::endl;
-            for (const auto &h : humans) {
-                h.print();
-                draw_human(resized_image, h);
+    {
+        TRACE("batch run process PAF and draw results");
+        const int feature_size = feature_height * feature_width;
+        for (int i = 0; i < image_files.size(); ++i) {
+            const auto humans = [&]() {
+                TRACE("run paf_process");
+                return (*paf_process)(confs.data() + i * n_joins * feature_size,
+                                      pafs.data() +
+                                          i * 2 * n_connections * feature_size);
+            }();
+            auto resized_image = resized_images[i];
+            {
+                TRACE("draw_results");
+                std::cout << "got " << humans.size() << " humans" << std::endl;
+                for (const auto &h : humans) {
+                    h.print();
+                    draw_human(resized_image, h);
+                }
+                const auto name =
+                    "output" + std::to_string(start_idx + i) + ".png";
+                cv::imwrite(name, resized_image);
             }
-            const auto name = "output" + std::to_string(start_idx + i) + ".png";
-            cv::imwrite(name, resized_image);
         }
     }
 }
