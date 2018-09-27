@@ -26,6 +26,7 @@ template <typename T> class get_peak_map_gpu_op_impl
         TRACE(std::string("<") + typeid(*this).name() + ">::" + __func__);
         smooth(input, output, ksize);
         {
+            TRACE("max pooling on GPU");
             smoothed_gpu.fromHost(output.data());
             pool(smoothed_gpu.data(), pooled_gpu.data());
             // cudaDeviceSynchronize();
