@@ -24,5 +24,12 @@ TARGET_LINK_LIBRARIES(uff-runner nvinfer nvparsers)
 ADD_LIBRARY(pose-detetor ${CMAKE_CURRENT_LIST_DIR}/pose_detector.cpp)
 TARGET_LINK_LIBRARIES(pose-detetor uff-runner input_image paf)
 
+ADD_LIBRARY(stream-detetor ${CMAKE_CURRENT_LIST_DIR}/stream_detector.cpp)
+TARGET_LINK_LIBRARIES(stream-detetor uff-runner input_image paf)
+
 ADD_EXECUTABLE(example ${CMAKE_CURRENT_LIST_DIR}/example.cpp)
 TARGET_LINK_LIBRARIES(example tracer pose-detetor vis gflags)
+
+ADD_EXECUTABLE(example-stream-detector
+               ${CMAKE_CURRENT_LIST_DIR}/example_stream_detector.cpp)
+TARGET_LINK_LIBRARIES(example-stream-detector tracer stream-detetor vis gflags)

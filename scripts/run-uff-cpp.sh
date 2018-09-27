@@ -2,6 +2,7 @@
 set -e
 
 HAVE_CUDA=1 make
+echo
 
 MODEL_DIR=$HOME/Downloads
 D=$HOME/var/data/openpose
@@ -10,7 +11,8 @@ batch_size=4
 repeat=20
 gksize=13
 
-BIN=$(pwd)/cmake-build/$(uname -s)/example
+# BIN=$(pwd)/cmake-build/$(uname -s)/example
+BIN=$(pwd)/cmake-build/$(uname -s)/example-stream-detector
 
 run_uff_cpp() {
     local MODEL_FILE=${MODEL_DIR}/hao28-256x384.uff
