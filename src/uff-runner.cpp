@@ -68,7 +68,7 @@ template <typename T>
 using destroy_ptr = std::unique_ptr<T, destroy_deleter<T>>;
 
 nvinfer1::ICudaEngine *loadModelAndCreateEngine(const char *uffFile,
-                                                int maxBatchSize,
+                                                int max_batch_size,
                                                 nvuffparser::IUffParser *parser,
                                                 bool use_f16)
 {
@@ -87,13 +87,13 @@ nvinfer1::ICudaEngine *loadModelAndCreateEngine(const char *uffFile,
             return nullptr;
         }
     }
-    builder->setMaxBatchSize(maxBatchSize);
+    builder->setMaxBatchSize(max_batch_size);
     return builder->buildCudaEngine(*network);
 }
 
 nvinfer1::ICudaEngine *
 create_engine(const std::string &model_file, const input_info_t &input_info,
-              const std::vector<std::string> &output_names, int maxBatchSize,
+              const std::vector<std::string> &output_names, int max_batch_size,
               bool use_f16)
 {
     TRACE(__func__);
@@ -109,7 +109,7 @@ create_engine(const std::string &model_file, const input_info_t &input_info,
         );
     }
     for (auto &name : output_names) { parser->registerOutput(name.c_str()); }
-    auto engine = loadModelAndCreateEngine(model_file.c_str(), maxBatchSize,
+    auto engine = loadModelAndCreateEngine(model_file.c_str(), max_batch_size,
                                            parser.get(), use_f16);
     if (!engine) {
         gLogger.log(nvinfer1::ILogger::Severity::kERROR,
@@ -119,16 +119,17 @@ create_engine(const std::string &model_file, const input_info_t &input_info,
     return engine;
 }
 
-class UFFRunnerImpl : public UFFRunner
+class uff_runner_impl : public uff_runner
 {
   public:
-    UFFRunnerImpl(const std::string &model_file, const input_info_t &input_info,
-                  const std::vector<std::string> &output_names,
-                  int maxBatchSize, bool use_f16);
-    ~UFFRunnerImpl() override;
+    uff_runner_impl(const std::string &model_file,
+                    const input_info_t &input_info,
+                    const std::vector<std::string> &output_names,
+                    int max_batch_size, bool use_f16);
+    ~uff_runner_impl() override;
 
     void execute(const std::vector<void *> &inputs,
-                 const std::vector<void *> &outputs, int batchSize) override;
+                 const std::vector<void *> &outputs, int batch_size) override;
 
   private:
     destroy_ptr<nvinfer1::ICudaEngine> engine_;
@@ -136,22 +137,22 @@ class UFFRunnerImpl : public UFFRunner
     using cuda_buffer_t = cuda_tensor<char, 1>;
     std::vector<std::unique_ptr<cuda_buffer_t>> buffers_;
 
-    void createBuffers_(int batchSize);
+    void createBuffers_(int batch_size);
 };
 
-UFFRunnerImpl::UFFRunnerImpl(const std::string &model_file,
-                             const input_info_t &input_info,
-                             const std::vector<std::string> &output_names,
-                             int maxBatchSize, bool use_f16)
-    : engine_(create_engine(model_file, input_info, output_names, maxBatchSize,
-                            use_f16))
+uff_runner_impl::uff_runner_impl(const std::string &model_file,
+                                 const input_info_t &input_info,
+                                 const std::vector<std::string> &output_names,
+                                 int max_batch_size, bool use_f16)
+    : engine_(create_engine(model_file, input_info, output_names,
+                            max_batch_size, use_f16))
 {
-    createBuffers_(maxBatchSize);
+    createBuffers_(max_batch_size);
 }
 
-UFFRunnerImpl::~UFFRunnerImpl() { nvuffparser::shutdownProtobufLibrary(); }
+uff_runner_impl::~uff_runner_impl() { nvuffparser::shutdownProtobufLibrary(); }
 
-void UFFRunnerImpl::createBuffers_(int batchSize)
+void uff_runner_impl::createBuffers_(int batch_size)
 {
     TRACE(__func__);
 
@@ -164,14 +165,14 @@ void UFFRunnerImpl::createBuffers_(int batchSize)
         std::cout << "binding " << i << ":"
                   << " name: " << name << " type" << to_string(dtype)
                   << to_string(dims) << std::endl;
-        const size_t mem_size = batchSize * volume(dims) * elementSize(dtype);
+        const size_t mem_size = batch_size * volume(dims) * elementSize(dtype);
         buffers_.push_back(
             std::unique_ptr<cuda_buffer_t>(new cuda_buffer_t(mem_size)));
     }
 }
 
-void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
-                            const std::vector<void *> &outputs, int batchSize)
+void uff_runner_impl::execute(const std::vector<void *> &inputs,
+                              const std::vector<void *> &outputs, int batch_size)
 {
     TRACE(__func__);
 
@@ -192,7 +193,7 @@ void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
         for (int i = 0; i < buffers_.size(); ++i) {
             buffer_ptrs_[i] = buffers_[i]->data();
         }
-        context->execute(batchSize, buffer_ptrs_.data());
+        context->execute(batch_size, buffer_ptrs_.data());
         context->destroy();
     }
 
@@ -207,9 +208,9 @@ void UFFRunnerImpl::execute(const std::vector<void *> &inputs,
     }
 }
 
-UFFRunner *create_openpose_runner(const std::string &model_file,
-                                  int input_height, int input_width,
-                                  int maxBatchSize, bool use_f16)
+uff_runner *create_openpose_runner(const std::string &model_file,
+                                   int input_height, int input_width,
+                                   int max_batch_size, bool use_f16)
 {
     const input_info_t input_info = {
         {
@@ -222,6 +223,6 @@ UFFRunner *create_openpose_runner(const std::string &model_file,
         "outputs/conf",
         "outputs/paf",
     };
-    return new UFFRunnerImpl(model_file, input_info, output_names, maxBatchSize,
-                             use_f16);
+    return new uff_runner_impl(model_file, input_info, output_names,
+                               max_batch_size, use_f16);
 }
