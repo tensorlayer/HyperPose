@@ -37,7 +37,7 @@ void resize_area(const tensor_proxy_t<T, 3> &input, tensor_t<T, 3> &output)
 }
 
 template <typename T>
-void smooth(const tensor_t<T, 3> &input, tensor_t<T, 3> &output, int ksize = 17)
+void smooth(const tensor_t<T, 3> &input, tensor_t<T, 3> &output, int ksize)
 {
     TRACE(__func__);
     const T sigma = 3.0;
@@ -64,4 +64,5 @@ void smooth(const tensor_t<T, 3> &input, tensor_t<T, 3> &output, int ksize = 17)
 void inplace_select_peaks(const tensor_t<float, 3> &output,
                           const tensor_t<float, 3> &pooled);
 
-void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output);
+void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output,
+                  int ksize);

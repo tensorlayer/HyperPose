@@ -67,7 +67,8 @@ void inplace_select_peaks(const tensor_t<float, 3> &output,
     }
 }
 
-void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
+void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output,
+                  int ksize)
 {
     TRACE(__func__);
 
@@ -80,7 +81,7 @@ void get_peak_map(const tensor_t<float, 3> &input, tensor_t<float, 3> &output)
     assert(width == output.dims[2]);
 
     tensor_t<float, 3> pooled(nullptr, channel, height, width);
-    smooth(input, output);
+    smooth(input, output, ksize);
     same_max_pool_3x3(output, pooled);
     inplace_select_peaks(output, pooled);
 }

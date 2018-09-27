@@ -59,7 +59,8 @@ class paf_processor_impl : public paf_processor
           peaks(nullptr, channel_j, height, width),
           upsample_paf(nullptr, channel_c * 2, height, width),
           get_peak_map_gpu(new get_peak_map_gpu_op_t(channel_j, height, width,
-                                                     gauss_kernel_size))
+                                                     gauss_kernel_size)),
+          gauss_kernel_size(gauss_kernel_size)
     {
     }
 
@@ -77,7 +78,7 @@ class paf_processor_impl : public paf_processor
         if (use_gpu) {
             (*get_peak_map_gpu)(upsample_conf, peaks);
         } else {
-            get_peak_map(upsample_conf, peaks);
+            get_peak_map(upsample_conf, peaks, gauss_kernel_size);
         }
 
         resize_area(tensor_proxy_t<float, 3>((float *)paf_, channel_c * 2,
@@ -109,6 +110,7 @@ class paf_processor_impl : public paf_processor
 
     using get_peak_map_gpu_op_t = get_peak_map_gpu_op_impl<float>;
     std::unique_ptr<get_peak_map_gpu_op_t> get_peak_map_gpu;
+    const int gauss_kernel_size;
 
     std::vector<ConnectionCandidate>
     getConnectionCandidates(const tensor_t<float, 3> &pafmap,
