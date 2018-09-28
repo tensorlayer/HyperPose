@@ -1,34 +1,47 @@
-#include <iostream>
+#include <cstdint>
 #include <string>
 
 #include <opencv2/opencv.hpp>
 
 #include "tensor.h"
 
-std::string show_size(const cv::Size &s)
+void _input_image(const std::string &filename, int target_height,
+                  int target_width, uint8_t *hwc_buffer)
 {
-    return std::to_string(s.width) + " x " + std::to_string(s.height);
+    const cv::Size new_size(target_width, target_height);
+    cv::Mat resized_image(new_size, CV_8UC(3), hwc_buffer);
+
+    const auto img = cv::imread(filename);
+    if (img.empty()) { exit(1); }
+    cv::resize(img, resized_image, resized_image.size(), 0, 0);
+}
+
+void input_image(const std::string &filename, int target_height,
+                 int target_width, uint8_t *hwc_buffer, float *chw_buffer)
+{
+    _input_image(filename, target_height, target_width, hwc_buffer);
+    tensor_proxy_t<uint8_t, 3> s(hwc_buffer, target_height, target_width, 3);
+    tensor_proxy_t<float, 3> t(chw_buffer, 3, target_height, target_width);
+    for (int k = 0; k < 3; ++k) {
+        for (int i = 0; i < target_height; ++i) {
+            for (int j = 0; j < target_width; ++j) {
+                t.at(k, i, j) = s.at(i, j, k) / 255.0;
+            }
+        }
+    }
 }
 
 cv::Mat input_image(const std::string &filename, int target_height,
                     int target_width, float *buffer)
 {
-    auto &debug = std::cerr;
-
     const cv::Size new_size(target_width, target_height);
     cv::Mat resized_image(new_size, CV_8UC(3));
 
     const auto img = cv::imread(filename);
 
-    if (img.empty()) {
-        debug << "failed to read " << filename << std::endl;
-        exit(1);
-    }
+    if (img.empty()) { exit(1); }
 
     cv::resize(img, resized_image, resized_image.size(), 0, 0);
-
-    debug << "original input image size: " << show_size(img.size())
-          << ", resized to " << show_size(resized_image.size()) << std::endl;
 
     if (buffer) {
         tensor_proxy_t<float, 3> t(buffer, 3, target_height, target_width);

@@ -90,7 +90,7 @@ template <typename T, uint8_t r> struct tensor_t {
 
     int32_t volume() const { return ::volume<r>(dims); }
 
-    T *kth_slice(int k)
+    T *operator[](int k)
     {
         const int off = volume() / dims[0] + k;
         return data_.get() + off;
