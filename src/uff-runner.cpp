@@ -172,9 +172,10 @@ void uff_runner_impl::createBuffers_(int batch_size)
 }
 
 void uff_runner_impl::execute(const std::vector<void *> &inputs,
-                              const std::vector<void *> &outputs, int batch_size)
+                              const std::vector<void *> &outputs,
+                              int batch_size)
 {
-    TRACE(__func__);
+    TRACE("uff_runner_impl::execute");
 
     {
         TRACE("copy input from host");
@@ -187,7 +188,7 @@ void uff_runner_impl::execute(const std::vector<void *> &inputs,
     }
 
     {
-        TRACE("context->execute");
+        TRACE("uff_runner_impl::context->execute");
         auto context = engine_->createExecutionContext();
         std::vector<void *> buffer_ptrs_(buffers_.size());
         for (int i = 0; i < buffers_.size(); ++i) {
