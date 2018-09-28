@@ -97,7 +97,9 @@ def _map_fn(img_list, annos):
     image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
     image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
+    return image, resultmap, mask
 
+def _map_fn2(image, resultmap, mask)
     image = tf.reshape(image, [hin, win, 3])
     resultmap = tf.reshape(resultmap, [hout, wout, 57])
     mask = tf.reshape(mask, [hout, wout, 1])
@@ -219,7 +221,8 @@ if __name__ == '__main__':
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
     dataset = dataset.shuffle(buffer_size=4096)  # shuffle before loading images
     dataset = dataset.repeat(n_epoch)
-    dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count()) # decouple the heavy map_fn
+    dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count())
+    dataset = dataset.map(_map_fn2, num_parallel_calls=multiprocessing.cpu_count()) 
     dataset = dataset.batch(batch_size) # TODO: consider using tf.contrib.map_and_batch
     dataset = dataset.prefetch(1) # prefetch 1 batch
     iterator = dataset.make_one_shot_iterator()
