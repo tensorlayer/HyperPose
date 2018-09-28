@@ -1,6 +1,8 @@
 #include <cstdint>
 #include <thread>
 
+#include <opencv2/opencv.hpp>
+
 #include "channel.hpp"
 #include "input.h"
 #include "paf.h"
@@ -8,6 +10,7 @@
 #include "tensor.h"
 #include "tracer.h"
 #include "uff-runner.h"
+#include "vis.h"
 
 class stream_detector_impl : public stream_detector
 {
@@ -26,15 +29,17 @@ class stream_detector_impl : public stream_detector
           confs(nullptr, buffer_size, n_joins, feature_height, feature_width),
           pafs(nullptr, buffer_size, n_connections * 2, feature_height,
                feature_width),
-          image_stream_in(buffer_size),
-          image_stream_out(buffer_size),
-          feature_stream_in(buffer_size),
-          feature_stream_out(buffer_size),
+          image_stream_1(buffer_size),
+          image_stream_2(buffer_size),
+          image_stream_3(buffer_size),
+          feature_stream_1(buffer_size),
+          feature_stream_2(buffer_size),
           paf_process(create_paf_processor(feature_height, feature_width,
                                            input_height, input_width, n_joins,
-                                           n_connections, gauss_kernel_size)),
-          runner(create_openpose_runner(model_file, height, width, 1, use_f16))
+                                           n_connections, gauss_kernel_size))
     {
+        runner.reset(
+            create_openpose_runner(model_file, height, width, 1, use_f16));
     }
 
     void run(const std::vector<std::string> &filenames) override
@@ -43,35 +48,57 @@ class stream_detector_impl : public stream_detector
         std::vector<std::thread> ths;
 
         for (int i = 0; i < buffer_size; ++i) {
-            image_stream_in.put(in_stream_t{hwc_images[i], chw_images[i]});
-            feature_stream_in.put(feature_stream_t{confs[i], pafs[i]});
+            image_stream_1.put(in_stream_t{hwc_images[i], chw_images[i]});
+            feature_stream_1.put(feature_stream_t{confs[i], pafs[i]});
         }
 
         ths.push_back(std::thread([&]() {
             for (int i = 0; i < filenames.size(); ++i) {
-                const auto p = image_stream_in.get();
+                const auto p = image_stream_1.get();
                 input_image(filenames[i], height, width, p.hwc_ptr, p.chw_ptr);
-                image_stream_out.put(p);
+
+                bool draw_resiezed_input = false;
+                if (draw_resiezed_input) {
+                    cv::Mat resized_image(cv::Size(width, height), CV_8UC(3),
+                                          p.hwc_ptr);
+                    const auto name = "input" + std::to_string(i) + ".png";
+                    cv::imwrite(name, resized_image);
+                }
+
+                image_stream_2.put(p);
             }
         }));
 
         ths.push_back(std::thread([&]() {
             for (int i = 0; i < filenames.size(); ++i) {
-                const auto p = image_stream_out.get();
-                const auto q = feature_stream_in.get();
+                const auto p = image_stream_2.get();
+                const auto q = feature_stream_1.get();
                 runner->execute({p.chw_ptr}, {q.heatmap_ptr, q.paf_ptr}, 1);
-                image_stream_in.put(p);
-                feature_stream_out.put(q);
+                feature_stream_2.put(q);
+                image_stream_3.put(p);
             }
         }));
 
         ths.push_back(std::thread([&]() {
             for (int i = 0; i < filenames.size(); ++i) {
-                const auto q = feature_stream_out.get();
+                const auto p = image_stream_3.get();
+                const auto q = feature_stream_2.get();
                 const auto humans =
                     (*paf_process)(q.heatmap_ptr, q.paf_ptr, false);
-                feature_stream_in.put(q);
                 printf("got %lu humnas from %d-th image\n", humans.size(), i);
+                bool draw_humans = true;
+                if (draw_humans) {
+                    cv::Mat resized_image(cv::Size(width, height), CV_8UC(3),
+                                          p.hwc_ptr);
+                    for (const auto &h : humans) {
+                        h.print();
+                        draw_human(resized_image, h);
+                    }
+                    const auto name = "output" + std::to_string(i) + ".png";
+                    cv::imwrite(name, resized_image);
+                }
+                feature_stream_1.put(q);
+                image_stream_1.put(p);
             }
         }));
 
@@ -102,11 +129,12 @@ class stream_detector_impl : public stream_detector
         float *paf_ptr;
     };
 
-    channel<in_stream_t> image_stream_in;
-    channel<in_stream_t> image_stream_out;
+    channel<in_stream_t> image_stream_1;
+    channel<in_stream_t> image_stream_2;
+    channel<in_stream_t> image_stream_3;
 
-    channel<feature_stream_t> feature_stream_in;
-    channel<feature_stream_t> feature_stream_out;
+    channel<feature_stream_t> feature_stream_1;
+    channel<feature_stream_t> feature_stream_2;
 
     std::unique_ptr<paf_processor> paf_process;
     std::unique_ptr<uff_runner> runner;

@@ -92,7 +92,7 @@ template <typename T, uint8_t r> struct tensor_t {
 
     T *operator[](int k)
     {
-        const int off = volume() / dims[0] + k;
+        const int off = volume() / dims[0] * k;
         return data_.get() + off;
     }
 };
