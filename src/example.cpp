@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
     // TODO: derive from model
     const int f_height = FLAGS_input_height / 8;
     const int f_width = FLAGS_input_width / 8;
+    auto files = repeat(split(FLAGS_image_files, ','), FLAGS_repeat);
 
     std::unique_ptr<pose_detector> pd(create_pose_detector(
         FLAGS_model_file, FLAGS_input_height, FLAGS_input_width, f_height,
@@ -40,7 +41,6 @@ int main(int argc, char *argv[])
         using duration_t = std::chrono::duration<double>;
         const auto t0 = clock_t::now();
 
-        auto files = repeat(split(FLAGS_image_files, ','), FLAGS_repeat);
         pd->inference(files);
 
         const int n = files.size();

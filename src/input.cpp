@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 
 #include <opencv2/opencv.hpp>
 
@@ -9,8 +10,8 @@ std::string show_size(const cv::Size &s)
     return std::to_string(s.width) + " x " + std::to_string(s.height);
 }
 
-cv::Mat input_image(const char *filename, int target_height, int target_width,
-                    float *buffer)
+cv::Mat input_image(const std::string &filename, int target_height,
+                    int target_width, float *buffer)
 {
     auto &debug = std::cerr;
 

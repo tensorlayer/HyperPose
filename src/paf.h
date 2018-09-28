@@ -21,6 +21,12 @@ paf_processor *create_paf_processor(int input_height, int input_width,
 extern "C" {
 #endif
 
+namespace
+{
+const int n_joins = 18 + 1;
+const int n_connections = 17 + 2;
+}  // namespace
+
 /*
 C APIs
 */

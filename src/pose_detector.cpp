@@ -14,12 +14,6 @@
 #include "uff-runner.h"
 #include "vis.h"
 
-namespace
-{
-const int n_joins = 18 + 1;
-const int n_connections = 17 + 2;
-}  // namespace
-
 class pose_detector_impl : public pose_detector
 {
   public:
