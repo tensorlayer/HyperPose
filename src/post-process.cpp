@@ -45,10 +45,8 @@ void same_max_pool_3x3(const tensor_t<T, 3> &input, tensor_t<T, 3> &output)
     assert(height == output.dims[1]);
     assert(width == output.dims[2]);
 
-    const int offset = height * width;
     for (int k = 0; k < channel; ++k) {
-        same_max_pool_3x3(height, width, input.data() + k * offset,
-                          output.data() + k * offset);
+        same_max_pool_3x3(height, width, input[k], output[k]);
     }
 }
 

@@ -74,8 +74,7 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
         TRACE("batch read images");
         for (int i = 0; i < image_files.size(); ++i) {
             resized_images.push_back(
-                input_image(image_files[i].c_str(), height, width,
-                            images.data() + i * 3 * height * width));
+                input_image(image_files[i], height, width, images[i]));
         }
     }
     {
@@ -85,13 +84,10 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     }
     {
         TRACE("batch run process PAF and draw results");
-        const int feature_size = feature_height * feature_width;
         for (int i = 0; i < image_files.size(); ++i) {
             const auto humans = [&]() {
                 TRACE("run paf_process");
-                return (*paf_process)(
-                    confs.data() + i * n_joins * feature_size,
-                    pafs.data() + i * 2 * n_connections * feature_size, true);
+                return (*paf_process)(confs[i], pafs[i], true);
             }();
             auto resized_image = resized_images[i];
             {

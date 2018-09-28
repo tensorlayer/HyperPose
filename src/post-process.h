@@ -4,8 +4,6 @@
 #include "tensor.h"
 #include "tracer.h"
 
-inline int area(const cv::Size &size) { return size.height * size.width; }
-
 // tf.image.resize_area
 // This is the same as OpenCV's INTER_AREA.
 // input, output are in [channel, height, width] format
@@ -27,10 +25,8 @@ void resize_area(const tensor_proxy_t<T, 3> &input, tensor_t<T, 3> &output)
     const cv::Size size(width, height);
     const cv::Size target_size(target_width, target_height);
     for (int k = 0; k < channel; ++k) {
-        cv::Mat input_image(size, cv::DataType<T>::type,
-                            input.data() + k * area(size));
-        cv::Mat output_image(target_size, cv::DataType<T>::type,
-                             output.data() + k * area(target_size));
+        const cv::Mat input_image(size, cv::DataType<T>::type, (T *)input[k]);
+        cv::Mat output_image(target_size, cv::DataType<T>::type, output[k]);
         cv::resize(input_image, output_image, output_image.size(), 0, 0,
                    CV_INTER_AREA);
     }
@@ -52,10 +48,8 @@ void smooth(const tensor_t<T, 3> &input, tensor_t<T, 3> &output, int ksize)
 
     const cv::Size size(width, height);
     for (int k = 0; k < channel; ++k) {
-        cv::Mat input_image(size, cv::DataType<T>::type,
-                            input.data() + k * area(size));
-        cv::Mat output_image(size, cv::DataType<T>::type,
-                             output.data() + k * area(size));
+        const cv::Mat input_image(size, cv::DataType<T>::type, (T *)input[k]);
+        cv::Mat output_image(size, cv::DataType<T>::type, output[k]);
         cv::GaussianBlur(input_image, output_image, cv::Size(ksize, ksize),
                          sigma);
     }

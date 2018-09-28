@@ -95,6 +95,12 @@ template <typename T, uint8_t r> struct tensor_t {
         const int off = volume() / dims[0] * k;
         return data_.get() + off;
     }
+
+    const T *operator[](int k) const
+    {
+        const int off = volume() / dims[0] * k;
+        return data_.get() + off;
+    }
 };
 
 template <typename T, uint8_t r> struct tensor_proxy_t {
@@ -119,4 +125,16 @@ template <typename T, uint8_t r> struct tensor_proxy_t {
     }
 
     int32_t volume() const { return ::volume<r>(dims); }
+
+    T *operator[](int k)
+    {
+        const int off = volume() / dims[0] * k;
+        return data_ + off;
+    }
+
+    const T *operator[](int k) const
+    {
+        const int off = volume() / dims[0] * k;
+        return data_ + off;
+    }
 };
