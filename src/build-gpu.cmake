@@ -30,6 +30,13 @@ TARGET_LINK_LIBRARIES(stream-detetor uff-runner input_image paf)
 ADD_EXECUTABLE(example ${CMAKE_CURRENT_LIST_DIR}/example.cpp)
 TARGET_LINK_LIBRARIES(example tracer pose-detetor vis gflags)
 
+FIND_PACKAGE(Threads REQUIRED)
+
 ADD_EXECUTABLE(example-stream-detector
                ${CMAKE_CURRENT_LIST_DIR}/example_stream_detector.cpp)
-TARGET_LINK_LIBRARIES(example-stream-detector tracer stream-detetor vis gflags)
+TARGET_LINK_LIBRARIES(example-stream-detector
+                      tracer
+                      stream-detetor
+                      vis
+                      gflags
+                      Threads::Threads)
