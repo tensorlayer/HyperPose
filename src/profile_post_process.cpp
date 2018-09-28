@@ -6,7 +6,7 @@
 
 DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
-DEFINE_int32(gauss_kernel_size, 17, "Gauss kernel size for smooth operation.");
+DEFINE_int32(gauss_kernel_size, 13, "Gauss kernel size for smooth operation.");
 DEFINE_int32(repeat, 20, "Number of repeats.");
 
 void test_1()

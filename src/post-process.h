@@ -61,8 +61,8 @@ void smooth(const tensor_t<T, 3> &input, tensor_t<T, 3> &output, int ksize)
 }
 
 template <typename T>
-void same_max_pool_3x3(const int height, const int width,  //
-                       const T *input, T *output)
+void same_max_pool_3x3_2d(const int height, const int width,  //
+                          const T *input, T *output)
 {
     const auto at = [&](int i, int j) { return i * width + j; };
 
@@ -97,7 +97,7 @@ void same_max_pool_3x3(const tensor_t<T, 3> &input, tensor_t<T, 3> &output)
     assert(width == output.dims[2]);
 
     for (int k = 0; k < channel; ++k) {
-        same_max_pool_3x3(height, width, input[k], output[k]);
+        same_max_pool_3x3_2d(height, width, input[k], output[k]);
     }
 }
 
