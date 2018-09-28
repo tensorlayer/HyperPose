@@ -218,10 +218,10 @@ if __name__ == '__main__':
     n_epoch = math.ceil(n_step / (len(imgs_file_list) / batch_size))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
     dataset = dataset.shuffle(buffer_size=4096)  # shuffle before loading images
-    dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count())
-    dataset = dataset.prefetch(90000)
     dataset = dataset.repeat(n_epoch)
-    dataset = dataset.batch(batch_size)
+    dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count()) # decouple the heavy map_fn
+    dataset = dataset.batch(batch_size) # TODO: consider using tf.contrib.map_and_batch
+    dataset = dataset.prefetch(1) # prefetch 1 batch
     iterator = dataset.make_one_shot_iterator()
     one_element = iterator.get_next()
 
