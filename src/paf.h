@@ -7,7 +7,9 @@
 class paf_processor
 {
   public:
-    virtual std::vector<human_t> operator()(const float *, const float *) = 0;
+    virtual std::vector<human_t> operator()(const float * /* heatmap */,
+                                            const float * /* PAF */,
+                                            bool /* use GPU */) = 0;
 
     virtual ~paf_processor() {}
 };

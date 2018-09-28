@@ -65,15 +65,14 @@ class paf_processor_impl : public paf_processor
 
     std::vector<human_t> operator()(
         const float *conf_, /* [n_joins, input_height, input_width] */
-        const float *paf_ /* [n_connections * 2, input_height, input_width] */)
+        const float *paf_ /* [n_connections * 2, input_height, input_width] */,
+        bool use_gpu)
     {
         TRACE(__func__);
 
         resize_area(tensor_proxy_t<float, 3>((float *)conf_, n_joins,
                                              input_height, input_width),
                     upsample_conf);
-
-        const bool use_gpu = true;
         if (use_gpu) {
             (*get_peak_map_gpu)(upsample_conf, peaks);
         } else {

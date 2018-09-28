@@ -85,7 +85,7 @@ class stream_detector_impl : public stream_detector
         ths.push_back(std::thread([&]() {
             for (int i = 0; i < filenames.size(); ++i) {
                 const auto pr = feature_stream_out.get();
-                const auto humans = (*paf_process)(pr.first, pr.second);
+                const auto humans = (*paf_process)(pr.first, pr.second, false);
                 feature_stream_in.put(pr);
                 printf("got %lu humnas from %d-th image\n", humans.size(), i);
             }

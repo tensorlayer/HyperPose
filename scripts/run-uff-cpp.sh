@@ -5,8 +5,6 @@ HAVE_CUDA=1 make
 echo
 
 MODEL_DIR=$HOME/Downloads
-D=$HOME/var/data/openpose
-
 MODEL_FILE=${MODEL_DIR}/hao28-256x384.uff
 
 repeat=20
@@ -42,14 +40,14 @@ run_stream_example() {
         --image_files=${IMAGES}
 }
 
-# run_batch_example \
-#     $D/examples/media/COCO_val2014_000000000192.png \
-#     $D/new-tests/cam0_27.png \
-#     $D/126/cam2_3938.png \
-#     $D/126/cam1_2386.png
+with_images() {
+    local D=$HOME/var/data/openpose
+    $1 \
+        $D/examples/media/COCO_val2014_000000000192.png \
+        $D/new-tests/cam0_27.png \
+        $D/126/cam2_3938.png \
+        $D/126/cam1_2386.png
+}
 
-run_stream_example \
-    $D/examples/media/COCO_val2014_000000000192.png \
-    $D/new-tests/cam0_27.png \
-    $D/126/cam2_3938.png \
-    $D/126/cam1_2386.png
+# with_images run_batch_example
+with_images run_stream_example

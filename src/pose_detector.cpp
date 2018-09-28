@@ -89,9 +89,9 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
         for (int i = 0; i < image_files.size(); ++i) {
             const auto humans = [&]() {
                 TRACE("run paf_process");
-                return (*paf_process)(confs.data() + i * n_joins * feature_size,
-                                      pafs.data() +
-                                          i * 2 * n_connections * feature_size);
+                return (*paf_process)(
+                    confs.data() + i * n_joins * feature_size,
+                    pafs.data() + i * 2 * n_connections * feature_size, true);
             }();
             auto resized_image = resized_images[i];
             {
