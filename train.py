@@ -210,7 +210,19 @@ def make_model(img, results, mask, is_train=True, reuse=False):
        l2_loss += tf.contrib.layers.l2_regularizer(weight_decay_factor)(p)
     total_loss = tf.reduce_sum(losses) / batch_size + l2_loss
 
-    return total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, img, confs, pafs, m1, net
+    log_tensors = {'total_loss': total_loss, 'stage_losses': stage_losses, 'l2_loss': l2_loss}
+    net.cnn = cnn
+    net.img = img               # net input
+    net.last_conf = last_conf   # net output
+    net.last_paf = last_paf     # net output
+    net.confs = confs           # GT
+    net.pafs = pafs             # GT
+    net.m1 = m1                 # mask1, GT
+    net.m2 = m2                 # mask2, GT
+    net.stage_losses = stage_losses
+    net.l2_loss = l2_loss
+    return net, total_loss, log_tensors
+    # return total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, img, confs, pafs, m1, net
 
 if __name__ == '__main__':
 
@@ -291,7 +303,17 @@ if __name__ == '__main__':
     if config.TRAIN.train_mode == 'datasetapi':
         """ ======================== SINGLE GPU TRAINING ======================= """
         """ Train on single GPU using TensorFlow DatasetAPI. """
-        total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element)
+        net, total_loss, log_tensors = make_model(*one_element, is_train=True, reuse=False)
+        # cnn = net.cnn
+        x_ = net.img               # net input
+        last_conf = net.last_conf   # net output
+        last_paf = net.last_paf     # net output
+        confs_ = net.confs           # GT
+        pafs_ = net.pafs             # GT
+        mask = net.m1                 # mask1, GT
+        # net.m2 = m2                 # mask2, GT
+        stage_losses = net.stage_losses
+        l2_loss = net.l2_loss
 
         global_step = tf.Variable(1, trainable=False)
         print('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
@@ -389,7 +411,18 @@ if __name__ == '__main__':
         resultmaps = tf.placeholder(tf.float32, [None, hout, wout, n_pos * 3], "resultmaps")
         # if the people does not have keypoints annotations, ignore the area
         img_masks = tf.placeholder(tf.float32, [None, hout, wout, 1], 'img_masks')
-        total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element, is_train=True, reuse=False)
+        # total_loss, last_conf, stage_losses, L2, cnn, last_paf, x_, confs_, pafs_, mask, net = make_model(*one_element, is_train=True, reuse=False)
+        net, total_loss, log_tensors = make_model(*one_element, is_train=True, reuse=False)
+        # cnn = net.cnn
+        x_ = net.img               # net input
+        last_conf = net.last_conf   # net output
+        last_paf = net.last_paf     # net output
+        confs_ = net.confs           # GT
+        pafs_ = net.pafs             # GT
+        mask = net.m1                 # mask1, GT
+        # net.m2 = m2                 # mask2, GT
+        stage_losses = net.stage_losses
+        l2_loss = net.l2_loss
 
         global_step = tf.Variable(1, trainable=False)
         print('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
@@ -438,8 +471,8 @@ if __name__ == '__main__':
                 ## save some training data for debugging data augmentation (slow)
                 # draw_results(x_, confs_, None, pafs_, None, mask, 'check_batch_{}_'.format(step))
 
-                [_, the_loss, loss_ll, L2_reg, conf_result, weight_norm, paf_result] = sess.run(
-                    [train_op, total_loss, stage_losses, L2, last_conf, L2, last_paf],
+                [_, the_loss, loss_ll, conf_result, weight_norm, paf_result] = sess.run(
+                    [train_op, total_loss, stage_losses, last_conf, l2_loss, last_paf],
                     feed_dict={
                         x: x_,
                         resultmaps: map_batch,
