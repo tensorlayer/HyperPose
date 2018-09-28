@@ -9,3 +9,11 @@ TARGET_LINK_LIBRARIES(input_image opencv_imgcodecs) # required on ubuntu 18
 
 ADD_LIBRARY(vis ${CMAKE_CURRENT_LIST_DIR}/vis.cpp)
 TARGET_LINK_LIBRARIES(vis opencv_core opencv_imgproc opencv_highgui)
+
+ADD_EXECUTABLE(profile-post-process
+               ${CMAKE_CURRENT_LIST_DIR}/profile_post_process.cpp)
+TARGET_LINK_LIBRARIES(profile-post-process
+                      tracer
+                      gflags
+                      opencv_core
+                      opencv_imgproc)
