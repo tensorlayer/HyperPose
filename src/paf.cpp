@@ -29,7 +29,7 @@ template <typename T> struct point_2d {
     T l2() const { return sqr(x) + sqr(y); }
 };
 
-struct Peak {
+struct peak_info {
     point_2d<int> pos;
     float score;
     int id;
@@ -77,7 +77,7 @@ class paf_processor_impl : public paf_processor
                         upsample_paf);
         }
         get_peak_map(upsample_conf, peaks, use_gpu);
-        return (*this)(upsample_conf, peaks, upsample_paf);
+        return process(upsample_conf, peaks, upsample_paf);
     }
 
   private:
@@ -104,14 +104,15 @@ class paf_processor_impl : public paf_processor
 
     std::vector<ConnectionCandidate>
     getConnectionCandidates(const tensor_t<float, 3> &pafmap,
-                            const std::vector<Peak> &all_peaks,
+                            const std::vector<peak_info> &all_peaks,
                             const std::vector<int> &peak_index_1,
                             const std::vector<int> &peak_index_2,
                             const std::pair<int, int> coco_pair_net, int height)
     {
         std::vector<ConnectionCandidate> candidates;
 
-        const auto maybe_add = [&](const Peak &peak_a, const Peak &peak_b) {
+        const auto maybe_add = [&](const peak_info &peak_a,
+                                   const peak_info &peak_b) {
             const auto dis = peak_b.pos - peak_a.pos;
             const float norm = std::sqrt(dis.l2());
             if (norm < 1e-12) { return; }
@@ -160,7 +161,7 @@ class paf_processor_impl : public paf_processor
 
     std::vector<Connection>
     getConnections(const tensor_t<float, 3> &pafmap,
-                   const std::vector<Peak> &all_peaks,
+                   const std::vector<peak_info> &all_peaks,
                    const std::vector<std::vector<int>> &peak_ids_by_channel,
                    int pair_id, int height)
     {
@@ -202,19 +203,19 @@ class paf_processor_impl : public paf_processor
     void find_peak_coords(
         const tensor_t<float, 3> &heatmap, const tensor_t<float, 3> &peaks,
         float threshold,                                    //
-        std::vector<Peak> &all_peaks,                       // output
+        std::vector<peak_info> &all_peaks,                  // output
         std::vector<std::vector<int>> &peak_ids_by_channel  // output
     )
     {
         TRACE(__func__);
         int idx = 0;
         for (int part_id = 0; part_id < COCO_N_PARTS; ++part_id) {
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    if (peaks.at(part_id, y, x) > threshold) {
-                        const Peak info =
-                            Peak{point_2d<int>{x, y}, heatmap.at(part_id, y, x),
-                                 idx++};
+            for (int i = 0; i < height; ++i) {
+                for (int j = 0; j < width; ++j) {
+                    if (peaks.at(part_id, i, j) > threshold) {
+                        const peak_info info =
+                            peak_info{point_2d<int>{j, i},
+                                      heatmap.at(part_id, i, j), idx++};
                         all_peaks.push_back(info);
                         peak_ids_by_channel[part_id].push_back(info.id);
                     }
@@ -226,7 +227,7 @@ class paf_processor_impl : public paf_processor
     }
 
     std::vector<human_ref_t>
-    getHumans(const std::vector<Peak> &all_peaks,
+    getHumans(const std::vector<peak_info> &all_peaks,
               const std::vector<std::vector<Connection>> &all_connections)
     {
         TRACE(__func__);
@@ -314,7 +315,7 @@ class paf_processor_impl : public paf_processor
 
     std::vector<std::vector<Connection>>
     getAllConnections(const tensor_t<float, 3> &pafmap,
-                      const std::vector<Peak> &all_peaks,
+                      const std::vector<peak_info> &all_peaks,
                       const std::vector<std::vector<int>> &peak_ids_by_channel)
     {
         TRACE(__func__);
@@ -328,13 +329,13 @@ class paf_processor_impl : public paf_processor
     }
 
     std::vector<human_t>
-    operator()(const tensor_t<float, 3> &heatmap, /* [j, h, w] */
-               const tensor_t<float, 3> &peaks,   /* [j, h, w] */
-               const tensor_t<float, 3> &pafmap /* [2c, h, w] */)
+    process(const tensor_t<float, 3> &heatmap, /* [j, h, w] */
+            const tensor_t<float, 3> &peaks,   /* [j, h, w] */
+            const tensor_t<float, 3> &pafmap /* [2c, h, w] */)
     {
-        TRACE("paf_processor_impl::operator()::internal");
+        TRACE("paf_processor_impl::process");
 
-        std::vector<Peak> all_peaks;
+        std::vector<peak_info> all_peaks;
         std::vector<std::vector<int>> peak_ids_by_channel(COCO_N_PARTS);
         find_peak_coords(heatmap, peaks, THRESH_HEAT, all_peaks,
                          peak_ids_by_channel);
