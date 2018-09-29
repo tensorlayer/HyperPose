@@ -1,7 +1,6 @@
 #include "paf.h"
 
 #include <algorithm>
-#include <cmath>
 #include <functional>
 
 #include "coco.h"
@@ -9,31 +8,6 @@
 #include "post-process.h"
 #include "tensor.h"
 #include "tracer.h"
-
-template <typename T> T sqr(T x) { return x * x; }
-
-template <typename T> struct point_2d {
-    T x;
-    T y;
-
-    point_2d<T> operator-(const point_2d<T> &p) const
-    {
-        return point_2d<T>{x - p.x, y - p.y};
-    }
-
-    template <typename S> point_2d<S> cast_to() const
-    {
-        return point_2d<S>{S(x), S(y)};
-    }
-
-    T l2() const { return sqr(x) + sqr(y); }
-};
-
-struct peak_info {
-    point_2d<int> pos;
-    float score;
-    int id;
-};
 
 struct VectorXY {
     float x;
@@ -54,9 +28,8 @@ class paf_processor_impl : public paf_processor
           n_joins(n_joins),
           n_connections(n_connections),
           upsample_conf(nullptr, n_joins, height, width),
-          peaks(nullptr, n_joins, height, width),
           upsample_paf(nullptr, n_connections * 2, height, width),
-          get_peak_map(n_joins, height, width, gauss_kernel_size)
+          peak_finder(n_joins, height, width, gauss_kernel_size)
     {
     }
 
@@ -76,12 +49,13 @@ class paf_processor_impl : public paf_processor
                                                  input_height, input_width),
                         upsample_paf);
         }
-        get_peak_map(upsample_conf, peaks, use_gpu);
-        return process(upsample_conf, peaks, upsample_paf);
+        const auto all_peaks =
+            peak_finder.find_peak_coords(upsample_conf, THRESH_HEAT, use_gpu);
+        const auto peak_ids_by_channel = peak_finder.group_by(all_peaks);
+        return process(all_peaks, peak_ids_by_channel, upsample_paf);
     }
 
   private:
-    // const float THRESH_HEAT = 0.002;
     const float THRESH_HEAT = 0.05;
     const float THRESH_VECTOR_SCORE = 0.05;
     const int THRESH_VECTOR_CNT1 = 8;
@@ -97,10 +71,9 @@ class paf_processor_impl : public paf_processor
     const int n_connections;
 
     tensor_t<float, 3> upsample_conf;  // [J, H, W]
-    tensor_t<float, 3> peaks;          // [J, H, W]
     tensor_t<float, 3> upsample_paf;   // [2C, H, W]
 
-    get_peak_map_op<float> get_peak_map;
+    peak_finder_t<float> peak_finder;
 
     std::vector<ConnectionCandidate>
     getConnectionCandidates(const tensor_t<float, 3> &pafmap,
@@ -198,32 +171,6 @@ class paf_processor_impl : public paf_processor
             }
         }
         return conns;
-    }
-
-    void find_peak_coords(
-        const tensor_t<float, 3> &heatmap, const tensor_t<float, 3> &peaks,
-        float threshold,                                    //
-        std::vector<peak_info> &all_peaks,                  // output
-        std::vector<std::vector<int>> &peak_ids_by_channel  // output
-    )
-    {
-        TRACE(__func__);
-        int idx = 0;
-        for (int part_id = 0; part_id < COCO_N_PARTS; ++part_id) {
-            for (int i = 0; i < height; ++i) {
-                for (int j = 0; j < width; ++j) {
-                    if (peaks.at(part_id, i, j) > threshold) {
-                        const peak_info info =
-                            peak_info{point_2d<int>{j, i},
-                                      heatmap.at(part_id, i, j), idx++};
-                        all_peaks.push_back(info);
-                        peak_ids_by_channel[part_id].push_back(info.id);
-                    }
-                }
-            }
-        }
-        printf("selected %lu peaks with value > %f\n", all_peaks.size(),
-               threshold);
     }
 
     std::vector<human_ref_t>
@@ -329,16 +276,11 @@ class paf_processor_impl : public paf_processor
     }
 
     std::vector<human_t>
-    process(const tensor_t<float, 3> &heatmap, /* [j, h, w] */
-            const tensor_t<float, 3> &peaks,   /* [j, h, w] */
+    process(const std::vector<peak_info> &all_peaks,
+            const std::vector<std::vector<int>> &peak_ids_by_channel,
             const tensor_t<float, 3> &pafmap /* [2c, h, w] */)
     {
         TRACE("paf_processor_impl::process");
-
-        std::vector<peak_info> all_peaks;
-        std::vector<std::vector<int>> peak_ids_by_channel(COCO_N_PARTS);
-        find_peak_coords(heatmap, peaks, THRESH_HEAT, all_peaks,
-                         peak_ids_by_channel);
 
         const std::vector<std::vector<Connection>> all_connections =
             getAllConnections(pafmap, all_peaks, peak_ids_by_channel);

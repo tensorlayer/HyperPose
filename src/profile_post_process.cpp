@@ -14,12 +14,13 @@ void test_1()
     const int h = FLAGS_input_height;
     const int w = FLAGS_input_width;
 
-    get_peak_map_op<float> get_peak_map(n_joins, h, w, FLAGS_gauss_kernel_size);
+    peak_finder_t<float> peak_finder(n_joins, h, w, FLAGS_gauss_kernel_size);
 
     tensor_t<float, 3> heatmap(nullptr, n_joins, h, w);
-    tensor_t<float, 3> peaks(nullptr, n_joins, h, w);
     const int n = FLAGS_repeat;
-    for (int i = 0; i < n; ++i) { get_peak_map(heatmap, peaks, false); }
+    for (int i = 0; i < n; ++i) {
+        peak_finder.find_peak_coords(heatmap, 0.05, false);
+    }
 }
 
 int main(int argc, char *argv[])
