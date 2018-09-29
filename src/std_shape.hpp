@@ -41,7 +41,6 @@ template <typename dim_t, rank_t r> class basic_shape
                                std::multiplies<dim_t>());
     }
 
-  private:
     const std::array<dim_t, r> dims;
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 
 #include <cudnn.h>
 
@@ -8,12 +9,14 @@
 
 /* status checker */
 
+std::string get_cudnn_status_name(cudnnStatus_t status);
+
 struct cudnn_status_checker {
     void operator<<(cudnnStatus_t status) const
     {
         if (status != CUDNN_STATUS_SUCCESS) {
-            printf("want %d, got %d\n", CUDNN_STATUS_SUCCESS, status);
-            perror("cudnn error");
+            const auto name = get_cudnn_status_name(status);
+            fprintf(stderr, "%s\n", name.c_str());
             exit(1);
         }
     }

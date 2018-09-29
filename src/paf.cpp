@@ -59,6 +59,8 @@ class paf_processor_impl : public paf_processor
           upsample_paf(nullptr, n_connections * 2, height, width),
           get_peak_map_gpu(new get_peak_map_gpu_op_t(n_joins, height, width,
                                                      gauss_kernel_size)),
+          resize(input_height, input_width, height, width,
+                 std::max(n_joins, 2 * n_connections)),
           gauss_kernel_size(gauss_kernel_size)
     {
     }
@@ -69,24 +71,16 @@ class paf_processor_impl : public paf_processor
         bool use_gpu)
     {
         TRACE("paf_processor_impl::operator()");
-
         {
             TRACE("resize heatmap and PAF");
-            resize_area(tensor_proxy_t<float, 3>((float *)conf_, n_joins,
-                                                 input_height, input_width),
-                        upsample_conf);
-            resize_area(tensor_proxy_t<float, 3>((float *)paf_,
-                                                 n_connections * 2,
-                                                 input_height, input_width),
-                        upsample_paf);
+            resize(conf_, upsample_conf.data(), n_joins);
+            resize(paf_, upsample_paf.data(), 2 * n_connections);
         }
-
         if (use_gpu) {
             (*get_peak_map_gpu)(upsample_conf, peaks);
         } else {
             get_peak_map(upsample_conf, peaks, gauss_kernel_size);
         }
-
         return (*this)(upsample_conf, peaks, upsample_paf);
     }
 
@@ -112,6 +106,8 @@ class paf_processor_impl : public paf_processor
 
     using get_peak_map_gpu_op_t = get_peak_map_gpu_op_impl<float>;
     std::unique_ptr<get_peak_map_gpu_op_t> get_peak_map_gpu;
+    resize_op<float> resize;
+
     const int gauss_kernel_size;
 
     std::vector<ConnectionCandidate>

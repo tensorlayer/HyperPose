@@ -14,8 +14,11 @@ INCLUDE_DIRECTORIES(${CUDA_RT}/include ${CUDA_RT}/include/crt)
 ADD_LIBRARY(cudnn++ ${CMAKE_CURRENT_LIST_DIR}/cudnn.cpp)
 TARGET_LINK_LIBRARIES(cudnn++ cudnn cudart)
 
+ADD_LIBRARY(npp++ ${CMAKE_CURRENT_LIST_DIR}/npp.cpp)
+TARGET_LINK_LIBRARIES(npp++ nppig)
+
 ADD_LIBRARY(paf ${CMAKE_CURRENT_LIST_DIR}/paf.cpp)
-TARGET_LINK_LIBRARIES(paf tracer cudnn++)
+TARGET_LINK_LIBRARIES(paf tracer cudnn++ npp++)
 
 ADD_LIBRARY(uff-runner ${CMAKE_CURRENT_LIST_DIR}/uff-runner.cpp)
 TARGET_LINK_LIBRARIES(uff-runner nvinfer nvparsers)
