@@ -89,8 +89,6 @@ void same_max_pool_3x3_2d(const int height, const int width,  //
 template <typename T>
 void same_max_pool_3x3(const tensor_t<T, 3> &input, tensor_t<T, 3> &output)
 {
-    TRACE(__func__);
-
     const int channel = input.dims[0];
     const int height = input.dims[1];
     const int width = input.dims[2];
