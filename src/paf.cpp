@@ -7,7 +7,6 @@
 #include "coco.h"
 #include "human.h"
 #include "post-process.h"
-#include "post-process_gpu.h"
 #include "tensor.h"
 #include "tracer.h"
 
@@ -45,7 +44,7 @@ class paf_processor_impl : public paf_processor
 {
   public:
     paf_processor_impl(int input_height, int input_width, int height, int width,
-                       int n_joins /* COCO_N_PARTS */,
+                       int n_joins /* 1 + COCO_N_PARTS */,
                        int n_connections /* COCO_N_PAIRS */,
                        int gauss_kernel_size)
         : height(height),
@@ -57,8 +56,7 @@ class paf_processor_impl : public paf_processor
           upsample_conf(nullptr, n_joins, height, width),
           peaks(nullptr, n_joins, height, width),
           upsample_paf(nullptr, n_connections * 2, height, width),
-          get_peak_map_gpu(n_joins, height, width, gauss_kernel_size),
-          gauss_kernel_size(gauss_kernel_size)
+          get_peak_map(n_joins, height, width, gauss_kernel_size)
     {
     }
 
@@ -68,7 +66,6 @@ class paf_processor_impl : public paf_processor
         bool use_gpu)
     {
         TRACE("paf_processor_impl::operator()");
-
         {
             TRACE("resize heatmap and PAF");
             resize_area(tensor_proxy_t<float, 3>((float *)conf_, n_joins,
@@ -79,13 +76,7 @@ class paf_processor_impl : public paf_processor
                                                  input_height, input_width),
                         upsample_paf);
         }
-
-        if (use_gpu) {
-            get_peak_map_gpu(upsample_conf, peaks);
-        } else {
-            get_peak_map(upsample_conf, peaks, gauss_kernel_size);
-        }
-
+        get_peak_map(upsample_conf, peaks, use_gpu);
         return (*this)(upsample_conf, peaks, upsample_paf);
     }
 
@@ -109,9 +100,7 @@ class paf_processor_impl : public paf_processor
     tensor_t<float, 3> peaks;          // [J, H, W]
     tensor_t<float, 3> upsample_paf;   // [2C, H, W]
 
-    using get_peak_map_gpu_op_t = get_peak_map_gpu_op_impl<float>;
-    get_peak_map_gpu_op_t get_peak_map_gpu;
-    const int gauss_kernel_size;
+    get_peak_map_op<float> get_peak_map;
 
     std::vector<ConnectionCandidate>
     getConnectionCandidates(const tensor_t<float, 3> &pafmap,

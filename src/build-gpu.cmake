@@ -39,3 +39,12 @@ TARGET_LINK_LIBRARIES(example-stream-detector
                       vis
                       gflags
                       Threads::Threads)
+
+ADD_EXECUTABLE(profile-post-process
+${CMAKE_CURRENT_LIST_DIR}/profile_post_process.cpp)
+TARGET_LINK_LIBRARIES(profile-post-process
+       tracer
+       gflags
+       paf
+       opencv_core
+       opencv_imgproc)

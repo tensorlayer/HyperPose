@@ -4,8 +4,11 @@
 #include <cassert>
 #include <limits>
 
+#include <cuda_runtime.h>
 #include <opencv2/opencv.hpp>
 
+#include "cudnn.hpp"
+#include "std_cuda_tensor.hpp"
 #include "tensor.h"
 #include "tracer.h"
 
@@ -112,22 +115,43 @@ void inplace_select_peaks(const tensor_t<T, 3> &output,
                    output.data(), [](T x, T y) { return x != y ? 0 : x; });
 }
 
-template <typename T>
-void get_peak_map(const tensor_t<T, 3> &input, tensor_t<T, 3> &output,
-                  int ksize)
+template <typename T> class get_peak_map_op
 {
-    TRACE(__func__);
+  public:
+    get_peak_map_op(int channel, int height, int width, int ksize)
+        : ksize(ksize),
+          smoothed_gpu(channel, height, width),
+          pooled_gpu(channel, height, width),
+          pooled_cpu(nullptr, channel, height, width),
+          same_max_pool_3x3_gpu(1, channel, height, width, 3, 3)
+    {
+    }
 
-    const int channel = input.dims[0];
-    const int height = input.dims[1];
-    const int width = input.dims[2];
+    void operator()(const tensor_t<T, 3> &input, tensor_t<T, 3> &output,
+                    bool use_gpu)
+    {
+        TRACE(std::string("<") + typeid(*this).name() + ">::" + __func__);
+        smooth(input, output, ksize);
+        if (use_gpu) {
+            TRACE("max pooling on GPU");
+            smoothed_gpu.fromHost(output.data());
+            same_max_pool_3x3_gpu(smoothed_gpu.data(), pooled_gpu.data());
+            // cudaDeviceSynchronize();
+            pooled_gpu.toHost(pooled_cpu.data());
+        } else {
+            TRACE("max pooling on CPU");
+            same_max_pool_3x3(output, pooled_cpu);
+        }
+        inplace_select_peaks(output, pooled_cpu);
+    }
 
-    assert(channel == output.dims[0]);
-    assert(height == output.dims[1]);
-    assert(width == output.dims[2]);
+  private:
+    const int ksize;
 
-    tensor_t<T, 3> pooled(nullptr, channel, height, width);
-    smooth(input, output, ksize);
-    same_max_pool_3x3(output, pooled);
-    inplace_select_peaks(output, pooled);
-}
+    cuda_tensor<T, 3> smoothed_gpu;
+    cuda_tensor<T, 3> pooled_gpu;
+    tensor_t<T, 3> pooled_cpu;
+
+    using Pool = Pool_NCHW_PaddingSame_Max<T>;
+    Pool same_max_pool_3x3_gpu;
+};
