@@ -40,11 +40,21 @@ TARGET_LINK_LIBRARIES(example-stream-detector
                       gflags
                       Threads::Threads)
 
+ADD_EXECUTABLE(example-live-camera
+               ${CMAKE_CURRENT_LIST_DIR}/example_live_camera.cpp)
+TARGET_LINK_LIBRARIES(example-live-camera
+                      tracer
+                      stream-detetor
+                      vis
+                      gflags
+                      opencv_videoio
+                      Threads::Threads)
+
 ADD_EXECUTABLE(profile-post-process
-${CMAKE_CURRENT_LIST_DIR}/profile_post_process.cpp)
+               ${CMAKE_CURRENT_LIST_DIR}/profile_post_process.cpp)
 TARGET_LINK_LIBRARIES(profile-post-process
-       tracer
-       gflags
-       paf
-       opencv_core
-       opencv_imgproc)
+                      tracer
+                      gflags
+                      paf
+                      opencv_core
+                      opencv_imgproc)

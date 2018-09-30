@@ -1,3 +1,4 @@
+#include <atomic>
 #include <cstdint>
 #include <thread>
 
@@ -11,6 +12,39 @@
 #include "tracer.h"
 #include "uff-runner.h"
 #include "vis.h"
+
+struct default_inputer : stream_detector::inputer_t {
+    const std::vector<std::string> filenames;
+    int idx;
+
+    default_inputer(const std::vector<std::string> &filenames)
+        : filenames(filenames), idx(0)
+    {
+    }
+
+    bool operator()(int height, int width, uint8_t *hwc_ptr,
+                    float *chw_ptr) override
+    {
+        if (idx >= filenames.size()) { return false; }
+        input_image(filenames[idx++], height, width, hwc_ptr, chw_ptr);
+        return true;
+    }
+};
+
+struct default_handler : stream_detector::handler_t {
+    int idx;
+    default_handler() : idx(0) {}
+
+    void operator()(cv::Mat &image, const std::vector<human_t> &humans) override
+    {
+        for (const auto &h : humans) {
+            h.print();
+            draw_human(image, h);
+        }
+        const auto name = "output" + std::to_string(idx++) + ".png";
+        cv::imwrite(name, image);
+    }
+};
 
 class stream_detector_impl : public stream_detector
 {
@@ -42,7 +76,7 @@ class stream_detector_impl : public stream_detector
             create_openpose_runner(model_file, height, width, 1, use_f16));
     }
 
-    void run(const std::vector<std::string> &filenames) override
+    void run(inputer_t &in, handler_t &handle, int count) override
     {
         TRACE(__func__);
         std::vector<std::thread> ths;
@@ -52,25 +86,21 @@ class stream_detector_impl : public stream_detector
             feature_stream_1.put(feature_stream_t{confs[i], pafs[i]});
         }
 
+        // std::atomic<bool> done(false);
+
         ths.push_back(std::thread([&]() {
-            for (int i = 0; i < filenames.size(); ++i) {
+            for (;;) {
                 const auto p = image_stream_1.get();
-                input_image(filenames[i], height, width, p.hwc_ptr, p.chw_ptr);
-
-                bool draw_resiezed_input = false;
-                if (draw_resiezed_input) {
-                    cv::Mat resized_image(cv::Size(width, height), CV_8UC(3),
-                                          p.hwc_ptr);
-                    const auto name = "input" + std::to_string(i) + ".png";
-                    cv::imwrite(name, resized_image);
+                if (!in(height, width, p.hwc_ptr, p.chw_ptr)) {
+                    // done = true;
+                    break;
                 }
-
                 image_stream_2.put(p);
             }
         }));
 
         ths.push_back(std::thread([&]() {
-            for (int i = 0; i < filenames.size(); ++i) {
+            for (int i = 0; i < count; ++i) {
                 const auto p = image_stream_2.get();
                 const auto q = feature_stream_1.get();
                 runner->execute({p.chw_ptr}, {q.heatmap_ptr, q.paf_ptr}, 1);
@@ -80,7 +110,7 @@ class stream_detector_impl : public stream_detector
         }));
 
         ths.push_back(std::thread([&]() {
-            for (int i = 0; i < filenames.size(); ++i) {
+            for (int i = 0; i < count; ++i) {
                 const auto p = image_stream_3.get();
                 const auto q = feature_stream_2.get();
                 const auto humans =
@@ -90,12 +120,7 @@ class stream_detector_impl : public stream_detector
                 if (draw_humans) {
                     cv::Mat resized_image(cv::Size(width, height), CV_8UC(3),
                                           p.hwc_ptr);
-                    for (const auto &h : humans) {
-                        h.print();
-                        draw_human(resized_image, h);
-                    }
-                    const auto name = "output" + std::to_string(i) + ".png";
-                    cv::imwrite(name, resized_image);
+                    handle(resized_image, humans);
                 }
                 feature_stream_1.put(q);
                 image_stream_1.put(p);
@@ -103,6 +128,13 @@ class stream_detector_impl : public stream_detector
         }));
 
         for (auto &th : ths) { th.join(); }
+    }
+
+    void run(const std::vector<std::string> &filenames) override
+    {
+        default_inputer in(filenames);
+        default_handler handle;
+        run(in, handle, filenames.size());
     }
 
   private:
