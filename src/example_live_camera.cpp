@@ -46,9 +46,7 @@ struct camera_t {
             printf("#%d :: %d x %d\n", i, frame.size().height,
                    frame.size().width);
             ch.put(frame);
-            if (cv::waitKey(delay) >= 0) {
-                //  break;
-            }
+            cv::waitKey(delay);
         }
     }
 };
@@ -66,19 +64,7 @@ struct screen_t {
     void display(const cv::Mat &frame)
     {
         cv::imshow(name, frame);
-        if (cv::waitKey(delay) >= 0) {
-            //  break;
-        }
-    }
-
-    void monitor(channel<cv::Mat> &ch)
-    {
-        for (int i = 0;; ++i) {
-            const auto frame = ch.get();
-            printf("#%d :: %d x %d\n", i, frame.size().height,
-                   frame.size().width);
-            display(frame);
-        }
+        cv::waitKey(delay);
     }
 };
 
@@ -138,11 +124,6 @@ int main(int argc, char *argv[])
     std::vector<std::thread> ths;
 
     channel<cv::Mat> ch(24);
-
-    // ths.push_back(std::thread([&]() {
-    //     screen_t s1("origin", ch);
-    //     s1.display();
-    // }));
 
     ths.push_back(std::thread([&]() {
         camera_t c1(ch);
