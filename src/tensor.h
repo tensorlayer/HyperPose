@@ -59,12 +59,10 @@ template <typename T, uint8_t r> struct tensor_t {
         : dims({{static_cast<int32_t>(dims_)...}}),
           data_(new T[::volume<r>(dims)])
     {
-        TRACE(__func__);
-
+        // TRACE(__func__);
         static_assert(sizeof...(Dims) == r, "invalid number of dims");
-
-        printf("creating tensor :: %s @ %p\n", show_dim<r>(dims).c_str(),
-               data_.get());
+        // printf("creating tensor :: %s @ %p\n", show_dim<r>(dims).c_str(),
+        //        data_.get());
 
         if (data_ptr) {
             std::memcpy(data_.get(), data_ptr, sizeof(T) * volume());
@@ -85,9 +83,24 @@ template <typename T, uint8_t r> struct tensor_t {
         return data_[offset<r>(dims, i...)];
     }
 
-    virtual ~tensor_t() { printf("%p freed\n", data_.get()); }
+    virtual ~tensor_t()
+    {
+        //  printf("%p freed\n", data_.get());
+    }
 
     int32_t volume() const { return ::volume<r>(dims); }
+
+    T *operator[](int k)
+    {
+        const int off = volume() / dims[0] * k;
+        return data_.get() + off;
+    }
+
+    const T *operator[](int k) const
+    {
+        const int off = volume() / dims[0] * k;
+        return data_.get() + off;
+    }
 };
 
 template <typename T, uint8_t r> struct tensor_proxy_t {
@@ -112,4 +125,16 @@ template <typename T, uint8_t r> struct tensor_proxy_t {
     }
 
     int32_t volume() const { return ::volume<r>(dims); }
+
+    T *operator[](int k)
+    {
+        const int off = volume() / dims[0] * k;
+        return data_ + off;
+    }
+
+    const T *operator[](int k) const
+    {
+        const int off = volume() / dims[0] * k;
+        return data_ + off;
+    }
 };

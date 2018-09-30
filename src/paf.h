@@ -7,7 +7,9 @@
 class paf_processor
 {
   public:
-    virtual std::vector<human_t> operator()(const float *, const float *) = 0;
+    virtual std::vector<human_t> operator()(const float * /* heatmap */,
+                                            const float * /* PAF */,
+                                            bool /* use GPU */) = 0;
 
     virtual ~paf_processor() {}
 };
@@ -20,6 +22,12 @@ paf_processor *create_paf_processor(int input_height, int input_width,
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+namespace
+{
+const int n_joins = 18 + 1;
+const int n_connections = 17 + 2;
+}  // namespace
 
 /*
 C APIs
