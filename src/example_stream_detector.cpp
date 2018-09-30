@@ -18,6 +18,7 @@ DEFINE_int32(repeat, 1, "Number of repeats.");
 DEFINE_int32(buffer_size, 4, "Stream buffer size.");
 DEFINE_int32(gauss_kernel_size, 17, "Gauss kernel size for smooth operation.");
 DEFINE_bool(use_f16, false, "Use float16.");
+DEFINE_bool(flip_rgb, true, "Flip RGB.");
 
 // input flags
 DEFINE_string(image_files, "", "Comma separated list of pathes to image.");
@@ -35,7 +36,8 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<stream_detector> sd(stream_detector::create(
         FLAGS_model_file, FLAGS_input_height, FLAGS_input_width, f_height,
-        f_width, FLAGS_buffer_size, FLAGS_use_f16, FLAGS_gauss_kernel_size));
+        f_width, FLAGS_buffer_size, FLAGS_use_f16, FLAGS_gauss_kernel_size,
+        FLAGS_flip_rgb));
 
     {
         using clock_t = std::chrono::system_clock;

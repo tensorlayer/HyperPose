@@ -27,5 +27,5 @@ class stream_detector
                                    int input_height, int input_width,  //
                                    int feature_height, int feature_width,
                                    int batch_size, bool use_f16,
-                                   int gauss_kernel_size);
+                                   int gauss_kernel_size, bool flip_rgb);
 };

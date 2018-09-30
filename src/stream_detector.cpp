@@ -15,10 +15,11 @@
 
 struct default_inputer : stream_detector::inputer_t {
     const std::vector<std::string> filenames;
+    const bool flip_rgb;
     int idx;
 
-    default_inputer(const std::vector<std::string> &filenames)
-        : filenames(filenames), idx(0)
+    default_inputer(const std::vector<std::string> &filenames, bool flip_rgb)
+        : filenames(filenames), flip_rgb(flip_rgb), idx(0)
     {
     }
 
@@ -26,7 +27,8 @@ struct default_inputer : stream_detector::inputer_t {
                     float *chw_ptr) override
     {
         if (idx >= filenames.size()) { return false; }
-        input_image(filenames[idx++], height, width, hwc_ptr, chw_ptr);
+        input_image(filenames[idx++], height, width, hwc_ptr, chw_ptr,
+                    flip_rgb);
         return true;
     }
 };
@@ -52,12 +54,14 @@ class stream_detector_impl : public stream_detector
     stream_detector_impl(const std::string &model_file,          //
                          int input_height, int input_width,      //
                          int feature_height, int feature_width,  //
-                         int buffer_size, bool use_f16, int gauss_kernel_size)
+                         int buffer_size, bool use_f16, int gauss_kernel_size,
+                         bool flip_rgb)
         : buffer_size(buffer_size),
           height(input_height),
           width(input_width),
           feature_height(feature_height),
           feature_width(feature_width),
+          flip_rgb(flip_rgb),
           hwc_images(nullptr, buffer_size, height, width, 3),
           chw_images(nullptr, buffer_size, 3, height, width),
           confs(nullptr, buffer_size, n_joins, feature_height, feature_width),
@@ -132,7 +136,7 @@ class stream_detector_impl : public stream_detector
 
     void run(const std::vector<std::string> &filenames) override
     {
-        default_inputer in(filenames);
+        default_inputer in(filenames, flip_rgb);
         default_handler handle;
         run(in, handle, filenames.size());
     }
@@ -145,6 +149,8 @@ class stream_detector_impl : public stream_detector
 
     const int feature_height;
     const int feature_width;
+
+    const bool flip_rgb;
 
     tensor_t<uint8_t, 4> hwc_images;
     tensor_t<float, 4> chw_images;
@@ -176,9 +182,9 @@ stream_detector *stream_detector::create(const std::string &model_file,
                                          int input_height, int input_width,  //
                                          int feature_height, int feature_width,
                                          int buffer_size, bool use_f16,
-                                         int gauss_kernel_size)
+                                         int gauss_kernel_size, bool flip_rgb)
 {
     return new stream_detector_impl(model_file, input_height, input_width,
                                     feature_height, feature_width, buffer_size,
-                                    use_f16, gauss_kernel_size);
+                                    use_f16, gauss_kernel_size, flip_rgb);
 }

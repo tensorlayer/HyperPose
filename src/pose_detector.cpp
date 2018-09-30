@@ -20,7 +20,8 @@ class pose_detector_impl : public pose_detector
     pose_detector_impl(const std::string &model_file,          //
                        int input_height, int input_width,      //
                        int feature_height, int feature_width,  //
-                       int batch_size, bool use_f16, int gauss_kernel_size);
+                       int batch_size, bool use_f16, int gauss_kernel_size,
+                       bool flip_rgb);
 
     void one_batch(const std::vector<std::string> &image_files, int start_idx);
 
@@ -34,7 +35,10 @@ class pose_detector_impl : public pose_detector
     const int feature_height;
     const int feature_width;
 
-    tensor_t<float, 4> images;
+    const bool flip_rgb;
+
+    tensor_t<uint8_t, 4> hwc_images;
+    tensor_t<float, 4> chw_images;
     tensor_t<float, 4> confs;
     tensor_t<float, 4> pafs;
 
@@ -46,13 +50,15 @@ pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
                                        int input_height, int input_width,  //
                                        int feature_height, int feature_width,
                                        int batch_size, bool use_f16,
-                                       int gauss_kernel_size)
+                                       int gauss_kernel_size, bool flip_rgb)
     : height(input_height),
       width(input_width),
+      batch_size(batch_size),
       feature_height(feature_height),
       feature_width(feature_width),
-      batch_size(batch_size),
-      images(nullptr, batch_size, 3, height, width),
+      flip_rgb(flip_rgb),
+      hwc_images(nullptr, batch_size, height, width, 3),
+      chw_images(nullptr, batch_size, 3, height, width),
       confs(nullptr, batch_size, n_joins, feature_height, feature_width),
       pafs(nullptr, batch_size, n_connections * 2, feature_height,
            feature_width),
@@ -73,13 +79,15 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     {
         TRACE("batch read images");
         for (int i = 0; i < image_files.size(); ++i) {
+            input_image(image_files[i], height, width, hwc_images[i],
+                        chw_images[i], flip_rgb);
             resized_images.push_back(
-                input_image(image_files[i], height, width, images[i]));
+                cv::Mat(cv::Size(width, height), CV_8UC(3), hwc_images[i]));
         }
     }
     {
         TRACE("batch run tensorRT");
-        runner->execute({images.data()}, {confs.data(), pafs.data()},
+        runner->execute({chw_images.data()}, {confs.data(), pafs.data()},
                         image_files.size());
     }
     {
@@ -119,9 +127,9 @@ pose_detector *create_pose_detector(const std::string &model_file,      //
                                     int input_height, int input_width,  //
                                     int feature_height, int feature_width,
                                     int batch_size, bool use_f16,
-                                    int gauss_kernel_size)
+                                    int gauss_kernel_size, bool flip_rgb)
 {
     return new pose_detector_impl(model_file, input_height, input_width,
                                   feature_height, feature_width, batch_size,
-                                  use_f16, gauss_kernel_size);
+                                  use_f16, gauss_kernel_size, flip_rgb);
 }
