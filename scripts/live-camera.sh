@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-HAVE_CUDA=1 make
+make
 echo
 
 MODEL_DIR=$HOME/Downloads
