@@ -6,13 +6,12 @@
 </p>
 
 
-## 1. Motivation
+## Motivation
 
 [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art real-time 2D pose estimation algorithm. 
 In the official Caffe-based [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
 data processing, training, and neural network blocks are heavily interleaved and mostly hard-coded. This makes it difficult
 to be customised for achieving the best performance in our custom pose estimation applications.
-
 Hence, we develop OpenPose-Plus, a fast and flexible pose estimation framework that offers the following powerful features:
 - Flexible combination of standard training dataset with your own custom labelled data.
 - Customisable data augmentation pipeline without compromising performance
@@ -20,16 +19,18 @@ Hence, we develop OpenPose-Plus, a fast and flexible pose estimation framework t
 - Switchable neural networks (e.g., changing VGG to MobileNet for minimal memory consumption)
 - Integrated training on a single GPU and multiple GPUs
 
+## Work in progress
+
 This project is still under active development, some of the TODOs are as follows:
 - Distributed training
 - Pose Proposal Networks, ECCV 2018
 
-## 2. Project files
+## Key project files
 
 - `config.py` : config of the training details.
 - `train.py`: trains the model.
 
-## 3. Preparation
+## Preparation
 
 Build C++ library for post processing. See: <https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess>
 
@@ -42,7 +43,7 @@ rm -rf build
 rm *.so
 ```
 
-## 4. Train a model
+## Training your model
 
 Runs `train.py`, it will automatically download MSCOCO 2017 dataset into `dataset/coco17`.
 The default model in `models.py` is based on VGG19, which is the same with the original paper.
