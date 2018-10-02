@@ -115,6 +115,7 @@ def _map_fn_read_data(img_list, annos):
 
 
 def _map_fn_data_aug_get_mask(image, annos):
+
     def _data_aug_fn(image, ground_truth):
         ground_truth = cPickle.loads(ground_truth)
         ground_truth = list(ground_truth)
@@ -136,6 +137,7 @@ def _map_fn_data_aug_get_mask(image, annos):
 
 
 def _map_fn_data_aug(image, annos, mask_miss):
+
     def _data_aug_fn(image, annos, mask_miss):
         ## image data augmentation
         # randomly resize height and width independently, scale is changed
@@ -272,7 +274,7 @@ if __name__ == '__main__':
 
     # choice dataset for training
     if config.DATA.train_data == 'coco_only':
-        ## 1. only coco training set
+        # 1. only coco training set
         imgs_file_list = train_imgs_file_list
         train_targets = list(zip(train_objs_info_list, train_mask_list))
     elif config.DATA.train_data == 'yours_only':
@@ -286,14 +288,12 @@ if __name__ == '__main__':
     else:
         raise Exception('please choice a correct config.DATA.train_data setting.')
 
-
     # define data augmentation
     def generator():
         """TF Dataset generartor."""
         assert len(imgs_file_list) == len(train_targets)
         for _input, _target in zip(imgs_file_list, train_targets):
             yield _input.encode('utf-8'), cPickle.dumps(_target)
-
 
     n_epoch = math.ceil(n_step / (len(imgs_file_list) / batch_size))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
@@ -304,7 +304,6 @@ if __name__ == '__main__':
     dataset = dataset.prefetch(2)  # prefetch 1 batch
     iterator = dataset.make_one_shot_iterator()
     one_element = iterator.get_next()
-
     """ Train on single GPU using TensorFlow DatasetAPI. """
     net, total_loss, log_tensors = make_model(*one_element, is_train=True, reuse=False)
     x_ = net.img  # net input
@@ -344,7 +343,7 @@ if __name__ == '__main__':
             tic = time.time()
             step = sess.run(global_step)
             if step != 0 and (step % lr_decay_every_step == 0):
-                new_lr_decay = lr_decay_factor ** (step // lr_decay_every_step)
+                new_lr_decay = lr_decay_factor**(step // lr_decay_every_step)
                 sess.run(tf.assign(lr_v, lr_init * new_lr_decay))
 
             [_, _loss, _stage_losses, _l2, conf_result, paf_result] = \
@@ -361,16 +360,15 @@ if __name__ == '__main__':
             # save intermedian results and model
             if (step != 0) and (step % save_interval == 0):
                 ## save some results
-                [img_out, confs_ground, pafs_ground, conf_result, paf_result, mask_out] = sess.run(
-                    [x_, confs_, pafs_, last_conf, last_paf, mask])
+                [img_out, confs_ground, pafs_ground, conf_result, paf_result,
+                 mask_out] = sess.run([x_, confs_, pafs_, last_conf, last_paf, mask])
                 draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
 
                 # save model
                 # tl.files.save_npz(
                 #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                 # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
-                tl.files.save_npz_dict(
-                    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                 tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
             if step == n_step:  # training finished
                 break
