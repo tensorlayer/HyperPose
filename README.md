@@ -9,17 +9,16 @@
 ## 1. Motivation
 
 [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art real-time 2D pose estimation algorithm. 
-In the official [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation) implemented using Caffe,
-data processing, training, and neural network blocks are heavily interleaved and mostly hard coded. This makes them difficult
-to be customised for exhibiting the best performance in custom pose estimation applications.
+In the official Caffe-based [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
+data processing, training, and neural network blocks are heavily interleaved and mostly hard-coded. This makes it difficult
+to be customised for achieving the best performance in our custom pose estimation applications.
 
-To enable high-performance real-time 2D pose estimation, we develop OpenPose-Plus, a flexible pose estimation framework.
-OpenPose-Plus has the following powerful features:
+Hence, we develop OpenPose-Plus, a fast and flexible pose estimation framework that offers the following powerful features:
 - Flexible combination of standard training dataset with your own custom labelled data.
 - Customisable data augmentation pipeline without compromising performance
-- Integrated training on a single GPU and multiple GPUs
 - Deployment on embedded platforms using TensorRT
 - Switchable neural networks (e.g., changing VGG to MobileNet for minimal memory consumption)
+- Integrated training on a single GPU and multiple GPUs
 
 This project is still under active development, some of the TODOs are as follows:
 - Distributed training
@@ -28,9 +27,6 @@ This project is still under active development, some of the TODOs are as follows
 ## 2. Project files
 
 - `config.py` : config of the training details.
-  -  set training mode : `datasetapi` (single gpu, default), `distributed` (multi-gpus, TODO), `placeholder `(slow, for debug only)
-- `models.py`: defines the model structures.
-- `utils.py`: utility functions.
 - `train.py`: trains the model.
 
 ## 3. Preparation
