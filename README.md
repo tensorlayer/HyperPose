@@ -58,7 +58,7 @@ In `config.py`:
    * `coco_and_yours`: training data is COCO and your datasets
 
 - `config.MODEL.name` can be:
-   * `vgg`: VGG19 version (default), slow  
+   * `vgg`: VGG19 version (default), slow
 	* `vggtiny`: VGG tiny version, faster
 	* `mobilenet`: MobileNet version, faster
 
@@ -67,8 +67,21 @@ In `config.py`:
    * `distributed`: multiple GPUs with TF dataset api pipeline, fast (you may need to change the hyper parameters according to your hardware)
    * `placeholder`: single GPU with placeholder, for debug only, slow
 
+## 5. Inference
+
+Currently we provide two C++ APIs for inference, both defined in `include/openpose-plus.hpp`.
+They are for running the tensorflow model with tensorRT and post-processing respectively.
+
+You can look the examples in the `examples` folder to see how to use the APIs.
+Running `./scripts/live-camera.sh` will give you a quick review of how it works.
+
+You can build the APIs into a standard C++ library by just running `make pack`, provided that you have the following dependencies installed
+
+  - tensorRT
+  - opencv
+
 <!---
-## 5. Inference 
+## 5. Inference
 
 In this project, input images are RGB with 0~1.
 Runs `train.py`, it will automatically download the default VGG19-based model from [here](https://github.com/tensorlayer/pretrained-models), and use it for inferencing.
@@ -108,7 +121,7 @@ For TensorRT float16 (half-float) inferencing, xxx
     1. prepare your data following MSCOCO format, you need to .
     2. concatenate the list of your own data JSON into ...
 -->
-    
+
 ## Discussion
 
 - [TensorLayer Slack](https://join.slack.com/t/tensorlayer/shared_invite/enQtMjUyMjczMzU2Njg4LWI0MWU0MDFkOWY2YjQ4YjVhMzI5M2VlZmE4YTNhNGY1NjZhMzUwMmQ2MTc0YWRjMjQzMjdjMTg2MWQ2ZWJhYzc)
@@ -123,4 +136,3 @@ For TensorRT float16 (half-float) inferencing, xxx
 - [Default COCO model](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_COCO/pose_deploy.prototxt)
 - [Visualizing Caffe model](http://ethereon.github.io/netscope/#/editor)
 -->
-
