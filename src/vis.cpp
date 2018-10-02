@@ -1,9 +1,9 @@
-#include "vis.h"
+#include <vis.h>
 
 #include <opencv2/opencv.hpp>
 
-#include "coco.h"
-#include "human.h"
+#include <coco.h>
+#include <human.h>
 
 namespace
 {

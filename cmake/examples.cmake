@@ -1,7 +1,5 @@
 FIND_PACKAGE(Threads REQUIRED)
 
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/src)
-
 ADD_EXECUTABLE(example-batch-detector examples/example_batch_detector.cpp)
 TARGET_LINK_LIBRARIES(example-batch-detector tracer pose-detetor vis gflags)
 

@@ -2,11 +2,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <stdtracer>
 
 #include <cuda_runtime.h>
 
-#include "std_shape.hpp"
-#include "tracer.h"
+#include <bits/std_shape.hpp>
+
+using rank_t = ttl::internal::rank_t;
+template <rank_t r> using shape = ttl::internal::basic_shape<r>;
 
 template <typename T> struct cuda_mem_allocator {
     T *operator()(int count)
@@ -26,7 +29,8 @@ template <typename R, rank_t r> class basic_cuda_tensor
   public:
     template <typename... D>
     explicit basic_cuda_tensor(D... d)
-        : shape_(d...), count(shape_.size()),
+        : shape_(d...),
+          count(shape_.size()),
           data_(cuda_mem_allocator<R>()(count))
     {
         TRACE(__func__);

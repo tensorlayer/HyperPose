@@ -9,6 +9,7 @@ IndentWidth: 4
 BreakBeforeBraces: Linux
 SortIncludes: true
 # IncludeBlocks: true
+# IncludeBlocks: IBS_Regroup  # clang-format 8
 
 DerivePointerAlignment: false
 PointerAlignment: Right

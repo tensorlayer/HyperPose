@@ -3,9 +3,10 @@
 
 #include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
+#include <stdtracer>
 
-#include "stream_detector.h"
-#include "tracer.h"
+#include <stream_detector.h>
+
 #include "utils.hpp"
 
 // Model flags
