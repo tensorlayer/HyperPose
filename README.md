@@ -18,7 +18,7 @@ OpenPose-Plus has the following powerful features:
 - Flexible combination of standard training dataset with your own custom labelled data.
 - Customisable data augmentation pipeline without compromising performance
 - Integrated training on a single GPU and multiple GPUs
-- Deployment on embedded platforms such as TensorRT
+- Deployment on embedded platforms using TensorRT
 - Switchable neural networks (e.g., changing VGG to MobileNet for minimal memory consumption)
 
 This project is still under active development, some of the TODOs are as follows:
