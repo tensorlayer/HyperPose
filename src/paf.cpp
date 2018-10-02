@@ -1,5 +1,3 @@
-#include <paf.h>
-
 #include <algorithm>
 #include <functional>
 
@@ -8,6 +6,8 @@
 
 using ttl::tensor;
 using ttl::tensor_ref;
+
+#include <openpose-plus.h>
 
 #include <coco.h>
 #include <human.h>
