@@ -8,10 +8,10 @@
 
 ## 1. Motivation
 
-[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the0art real-time 2D pose estimation algorithm. 
-The official [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation) is implemented using Caffe. In this codebase,
-data-preprocessing, training, and post-processing blocks are mostly hard coded. This makes them difficult
-to be customised for exhibiting the best performance in our custom visual applications.
+[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art real-time 2D pose estimation algorithm. 
+In the official [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation) implemented using Caffe,
+data processing, training, and neural network blocks are heavily interleaved and mostly hard coded. This makes them difficult
+to be customised for exhibiting the best performance in custom pose estimation applications.
 
 To enable high-performance real-time 2D pose estimation, we develop OpenPose-Plus, a flexible pose estimation framework.
 OpenPose-Plus has the following powerful features:
