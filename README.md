@@ -1,4 +1,4 @@
-# An advanced OpenPose implementation using TensorFlow and TensorLayer
+# OpenPose-Plus: Fast and Flexible OpenPose Framework based on TensorFlow and TensorLayer
 
 </a>
 <p align="center">
