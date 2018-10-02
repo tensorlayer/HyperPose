@@ -5,7 +5,8 @@
 #include <opencv2/opencv.hpp>
 #include <stdtracer>
 
-#include "pose_detector.h"
+#include <pose_detector.h>
+
 #include "utils.hpp"
 
 // Model flags

@@ -1,4 +1,4 @@
-#include "paf.h"
+#include <paf.h>
 
 #include <algorithm>
 #include <functional>
@@ -9,8 +9,9 @@
 using ttl::tensor;
 using ttl::tensor_ref;
 
-#include "coco.h"
-#include "human.h"
+#include <coco.h>
+#include <human.h>
+
 #include "post-process.h"
 
 struct VectorXY {

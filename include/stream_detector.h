@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-#include "human.h"
+#include <human.h>
 
 class stream_detector
 {

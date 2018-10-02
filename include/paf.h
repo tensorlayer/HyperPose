@@ -1,5 +1,5 @@
 #pragma once
-#include "human.h"
+#include <human.h>
 
 #ifdef __cplusplus
 // C++ APIs

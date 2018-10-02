@@ -5,7 +5,8 @@
 #include <opencv2/opencv.hpp>
 #include <stdtracer>
 
-#include "stream_detector.h"
+#include <stream_detector.h>
+
 #include "utils.hpp"
 
 // Model flags

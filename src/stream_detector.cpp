@@ -8,12 +8,13 @@
 
 using ttl::tensor;
 
-#include "channel.hpp"
+#include <channel.hpp>
+#include <paf.h>
+#include <stream_detector.h>
+#include <vis.h>
+
 #include "input.h"
-#include "paf.h"
-#include "stream_detector.h"
 #include "uff-runner.h"
-#include "vis.h"
 
 struct default_inputer : stream_detector::inputer_t {
     const std::vector<std::string> filenames;

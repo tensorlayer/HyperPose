@@ -13,6 +13,8 @@
 using ttl::tensor;
 using ttl::tensor_ref;
 
+#include <coco.h>
+
 #include "cudnn.hpp"
 #include "std_cuda_tensor.hpp"
 

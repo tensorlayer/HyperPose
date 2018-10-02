@@ -3,6 +3,8 @@ PROJECT(openpose-plus)
 
 SET(CMAKE_CXX_STANDARD 14)
 
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
+
 INCLUDE(cmake/3rdparty.cmake)
 INCLUDE(cmake/openpose-plus.cmake)
 INCLUDE(cmake/examples.cmake)
