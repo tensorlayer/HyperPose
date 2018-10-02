@@ -5,26 +5,43 @@
 class uff_runner
 {
   public:
-    virtual void execute(const std::vector<void *> &inputs,
-                         const std::vector<void *> &outputs,
-                         int batchSize = 1) = 0;
+    virtual void
+    execute(const std::vector<void *>
+                &inputs /* should contain 1 pointer to a float
+                           array of length max_batch_size * 3 * H * W */
+            ,
+            const std::vector<void *>
+                &outputs /* should container 2 pointers to heatmap and PAF map,
+                            heatmap :: max_batch_size * 19 * H' * W',
+                            PAF map :: max_batch_size * (2*19) * H' * W' */
+            ,
+            int batchSize = 1) = 0;
+
     virtual ~uff_runner() {}
 };
 
-uff_runner *create_openpose_runner(const std::string &model_file,
-                                   int input_height, int input_width,
-                                   int max_batch_size, bool use_f16);
+// Create a uff_runner to run the openpose model
+uff_runner *create_openpose_runner(
+    const std::string &model_file /* path to the exported uff model file */,
+    int input_height /* height of the input image */,
+    int input_width /* width of the input image */, int max_batch_size,
+    bool use_f16);
 
 class paf_processor
 {
   public:
     virtual std::vector<human_t> operator()(const float * /* heatmap */,
-                                            const float * /* PAF */,
+                                            const float * /* PAF map */,
                                             bool /* use GPU */) = 0;
 
     virtual ~paf_processor() {}
 };
 
-paf_processor *create_paf_processor(int input_height, int input_width,
-                                    int height, int width, int n_joins,
-                                    int n_connections, int gauss_kernel_size);
+// Create a paf_processor to run post process
+paf_processor *create_paf_processor(
+    int input_height /* height of feature maps */,
+    int input_width /* width of feature maps */,
+    int height /* height of output, usually equal to input image height */,
+    int width /* width of output, usually equal to input image width */,
+    int n_joins /* must be 19 for now */,
+    int n_connections /* must be 19 for now */, int gauss_kernel_size);

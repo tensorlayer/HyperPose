@@ -18,3 +18,6 @@ docker-build:
 GPU_TAG = openpose-plus:builder-gpu
 docker-build-gpu:
 	docker build --rm -t $(GPU_TAG) -f docker/Dockerfile.builder-gpu .
+
+pack: cmake_targets
+	make -C $(BUILD_DIR) -j $(NPROC) package
