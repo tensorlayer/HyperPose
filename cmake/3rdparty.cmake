@@ -29,7 +29,7 @@ EXTERNALPROJECT_ADD(libstdtensor
                     GIT_REPOSITORY
                     ${STDTENSOR_GIT_URL}
                     GIT_TAG
-                    dev
+                    62a21724014c73e57a4b693f5f05acc058d14e64
                     CMAKE_ARGS
                     -DCMAKE_INSTALL_PREFIX=${THIRDPARTY_PREFIX}
                     -DBUILD_TESTS=0
