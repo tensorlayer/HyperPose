@@ -15,11 +15,11 @@ to be customised for exhibiting the best performance in our custom visual applic
 
 To enable high-performance real-time 2D pose estimation, we develop OpenPose-Plus, a flexible pose estimation framework.
 OpenPose-Plus has the following powerful features:
-- Combining standard training dataset with your own custom labelled data.
-- Customising the data augmentation pipeline without compromising performance
-- Training on a single GPU and multiple GPUs
-- Deployment onto real-world embedded platforms such as TensorRT
-- Customising the detection neural networks (e.g., changing VGG to MobileNet)
+- Flexible combination of standard training dataset with your own custom labelled data.
+- Customisable data augmentation pipeline without compromising performance
+- Integrated training on a single GPU and multiple GPUs
+- Deployment on embedded platforms such as TensorRT
+- Switchable neural networks (e.g., changing VGG to MobileNet for minimal memory consumption)
 
 This project is still under active development, some of the TODOs are as follows:
 - Distributed training
