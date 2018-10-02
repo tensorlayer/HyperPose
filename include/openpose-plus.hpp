@@ -1,5 +1,6 @@
 // The public C++ API of openpose-plus
 #pragma once
+#include <openpose-plus/human.h>
 
 class uff_runner
 {

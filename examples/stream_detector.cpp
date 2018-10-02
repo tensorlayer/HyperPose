@@ -9,9 +9,9 @@
 
 using ttl::tensor;
 
-#include <channel.hpp>
 #include <openpose-plus.h>
 
+#include "channel.hpp"
 #include "input.h"
 #include "vis.h"
 

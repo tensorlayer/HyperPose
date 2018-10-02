@@ -9,9 +9,6 @@ using ttl::tensor_ref;
 
 #include <openpose-plus.h>
 
-#include <coco.h>
-#include <human.h>
-
 #include "post-process.h"
 
 struct VectorXY {

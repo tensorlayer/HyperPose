@@ -9,8 +9,7 @@
 
 using ttl::tensor_ref;
 
-#include <channel.hpp>
-
+#include "channel.hpp"
 #include "stream_detector.h"
 #include "utils.hpp"
 #include "vis.h"

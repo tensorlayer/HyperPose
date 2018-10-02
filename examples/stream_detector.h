@@ -4,7 +4,7 @@
 
 #include <opencv2/opencv.hpp>
 
-#include <human.h>
+#include <openpose-plus.h>
 
 class stream_detector
 {

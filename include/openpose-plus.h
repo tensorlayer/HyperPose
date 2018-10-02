@@ -1,8 +1,8 @@
 #pragma once
-#include <human.h>
 
 #ifdef __cplusplus
 #include <openpose-plus.hpp>  // C++ APIs
+#include <openpose-plus/human.h>
 
 extern "C" {
 #endif
