@@ -349,7 +349,7 @@ if __name__ == '__main__':
             your_mask_list.extend(_mask_list)
         print("number of own images found:", len(your_imgs_file_list))
 
-    # choice dataset for training
+    # choose dataset for training
     if config.DATA.train_data == 'coco_only':
         # 1. only coco training set
         imgs_file_list = train_imgs_file_list
@@ -367,7 +367,7 @@ if __name__ == '__main__':
 
     # define data augmentation
     def generator():
-        """TF Dataset generartor."""
+        """TF Dataset generator."""
         assert len(imgs_file_list) == len(train_targets)
         for _input, _target in zip(imgs_file_list, train_targets):
             yield _input.encode('utf-8'), cPickle.dumps(_target)
