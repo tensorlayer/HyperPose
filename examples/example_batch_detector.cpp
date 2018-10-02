@@ -3,9 +3,9 @@
 
 #include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
+#include <stdtracer>
 
 #include "pose_detector.h"
-#include "tracer.h"
 #include "utils.hpp"
 
 // Model flags

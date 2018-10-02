@@ -1,8 +1,8 @@
 #include <gflags/gflags.h>
+#include <stdtracer>
 
 #include "paf.h"
 #include "post-process.h"
-#include "tracer.h"
 
 DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");

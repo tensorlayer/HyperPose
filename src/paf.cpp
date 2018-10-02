@@ -3,11 +3,12 @@
 #include <algorithm>
 #include <functional>
 
+#include <stdtracer>
+
 #include "coco.h"
 #include "human.h"
 #include "post-process.h"
 #include "tensor.h"
-#include "tracer.h"
 
 struct VectorXY {
     float x;

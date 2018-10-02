@@ -3,13 +3,13 @@
 #include <thread>
 
 #include <opencv2/opencv.hpp>
+#include <stdtracer>
 
 #include "channel.hpp"
 #include "input.h"
 #include "paf.h"
 #include "stream_detector.h"
 #include "tensor.h"
-#include "tracer.h"
 #include "uff-runner.h"
 #include "vis.h"
 

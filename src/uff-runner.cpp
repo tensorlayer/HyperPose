@@ -11,10 +11,10 @@
 #include <NvInfer.h>
 #include <NvUffParser.h>
 #include <NvUtils.h>
+#include <stdtracer>
 
 #include "logger.h"
 #include "std_cuda_tensor.hpp"
-#include "tracer.h"
 #include "uff-runner.h"
 
 using input_info_t = std::vector<std::pair<std::string, std::vector<int>>>;

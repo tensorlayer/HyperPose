@@ -7,11 +7,11 @@
 
 #include <cuda_runtime.h>
 #include <opencv2/opencv.hpp>
+#include <stdtracer>
 
 #include "cudnn.hpp"
 #include "std_cuda_tensor.hpp"
 #include "tensor.h"
-#include "tracer.h"
 
 // tf.image.resize_area
 // This is the same as OpenCV's INTER_AREA.

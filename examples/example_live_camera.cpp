@@ -4,11 +4,11 @@
 
 #include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
+#include <stdtracer>
 
 #include "channel.hpp"
 #include "stream_detector.h"
 #include "tensor.h"
-#include "tracer.h"
 #include "utils.hpp"
 #include "vis.h"
 
