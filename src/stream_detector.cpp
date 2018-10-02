@@ -3,13 +3,15 @@
 #include <thread>
 
 #include <opencv2/opencv.hpp>
+#include <stdtensor>
 #include <stdtracer>
+
+using ttl::tensor;
 
 #include "channel.hpp"
 #include "input.h"
 #include "paf.h"
 #include "stream_detector.h"
-#include "tensor.h"
 #include "uff-runner.h"
 #include "vis.h"
 
@@ -62,11 +64,10 @@ class stream_detector_impl : public stream_detector
           feature_height(feature_height),
           feature_width(feature_width),
           flip_rgb(flip_rgb),
-          hwc_images(nullptr, buffer_size, height, width, 3),
-          chw_images(nullptr, buffer_size, 3, height, width),
-          confs(nullptr, buffer_size, n_joins, feature_height, feature_width),
-          pafs(nullptr, buffer_size, n_connections * 2, feature_height,
-               feature_width),
+          hwc_images(buffer_size, height, width, 3),
+          chw_images(buffer_size, 3, height, width),
+          confs(buffer_size, n_joins, feature_height, feature_width),
+          pafs(buffer_size, n_connections * 2, feature_height, feature_width),
           image_stream_1(buffer_size),
           image_stream_2(buffer_size),
           image_stream_3(buffer_size),
@@ -86,8 +87,10 @@ class stream_detector_impl : public stream_detector
         std::vector<std::thread> ths;
 
         for (int i = 0; i < buffer_size; ++i) {
-            image_stream_1.put(in_stream_t{hwc_images[i], chw_images[i]});
-            feature_stream_1.put(feature_stream_t{confs[i], pafs[i]});
+            image_stream_1.put(
+                in_stream_t{hwc_images[i].data(), chw_images[i].data()});
+            feature_stream_1.put(
+                feature_stream_t{confs[i].data(), pafs[i].data()});
         }
 
         // std::atomic<bool> done(false);
@@ -152,10 +155,10 @@ class stream_detector_impl : public stream_detector
 
     const bool flip_rgb;
 
-    tensor_t<uint8_t, 4> hwc_images;
-    tensor_t<float, 4> chw_images;
-    tensor_t<float, 4> confs;
-    tensor_t<float, 4> pafs;
+    tensor<uint8_t, 4> hwc_images;
+    tensor<float, 4> chw_images;
+    tensor<float, 4> confs;
+    tensor<float, 4> pafs;
 
     struct in_stream_t {
         uint8_t *hwc_ptr;

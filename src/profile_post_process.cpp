@@ -16,7 +16,7 @@ void test_1()
 
     peak_finder_t<float> peak_finder(n_joins, h, w, FLAGS_gauss_kernel_size);
 
-    tensor_t<float, 3> heatmap(nullptr, n_joins, h, w);
+    tensor<float, 3> heatmap(n_joins, h, w);
     const int n = FLAGS_repeat;
     for (int i = 0; i < n; ++i) {
         peak_finder.find_peak_coords(heatmap, 0.05, false);

@@ -22,7 +22,6 @@ SET_TARGET_PROPERTIES(tracer PROPERTIES LINKER_LANGUAGE CXX)
 ADD_DEPENDENCIES(tracer libstdtracer)
 TARGET_LINK_LIBRARIES(tracer stdtracer)
 
-# TODO: use stdtensor
 SET(STDTENSOR_GIT_URL https://github.com/lgarithm/stdtensor.git
     CACHE STRING "URL for clone stdtensor")
 
@@ -35,6 +34,10 @@ EXTERNALPROJECT_ADD(libstdtensor
                     -DCMAKE_INSTALL_PREFIX=${THIRDPARTY_PREFIX}
                     -DBUILD_TESTS=0
                     -DBUILD_EXAMPLES=0)
+
+ADD_LIBRARY(stdtensor STATIC)
+SET_TARGET_PROPERTIES(stdtensor PROPERTIES LINKER_LANGUAGE CXX)
+ADD_DEPENDENCIES(stdtensor libstdtensor)
 
 INCLUDE_DIRECTORIES(${THIRDPARTY_PREFIX}/include)
 LINK_DIRECTORIES(${THIRDPARTY_PREFIX}/lib)

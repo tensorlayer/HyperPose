@@ -6,7 +6,10 @@
 
 #include <cuda_runtime.h>
 
-#include "std_shape.hpp"
+#include <bits/std_shape.hpp>
+
+using rank_t = ttl::internal::rank_t;
+template <rank_t r> using shape = ttl::internal::basic_shape<r>;
 
 template <typename T> struct cuda_mem_allocator {
     T *operator()(int count)
