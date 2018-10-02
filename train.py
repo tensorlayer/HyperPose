@@ -235,76 +235,10 @@ def make_model(img, results, mask, is_train=True, reuse=False):
     # return total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, img, confs, pafs, m1, net
 
 
-if __name__ == '__main__':
-
-    if 'coco' in config.DATA.train_data:
-        # automatically download MSCOCO data to "data/mscoco..."" folder
-        train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
-            load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
-
-        # read coco training images contains valid people
-        train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
-            get_pose_data_list(train_im_path, train_ann_path)
-
-        # read coco validating images contains valid people (you can use it for training as well)
-        val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
-            get_pose_data_list(val_im_path, val_ann_path)
-
-    if 'yours' in config.DATA.train_data:
-        ## read your own images contains valid people
-        ## 1. if you only have one folder as follow:
-        ##   data/your_data
-        ##           /images
-        ##               0001.jpeg
-        ##               0002.jpeg
-        ##           /coco.json
-        # your_imgs_file_list, your_objs_info_list, your_mask_list, your_targets = \
-        #     get_pose_data_list(config.DATA.your_images_path, config.DATA.your_annos_path)
-        ## 2. if you have a folder with many folders: (which is common in industry)
-        folder_list = tl.files.load_folder_list(path='data/your_data')
-        your_imgs_file_list, your_objs_info_list, your_mask_list = [], [], []
-        for folder in folder_list:
-            _imgs_file_list, _objs_info_list, _mask_list, _targets = \
-                get_pose_data_list(os.path.join(folder, 'images'), os.path.join(folder, 'coco.json'))
-            print(len(_imgs_file_list))
-            your_imgs_file_list.extend(_imgs_file_list)
-            your_objs_info_list.extend(_objs_info_list)
-            your_mask_list.extend(_mask_list)
-        print("number of own images found:", len(your_imgs_file_list))
-
-    # choice dataset for training
-    if config.DATA.train_data == 'coco_only':
-        # 1. only coco training set
-        imgs_file_list = train_imgs_file_list
-        train_targets = list(zip(train_objs_info_list, train_mask_list))
-    elif config.DATA.train_data == 'yours_only':
-        # 2. only your own data
-        imgs_file_list = your_imgs_file_list
-        train_targets = list(zip(your_objs_info_list, your_mask_list))
-    elif config.DATA.train_data == 'coco_and_yours':
-        # 3. your own data and coco training set
-        imgs_file_list = train_imgs_file_list + your_imgs_file_list
-        train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
-    else:
-        raise Exception('please choice a correct config.DATA.train_data setting.')
-
-    # define data augmentation
-    def generator():
-        """TF Dataset generartor."""
-        assert len(imgs_file_list) == len(train_targets)
-        for _input, _target in zip(imgs_file_list, train_targets):
-            yield _input.encode('utf-8'), cPickle.dumps(_target)
-
-    n_epoch = math.ceil(n_step / (len(imgs_file_list) / batch_size))
-    dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
-    dataset = dataset.shuffle(buffer_size=4096)  # shuffle before loading images
-    dataset = dataset.repeat(n_epoch)
-    dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count() / 2)  # decouple the heavy map_fn
-    dataset = dataset.batch(batch_size)  # TODO: consider using tf.contrib.map_and_batch
-    dataset = dataset.prefetch(2)  # prefetch 1 batch
-    iterator = dataset.make_one_shot_iterator()
-    one_element = iterator.get_next()
+def local_train(training_dataset):
     """ Train on single GPU using TensorFlow DatasetAPI. """
+    iterator = training_dataset.make_one_shot_iterator()
+    one_element = iterator.get_next()
     net, total_loss, log_tensors = make_model(*one_element, is_train=True, reuse=False)
     x_ = net.img  # net input
     last_conf = net.last_conf  # net output
@@ -372,3 +306,83 @@ if __name__ == '__main__':
                 tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
             if step == n_step:  # training finished
                 break
+
+
+def distributed_train(dataset):
+    pass
+
+
+if __name__ == '__main__':
+
+    if 'coco' in config.DATA.train_data:
+        # automatically download MSCOCO data to "data/mscoco..."" folder
+        train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
+            load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
+
+        # read coco training images contains valid people
+        train_imgs_file_list, train_objs_info_list, train_mask_list, train_targets = \
+            get_pose_data_list(train_im_path, train_ann_path)
+
+        # read coco validating images contains valid people (you can use it for training as well)
+        val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
+            get_pose_data_list(val_im_path, val_ann_path)
+
+    if 'yours' in config.DATA.train_data:
+        ## read your own images contains valid people
+        ## 1. if you only have one folder as follow:
+        ##   data/your_data
+        ##           /images
+        ##               0001.jpeg
+        ##               0002.jpeg
+        ##           /coco.json
+        # your_imgs_file_list, your_objs_info_list, your_mask_list, your_targets = \
+        #     get_pose_data_list(config.DATA.your_images_path, config.DATA.your_annos_path)
+        ## 2. if you have a folder with many folders: (which is common in industry)
+        folder_list = tl.files.load_folder_list(path='data/your_data')
+        your_imgs_file_list, your_objs_info_list, your_mask_list = [], [], []
+        for folder in folder_list:
+            _imgs_file_list, _objs_info_list, _mask_list, _targets = \
+                get_pose_data_list(os.path.join(folder, 'images'), os.path.join(folder, 'coco.json'))
+            print(len(_imgs_file_list))
+            your_imgs_file_list.extend(_imgs_file_list)
+            your_objs_info_list.extend(_objs_info_list)
+            your_mask_list.extend(_mask_list)
+        print("number of own images found:", len(your_imgs_file_list))
+
+    # choice dataset for training
+    if config.DATA.train_data == 'coco_only':
+        # 1. only coco training set
+        imgs_file_list = train_imgs_file_list
+        train_targets = list(zip(train_objs_info_list, train_mask_list))
+    elif config.DATA.train_data == 'yours_only':
+        # 2. only your own data
+        imgs_file_list = your_imgs_file_list
+        train_targets = list(zip(your_objs_info_list, your_mask_list))
+    elif config.DATA.train_data == 'coco_and_yours':
+        # 3. your own data and coco training set
+        imgs_file_list = train_imgs_file_list + your_imgs_file_list
+        train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
+    else:
+        raise Exception('please choice a correct config.DATA.train_data setting.')
+
+    # define data augmentation
+    def generator():
+        """TF Dataset generartor."""
+        assert len(imgs_file_list) == len(train_targets)
+        for _input, _target in zip(imgs_file_list, train_targets):
+            yield _input.encode('utf-8'), cPickle.dumps(_target)
+
+    n_epoch = math.ceil(n_step / (len(imgs_file_list) / batch_size))
+    dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
+    dataset = dataset.shuffle(buffer_size=4096)  # shuffle before loading images
+    dataset = dataset.repeat(n_epoch)
+    dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count() / 2)  # decouple the heavy map_fn
+    dataset = dataset.batch(batch_size)  # TODO: consider using tf.contrib.map_and_batch
+    dataset = dataset.prefetch(2)  # prefetch 1 batch
+
+    if config.TRAIN.train_mode == 'local':
+        local_train(dataset)
+    elif config.TRAIN.train_mode == 'distributed':
+        distributed_train(dataset)
+    else:
+        raise Exception('Unknown training mode')
