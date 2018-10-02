@@ -1,4 +1,4 @@
-# OpenPose using TensorFlow and TensorLayer
+# An advanced OpenPose implementation using TensorFlow and TensorLayer
 
 </a>
 <p align="center">
@@ -8,19 +8,22 @@
 
 ## 1. Motivation
 
-[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) from CMU provides real-time 2D pose estimation following ["Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields"](https://arxiv.org/pdf/1611.08050.pdf) However, the [training code](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation) is based on Caffe and C++, which is hard to be customized.
-While in practice, developers need to customize their training set, data augmentation methods according to their requirement.
-For this reason, we reimplemented this project in [TensorLayer fashion](https://github.com/tensorlayer/tensorlayer).
+[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the0art real-time 2D pose estimation algorithm. 
+The official [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation) is implemented using Caffe. In this codebase,
+data-preprocessing, training, and post-processing blocks are mostly hard coded. This makes them difficult
+to be customised for exhibiting the best performance in our custom visual applications.
 
-🚀🚀 **This repo will be moved into [here](https://github.com/tensorlayer/tensorlayer/tree/master/examples) for life-cycle management soon. More cool Computer Vision applications such as super resolution and style transfer can be found in this [organization](https://github.com/tensorlayer).**
+To enable high-performance real-time 2D pose estimation, we develop OpenPose-Plus, a flexible pose estimation framework.
+OpenPose-Plus has the following powerful features:
+- Combining standard training dataset with your own custom labelled data.
+- Customising the data augmentation pipeline without compromising performance
+- Training on a single GPU and multiple GPUs
+- Deployment onto real-world embedded platforms such as TensorRT
+- Customising the detection neural networks (e.g., changing VGG to MobileNet)
 
-- TODO
-  - [ ] Provides pretrained models
-  - [ ] TensorRT Float16 and Int8 inference
-  - [ ] Faster C++ post-processing
-  - [ ] Distributed training
-  - [ ] Faster data augmentation
-  - [ ] Pose Proposal Networks, ECCV 2018
+This project is still under active development, some of the TODOs are as follows:
+- Distributed training
+- Pose Proposal Networks, ECCV 2018
 
 ## 2. Project files
 
@@ -50,23 +53,20 @@ The default model in `models.py` is based on VGG19, which is the same with the o
 If you want to customize the model, simply change it in `models.py`.
 And then `train.py` will train the model to the end.
 
-In `config.py`:
+In `config.py`, `config.DATA.train_data` can be:
+* `coco_only`: training data is COCO dataset only (default)
+* `yours_only`: training data is your dataset specified by `config.DATA.your_xxx`
+* `coco_and_yours`: training data is COCO and your dataset
 
-- `config.DATA.train_data` can be:
-   * `coco_only`: training data is COCO dataset only (default)
-   * `yours_only`: training data is your dataset specified by `config.DATA.your_xxx`
-   * `coco_and_yours`: training data is COCO and your datasets
+`config.MODEL.name` can be:
+* `vgg`: VGG19 version (default), slow  
+* `vggtiny`: VGG tiny version, faster
+* `mobilenet`: MobileNet version, faster
 
-- `config.MODEL.name` can be:
-   * `vgg`: VGG19 version (default), slow  
-	* `vggtiny`: VGG tiny version, faster
-	* `mobilenet`: MobileNet version, faster
-
-- `config.TRAIN.train_mode` can be:
-   * `datasetapi`: single GPU with TF dataset api pipeline (default)
-   * `distributed`: multiple GPUs with TF dataset api pipeline, fast (you may need to change the hyper parameters according to your hardware)
-   * `placeholder`: single GPU with placeholder, for debug only, slow
-
+`config.TRAIN.train_mode` can be:
+* `local`: single GPU training
+* `distributed`: multiple GPU training (on-going work)
+ 
 <!---
 ## 5. Inference 
 
