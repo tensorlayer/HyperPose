@@ -1,4 +1,4 @@
-# OpenPose using TensorFlow and TensorLayer
+# OpenPose-Plus: Fast and Flexible OpenPose Framework based on TensorFlow and TensorLayer
 
 </a>
 <p align="center">
@@ -6,31 +6,31 @@
 </p>
 
 
-## 1. Motivation
+## Motivation
 
-[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) from CMU provides real-time 2D pose estimation following ["Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields"](https://arxiv.org/pdf/1611.08050.pdf) However, the [training code](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation) is based on Caffe and C++, which is hard to be customized.
-While in practice, developers need to customize their training set, data augmentation methods according to their requirement.
-For this reason, we reimplemented this project in [TensorLayer fashion](https://github.com/tensorlayer/tensorlayer).
+[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art real-time 2D pose estimation algorithm. 
+In the official Caffe-based [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
+data processing, training, and neural network blocks are heavily interleaved and mostly hard-coded. This makes it difficult
+to be customised for achieving the best performance in our custom pose estimation applications.
+Hence, we develop OpenPose-Plus, a fast and flexible pose estimation framework that offers the following powerful features:
+- Flexible combination of standard training dataset with your own custom labelled data.
+- Customisable data augmentation pipeline without compromising performance
+- Deployment on embedded platforms using TensorRT
+- Switchable neural networks (e.g., changing VGG to MobileNet for minimal memory consumption)
+- Integrated training on a single GPU and multiple GPUs
 
-🚀🚀 **This repo will be moved into [here](https://github.com/tensorlayer/tensorlayer/tree/master/examples) for life-cycle management soon. More cool Computer Vision applications such as super resolution and style transfer can be found in this [organization](https://github.com/tensorlayer).**
+## Work in progress
 
-- TODO
-  - [ ] Provides pretrained models
-  - [ ] TensorRT Float16 and Int8 inference
-  - [ ] Faster C++ post-processing
-  - [ ] Distributed training
-  - [ ] Faster data augmentation
-  - [ ] Pose Proposal Networks, ECCV 2018
+This project is still under active development, some of the TODOs are as follows:
+- Distributed training
+- Pose Proposal Networks, ECCV 2018
 
-## 2. Project files
+## Key project files
 
 - `config.py` : config of the training details.
-  -  set training mode : `datasetapi` (single gpu, default), `distributed` (multi-gpus, TODO), `placeholder `(slow, for debug only)
-- `models.py`: defines the model structures.
-- `utils.py`: utility functions.
 - `train.py`: trains the model.
 
-## 3. Preparation
+## Preparation
 
 Build C++ library for post processing. See: <https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess>
 
@@ -43,14 +43,17 @@ rm -rf build
 rm *.so
 ```
 
-## 4. Train a model
+## Training your model
 
 Runs `train.py`, it will automatically download MSCOCO 2017 dataset into `dataset/coco17`.
 The default model in `models.py` is based on VGG19, which is the same with the original paper.
 If you want to customize the model, simply change it in `models.py`.
 And then `train.py` will train the model to the end.
 
-In `config.py`:
+In `config.py`, `config.DATA.train_data` can be:
+* `coco_only`: training data is COCO dataset only (default)
+* `yours_only`: training data is your dataset specified by `config.DATA.your_xxx`
+* `coco_and_yours`: training data is COCO and your dataset
 
 - `config.DATA.train_data` can be:
    * `coco_only`: training data is COCO dataset only (default)

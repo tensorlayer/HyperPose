@@ -6,11 +6,9 @@ from inference.common import rename_tensor
 __all__ = [
     'get_base_model_func',
     'get_model_func',
-    'model',  # the base, TODO: deprecated
 ]
 
 
-##=========================== for training ===================================
 def get_base_model_func(name):
     if name == 'vgg':
         from models_vgg import model
@@ -25,10 +23,6 @@ def get_base_model_func(name):
     return model
 
 
-model = get_base_model_func(config.MODEL.name)
-
-
-##=========================== for inference ===================================
 def _input_image(height, width, data_format, name):
     """Create a placeholder for input image."""
     # TODO: maybe make it a Layer in tensorlayer
