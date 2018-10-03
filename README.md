@@ -63,9 +63,9 @@ If you want to customize the model, simply change it in `models.py`.
 And then `train.py` will train the model to the end.
 
 In `config.py`, `config.DATA.train_data` can be:
-* `coco_only`: training data is COCO dataset only (default)
-* `yours_only`: training data is your dataset specified by `config.DATA.your_xxx`
-* `coco_and_yours`: training data is COCO and your dataset
+* `coco`: training data is COCO dataset only (default)
+* `custom`: training data is your dataset specified by `config.DATA.your_xxx`
+* `coco_and_custom`: training data is COCO and your dataset
 
 `config.MODEL.name` can be:
 * `vgg`: VGG19 version (default), slow  

@@ -330,7 +330,7 @@ if __name__ == '__main__':
         val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
             get_pose_data_list(val_im_path, val_ann_path)
 
-    if 'yours' in config.DATA.train_data:
+    if 'custom' in config.DATA.train_data:
         ## read your own images contains valid people
         ## 1. if you only have one folder as follow:
         ##   data/your_data
@@ -353,15 +353,15 @@ if __name__ == '__main__':
         print("number of own images found:", len(your_imgs_file_list))
 
     # choose dataset for training
-    if config.DATA.train_data == 'coco_only':
+    if config.DATA.train_data == 'coco':
         # 1. only coco training set
         imgs_file_list = train_imgs_file_list
         train_targets = list(zip(train_objs_info_list, train_mask_list))
-    elif config.DATA.train_data == 'yours_only':
+    elif config.DATA.train_data == 'custom':
         # 2. only your own data
         imgs_file_list = your_imgs_file_list
         train_targets = list(zip(your_objs_info_list, your_mask_list))
-    elif config.DATA.train_data == 'coco_and_yours':
+    elif config.DATA.train_data == 'coco_and_custom':
         # 3. your own data and coco training set
         imgs_file_list = train_imgs_file_list + your_imgs_file_list
         train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
