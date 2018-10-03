@@ -1,3 +1,6 @@
+import subprocess
+subprocess.call('doxygen', shell=True)
+
 project = 'openpose-plus'
 copyright = '2018, tensorlayer'
 author = 'tensorlayer'
