@@ -45,16 +45,11 @@ rm *.so
 
 ## Training your model
 
-Training the model is implemented using TensorFlow. To run `train.py`, you would need the following packages 
-in your virtual environment (Python <=3.6):
+Training the model is implemented using TensorFlow. To run `train.py`, you would need to install packages (shown
+in []requirements.txt](https://github.com/tensorlayer/openpose-plus/blob/master/requirements.txt) in your virtual environment (Python <=3.6):
 
 ```bash
-pip install tensorflow
-pip install tensorlayer
-pip install cython
-pip install pycocotools
-pip install easydict
-pip install opencv-python
+pip install -r requirements.txt
 ```
 
 `train.py` will automatically download MSCOCO 2017 dataset into `dataset/coco17`.
