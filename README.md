@@ -50,6 +50,7 @@ in []requirements.txt](https://github.com/tensorlayer/openpose-plus/blob/master/
 
 ```bash
 pip install -r requirements.txt
+pip install pycocotools
 ```
 
 `train.py` will automatically download MSCOCO 2017 dataset into `dataset/coco17`.
