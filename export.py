@@ -8,7 +8,7 @@ import tensorflow as tf
 import tensorlayer as tl
 
 from inference.common import measure, rename_tensor
-from models import get_model_func
+from models import get_model
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
@@ -77,7 +77,7 @@ def main():
 
     def model_func():
         target_size = (args.width, args.height)
-        return get_model_func(args.base_model)(target_size, args.data_format)
+        return get_model(args.base_model)(target_size, args.data_format)
 
     export_model(model_func, args.checkpoint_dir, args.path_to_npz, args.graph_filename, args.uff_filename)
 
