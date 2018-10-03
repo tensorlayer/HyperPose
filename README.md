@@ -32,7 +32,7 @@ This project is still under active development, some of the TODOs are as follows
 
 ## Preparation
 
-Build C++ library for post processing. See: <https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess>
+Build C++ library for post processing. See [instruction](https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess)
 
 ```bash
 cd inference/pafprocess
@@ -45,8 +45,8 @@ rm *.so
 
 ## Training your model
 
-Training the model is implemented using TensorFlow. To run `train.py`, you would need to install packages (shown
-in []requirements.txt](https://github.com/tensorlayer/openpose-plus/blob/master/requirements.txt) in your virtual environment (Python <=3.6):
+Training the model is implemented using TensorFlow. To run `train.py`, you would need to install packages, shown
+in [requirements.txt](https://github.com/tensorlayer/openpose-plus/blob/master/requirements.txt), in your virtual environment (Python <=3.6):
 
 ```bash
 pip install -r requirements.txt
