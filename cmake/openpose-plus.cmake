@@ -1,5 +1,4 @@
 FIND_PACKAGE(opencv)
-FIND_PACKAGE(gflags)
 
 ADD_DEFINITIONS(-ffast-math)
 
@@ -21,4 +20,6 @@ TARGET_LINK_LIBRARIES(openpose-plus
                       opencv_core
                       opencv_imgproc)
 TARGET_INCLUDE_DIRECTORIES(openpose-plus
-                           PRIVATE ${CUDA_RT}/include ${CUDA_RT}/include/crt)
+                           PRIVATE
+                           ${CUDA_RT}/include
+                           ${CUDA_RT}/include/crt)
