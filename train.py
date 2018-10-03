@@ -111,43 +111,68 @@ def make_model(img, results, mask, is_train=True, reuse=False):
     # return total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, img, confs, pafs, m1, net
 
 
+def _data_aug_fn(image, ground_truth):
+    """Data augmentation function."""
+    ground_truth = cPickle.loads(ground_truth)
+    ground_truth = list(ground_truth)
+
+    annos = ground_truth[0]
+    mask = ground_truth[1]
+    h_mask, w_mask, _ = np.shape(image)
+    # mask
+    mask_miss = np.ones((h_mask, w_mask), dtype=np.uint8)
+
+    for seg in mask:
+        bin_mask = maskUtils.decode(seg)
+        bin_mask = np.logical_not(bin_mask)
+        mask_miss = np.bitwise_and(mask_miss, bin_mask)
+
+    ## image data augmentation
+    # randomly resize height and width independently, scale is changed
+    image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
+    # random rotate
+    image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
+    # random left-right flipping
+    image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
+    # random resize height and width together
+    image, annos, mask_miss = keypoint_random_resize_shortestedge(
+        image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
+    # random crop
+    image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding
+
+    # generate result maps including keypoints heatmap, pafs and mask
+    h, w, _ = np.shape(image)
+    height, width, _ = np.shape(image)
+    heatmap = get_heatmap(annos, height, width)
+    vectormap = get_vectormap(annos, height, width)
+    resultmap = np.concatenate((heatmap, vectormap), axis=2)
+
+    image = np.array(image, dtype=np.float32)
+
+    img_mask = mask_miss.reshape(hin, win, 1)
+    image = image * np.repeat(img_mask, 3, 2)
+
+    resultmap = np.array(resultmap, dtype=np.float32)
+    mask_miss = cv2.resize(mask_miss, (hout, wout), interpolation=cv2.INTER_AREA)
+    mask_miss = np.array(mask_miss, dtype=np.float32)
+    return image, resultmap, mask_miss
+
+
+def _map_fn(img_list, annos):
+    """TF Dataset pipeline."""
+    image = tf.read_file(img_list)
+    image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
+    image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+    image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
+
+    image = tf.reshape(image, [hin, win, 3])
+    resultmap = tf.reshape(resultmap, [hout, wout, 57])
+    mask = tf.reshape(mask, [hout, wout, 1])
+
+    return image, resultmap, mask
+
+
 def single_train(training_dataset):
-
-    def _map_fn(image, annos, mask_miss):
-
-        def _data_aug_fn(image, annos, mask_miss):
-            # image data augmentation
-            # randomly resize height and width independently, scale is changed
-            image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
-            # random rotate
-            image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
-            # random left-right flipping
-            image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
-            # random resize height and width together
-            image, annos, mask_miss = keypoint_random_resize_shortestedge(
-                image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
-            # random crop
-            image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding
-
-            # generate result maps including keypoints heatmap, pafs and mask
-            h, w, _ = np.shape(image)
-            height, width, _ = np.shape(image)
-            heatmap = get_heatmap(annos, height, width)
-            vectormap = get_vectormap(annos, height, width)
-            resultmap = np.concatenate((heatmap, vectormap), axis=2)
-
-            image = np.array(image, dtype=np.float32)
-
-            img_mask = mask_miss.reshape(hin, win, 1)
-            image = image * np.repeat(img_mask, 3, 2)
-
-            resultmap = np.array(resultmap, dtype=np.float32)
-            mask_miss = cv2.resize(mask_miss, (hout, wout), interpolation=cv2.INTER_AREA)
-            mask_miss = np.array(mask_miss, dtype=np.float32)
-            return image, resultmap, mask_miss
-
-        return tf.py_func(_data_aug_fn, [image, annos, mask_miss], [tf.float32, tf.float32, tf.float32])
-
     ds = training_dataset.shuffle(buffer_size=4096)  # shuffle before loading images
     ds = ds.repeat(n_epoch)
     ds = ds.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count() // 2)  # decouple the heavy map_fn
@@ -224,24 +249,21 @@ def single_train(training_dataset):
                 break
 
 
+def _mock_map_fn(img_list, annos):
+    """TF Dataset pipeline."""
+    image = tf.read_file(img_list)
+    image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
+    image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+
+    image = np.ones((hin, win, 3), dtype=np.float32)
+    resultmap = np.ones((hout, wout, 57), dtype=np.float32)
+    mask = np.ones((hout, wout, 1), dtype=np.float32)
+
+    return image, resultmap, mask
+
+
+
 def parallel_train(training_dataset):
-
-    def _mock_map_fn(image, annos, mask_miss):
-
-        def _mock_data_aug_fn(image, annos, mask_miss):
-            height, width, _ = np.shape(image)
-            heatmap = get_heatmap(annos, height, width)
-            vectormap = get_vectormap(annos, height, width)
-            resultmap = np.concatenate((heatmap, vectormap), axis=2)
-
-            image = np.ones((hout, wout, 3), dtype=np.float32)
-            mask_miss = np.ones((hout, wout, 1), dtype=np.float32)
-            resultmap = np.array(resultmap, dtype=np.float32)
-
-            return image, resultmap, mask_miss
-
-        return tf.py_func(_mock_data_aug_fn, [image, annos, mask_miss], [tf.float32, tf.float32, tf.float32])
-
     ds = training_dataset.shuffle(buffer_size=4096)  # shuffle before loading images
     ds = ds.repeat(n_epoch)
     ds = ds.map(_mock_map_fn, num_parallel_calls=multiprocessing.cpu_count() // 2)  # decouple the heavy map_fn
