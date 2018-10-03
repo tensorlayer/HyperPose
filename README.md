@@ -69,8 +69,8 @@ In `config.py`, `config.DATA.train_data` can be:
 * `mobilenet`: MobileNet version, faster
 
 `config.TRAIN.train_mode` can be:
-* `local`: single GPU training
-* `distributed`: multiple GPU training (on-going work)
+* `single`: single GPU training
+* `parallel`: parallel GPU training (on-going work)
 
 ## 5. Inference
 

@@ -136,42 +136,6 @@ def _map_fn_data_aug_get_mask(image, annos):
     return image, annos, mask_miss
 
 
-def _map_fn_data_aug(image, annos, mask_miss):
-
-    def _data_aug_fn(image, annos, mask_miss):
-        ## image data augmentation
-        # randomly resize height and width independently, scale is changed
-        image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
-        # random rotate
-        image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
-        # random left-right flipping
-        image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
-        # random resize height and width together
-        image, annos, mask_miss = keypoint_random_resize_shortestedge(
-            image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
-        # random crop
-        image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding
-
-        # generate result maps including keypoints heatmap, pafs and mask
-        h, w, _ = np.shape(image)
-        height, width, _ = np.shape(image)
-        heatmap = get_heatmap(annos, height, width)
-        vectormap = get_vectormap(annos, height, width)
-        resultmap = np.concatenate((heatmap, vectormap), axis=2)
-
-        image = np.array(image, dtype=np.float32)
-
-        img_mask = mask_miss.reshape(hin, win, 1)
-        image = image * np.repeat(img_mask, 3, 2)
-
-        resultmap = np.array(resultmap, dtype=np.float32)
-        mask_miss = cv2.resize(mask_miss, (hout, wout), interpolation=cv2.INTER_AREA)
-        mask_miss = np.array(mask_miss, dtype=np.float32)
-        return image, resultmap, mask_miss
-
-    return tf.py_func(_data_aug_fn, [image, annos, mask_miss], [tf.float32, tf.float32, tf.float32])
-
-
 def get_pose_data_list(im_path, ann_path):
     """
     train_im_path : image folder name
@@ -237,9 +201,49 @@ def make_model(img, results, mask, is_train=True, reuse=False):
     # return total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, img, confs, pafs, m1, net
 
 
-def local_train(training_dataset):
-    """ Train on single GPU using TensorFlow DatasetAPI. """
-    iterator = training_dataset.make_one_shot_iterator()
+def single_train(training_dataset):
+
+    def _map_fn(image, annos, mask_miss):
+
+        def _data_aug_fn(image, annos, mask_miss):
+            # image data augmentation
+            # randomly resize height and width independently, scale is changed
+            image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
+            # random rotate
+            image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
+            # random left-right flipping
+            image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
+            # random resize height and width together
+            image, annos, mask_miss = keypoint_random_resize_shortestedge(
+                image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
+            # random crop
+            image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding
+
+            # generate result maps including keypoints heatmap, pafs and mask
+            h, w, _ = np.shape(image)
+            height, width, _ = np.shape(image)
+            heatmap = get_heatmap(annos, height, width)
+            vectormap = get_vectormap(annos, height, width)
+            resultmap = np.concatenate((heatmap, vectormap), axis=2)
+
+            image = np.array(image, dtype=np.float32)
+
+            img_mask = mask_miss.reshape(hin, win, 1)
+            image = image * np.repeat(img_mask, 3, 2)
+
+            resultmap = np.array(resultmap, dtype=np.float32)
+            mask_miss = cv2.resize(mask_miss, (hout, wout), interpolation=cv2.INTER_AREA)
+            mask_miss = np.array(mask_miss, dtype=np.float32)
+            return image, resultmap, mask_miss
+
+        return tf.py_func(_data_aug_fn, [image, annos, mask_miss], [tf.float32, tf.float32, tf.float32])
+
+    ds = training_dataset.shuffle(buffer_size=4096)  # shuffle before loading images
+    ds = ds.repeat(n_epoch)
+    ds = ds.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count() // 2)  # decouple the heavy map_fn
+    ds = ds.batch(batch_size)  # TODO: consider using tf.contrib.map_and_batch
+    ds = ds.prefetch(2)
+    iterator = ds.make_one_shot_iterator()
     one_element = iterator.get_next()
     net, total_loss, log_tensors = make_model(*one_element, is_train=True, reuse=False)
     x_ = net.img  # net input
@@ -266,7 +270,7 @@ def local_train(training_dataset):
     with tf.Session(config=config) as sess:
         sess.run(tf.global_variables_initializer())
 
-        # restore pretrained weights
+        # restore pre-trained weights
         try:
             # tl.files.load_and_assign_npz(sess, os.path.join(model_path, 'pose.npz'), net)
             tl.files.load_and_assign_npz_dict(sess=sess, name=os.path.join(model_path, 'pose.npz'))
@@ -275,7 +279,7 @@ def local_train(training_dataset):
 
         # train until the end
         sess.run(tf.assign(lr_v, lr_init))
-        while (True):
+        while True:
             tic = time.time()
             step = sess.run(global_step)
             if step != 0 and (step % lr_decay_every_step == 0):
@@ -293,9 +297,9 @@ def local_train(training_dataset):
             for ix, ll in enumerate(_stage_losses):
                 print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
-            # save intermedian results and model
+            # save intermediate results and model
             if (step != 0) and (step % save_interval == 0):
-                ## save some results
+                # save some results
                 [img_out, confs_ground, pafs_ground, conf_result, paf_result,
                  mask_out] = sess.run([x_, confs_, pafs_, last_conf, last_paf, mask])
                 draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
@@ -310,8 +314,98 @@ def local_train(training_dataset):
                 break
 
 
-def distributed_train(dataset):
-    pass
+def parallel_train(training_dataset):
+    def _mock_map_fn(image, annos, mask_miss):
+
+        def _mock_data_aug_fn(image, annos, mask_miss):
+            height, width, _ = np.shape(image)
+            heatmap = get_heatmap(annos, height, width)
+            vectormap = get_vectormap(annos, height, width)
+            resultmap = np.concatenate((heatmap, vectormap), axis=2)
+
+            image = np.ones((hout, wout, 3), dtype=np.float32)
+            mask_miss = np.ones((hout, wout, 1), dtype=np.float32)
+            resultmap = np.array(resultmap, dtype=np.float32)
+
+            return image, resultmap, mask_miss
+
+        return tf.py_func(_mock_data_aug_fn, [image, annos, mask_miss], [tf.float32, tf.float32, tf.float32])
+
+    ds = training_dataset.shuffle(buffer_size=4096)  # shuffle before loading images
+    ds = ds.repeat(n_epoch)
+    ds = ds.map(_mock_map_fn, num_parallel_calls=multiprocessing.cpu_count() // 2)  # decouple the heavy map_fn
+    ds = ds.batch(batch_size)  # TODO: consider using tf.contrib.map_and_batch
+    ds = ds.prefetch(2)
+    iterator = ds.make_one_shot_iterator()
+    one_element = iterator.get_next()
+
+    net, total_loss, log_tensors = make_model(*one_element, is_train=True, reuse=False)
+    x_ = net.img  # net input
+    last_conf = net.last_conf  # net output
+    last_paf = net.last_paf  # net output
+    confs_ = net.confs  # GT
+    pafs_ = net.pafs  # GT
+    mask = net.m1  # mask1, GT
+    # net.m2 = m2                 # mask2, GT
+    stage_losses = net.stage_losses
+    l2_loss = net.l2_loss
+
+    global_step = tf.Variable(1, trainable=False)
+    print('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
+        n_step, batch_size, lr_init, lr_decay_every_step))
+    with tf.variable_scope('learning_rate'):
+        lr_v = tf.Variable(lr_init, trainable=False)
+
+    opt = tf.train.MomentumOptimizer(lr_v, 0.9)
+    train_op = opt.minimize(total_loss, global_step=global_step)
+    config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
+
+    # start training
+    with tf.Session(config=config) as sess:
+        sess.run(tf.global_variables_initializer())
+
+        # restore pre-trained weights
+        try:
+            # tl.files.load_and_assign_npz(sess, os.path.join(model_path, 'pose.npz'), net)
+            tl.files.load_and_assign_npz_dict(sess=sess, name=os.path.join(model_path, 'pose.npz'))
+        except:
+            print("no pretrained model")
+
+        # train until the end
+        sess.run(tf.assign(lr_v, lr_init))
+        while True:
+            tic = time.time()
+            step = sess.run(global_step)
+            if step != 0 and (step % lr_decay_every_step == 0):
+                new_lr_decay = lr_decay_factor**(step // lr_decay_every_step)
+                sess.run(tf.assign(lr_v, lr_init * new_lr_decay))
+
+            [_, _loss, _stage_losses, _l2, conf_result, paf_result] = \
+                sess.run([train_op, total_loss, stage_losses, l2_loss, last_conf, last_paf])
+
+            # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
+            lr = sess.run(lr_v)
+            print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} l2_loss {:10e} Took: {}s'.format(
+                step, n_step, _loss, lr, _l2,
+                time.time() - tic))
+            for ix, ll in enumerate(_stage_losses):
+                print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
+
+            # save intermediate results and model
+            if (step != 0) and (step % save_interval == 0):
+                # save some results
+                [img_out, confs_ground, pafs_ground, conf_result, paf_result,
+                 mask_out] = sess.run([x_, confs_, pafs_, last_conf, last_paf, mask])
+                draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
+
+                # save model
+                # tl.files.save_npz(
+                #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+                tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+            if step == n_step:  # training finished
+                break
 
 
 if __name__ == '__main__':
@@ -365,7 +459,7 @@ if __name__ == '__main__':
         imgs_file_list = train_imgs_file_list + your_imgs_file_list
         train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
     else:
-        raise Exception('please choice a correct config.DATA.train_data setting.')
+        raise Exception('please choose a valid config.DATA.train_data setting.')
 
     # define data augmentation
     def generator():
@@ -376,15 +470,10 @@ if __name__ == '__main__':
 
     n_epoch = math.ceil(n_step / (len(imgs_file_list) / batch_size))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
-    dataset = dataset.shuffle(buffer_size=4096)  # shuffle before loading images
-    dataset = dataset.repeat(n_epoch)
-    dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count() // 2)  # decouple the heavy map_fn
-    dataset = dataset.batch(batch_size)  # TODO: consider using tf.contrib.map_and_batch
-    dataset = dataset.prefetch(2)  # prefetch 1 batch
 
-    if config.TRAIN.train_mode == 'local':
-        local_train(dataset)
-    elif config.TRAIN.train_mode == 'distributed':
-        distributed_train(dataset)
+    if config.TRAIN.train_mode == 'single':
+        single_train(dataset)
+    elif config.TRAIN.train_mode == 'parallel':
+        parallel_train(dataset)
     else:
         raise Exception('Unknown training mode')
