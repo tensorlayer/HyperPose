@@ -14,7 +14,7 @@ ADD_LIBRARY(pose-detetor examples/pose_detector.cpp examples/input.cpp)
 TARGET_LINK_LIBRARIES(pose-detetor openpose-plus helpers)
 
 ADD_LIBRARY(stream-detetor examples/stream_detector.cpp)
-TARGET_LINK_LIBRARIES(stream-detetor openpose-plus helpers)
+TARGET_LINK_LIBRARIES(stream-detetor openpose-plus tracer helpers)
 
 ADD_EXECUTABLE(example-batch-detector examples/example_batch_detector.cpp)
 TARGET_LINK_LIBRARIES(example-batch-detector tracer pose-detetor gflags helpers)

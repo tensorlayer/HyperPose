@@ -7,7 +7,6 @@ services:
 
 python:
 - '3.6'
-- '2.7'
 
 sudo: required
 
@@ -21,10 +20,9 @@ before_install:
 - ./scripts/download-test-data.sh
 
 script:
-# TODO: add tests for C++
-# - make docker-build
+- docker build --rm -t openpose-plus-test:snapshot -f docker/Dockerfile.builder-cpu-bionic .
+- docker run --rm -it openpose-plus-test:snapshot sh -c './configure && make && make test'
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vgg
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vggtiny
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=mobilenet
 - python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=hao28_experimental
-# TODO: add move tests

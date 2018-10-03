@@ -14,7 +14,6 @@ ELSE()
     INCLUDE(cmake/openpose-plus.cmake)
     INCLUDE(cmake/package.cmake)
 ENDIF()
-
 INCLUDE(cmake/3rdparty.cmake)
 INCLUDE(cmake/examples.cmake)
 
