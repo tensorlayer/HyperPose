@@ -3,5 +3,5 @@ numpy
 easydict
 opencv-python
 tensorflow
-tensorlayer
+nltk # required by tensorlayer
 # pycocotools  # must be installed after cython and numpy are installed
