@@ -2,7 +2,9 @@
 #include <string>
 #include <vector>
 
-#include <human.h>
+#include <opencv2/opencv.hpp>
+
+#include <openpose-plus.h>
 
 class stream_detector
 {

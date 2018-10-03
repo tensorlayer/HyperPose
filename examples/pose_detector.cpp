@@ -1,4 +1,4 @@
-#include <pose_detector.h>
+#include "pose_detector.h"
 
 #include <algorithm>
 #include <cassert>
@@ -12,11 +12,10 @@
 using ttl::tensor;
 using ttl::tensor_ref;
 
-#include <paf.h>
-#include <vis.h>
+#include <openpose-plus.h>
 
 #include "input.h"
-#include "uff-runner.h"
+#include "vis.h"
 
 class pose_detector_impl : public pose_detector
 {

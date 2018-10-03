@@ -13,9 +13,10 @@
 #include <NvUtils.h>
 #include <stdtracer>
 
+#include <openpose-plus.h>
+
 #include "logger.h"
 #include "std_cuda_tensor.hpp"
-#include "uff-runner.h"
 
 using input_info_t = std::vector<std::pair<std::string, std::vector<int>>>;
 

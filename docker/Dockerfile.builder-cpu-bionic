@@ -1,0 +1,8 @@
+FROM ubuntu:bionic
+
+ADD docker/sources.list.bionic.ustc /etc/apt/sources.list
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update && \
+    apt install -y g++ cmake libopencv-dev libgflags-dev git
+ADD . /openpose-plus
+WORKDIR /openpose-plus

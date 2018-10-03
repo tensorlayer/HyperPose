@@ -9,11 +9,10 @@
 
 using ttl::tensor_ref;
 
-#include <channel.hpp>
-#include <stream_detector.h>
-#include <vis.h>
-
+#include "channel.hpp"
+#include "stream_detector.h"
 #include "utils.hpp"
+#include "vis.h"
 
 // Model flags
 DEFINE_string(model_file, "vgg.uff", "Path to uff model.");
