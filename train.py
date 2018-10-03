@@ -12,7 +12,7 @@ import multiprocessing
 import _pickle as cPickle
 import tensorflow as tf
 import tensorlayer as tl
-import models
+import models as model
 from config import config
 from pycocotools.coco import maskUtils
 from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
@@ -196,7 +196,6 @@ def make_model(img, results, mask, is_train=True, reuse=False):
     m1 = tf_repeat(mask, [1, 1, 1, n_pos])
     m2 = tf_repeat(mask, [1, 1, 1, n_pos * 2])
 
-    model = models.get_base_model(config.MODEL.name)
     cnn, b1_list, b2_list, net = model(img, n_pos, m1, m2, is_train, reuse)
 
     # define loss

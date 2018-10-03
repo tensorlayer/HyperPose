@@ -1,4 +1,5 @@
 import tensorflow as tf
+from config import config
 from inference.common import rename_tensor
 
 __all__ = [
@@ -46,3 +47,6 @@ def get_model(base_model_name):
             return image, rename_tensor(conf_tensor, 'conf'), rename_tensor(pafs_tensor, 'paf')
 
     return model_func
+
+
+model = get_base_model(config.MODEL.name)

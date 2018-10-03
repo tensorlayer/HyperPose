@@ -8,7 +8,7 @@ import time
 import tensorflow as tf
 import tensorlayer as tl
 
-from inference.common import measure, plot_humans, read_imgfile, rename_tensor
+from inference.common import measure, plot_humans, read_imgfile
 from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
 from models import get_model
 
