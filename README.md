@@ -45,7 +45,19 @@ rm *.so
 
 ## Training your model
 
-Runs `train.py`, it will automatically download MSCOCO 2017 dataset into `dataset/coco17`.
+Training the model is implemented using TensorFlow. To run `train.py`, you would need the following packages 
+in your virtual environment (Python <=3.6):
+
+```bash
+pip install tensorflow
+pip install tensorlayer
+pip install cython
+pip install pycocotools
+pip install easydict
+pip install opencv-python
+```
+
+`train.py` will automatically download MSCOCO 2017 dataset into `dataset/coco17`.
 The default model in `models.py` is based on VGG19, which is the same with the original paper.
 If you want to customize the model, simply change it in `models.py`.
 And then `train.py` will train the model to the end.
