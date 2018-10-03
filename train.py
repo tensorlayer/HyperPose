@@ -46,96 +46,6 @@ hout = config.MODEL.hout
 wout = config.MODEL.wout
 
 
-def _data_aug_fn(image, ground_truth):
-    """Data augmentation function."""
-    ground_truth = cPickle.loads(ground_truth)
-    ground_truth = list(ground_truth)
-
-    annos = ground_truth[0]
-    mask = ground_truth[1]
-    h_mask, w_mask, _ = np.shape(image)
-    # mask
-    mask_miss = np.ones((h_mask, w_mask), dtype=np.uint8)
-
-    for seg in mask:
-        bin_mask = maskUtils.decode(seg)
-        bin_mask = np.logical_not(bin_mask)
-        mask_miss = np.bitwise_and(mask_miss, bin_mask)
-
-    ## image data augmentation
-    # randomly resize height and width independently, scale is changed
-    image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
-    # random rotate
-    image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
-    # random left-right flipping
-    image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
-    # random resize height and width together
-    image, annos, mask_miss = keypoint_random_resize_shortestedge(
-        image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
-    # random crop
-    image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding
-
-    # generate result maps including keypoints heatmap, pafs and mask
-    h, w, _ = np.shape(image)
-    height, width, _ = np.shape(image)
-    heatmap = get_heatmap(annos, height, width)
-    vectormap = get_vectormap(annos, height, width)
-    resultmap = np.concatenate((heatmap, vectormap), axis=2)
-
-    image = np.array(image, dtype=np.float32)
-
-    img_mask = mask_miss.reshape(hin, win, 1)
-    image = image * np.repeat(img_mask, 3, 2)
-
-    resultmap = np.array(resultmap, dtype=np.float32)
-    mask_miss = cv2.resize(mask_miss, (hout, wout), interpolation=cv2.INTER_AREA)
-    mask_miss = np.array(mask_miss, dtype=np.float32)
-    return image, resultmap, mask_miss
-
-
-def _map_fn(img_list, annos):
-    """TF Dataset pipeline."""
-    image = tf.read_file(img_list)
-    image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
-    image = tf.image.convert_image_dtype(image, dtype=tf.float32)
-    image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
-
-    image = tf.reshape(image, [hin, win, 3])
-    resultmap = tf.reshape(resultmap, [hout, wout, 57])
-    mask = tf.reshape(mask, [hout, wout, 1])
-
-    return image, resultmap, mask
-
-
-def _map_fn_read_data(img_list, annos):
-    image = tf.read_file(img_list)
-    image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
-    image = tf.image.convert_image_dtype(image, dtype=tf.float32)
-    return image, annos
-
-
-def _map_fn_data_aug_get_mask(image, annos):
-
-    def _data_aug_fn(image, ground_truth):
-        ground_truth = cPickle.loads(ground_truth)
-        ground_truth = list(ground_truth)
-
-        annos = ground_truth[0]
-        mask = ground_truth[1]
-        h_mask, w_mask, _ = np.shape(image)
-        # mask
-        mask_miss = np.ones((h_mask, w_mask), dtype=np.uint8)
-
-        for seg in mask:
-            bin_mask = maskUtils.decode(seg)
-            bin_mask = np.logical_not(bin_mask)
-            mask_miss = np.bitwise_and(mask_miss, bin_mask)
-        return image, mask_miss
-
-    image, mask_miss = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32])
-    return image, annos, mask_miss
-
-
 def get_pose_data_list(im_path, ann_path):
     """
     train_im_path : image folder name
@@ -315,6 +225,7 @@ def single_train(training_dataset):
 
 
 def parallel_train(training_dataset):
+
     def _mock_map_fn(image, annos, mask_miss):
 
         def _mock_data_aug_fn(image, annos, mask_miss):
