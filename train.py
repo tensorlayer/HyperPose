@@ -12,8 +12,8 @@ import multiprocessing
 import _pickle as cPickle
 import tensorflow as tf
 import tensorlayer as tl
+import models as model
 from config import config
-from models import model
 from pycocotools.coco import maskUtils
 from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
                                 keypoint_random_resize_shortestedge, keypoint_random_rotate)
@@ -195,7 +195,9 @@ def make_model(img, results, mask, is_train=True, reuse=False):
     pafs = results[:, :, :, n_pos:]
     m1 = tf_repeat(mask, [1, 1, 1, n_pos])
     m2 = tf_repeat(mask, [1, 1, 1, n_pos * 2])
+
     cnn, b1_list, b2_list, net = model(img, n_pos, m1, m2, is_train, reuse)
+
     # define loss
     losses = []
     last_losses_l1 = []
@@ -327,7 +329,7 @@ if __name__ == '__main__':
         val_imgs_file_list, val_objs_info_list, val_mask_list, val_targets = \
             get_pose_data_list(val_im_path, val_ann_path)
 
-    if 'yours' in config.DATA.train_data:
+    if 'custom' in config.DATA.train_data:
         ## read your own images contains valid people
         ## 1. if you only have one folder as follow:
         ##   data/your_data
@@ -350,15 +352,15 @@ if __name__ == '__main__':
         print("number of own images found:", len(your_imgs_file_list))
 
     # choose dataset for training
-    if config.DATA.train_data == 'coco_only':
+    if config.DATA.train_data == 'coco':
         # 1. only coco training set
         imgs_file_list = train_imgs_file_list
         train_targets = list(zip(train_objs_info_list, train_mask_list))
-    elif config.DATA.train_data == 'yours_only':
+    elif config.DATA.train_data == 'custom':
         # 2. only your own data
         imgs_file_list = your_imgs_file_list
         train_targets = list(zip(your_objs_info_list, your_mask_list))
-    elif config.DATA.train_data == 'coco_and_yours':
+    elif config.DATA.train_data == 'coco_and_custom':
         # 3. your own data and coco training set
         imgs_file_list = train_imgs_file_list + your_imgs_file_list
         train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
