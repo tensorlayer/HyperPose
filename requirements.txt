@@ -4,4 +4,4 @@ easydict
 opencv-python
 tensorflow
 tensorlayer
-pycocotools  # must be installed after cython and numpy are installed
+# pycocotools  # must be installed after cython and numpy are installed
