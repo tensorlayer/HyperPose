@@ -55,20 +55,14 @@ In `config.py`, `config.DATA.train_data` can be:
 * `yours_only`: training data is your dataset specified by `config.DATA.your_xxx`
 * `coco_and_yours`: training data is COCO and your dataset
 
-- `config.DATA.train_data` can be:
-   * `coco_only`: training data is COCO dataset only (default)
-   * `yours_only`: training data is your dataset specified by `config.DATA.your_xxx`
-   * `coco_and_yours`: training data is COCO and your datasets
+`config.MODEL.name` can be:
+* `vgg`: VGG19 version (default), slow  
+* `vggtiny`: VGG tiny version, faster
+* `mobilenet`: MobileNet version, faster
 
-- `config.MODEL.name` can be:
-   * `vgg`: VGG19 version (default), slow
-	* `vggtiny`: VGG tiny version, faster
-	* `mobilenet`: MobileNet version, faster
-
-- `config.TRAIN.train_mode` can be:
-   * `datasetapi`: single GPU with TF dataset api pipeline (default)
-   * `distributed`: multiple GPUs with TF dataset api pipeline, fast (you may need to change the hyper parameters according to your hardware)
-   * `placeholder`: single GPU with placeholder, for debug only, slow
+`config.TRAIN.train_mode` can be:
+* `local`: single GPU training
+* `distributed`: multiple GPU training (on-going work)
 
 ## 5. Inference
 
