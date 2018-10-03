@@ -1,5 +1,6 @@
+/build
 /html
 /latex
-/xml
 /output
-/build
+/rst
+/xml

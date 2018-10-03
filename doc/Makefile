@@ -1,17 +1,4 @@
-default: sphinx-doc
-
-doxygen-doc:
+doc:
 	doxygen
-
-breathe-doc: doxygen-doc
-	breathe-apidoc -o output xml
-
-
-SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
-SOURCEDIR     = output
-BUILDDIR      = build
-
-# TODO: make it work
-sphinx-doc: breathe-doc
-	$(SPHINXBUILD) -c . "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS)
+	# breathe-apidoc -o rst xml
+	sphinx-build -T -E . build
