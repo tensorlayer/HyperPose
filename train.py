@@ -12,7 +12,7 @@ import multiprocessing
 import _pickle as cPickle
 import tensorflow as tf
 import tensorlayer as tl
-import models as model
+from models import model
 from config import config
 from pycocotools.coco import maskUtils
 from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
@@ -378,7 +378,7 @@ if __name__ == '__main__':
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
     dataset = dataset.shuffle(buffer_size=4096)  # shuffle before loading images
     dataset = dataset.repeat(n_epoch)
-    dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count() / 2)  # decouple the heavy map_fn
+    dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count() // 2)  # decouple the heavy map_fn
     dataset = dataset.batch(batch_size)  # TODO: consider using tf.contrib.map_and_batch
     dataset = dataset.prefetch(2)  # prefetch 1 batch
 
