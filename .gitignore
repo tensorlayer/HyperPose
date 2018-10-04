@@ -1,3 +1,4 @@
+.DS_Store
 __pycache__
 .idea
 *.a
@@ -33,3 +34,4 @@ test.py
 test.py
 Testing
 venv
+third_party

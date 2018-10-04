@@ -70,9 +70,32 @@ In `config.py`, `config.DATA.train_data` can be:
 
 `config.TRAIN.train_mode` can be:
 * `single`: single GPU training
-* `parallel`: parallel GPU training (on-going work)
+* `parallel`: parallel GPU training (on-going)
 
-## 5. Inference
+Train your model by simply running:
+
+```bash
+python train.py
+```
+
+## Parallel training
+
+We use Horovod to support train multiple tensorflow programs. 
+You would need to install the [OpenMPI](https://www.open-mpi.org/) in your machine.
+We also provide a reference script (`scripts/install-mpi.sh`) to help you go through the installation. 
+Once OpenMPI is installed, you would also need to install Horovod python library.
+
+```bash
+pip install horovod
+```
+
+Then set the `config.TRAIN.train_mode` to `parallel`, and just run:
+
+```bash
+python train.py
+```
+
+## Inference
 
 Currently we provide two C++ APIs for inference, both defined in `include/openpose-plus.hpp`.
 They are for running the tensorflow model with tensorRT and post-processing respectively.

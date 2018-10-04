@@ -12,12 +12,14 @@ import multiprocessing
 import _pickle as cPickle
 import tensorflow as tf
 import tensorlayer as tl
+from hvd_trainer import HorovodTrainer
 from models import model
 from config import config
 from pycocotools.coco import maskUtils
 from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
                                 keypoint_random_resize_shortestedge, keypoint_random_rotate)
 from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset, tf_repeat)
+import horovod.tensorflow as hvd
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
@@ -210,7 +212,7 @@ def single_train(training_dataset):
             # tl.files.load_and_assign_npz(sess, os.path.join(model_path, 'pose.npz'), net)
             tl.files.load_and_assign_npz_dict(sess=sess, name=os.path.join(model_path, 'pose.npz'))
         except:
-            print("no pretrained model")
+            print("no pre-trained model")
 
         # train until the end
         sess.run(tf.assign(lr_v, lr_init))
@@ -262,16 +264,23 @@ def _mock_map_fn(img_list, annos):
     return image, resultmap, mask
 
 
+def _parallel_train_model(img, results, mask):
+    net, total_loss, log_tensors = make_model(img, results, mask, is_train=True, reuse=False)
+    return net, total_loss, log_tensors
+
 
 def parallel_train(training_dataset):
-    ds = training_dataset.shuffle(buffer_size=4096)  # shuffle before loading images
+    hvd.init() # HOROVOD
+
+    ds = training_dataset.shuffle(buffer_size=4096)
+    ds = ds.shard(num_shards=hvd.size(), index=hvd.rank())
     ds = ds.repeat(n_epoch)
-    ds = ds.map(_mock_map_fn, num_parallel_calls=multiprocessing.cpu_count() // 2)  # decouple the heavy map_fn
-    ds = ds.batch(batch_size)  # TODO: consider using tf.contrib.map_and_batch
-    ds = ds.prefetch(2)
+    ds = ds.map(_mock_map_fn, num_parallel_calls=multiprocessing.cpu_count() // 2)
+    ds = ds.batch(batch_size)
+    ds = ds.prefetch(buffer_size=1)
+
     iterator = ds.make_one_shot_iterator()
     one_element = iterator.get_next()
-
     net, total_loss, log_tensors = make_model(*one_element, is_train=True, reuse=False)
     x_ = net.img  # net input
     last_conf = net.last_conf  # net output
@@ -284,61 +293,81 @@ def parallel_train(training_dataset):
     l2_loss = net.l2_loss
 
     global_step = tf.Variable(1, trainable=False)
-    print('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
-        n_step, batch_size, lr_init, lr_decay_every_step))
     with tf.variable_scope('learning_rate'):
         lr_v = tf.Variable(lr_init, trainable=False)
 
     opt = tf.train.MomentumOptimizer(lr_v, 0.9)
+    opt = hvd.DistributedOptimizer(opt) # HOROVOD
     train_op = opt.minimize(total_loss, global_step=global_step)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
 
-    # start training
+    config.gpu_options.allow_growth = True # HOROVOD
+    config.gpu_options.visible_device_list = str(hvd.local_rank()) # HOROVOD
+
+    # Add variable initializer.
+    init = tf.global_variables_initializer() # HOVOROD
+
+    # Horovod: broadcast initial variable states from rank 0 to all other processes.
+    # This is necessary to ensure consistent initialization of all workers when
+    # training is started with random weights or restored from a checkpoint.
+    bcast = hvd.broadcast_global_variables(0) # HOVOROD
+
+    # Horovod: adjust number of steps based on number of GPUs.
+    n_my_step = n_step // hvd.size() + 1 # HOVOROD
+
+    # Start training
     with tf.Session(config=config) as sess:
-        sess.run(tf.global_variables_initializer())
+        init.run()
+        bcast.run() # HOVODO
+        print('Worker{}: Initialized'.format(hvd.rank()))
+        print('Worker{}: Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
+            hvd.rank(), n_my_step, batch_size, lr_init, lr_decay_every_step))
 
         # restore pre-trained weights
         try:
             # tl.files.load_and_assign_npz(sess, os.path.join(model_path, 'pose.npz'), net)
             tl.files.load_and_assign_npz_dict(sess=sess, name=os.path.join(model_path, 'pose.npz'))
         except:
-            print("no pretrained model")
+            print("no pre-trained model")
 
         # train until the end
-        sess.run(tf.assign(lr_v, lr_init))
+        sess.run(tf.assign(lr_v, lr_init * hvd.size())) # HOROVOD: Scale the learning rate linearly
         while True:
-            tic = time.time()
             step = sess.run(global_step)
+            if step == n_my_step:
+                break
+
+            tic = time.time()
             if step != 0 and (step % lr_decay_every_step == 0):
                 new_lr_decay = lr_decay_factor**(step // lr_decay_every_step)
-                sess.run(tf.assign(lr_v, lr_init * new_lr_decay))
+                sess.run(tf.assign(lr_v, lr_init * new_lr_decay * hvd.size())) # HOROVOD
 
             [_, _loss, _stage_losses, _l2, conf_result, paf_result] = \
                 sess.run([train_op, total_loss, stage_losses, l2_loss, last_conf, last_paf])
 
             # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
             lr = sess.run(lr_v)
-            print('Total Loss at iteration {} / {} is: {} Learning rate {:10e} l2_loss {:10e} Took: {}s'.format(
-                step, n_step, _loss, lr, _l2,
+            print('Worker{}: Total Loss at iteration {} / {} is: {} Learning rate {:10e} l2_loss {:10e} Took: {}s'.format(
+                hvd.rank(), step, n_my_step, _loss, lr, _l2,
                 time.time() - tic))
             for ix, ll in enumerate(_stage_losses):
-                print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
+                print('Worker{}:', hvd.rank(), 'Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
             # save intermediate results and model
-            if (step != 0) and (step % save_interval == 0):
-                # save some results
-                [img_out, confs_ground, pafs_ground, conf_result, paf_result,
-                 mask_out] = sess.run([x_, confs_, pafs_, last_conf, last_paf, mask])
-                draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
+            if hvd.rank() == 0: # HOROVOD
+                if (step != 0) and (step % save_interval == 0):
+                    # save some results
+                    [img_out, confs_ground, pafs_ground, conf_result, paf_result,
+                     mask_out] = sess.run([x_, confs_, pafs_, last_conf, last_paf, mask])
+                    draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
 
-                # save model
-                # tl.files.save_npz(
-                #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
-                # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
-                tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
-                tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
-            if step == n_step:  # training finished
-                break
+                    # save model
+                    # tl.files.save_npz(
+                    #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                    # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+                    tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                    tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+
 
 
 if __name__ == '__main__':
