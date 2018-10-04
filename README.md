@@ -89,11 +89,29 @@ Once OpenMPI is installed, you would also need to install Horovod python library
 pip install horovod
 ```
 
-Then set the `config.TRAIN.train_mode` to `parallel`, and just run:
+Don't forget to set the `config.TRAIN.train_mode` to `parallel`.
+
+(i) To run on a machine with 4 GPUs:
 
 ```bash
-python train.py
+$ mpirun -np 4 \
+    -bind-to none -map-by slot \
+    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+    -mca pml ob1 -mca btl ^openib \
+    python train.py
 ```
+
+(ii) To run on 4 machines with 4 GPUs each:
+
+```bash
+$ mpirun -np 16 \
+    -H server1:4,server2:4,server3:4,server4:4 \
+    -bind-to none -map-by slot \
+    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+    -mca pml ob1 -mca btl ^openib \
+    python train.py
+```
+
 
 ## Inference
 
