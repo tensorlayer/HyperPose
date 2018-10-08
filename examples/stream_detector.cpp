@@ -178,7 +178,7 @@ class stream_detector_impl : public stream_detector
     channel<feature_stream_t> feature_stream_2;
 
     std::unique_ptr<paf_processor> paf_process;
-    std::unique_ptr<uff_runner> runner;
+    std::unique_ptr<openpose_runner> runner;
 };
 
 stream_detector *stream_detector::create(const std::string &model_file,

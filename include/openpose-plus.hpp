@@ -2,10 +2,10 @@
 #pragma once
 #include <openpose-plus/human.h>
 
-/*! \interface uff_runner
+/*! \interface openpose_runner
     A class that runs a UFF model.
 */
-class uff_runner
+class openpose_runner
 {
   public:
     //! Run the openpose model.
@@ -21,11 +21,11 @@ class uff_runner
                ,
                int batchSize = 1 /*! number of batches */) = 0;
 
-    virtual ~uff_runner() {}
+    virtual ~openpose_runner() {}
 };
 
-//! Creates a uff_runner for running openpose model
-uff_runner *create_openpose_runner(
+//! Creates a openpose_runner for running openpose model
+openpose_runner *create_openpose_runner(
     const std::string &model_file /*! path to the exported uff model file */,
     int input_height /*! height of the input image */,
     int input_width /*! width of the input image */,

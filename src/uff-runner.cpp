@@ -120,7 +120,7 @@ create_engine(const std::string &model_file, const input_info_t &input_info,
     return engine;
 }
 
-class uff_runner_impl : public uff_runner
+class uff_runner_impl : public openpose_runner
 {
   public:
     uff_runner_impl(const std::string &model_file,
@@ -211,9 +211,9 @@ void uff_runner_impl::operator()(const std::vector<void *> &inputs,
     }
 }
 
-uff_runner *create_openpose_runner(const std::string &model_file,
-                                   int input_height, int input_width,
-                                   int max_batch_size, bool use_f16)
+openpose_runner *create_openpose_runner(const std::string &model_file,
+                                        int input_height, int input_width,
+                                        int max_batch_size, bool use_f16)
 {
     const input_info_t input_info = {
         {
