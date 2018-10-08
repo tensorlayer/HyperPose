@@ -68,10 +68,6 @@ In `config.py`, `config.DATA.train_data` can be:
 * `vggtiny`: VGG tiny version, faster
 * `mobilenet`: MobileNet version, faster
 
-`config.TRAIN.train_mode` can be:
-* `single`: single GPU training
-* `parallel`: parallel GPU training (on-going)
-
 Train your model by simply running:
 
 ```bash
@@ -89,7 +85,7 @@ Once OpenMPI is installed, you would also need to install Horovod python library
 pip install horovod
 ```
 
-Don't forget to set the `config.TRAIN.train_mode` to `parallel`.
+Set the `config.TRAIN.train_mode` to `parallel` (default is `single`).
 
 (i) To run on a machine with 4 GPUs:
 
