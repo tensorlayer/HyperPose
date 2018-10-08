@@ -2,18 +2,17 @@
 set -e
 
 if [ $(uname) == "Darwin" ]; then
-	NPROC=$(sysctl -n hw.ncpu)
+    NPROC=$(sysctl -n hw.ncpu)
 else
-	NPROC=$(nproc)
+    NPROC=$(nproc)
 fi
 
 mkdir -p $HOME/openmpi_tmp && cd $HOME/openmpi_tmp
 
-# TODO: upgrade to latest version once https://github.com/open-mpi/ompi/pull/5296 is in the release
 MPI_MAJOR=3
-MPI_MINOR=1.1
+MPI_MINOR=1
 
-VERSION=${MPI_MAJOR}.${MPI_MINOR}.0
+VERSION=${MPI_MAJOR}.${MPI_MINOR}.1
 FILENAME=openmpi-${VERSION}.tar.bz2
 FOLDER=openmpi-${VERSION}
 URL=https://download.open-mpi.org/release/open-mpi/v${MPI_MAJOR}.${MPI_MINOR}/${FILENAME}
