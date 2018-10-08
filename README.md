@@ -112,9 +112,9 @@ Running on TX 2, the inference speed is 13 frames / second. On TX 1, the
 inference speed is 10 frames / second. On Titan 1050Ti, the inference 
 speed is 38 frames / second.
 
-We also has a Python binding for supporting inference. The current binding depends on
-the tf-pose-estimation project, and we are working on imporving the Python binding efficiency.
-For now, to enable the current Python binding, please build C++ library for post processing, and run:
+We also have a Python binding for inference API. The current binding relies on
+the external tf-pose-estimation project. We are working on providing the Python binding for our high-performance
+C++ implementation. For now, to enable the Python binding, please build C++ library for post processing by:
 
 ```bash
 cd inference/pafprocess
@@ -125,7 +125,7 @@ rm -rf build
 rm *.so
 ```
 
-See [instruction](https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess).
+See [tf-pose](https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess) for details.
 
 <!---
 ## 5. Inference
