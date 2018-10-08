@@ -1,4 +1,4 @@
-# OpenPose-Plus
+# OpenPose-Plus: Real-time and Flexible Pose Estimation
 
 </a>
 <p align="center">
