@@ -3,7 +3,7 @@
 #include <openpose-plus/human.h>
 
 /*! \interface openpose_runner
-    A class that runs a UFF model.
+    A class that runs a the openpose model.
 */
 class openpose_runner
 {
