@@ -1,4 +1,4 @@
-# OpenPose-Plus: Real-time and Flexible Pose Estimation Framework based on TensorFlow/TensorLayer and OpenPose
+# OpenPose-Plus
 
 </a>
 <p align="center">
