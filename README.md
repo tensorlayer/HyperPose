@@ -8,15 +8,16 @@
 [![Documentation Status](https://readthedocs.org/projects/openpose-plus/badge/?version=latest)](https://openpose-plus.readthedocs.io/en/latest/?badge=latest)
 
 [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art pose estimation algorithm.
-In the official Caffe-based [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
-data augmentation, training, and neural network are most hard-coded, and thus difficult
+In its Caffe [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
+data augmentation, training, and neural network are most hard-coded. They are difficult
 to be customised for achieving the best performance in our custom pose estimation applications.
-Hence, we develop OpenPose-Plus, a fast and flexible pose estimation framework that offers the following powerful features:
+Advanced features such as contemporary embedded platforms and parallel GPU training is also missing features.
+Hence, we develop OpenPose-Plus, a real-time and flexible pose estimation framework that offers the following powerful features:
 - Flexible combination of standard training dataset with your own custom labelled data.
 - Customisable data augmentation pipeline without compromising performance
 - Deployment on embedded platforms using TensorRT
 - Switchable neural networks (e.g., changing VGG to MobileNet for minimal memory consumption)
-- Integrated training on a single GPU and multiple GPUs
+- High-performance training using multiple GPUs
 
 This project is still under active development, some of the TODOs are as follows:
 - Parallel training (experimental)
@@ -55,7 +56,9 @@ python train.py
 
 ## Training using Multiple GPUs
 
-We use Horovod to support training using multiple GPUs that can spread across multiple machines. 
+The pose estimation neural network takes many hours to train.
+To speed up the training, we support multiple GPU training while requiring
+minimal changes in your code. We use Horovod to support training using multiple GPUs that can spread across multiple machines. 
 You need to install the [OpenMPI](https://www.open-mpi.org/) in your machine.
 We also provide an example script (`scripts/install-mpi.sh`) to help you go through the installation. 
 Once OpenMPI is installed, you can install Horovod python library as follows:
@@ -90,10 +93,12 @@ $ mpirun -np 16 \
 
 ## High-performance Inference using TensorRT
 
-Currently we provide two C++ APIs for inference, both defined in `include/openpose-plus.hpp`.
+Real-time inference on resource-constrained embedded platforms
+is always challenging. To resolve this, we provide a TensorRT-compatible inference engine. 
+The engine has two C++ APIs, both defined in `include/openpose-plus.hpp`.
 They are for running the TensorFlow model with TensorRT and post-processing respectively.
 
-You can look the examples in the `examples` folder to see how to use the APIs.
+You can look at the examples in the `examples` folder to see how to use the APIs.
 Running `./scripts/live-camera.sh` will give you a quick review of how it works.
 
 You can build the APIs into a standard C++ library by just running `make pack`, provided that you have the following dependencies installed
