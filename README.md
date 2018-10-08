@@ -23,26 +23,8 @@ Hence, we develop OpenPose-Plus, a fast and flexible pose estimation framework t
 ## Work in progress
 
 This project is still under active development, some of the TODOs are as follows:
-- Distributed training
+- Parallel training (experimental)
 - Pose Proposal Networks, ECCV 2018
-
-## Key project files
-
-- `config.py` : config of the training details.
-- `train.py`: trains the model.
-
-## Preparation
-
-Build C++ library for post processing. See [instruction](https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess)
-
-```bash
-cd inference/pafprocess
-make
-
-# ** before recompiling **
-rm -rf build
-rm *.so
-```
 
 ## Training your model
 
@@ -129,6 +111,21 @@ Some initial performance numbers are as follows.
 Running on TX 2, the inference speed is 13 frames / second. On TX 1, the 
 inference speed is 10 frames / second. On Titan 1050Ti, the inference 
 speed is 38 frames / second.
+
+We also has a Python binding for supporting inference. The current binding depends on
+the tf-pose-estimation project, and we are working on imporving the Python binding efficiency.
+For now, to enable the current Python binding, please build C++ library for post processing, and run:
+
+```bash
+cd inference/pafprocess
+make
+
+# ** before recompiling **
+rm -rf build
+rm *.so
+```
+
+See [instruction](https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess).
 
 <!---
 ## 5. Inference
