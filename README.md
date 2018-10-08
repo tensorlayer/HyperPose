@@ -1,4 +1,4 @@
-# OpenPose-Plus: Fast and Flexible OpenPose Framework based on TensorFlow and TensorLayer
+# OpenPose-Plus: Real-time and Flexible Pose Estimation Framework based on TensorFlow/TensorLayer and OpenPose
 
 </a>
 <p align="center">
@@ -7,9 +7,9 @@
 
 [![Documentation Status](https://readthedocs.org/projects/openpose-plus/badge/?version=latest)](https://openpose-plus.readthedocs.io/en/latest/?badge=latest)
 
-[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art real-time 2D pose estimation algorithm.
+[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art pose estimation algorithm.
 In the official Caffe-based [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
-data processing, training, and neural network blocks are heavily interleaved and mostly hard-coded. This makes it difficult
+data augmentation, training, and neural network are most hard-coded, and thus difficult
 to be customised for achieving the best performance in our custom pose estimation applications.
 Hence, we develop OpenPose-Plus, a fast and flexible pose estimation framework that offers the following powerful features:
 - Flexible combination of standard training dataset with your own custom labelled data.
@@ -164,6 +164,12 @@ For TensorRT float16 (half-float) inferencing, xxx
     1. prepare your data following MSCOCO format, you need to .
     2. concatenate the list of your own data JSON into ...
 -->
+
+## License
+
+You can use the project code under a free Apache 2.0 license ONLY IF you:
+(i) cite the TensorLayer paper and this project in your research articile if you are an academic user.
+(2) mention TensorLayer and this project in your project website/articiles if you are a commercial user.
 
 ## Related Discussion
 
