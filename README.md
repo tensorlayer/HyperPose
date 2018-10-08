@@ -55,16 +55,16 @@ python train.py
 
 ## Training using Multiple GPUs
 
-We use Horovod to support train multiple tensorflow programs. 
-You would need to install the [OpenMPI](https://www.open-mpi.org/) in your machine.
-We also provide a reference script (`scripts/install-mpi.sh`) to help you go through the installation. 
-Once OpenMPI is installed, you would also need to install Horovod python library.
+We use Horovod to support training using multiple GPUs that can spread across multiple machines. 
+You need to install the [OpenMPI](https://www.open-mpi.org/) in your machine.
+We also provide an example script (`scripts/install-mpi.sh`) to help you go through the installation. 
+Once OpenMPI is installed, you can install Horovod python library as follows:
 
 ```bash
 pip install horovod
 ```
 
-Set the `config.TRAIN.train_mode` to `parallel` (default is `single`).
+To enable paralle training, set the `config.TRAIN.train_mode` to `parallel` (default is `single`).
 
 (i) To run on a machine with 4 GPUs:
 
