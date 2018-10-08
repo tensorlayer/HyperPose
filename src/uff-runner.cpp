@@ -177,7 +177,7 @@ void uff_runner_impl::operator()(const std::vector<void *> &inputs,
                                  const std::vector<void *> &outputs,
                                  int batch_size)
 {
-    TRACE("uff_runner_impl::execute");
+    TRACE("uff_runner_impl::operator()");
 
     {
         TRACE("copy input from host");
