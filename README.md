@@ -91,7 +91,7 @@ $ mpirun -np 16 \
 ## Inference on TensorRT
 
 Currently we provide two C++ APIs for inference, both defined in `include/openpose-plus.hpp`.
-They are for running the tensorflow model with tensorRT and post-processing respectively.
+They are for running the TensorFlow model with TensorRT and post-processing respectively.
 
 You can look the examples in the `examples` folder to see how to use the APIs.
 Running `./scripts/live-camera.sh` will give you a quick review of how it works.
@@ -102,13 +102,13 @@ You can build the APIs into a standard C++ library by just running `make pack`, 
   - opencv
   - gflags
 
-Performance-wise, we are still improving the speed of this framework. 
-Some initial performance numbers are as follows.
-Running on TX 2, the inference speed is 13 frames / second. On TX 1, the 
-inference speed is 10 frames / second. On Titan 1050Ti, the inference 
+We are improving the performance of the inference, especially on embedded platforms. 
+Initial benchmark results are as follows.
+On Jetson TX 2, the inference speed is 13 frames / second. On Jetson TX1, the 
+speed is 10 frames / second. On Titan 1050, the 
 speed is 38 frames / second.
 
-We also have a Python binding for inference API. The current binding relies on
+We also have a Python binding for C++ inference API. The current binding relies on
 the external tf-pose-estimation project. We are working on providing the Python binding for our high-performance
 C++ implementation. For now, to enable the Python binding, please build C++ library for post processing by:
 
