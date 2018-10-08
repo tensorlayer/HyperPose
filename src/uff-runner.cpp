@@ -120,7 +120,7 @@ create_engine(const std::string &model_file, const input_info_t &input_info,
     return engine;
 }
 
-class uff_runner_impl : public uff_runner
+class uff_runner_impl : public pose_detection_runner
 {
   public:
     uff_runner_impl(const std::string &model_file,
@@ -129,8 +129,9 @@ class uff_runner_impl : public uff_runner
                     int max_batch_size, bool use_f16);
     ~uff_runner_impl() override;
 
-    void execute(const std::vector<void *> &inputs,
-                 const std::vector<void *> &outputs, int batch_size) override;
+    void operator()(const std::vector<void *> &inputs,
+                    const std::vector<void *> &outputs,
+                    int batch_size) override;
 
   private:
     destroy_ptr<nvinfer1::ICudaEngine> engine_;
@@ -172,11 +173,11 @@ void uff_runner_impl::createBuffers_(int batch_size)
     }
 }
 
-void uff_runner_impl::execute(const std::vector<void *> &inputs,
-                              const std::vector<void *> &outputs,
-                              int batch_size)
+void uff_runner_impl::operator()(const std::vector<void *> &inputs,
+                                 const std::vector<void *> &outputs,
+                                 int batch_size)
 {
-    TRACE("uff_runner_impl::execute");
+    TRACE("uff_runner_impl::operator()");
 
     {
         TRACE("copy input from host");
@@ -210,9 +211,9 @@ void uff_runner_impl::execute(const std::vector<void *> &inputs,
     }
 }
 
-uff_runner *create_openpose_runner(const std::string &model_file,
-                                   int input_height, int input_width,
-                                   int max_batch_size, bool use_f16)
+pose_detection_runner *
+create_pose_detection_runner(const std::string &model_file, int input_height,
+                             int input_width, int max_batch_size, bool use_f16)
 {
     const input_info_t input_info = {
         {
