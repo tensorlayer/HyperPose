@@ -167,7 +167,7 @@ For TensorRT float16 (half-float) inferencing, xxx
 
 ## License
 
-You can use the project code under a free Apache 2.0 license ONLY IF you:
+You can use the project code under a free [Apache 2.0 license](https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst) ONLY IF you:
 (i) cite the TensorLayer paper and this project in your research articile if you are an academic user.
 (2) mention TensorLayer and this project in your project website/articiles if you are a commercial user.
 
