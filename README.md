@@ -11,8 +11,8 @@
 In its Caffe [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
 data augmentation, training, and neural network are most hard-coded. They are difficult
 to be customised for achieving the best performance in our custom pose estimation applications.
-Advanced features such as embedded platform supports and parallel GPU training is also missing features.
-Hence, we develop OpenPose-Plus, a real-time and flexible pose estimation framework that offers the following powerful features:
+Advanced features such as embedded platform supports and parallel GPU training are missed features.
+To address these challenges, we develop OpenPose-Plus, a real-time and flexible pose estimation framework that offers the following powerful features:
 - Flexible combination of standard training dataset with your own custom labelled data.
 - Customisable data augmentation pipeline without compromising performance
 - Deployment on embedded platforms using TensorRT
