@@ -69,11 +69,48 @@ In `config.py`, `config.DATA.train_data` can be:
 * `vggtiny`: VGG tiny version, faster
 * `mobilenet`: MobileNet version, faster
 
-`config.TRAIN.train_mode` can be:
-* `local`: single GPU training
-* `distributed`: multiple GPU training (on-going work)
+Train your model by simply running:
 
-## 5. Inference
+```bash
+python train.py
+```
+
+## Parallel training
+
+We use Horovod to support train multiple tensorflow programs. 
+You would need to install the [OpenMPI](https://www.open-mpi.org/) in your machine.
+We also provide a reference script (`scripts/install-mpi.sh`) to help you go through the installation. 
+Once OpenMPI is installed, you would also need to install Horovod python library.
+
+```bash
+pip install horovod
+```
+
+Set the `config.TRAIN.train_mode` to `parallel` (default is `single`).
+
+(i) To run on a machine with 4 GPUs:
+
+```bash
+$ mpirun -np 4 \
+    -bind-to none -map-by slot \
+    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+    -mca pml ob1 -mca btl ^openib \
+    python train.py
+```
+
+(ii) To run on 4 machines with 4 GPUs each:
+
+```bash
+$ mpirun -np 16 \
+    -H server1:4,server2:4,server3:4,server4:4 \
+    -bind-to none -map-by slot \
+    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+    -mca pml ob1 -mca btl ^openib \
+    python train.py
+```
+
+
+## Inference
 
 Currently we provide two C++ APIs for inference, both defined in `include/openpose-plus.hpp`.
 They are for running the tensorflow model with tensorRT and post-processing respectively.
@@ -85,6 +122,13 @@ You can build the APIs into a standard C++ library by just running `make pack`, 
 
   - tensorRT
   - opencv
+  - gflags
+
+Performance-wise, we are still improving the speed of this framework. 
+Some initial performance numbers are as follows.
+Running on TX 2, the inference speed is 13 frames / second. On TX 1, the 
+inference speed is 10 frames / second. On Titan 1050Ti, the inference 
+speed is 38 frames / second.
 
 <!---
 ## 5. Inference

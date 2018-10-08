@@ -12,12 +12,14 @@ import multiprocessing
 import _pickle as cPickle
 import tensorflow as tf
 import tensorlayer as tl
+from hvd_trainer import HorovodTrainer
 from models import model
 from config import config
 from pycocotools.coco import maskUtils
 from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
                                 keypoint_random_resize_shortestedge, keypoint_random_rotate)
 from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset, tf_repeat)
+import horovod.tensorflow as hvd
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
@@ -28,6 +30,7 @@ tl.files.exists_or_mkdir(config.MODEL.model_path, verbose=False)  # to save mode
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
+# FIXME: Don't use global variables.
 # define hyper-parameters for training
 batch_size = config.TRAIN.batch_size
 lr_decay_every_step = config.TRAIN.lr_decay_every_step
@@ -37,6 +40,7 @@ weight_decay_factor = config.TRAIN.weight_decay_factor
 lr_init = config.TRAIN.lr_init
 lr_decay_factor = config.TRAIN.lr_decay_factor
 
+# FIXME: Don't use global variables.
 # define hyper-parameters for model
 model_path = config.MODEL.model_path
 n_pos = config.MODEL.n_pos
@@ -44,132 +48,6 @@ hin = config.MODEL.hin
 win = config.MODEL.win
 hout = config.MODEL.hout
 wout = config.MODEL.wout
-
-
-def _data_aug_fn(image, ground_truth):
-    """Data augmentation function."""
-    ground_truth = cPickle.loads(ground_truth)
-    ground_truth = list(ground_truth)
-
-    annos = ground_truth[0]
-    mask = ground_truth[1]
-    h_mask, w_mask, _ = np.shape(image)
-    # mask
-    mask_miss = np.ones((h_mask, w_mask), dtype=np.uint8)
-
-    for seg in mask:
-        bin_mask = maskUtils.decode(seg)
-        bin_mask = np.logical_not(bin_mask)
-        mask_miss = np.bitwise_and(mask_miss, bin_mask)
-
-    ## image data augmentation
-    # randomly resize height and width independently, scale is changed
-    image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
-    # random rotate
-    image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
-    # random left-right flipping
-    image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
-    # random resize height and width together
-    image, annos, mask_miss = keypoint_random_resize_shortestedge(
-        image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
-    # random crop
-    image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding
-
-    # generate result maps including keypoints heatmap, pafs and mask
-    h, w, _ = np.shape(image)
-    height, width, _ = np.shape(image)
-    heatmap = get_heatmap(annos, height, width)
-    vectormap = get_vectormap(annos, height, width)
-    resultmap = np.concatenate((heatmap, vectormap), axis=2)
-
-    image = np.array(image, dtype=np.float32)
-
-    img_mask = mask_miss.reshape(hin, win, 1)
-    image = image * np.repeat(img_mask, 3, 2)
-
-    resultmap = np.array(resultmap, dtype=np.float32)
-    mask_miss = cv2.resize(mask_miss, (hout, wout), interpolation=cv2.INTER_AREA)
-    mask_miss = np.array(mask_miss, dtype=np.float32)
-    return image, resultmap, mask_miss
-
-
-def _map_fn(img_list, annos):
-    """TF Dataset pipeline."""
-    image = tf.read_file(img_list)
-    image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
-    image = tf.image.convert_image_dtype(image, dtype=tf.float32)
-    image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
-
-    image = tf.reshape(image, [hin, win, 3])
-    resultmap = tf.reshape(resultmap, [hout, wout, 57])
-    mask = tf.reshape(mask, [hout, wout, 1])
-
-    return image, resultmap, mask
-
-
-def _map_fn_read_data(img_list, annos):
-    image = tf.read_file(img_list)
-    image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
-    image = tf.image.convert_image_dtype(image, dtype=tf.float32)
-    return image, annos
-
-
-def _map_fn_data_aug_get_mask(image, annos):
-
-    def _data_aug_fn(image, ground_truth):
-        ground_truth = cPickle.loads(ground_truth)
-        ground_truth = list(ground_truth)
-
-        annos = ground_truth[0]
-        mask = ground_truth[1]
-        h_mask, w_mask, _ = np.shape(image)
-        # mask
-        mask_miss = np.ones((h_mask, w_mask), dtype=np.uint8)
-
-        for seg in mask:
-            bin_mask = maskUtils.decode(seg)
-            bin_mask = np.logical_not(bin_mask)
-            mask_miss = np.bitwise_and(mask_miss, bin_mask)
-        return image, mask_miss
-
-    image, mask_miss = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32])
-    return image, annos, mask_miss
-
-
-def _map_fn_data_aug(image, annos, mask_miss):
-
-    def _data_aug_fn(image, annos, mask_miss):
-        ## image data augmentation
-        # randomly resize height and width independently, scale is changed
-        image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
-        # random rotate
-        image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
-        # random left-right flipping
-        image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
-        # random resize height and width together
-        image, annos, mask_miss = keypoint_random_resize_shortestedge(
-            image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
-        # random crop
-        image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding
-
-        # generate result maps including keypoints heatmap, pafs and mask
-        h, w, _ = np.shape(image)
-        height, width, _ = np.shape(image)
-        heatmap = get_heatmap(annos, height, width)
-        vectormap = get_vectormap(annos, height, width)
-        resultmap = np.concatenate((heatmap, vectormap), axis=2)
-
-        image = np.array(image, dtype=np.float32)
-
-        img_mask = mask_miss.reshape(hin, win, 1)
-        image = image * np.repeat(img_mask, 3, 2)
-
-        resultmap = np.array(resultmap, dtype=np.float32)
-        mask_miss = cv2.resize(mask_miss, (hout, wout), interpolation=cv2.INTER_AREA)
-        mask_miss = np.array(mask_miss, dtype=np.float32)
-        return image, resultmap, mask_miss
-
-    return tf.py_func(_data_aug_fn, [image, annos, mask_miss], [tf.float32, tf.float32, tf.float32])
 
 
 def get_pose_data_list(im_path, ann_path):
@@ -237,9 +115,74 @@ def make_model(img, results, mask, is_train=True, reuse=False):
     # return total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, img, confs, pafs, m1, net
 
 
-def local_train(training_dataset):
-    """ Train on single GPU using TensorFlow DatasetAPI. """
-    iterator = training_dataset.make_one_shot_iterator()
+def _data_aug_fn(image, ground_truth):
+    """Data augmentation function."""
+    ground_truth = cPickle.loads(ground_truth)
+    ground_truth = list(ground_truth)
+
+    annos = ground_truth[0]
+    mask = ground_truth[1]
+    h_mask, w_mask, _ = np.shape(image)
+    # mask
+    mask_miss = np.ones((h_mask, w_mask), dtype=np.uint8)
+
+    for seg in mask:
+        bin_mask = maskUtils.decode(seg)
+        bin_mask = np.logical_not(bin_mask)
+        mask_miss = np.bitwise_and(mask_miss, bin_mask)
+
+    ## image data augmentation
+    # randomly resize height and width independently, scale is changed
+    image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
+    # random rotate
+    image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
+    # random left-right flipping
+    image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
+    # random resize height and width together
+    image, annos, mask_miss = keypoint_random_resize_shortestedge(
+        image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
+    # random crop
+    image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding
+
+    # generate result maps including keypoints heatmap, pafs and mask
+    h, w, _ = np.shape(image)
+    height, width, _ = np.shape(image)
+    heatmap = get_heatmap(annos, height, width)
+    vectormap = get_vectormap(annos, height, width)
+    resultmap = np.concatenate((heatmap, vectormap), axis=2)
+
+    image = np.array(image, dtype=np.float32)
+
+    img_mask = mask_miss.reshape(hin, win, 1)
+    image = image * np.repeat(img_mask, 3, 2)
+
+    resultmap = np.array(resultmap, dtype=np.float32)
+    mask_miss = cv2.resize(mask_miss, (hout, wout), interpolation=cv2.INTER_AREA)
+    mask_miss = np.array(mask_miss, dtype=np.float32)
+    return image, resultmap, mask_miss
+
+
+def _map_fn(img_list, annos):
+    """TF Dataset pipeline."""
+    image = tf.read_file(img_list)
+    image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
+    image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+    image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
+
+    image = tf.reshape(image, [hin, win, 3])
+    resultmap = tf.reshape(resultmap, [hout, wout, 57])
+    mask = tf.reshape(mask, [hout, wout, 1])
+
+    return image, resultmap, mask
+
+
+def single_train(training_dataset):
+    ds = training_dataset.shuffle(buffer_size=4096)  # shuffle before loading images
+    ds = ds.repeat(n_epoch)
+    ds = ds.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count() // 2)  # decouple the heavy map_fn
+    ds = ds.batch(batch_size)  # TODO: consider using tf.contrib.map_and_batch
+    ds = ds.prefetch(2)
+    iterator = ds.make_one_shot_iterator()
     one_element = iterator.get_next()
     net, total_loss, log_tensors = make_model(*one_element, is_train=True, reuse=False)
     x_ = net.img  # net input
@@ -266,16 +209,16 @@ def local_train(training_dataset):
     with tf.Session(config=config) as sess:
         sess.run(tf.global_variables_initializer())
 
-        # restore pretrained weights
+        # restore pre-trained weights
         try:
             # tl.files.load_and_assign_npz(sess, os.path.join(model_path, 'pose.npz'), net)
             tl.files.load_and_assign_npz_dict(sess=sess, name=os.path.join(model_path, 'pose.npz'))
         except:
-            print("no pretrained model")
+            print("no pre-trained model")
 
         # train until the end
         sess.run(tf.assign(lr_v, lr_init))
-        while (True):
+        while True:
             tic = time.time()
             step = sess.run(global_step)
             if step != 0 and (step % lr_decay_every_step == 0):
@@ -293,9 +236,9 @@ def local_train(training_dataset):
             for ix, ll in enumerate(_stage_losses):
                 print('Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
-            # save intermedian results and model
+            # save intermediate results and model
             if (step != 0) and (step % save_interval == 0):
-                ## save some results
+                # save some results
                 [img_out, confs_ground, pafs_ground, conf_result, paf_result,
                  mask_out] = sess.run([x_, confs_, pafs_, last_conf, last_paf, mask])
                 draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
@@ -310,8 +253,125 @@ def local_train(training_dataset):
                 break
 
 
-def distributed_train(dataset):
-    pass
+def _mock_map_fn(img_list, annos):
+    """TF Dataset pipeline."""
+    image = tf.read_file(img_list)
+    image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
+    image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+
+    image = np.ones((hin, win, 3), dtype=np.float32)
+    resultmap = np.ones((hout, wout, 57), dtype=np.float32)
+    mask = np.ones((hout, wout, 1), dtype=np.float32)
+
+    return image, resultmap, mask
+
+
+def _parallel_train_model(img, results, mask):
+    net, total_loss, log_tensors = make_model(img, results, mask, is_train=True, reuse=False)
+    return net, total_loss, log_tensors
+
+
+def parallel_train(training_dataset):
+    hvd.init() # Horovod
+
+    ds = training_dataset.shuffle(buffer_size=4096)
+    ds = ds.shard(num_shards=hvd.size(), index=hvd.rank())
+    ds = ds.repeat(n_epoch)
+    ds = ds.map(_map_fn, num_parallel_calls=4)
+    ds = ds.batch(batch_size)
+    ds = ds.prefetch(buffer_size=1)
+
+    iterator = ds.make_one_shot_iterator()
+    one_element = iterator.get_next()
+    net, total_loss, log_tensors = make_model(*one_element, is_train=True, reuse=False)
+    x_ = net.img  # net input
+    last_conf = net.last_conf  # net output
+    last_paf = net.last_paf  # net output
+    confs_ = net.confs  # GT
+    pafs_ = net.pafs  # GT
+    mask = net.m1  # mask1, GT
+    # net.m2 = m2                 # mask2, GT
+    stage_losses = net.stage_losses
+    l2_loss = net.l2_loss
+
+    global_step = tf.Variable(1, trainable=False)
+    scaled_lr = lr_init * hvd.size()  # Horovod: scale the learning rate linearly
+    with tf.variable_scope('learning_rate'):
+        lr_v = tf.Variable(scaled_lr, trainable=False)
+
+    opt = tf.train.MomentumOptimizer(lr_v, 0.9)
+    opt = hvd.DistributedOptimizer(opt) # Horovod
+    train_op = opt.minimize(total_loss, global_step=global_step)
+    config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
+
+    config.gpu_options.allow_growth = True # Horovod
+    config.gpu_options.visible_device_list = str(hvd.local_rank()) # Horovod
+
+    # Add variable initializer.
+    init = tf.global_variables_initializer()
+
+    # Horovod: broadcast initial variable states from rank 0 to all other processes.
+    # This is necessary to ensure consistent initialization of all workers when
+    # training is started with random weights or restored from a checkpoint.
+    bcast = hvd.broadcast_global_variables(0) # Horovod
+
+    # Horovod: adjust number of steps based on number of GPUs.
+    global n_step, lr_decay_every_step
+    n_step = n_step // hvd.size() + 1 # Horovod
+    lr_decay_every_step = lr_decay_every_step // hvd.size() + 1 # Horovod
+
+    # Start training
+    with tf.Session(config=config) as sess:
+        init.run()
+        bcast.run() # Horovod
+        print('Worker{}: Initialized'.format(hvd.rank()))
+        print('Worker{}: Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
+            hvd.rank(), n_step, batch_size, lr_init, lr_decay_every_step))
+
+        # restore pre-trained weights
+        try:
+            # tl.files.load_and_assign_npz(sess, os.path.join(model_path, 'pose.npz'), net)
+            tl.files.load_and_assign_npz_dict(sess=sess, name=os.path.join(model_path, 'pose.npz'))
+        except:
+            print("no pre-trained model")
+
+        # train until the end
+        while True:
+            step = sess.run(global_step)
+            if step == n_step:
+                break
+
+            tic = time.time()
+            if step != 0 and (step % lr_decay_every_step == 0):
+                new_lr_decay = lr_decay_factor**(step // lr_decay_every_step)
+                sess.run(tf.assign(lr_v, scaled_lr * new_lr_decay))
+
+            [_, _loss, _stage_losses, _l2, conf_result, paf_result] = \
+                sess.run([train_op, total_loss, stage_losses, l2_loss, last_conf, last_paf])
+
+            # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
+            lr = sess.run(lr_v)
+            print('Worker{}: Total Loss at iteration {} / {} is: {} Learning rate {:10e} l2_loss {:10e} Took: {}s'.format(
+                hvd.rank(), step, n_step, _loss, lr, _l2,
+                time.time() - tic))
+            for ix, ll in enumerate(_stage_losses):
+                print('Worker{}:', hvd.rank(), 'Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
+
+            # save intermediate results and model
+            if hvd.rank() == 0: # Horovod
+                if (step != 0) and (step % save_interval == 0):
+                    # save some results
+                    [img_out, confs_ground, pafs_ground, conf_result, paf_result,
+                     mask_out] = sess.run([x_, confs_, pafs_, last_conf, last_paf, mask])
+                    draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
+
+                    # save model
+                    # tl.files.save_npz(
+                    #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                    # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+                    tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                    tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
+
 
 
 if __name__ == '__main__':
@@ -365,7 +425,7 @@ if __name__ == '__main__':
         imgs_file_list = train_imgs_file_list + your_imgs_file_list
         train_targets = list(zip(train_objs_info_list + your_objs_info_list, train_mask_list + your_mask_list))
     else:
-        raise Exception('please choice a correct config.DATA.train_data setting.')
+        raise Exception('please choose a valid config.DATA.train_data setting.')
 
     # define data augmentation
     def generator():
@@ -376,15 +436,10 @@ if __name__ == '__main__':
 
     n_epoch = math.ceil(n_step / (len(imgs_file_list) / batch_size))
     dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
-    dataset = dataset.shuffle(buffer_size=4096)  # shuffle before loading images
-    dataset = dataset.repeat(n_epoch)
-    dataset = dataset.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count() // 2)  # decouple the heavy map_fn
-    dataset = dataset.batch(batch_size)  # TODO: consider using tf.contrib.map_and_batch
-    dataset = dataset.prefetch(2)  # prefetch 1 batch
 
-    if config.TRAIN.train_mode == 'local':
-        local_train(dataset)
-    elif config.TRAIN.train_mode == 'distributed':
-        distributed_train(dataset)
+    if config.TRAIN.train_mode == 'single':
+        single_train(dataset)
+    elif config.TRAIN.train_mode == 'parallel':
+        parallel_train(dataset)
     else:
         raise Exception('Unknown training mode')
