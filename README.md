@@ -7,8 +7,6 @@
 
 [![Documentation Status](https://readthedocs.org/projects/openpose-plus/badge/?version=latest)](https://openpose-plus.readthedocs.io/en/latest/?badge=latest)
 
-## Motivation
-
 [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art real-time 2D pose estimation algorithm.
 In the official Caffe-based [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
 data processing, training, and neural network blocks are heavily interleaved and mostly hard-coded. This makes it difficult
@@ -20,13 +18,11 @@ Hence, we develop OpenPose-Plus, a fast and flexible pose estimation framework t
 - Switchable neural networks (e.g., changing VGG to MobileNet for minimal memory consumption)
 - Integrated training on a single GPU and multiple GPUs
 
-## Work in progress
-
 This project is still under active development, some of the TODOs are as follows:
 - Parallel training (experimental)
 - Pose Proposal Networks, ECCV 2018
 
-## Training your model
+## Custom Model Training
 
 Training the model is implemented using TensorFlow. To run `train.py`, you would need to install packages, shown
 in [requirements.txt](https://github.com/tensorlayer/openpose-plus/blob/master/requirements.txt), in your virtual environment (Python <=3.6):
@@ -57,7 +53,7 @@ Train your model by simply running:
 python train.py
 ```
 
-## Parallel training
+## Training using Multiple GPUs
 
 We use Horovod to support train multiple tensorflow programs. 
 You would need to install the [OpenMPI](https://www.open-mpi.org/) in your machine.
@@ -92,7 +88,7 @@ $ mpirun -np 16 \
 ```
 
 
-## Inference
+## Inference on TensorRT
 
 Currently we provide two C++ APIs for inference, both defined in `include/openpose-plus.hpp`.
 They are for running the tensorflow model with tensorRT and post-processing respectively.
@@ -169,7 +165,7 @@ For TensorRT float16 (half-float) inferencing, xxx
     2. concatenate the list of your own data JSON into ...
 -->
 
-## Discussion
+## Related Discussion
 
 - [TensorLayer Slack](https://join.slack.com/t/tensorlayer/shared_invite/enQtMjUyMjczMzU2Njg4LWI0MWU0MDFkOWY2YjQ4YjVhMzI5M2VlZmE4YTNhNGY1NjZhMzUwMmQ2MTc0YWRjMjQzMjdjMTg2MWQ2ZWJhYzc)
 - [TensorLayer WeChat](https://github.com/tensorlayer/tensorlayer-chinese/blob/master/docs/wechat_group.md)
