@@ -275,7 +275,7 @@ def parallel_train(training_dataset):
     ds = training_dataset.shuffle(buffer_size=4096)
     ds = ds.shard(num_shards=hvd.size(), index=hvd.rank())
     ds = ds.repeat(n_epoch)
-    ds = ds.map(_mock_map_fn, num_parallel_calls=multiprocessing.cpu_count() // 2)
+    ds = ds.map(_map_fn, num_parallel_calls=4)
     ds = ds.batch(batch_size)
     ds = ds.prefetch(buffer_size=1)
 
