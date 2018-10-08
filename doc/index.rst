@@ -5,12 +5,12 @@ Welcome to openpose-plus's documentation!
    :members:
    :outline:
 
-.. doxygeninterface:: uff_runner
+.. doxygeninterface:: pose_detection_runner
    :members:
    :outline:
 
 .. doxygenfunction:: create_paf_processor
    :project: openpose-plus
 
-.. doxygenfunction:: create_openpose_runner
+.. doxygenfunction:: create_pose_detection_runner
    :project: openpose-plus

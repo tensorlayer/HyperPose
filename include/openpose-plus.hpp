@@ -2,13 +2,14 @@
 #pragma once
 #include <openpose-plus/human.h>
 
-/*! \interface openpose_runner
-    A class that runs a the openpose model.
+/*! \interface pose_detection_runner
+    A class that runs a the pose detection model, which computes the feature
+   maps from input image.
 */
-class openpose_runner
+class pose_detection_runner
 {
   public:
-    //! Run the openpose model.
+    //! Run the pose detection model.
     virtual void
     operator()(const std::vector<void *>
                    &inputs /*! should contain 1 pointer to a float array of
@@ -21,11 +22,13 @@ class openpose_runner
                ,
                int batchSize = 1 /*! number of batches */) = 0;
 
-    virtual ~openpose_runner() {}
+    virtual ~pose_detection_runner() {}
 };
 
-//! Creates a openpose_runner for running openpose model
-openpose_runner *create_openpose_runner(
+//! Creates a pose_detection_runner.
+// Currently TensorRT is used as backend.
+// TODO: support TensorFlow backend
+pose_detection_runner *create_pose_detection_runner(
     const std::string &model_file /*! path to the exported uff model file */,
     int input_height /*! height of the input image */,
     int input_width /*! width of the input image */,
@@ -33,8 +36,8 @@ openpose_runner *create_openpose_runner(
     bool use_f16 /*! if use float 16 */);
 
 /*! \interface paf_processor
-A class that process the feature maps of openpose model, i.e confidence map and
-PAF.
+    A class that process the feature maps of a pose detection model, i.e
+confidence map and PAF.
 */
 class paf_processor
 {
@@ -47,7 +50,7 @@ class paf_processor
     virtual ~paf_processor() {}
 };
 
-//! Create a paf_processor to run post process
+//! Create a paf_processor.
 paf_processor *
 create_paf_processor(int input_height /*! height of feature maps */,
                      int input_width /*! width of feature maps */,

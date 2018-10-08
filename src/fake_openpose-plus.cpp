@@ -1,6 +1,6 @@
 #include <openpose-plus.h>
 
-class fake_uff_runner : public openpose_runner
+class fake_uff_runner : public pose_detection_runner
 {
   public:
     void operator()(const std::vector<void *> &, const std::vector<void *> &,
@@ -9,9 +9,9 @@ class fake_uff_runner : public openpose_runner
     }
 };
 
-openpose_runner *create_openpose_runner(const std::string &, int input_height,
-                                        int input_width, int max_batch_size,
-                                        bool use_f16)
+pose_detection_runner *
+create_pose_detection_runner(const std::string &, int input_height,
+                             int input_width, int max_batch_size, bool use_f16)
 {
     return new fake_uff_runner;
 }

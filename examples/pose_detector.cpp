@@ -45,8 +45,8 @@ class pose_detector_impl : public pose_detector
     tensor<float, 4> confs;
     tensor<float, 4> pafs;
 
-    std::unique_ptr<paf_processor> paf_process;
-    std::unique_ptr<openpose_runner> runner;
+    std::unique_ptr<paf_processor> process_paf;
+    std::unique_ptr<pose_detection_runner> compute_feature_maps;
 };
 
 pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
@@ -64,11 +64,11 @@ pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
       chw_images(batch_size, 3, height, width),
       confs(batch_size, n_joins, feature_height, feature_width),
       pafs(batch_size, n_connections * 2, feature_height, feature_width),
-      paf_process(create_paf_processor(feature_height, feature_width,
+      process_paf(create_paf_processor(feature_height, feature_width,
                                        input_height, input_width, n_joins,
                                        n_connections, gauss_kernel_size)),
-      runner(create_openpose_runner(model_file, height, width, batch_size,
-                                    use_f16))
+      compute_feature_maps(create_pose_detection_runner(
+          model_file, height, width, batch_size, use_f16))
 {
 }
 
@@ -89,15 +89,16 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     }
     {
         TRACE("batch run tensorRT");
-        (*runner)({chw_images.data()}, {confs.data(), pafs.data()},
-                  image_files.size());
+        (*compute_feature_maps)({chw_images.data()},
+                                {confs.data(), pafs.data()},
+                                image_files.size());
     }
     {
         TRACE("batch run process PAF and draw results");
         for (int i = 0; i < image_files.size(); ++i) {
             const auto humans = [&]() {
                 TRACE("run paf_process");
-                return (*paf_process)(confs[i].data(), pafs[i].data(), true);
+                return (*process_paf)(confs[i].data(), pafs[i].data(), true);
             }();
             auto resized_image = resized_images[i];
             {
