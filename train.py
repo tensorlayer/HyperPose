@@ -30,6 +30,7 @@ tl.files.exists_or_mkdir(config.MODEL.model_path, verbose=False)  # to save mode
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
+# FIXME: Don't use global variables.
 # define hyper-parameters for training
 batch_size = config.TRAIN.batch_size
 lr_decay_every_step = config.TRAIN.lr_decay_every_step
@@ -39,6 +40,7 @@ weight_decay_factor = config.TRAIN.weight_decay_factor
 lr_init = config.TRAIN.lr_init
 lr_decay_factor = config.TRAIN.lr_decay_factor
 
+# FIXME: Don't use global variables.
 # define hyper-parameters for model
 model_path = config.MODEL.model_path
 n_pos = config.MODEL.n_pos
@@ -314,7 +316,9 @@ def parallel_train(training_dataset):
     bcast = hvd.broadcast_global_variables(0) # Horovod
 
     # Horovod: adjust number of steps based on number of GPUs.
-    n_my_step = n_step // hvd.size() + 1 # Horovod
+    global n_step, lr_decay_every_step
+    n_step = n_step // hvd.size() + 1 # Horovod
+    lr_decay_every_step = lr_decay_every_step // hvd.size() + 1 # Horovod
 
     # Start training
     with tf.Session(config=config) as sess:
@@ -322,7 +326,7 @@ def parallel_train(training_dataset):
         bcast.run() # Horovod
         print('Worker{}: Initialized'.format(hvd.rank()))
         print('Worker{}: Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
-            hvd.rank(), n_my_step, batch_size, lr_init, lr_decay_every_step))
+            hvd.rank(), n_step, batch_size, lr_init, lr_decay_every_step))
 
         # restore pre-trained weights
         try:
@@ -334,7 +338,7 @@ def parallel_train(training_dataset):
         # train until the end
         while True:
             step = sess.run(global_step)
-            if step == n_my_step:
+            if step == n_step:
                 break
 
             tic = time.time()
@@ -348,7 +352,7 @@ def parallel_train(training_dataset):
             # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
             lr = sess.run(lr_v)
             print('Worker{}: Total Loss at iteration {} / {} is: {} Learning rate {:10e} l2_loss {:10e} Took: {}s'.format(
-                hvd.rank(), step, n_my_step, _loss, lr, _l2,
+                hvd.rank(), step, n_step, _loss, lr, _l2,
                 time.time() - tic))
             for ix, ll in enumerate(_stage_losses):
                 print('Worker{}:', hvd.rank(), 'Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
