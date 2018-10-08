@@ -88,7 +88,7 @@ $ mpirun -np 16 \
 ```
 
 
-## Inference on TensorRT
+## High-performance Inference using TensorRT
 
 Currently we provide two C++ APIs for inference, both defined in `include/openpose-plus.hpp`.
 They are for running the TensorFlow model with TensorRT and post-processing respectively.
