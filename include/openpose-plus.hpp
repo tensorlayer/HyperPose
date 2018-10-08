@@ -10,16 +10,16 @@ class uff_runner
   public:
     //! Run the openpose model.
     virtual void
-    execute(const std::vector<void *>
-                &inputs /*! should contain 1 pointer to a float array of length
-                           max_batch_size * 3 * H * W */
-            ,
-            const std::vector<void *>
-                &outputs /*! should container 2 pointers to heatmap and PAF map,
-                            heatmap :: max_batch_size * 19 * H' * W', PAF map ::
-                            max_batch_size * (2*19) * H' * W' */
-            ,
-            int batchSize = 1 /*! number of batches */) = 0;
+    operator()(const std::vector<void *>
+                   &inputs /*! should contain 1 pointer to a float array of
+                              length max_batch_size * 3 * H * W */
+               ,
+               const std::vector<void *>
+                   &outputs /*! should container 2 pointers to heatmap and PAF
+                               map, heatmap :: max_batch_size * 19 * H' * W',
+                               PAF map :: max_batch_size * (2*19) * H' * W' */
+               ,
+               int batchSize = 1 /*! number of batches */) = 0;
 
     virtual ~uff_runner() {}
 };

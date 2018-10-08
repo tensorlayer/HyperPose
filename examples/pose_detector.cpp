@@ -89,8 +89,8 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     }
     {
         TRACE("batch run tensorRT");
-        runner->execute({chw_images.data()}, {confs.data(), pafs.data()},
-                        image_files.size());
+        (*runner)({chw_images.data()}, {confs.data(), pafs.data()},
+                  image_files.size());
     }
     {
         TRACE("batch run process PAF and draw results");

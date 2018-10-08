@@ -110,7 +110,7 @@ class stream_detector_impl : public stream_detector
             for (int i = 0; i < count; ++i) {
                 const auto p = image_stream_2.get();
                 const auto q = feature_stream_1.get();
-                runner->execute({p.chw_ptr}, {q.heatmap_ptr, q.paf_ptr}, 1);
+                (*runner)({p.chw_ptr}, {q.heatmap_ptr, q.paf_ptr}, 1);
                 feature_stream_2.put(q);
                 image_stream_3.put(p);
             }

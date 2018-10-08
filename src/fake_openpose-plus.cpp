@@ -3,8 +3,8 @@
 class fake_uff_runner : public uff_runner
 {
   public:
-    void execute(const std::vector<void *> &, const std::vector<void *> &,
-                 int) override
+    void operator()(const std::vector<void *> &, const std::vector<void *> &,
+                    int) override
     {
     }
 };
