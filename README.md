@@ -5,10 +5,11 @@
     <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
 </p>
 
+[![Documentation Status](https://readthedocs.org/projects/openpose-plus/badge/?version=latest)](https://openpose-plus.readthedocs.io/en/latest/?badge=latest)
 
 ## Motivation
 
-[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art real-time 2D pose estimation algorithm. 
+[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art real-time 2D pose estimation algorithm.
 In the official Caffe-based [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
 data processing, training, and neural network blocks are heavily interleaved and mostly hard-coded. This makes it difficult
 to be customised for achieving the best performance in our custom pose estimation applications.
@@ -64,7 +65,7 @@ In `config.py`, `config.DATA.train_data` can be:
 * `coco_and_custom`: training data is COCO and your dataset
 
 `config.MODEL.name` can be:
-* `vgg`: VGG19 version (default), slow  
+* `vgg`: VGG19 version (default), slow
 * `vggtiny`: VGG tiny version, faster
 * `mobilenet`: MobileNet version, faster
 
