@@ -270,7 +270,7 @@ def _parallel_train_model(img, results, mask):
 
 
 def parallel_train(training_dataset):
-    hvd.init() # HOROVOD
+    hvd.init() # Horovod
 
     ds = training_dataset.shuffle(buffer_size=4096)
     ds = ds.shard(num_shards=hvd.size(), index=hvd.rank())
@@ -293,32 +293,33 @@ def parallel_train(training_dataset):
     l2_loss = net.l2_loss
 
     global_step = tf.Variable(1, trainable=False)
+    scaled_lr = lr_init * hvd.size()  # Horovod: scale the learning rate linearly
     with tf.variable_scope('learning_rate'):
-        lr_v = tf.Variable(lr_init, trainable=False)
+        lr_v = tf.Variable(scaled_lr, trainable=False)
 
     opt = tf.train.MomentumOptimizer(lr_v, 0.9)
-    opt = hvd.DistributedOptimizer(opt) # HOROVOD
+    opt = hvd.DistributedOptimizer(opt) # Horovod
     train_op = opt.minimize(total_loss, global_step=global_step)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
 
-    config.gpu_options.allow_growth = True # HOROVOD
-    config.gpu_options.visible_device_list = str(hvd.local_rank()) # HOROVOD
+    config.gpu_options.allow_growth = True # Horovod
+    config.gpu_options.visible_device_list = str(hvd.local_rank()) # Horovod
 
     # Add variable initializer.
-    init = tf.global_variables_initializer() # HOVOROD
+    init = tf.global_variables_initializer()
 
     # Horovod: broadcast initial variable states from rank 0 to all other processes.
     # This is necessary to ensure consistent initialization of all workers when
     # training is started with random weights or restored from a checkpoint.
-    bcast = hvd.broadcast_global_variables(0) # HOVOROD
+    bcast = hvd.broadcast_global_variables(0) # Horovod
 
     # Horovod: adjust number of steps based on number of GPUs.
-    n_my_step = n_step // hvd.size() + 1 # HOVOROD
+    n_my_step = n_step // hvd.size() + 1 # Horovod
 
     # Start training
     with tf.Session(config=config) as sess:
         init.run()
-        bcast.run() # HOVODO
+        bcast.run() # Horovod
         print('Worker{}: Initialized'.format(hvd.rank()))
         print('Worker{}: Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
             hvd.rank(), n_my_step, batch_size, lr_init, lr_decay_every_step))
@@ -331,7 +332,6 @@ def parallel_train(training_dataset):
             print("no pre-trained model")
 
         # train until the end
-        sess.run(tf.assign(lr_v, lr_init * hvd.size())) # HOROVOD: Scale the learning rate linearly
         while True:
             step = sess.run(global_step)
             if step == n_my_step:
@@ -340,7 +340,7 @@ def parallel_train(training_dataset):
             tic = time.time()
             if step != 0 and (step % lr_decay_every_step == 0):
                 new_lr_decay = lr_decay_factor**(step // lr_decay_every_step)
-                sess.run(tf.assign(lr_v, lr_init * new_lr_decay * hvd.size())) # HOROVOD
+                sess.run(tf.assign(lr_v, scaled_lr * new_lr_decay))
 
             [_, _loss, _stage_losses, _l2, conf_result, paf_result] = \
                 sess.run([train_op, total_loss, stage_losses, l2_loss, last_conf, last_paf])
@@ -354,7 +354,7 @@ def parallel_train(training_dataset):
                 print('Worker{}:', hvd.rank(), 'Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
             # save intermediate results and model
-            if hvd.rank() == 0: # HOROVOD
+            if hvd.rank() == 0: # Horovod
                 if (step != 0) and (step % save_interval == 0):
                     # save some results
                     [img_out, confs_ground, pafs_ground, conf_result, paf_result,
