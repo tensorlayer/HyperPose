@@ -1,4 +1,4 @@
-FIND_PACKAGE(opencv)
+FIND_PACKAGE(OpenCV)
 
 ADD_DEFINITIONS(-ffast-math)
 
