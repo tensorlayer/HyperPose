@@ -122,7 +122,7 @@ class stream_detector_impl : public stream_detector
                 const auto p = image_stream_3.get();
                 const auto q = feature_stream_2.get();
                 const auto humans =
-                    (*paf_process)(q.heatmap_ptr, q.paf_ptr, false);
+                    (*process_paf)(q.heatmap_ptr, q.paf_ptr, false);
                 printf("got %lu humnas from %d-th image\n", humans.size(), i);
                 bool draw_humans = true;
                 if (draw_humans) {
