@@ -121,12 +121,13 @@ You can build the APIs into a standard C++ library by just running `make pack`, 
 
   - tensorRT
   - opencv
+  - gflags
 
 Performance-wise, we are still improving the speed of this framework. 
 Some initial performance numbers are as follows.
-Running on TX 2, the inference speed is 24 frames / second. On TX 1, the 
-inference speed is 12 frames / second. On Titan 1050Ti, the inference 
-speed is 35 frames / second.
+Running on TX 2, the inference speed is 13 frames / second. On TX 1, the 
+inference speed is 10 frames / second. On Titan 1050Ti, the inference 
+speed is 38 frames / second.
 
 <!---
 ## 5. Inference
