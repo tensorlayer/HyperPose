@@ -1,4 +1,4 @@
-# OpenPose-Plus: Real-time and Flexible Pose Estimation
+# OpenPose-Plus
 
 </a>
 <p align="center">
@@ -12,7 +12,7 @@ In its Caffe [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estim
 data augmentation, training, and neural networks are most hard-coded. They are difficult
 to be customised for achieving the best performance in real-world applications.
 Necessary features such as embedded platform supports and parallel GPU training are missing as well.
-This motivates us to develop OpenPose-Plus, a real-time and flexible pose estimation framework that offers many powerful features:
+This motivates us to develop **OpenPose-Plus**, a high-performance yet flexible pose estimation framework that offers many powerful features:
 - Flexible combination of standard training dataset with your own custom labelled data.
 - Customisable data augmentation pipeline without compromising performance
 - Deployment on embedded platforms using TensorRT
@@ -93,7 +93,7 @@ $ mpirun -np 16 \
 ## High-performance Inference using TensorRT
 
 Real-time inference on resource-constrained embedded platforms
-is important but challenging. To resolve this, we provide a TensorRT-compatible inference engine. 
+is always challenging. To resolve this, we provide a TensorRT-compatible inference engine. 
 The engine has two C++ APIs, both defined in `include/openpose-plus.hpp`.
 They are for running the TensorFlow model with TensorRT and post-processing respectively.
 
@@ -107,9 +107,9 @@ You can build the APIs into a standard C++ library by just running `make pack`, 
   - gflags
 
 We are improving the performance of the engine. 
-Initial benchmark results are as follows.
-On Jetson TX 2, the inference speed is 13 frames / second. On Jetson TX1, the 
-speed is 10 frames / second. On Titan 1050, the 
+Initial benchmark results for running the full OpenPose model are as follows.
+On Jetson TX 2, the inference speed is 13 frames / second (the mobilenet variant is even faster). 
+On Jetson TX1, the speed is 10 frames / second. On Titan 1050, the 
 speed is 38 frames / second.
 
 We also have a Python binding for the engine. The current binding relies on
@@ -172,8 +172,8 @@ For TensorRT float16 (half-float) inferencing, xxx
 ## License
 
 You can use the project code under a free [Apache 2.0 license](https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst) ONLY IF you:
-- Cite the [TensorLayer paper](https://github.com/tensorlayer/tensorlayer#cite) and this project in your research article if as an **academic user**.
-- Acknowledge TensorLayer and this project in your project websites/articles as a **commercial user**.
+- Cite the [TensorLayer paper](https://github.com/tensorlayer/tensorlayer#cite) and this project in your research article if you are an **academic user**.
+- Acknowledge TensorLayer and this project in your project websites/articles if you are a **commercial user**.
 
 ## Related Discussion
 
