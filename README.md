@@ -37,7 +37,7 @@ pip install pycocotools
 The default model is VGG19 used in the OpenPose paper.
 To customize the model, simply changing it in `models.py`.
 
-You can use `config.py` to configure the training. `config.DATA.train_data` can be:
+You can use `openpose_plus/config.py` to configure the training. `config.DATA.train_data` can be:
 * `coco`: training data is COCO dataset only (default)
 * `custom`: training data is your dataset specified by `config.DATA.your_xxx`
 * `coco_and_custom`: training data is COCO and your dataset
@@ -57,9 +57,9 @@ python train.py
 
 The pose estimation neural network can take days to train.
 To speed up the training, we support multiple GPU training while requiring
-minimal changes in your code. We use Horovod to support training on GPUs that can spread across multiple machines. 
+minimal changes in your code. We use Horovod to support training on GPUs that can spread across multiple machines.
 You need to install the [OpenMPI](https://www.open-mpi.org/) in your machine.
-We also provide an example script (`scripts/install-mpi.sh`) to help you go through the installation. 
+We also provide an example script (`scripts/install-mpi.sh`) to help you go through the installation.
 Once OpenMPI is installed, you can install Horovod python library as follows:
 
 ```bash
@@ -93,7 +93,7 @@ $ mpirun -np 16 \
 ## High-performance Inference using TensorRT
 
 Real-time inference on resource-constrained embedded platforms
-is important but challenging. To resolve this, we provide a TensorRT-compatible inference engine. 
+is important but challenging. To resolve this, we provide a TensorRT-compatible inference engine.
 The engine has two C++ APIs, both defined in `include/openpose-plus.hpp`.
 They are for running the TensorFlow model with TensorRT and post-processing respectively.
 
@@ -106,10 +106,10 @@ You can build the APIs into a standard C++ library by just running `make pack`, 
   - opencv
   - gflags
 
-We are improving the performance of the engine. 
+We are improving the performance of the engine.
 Initial benchmark results are as follows.
-On Jetson TX 2, the inference speed is 13 frames / second. On Jetson TX1, the 
-speed is 10 frames / second. On Titan 1050, the 
+On Jetson TX 2, the inference speed is 13 frames / second. On Jetson TX1, the
+speed is 10 frames / second. On Titan 1050, the
 speed is 38 frames / second.
 
 We also have a Python binding for the engine. The current binding relies on
@@ -117,12 +117,7 @@ the external tf-pose-estimation project. We are working on providing the Python 
 C++ implementation. For now, to enable the binding, please build C++ library for post processing by:
 
 ```bash
-cd inference/pafprocess
-make
-
-# ** before recompiling **
-rm -rf build
-rm *.so
+./scripts/install-pafprocess.sh
 ```
 
 See [tf-pose](https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess) for details.
