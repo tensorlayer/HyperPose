@@ -1,25 +1,28 @@
 #!/usr/bin/env python3
 
+import math
+import multiprocessing
 import os
 import time
-import math
-import cv2
-import matplotlib
 
+import cv2
+import horovod.tensorflow as hvd
+import matplotlib
 matplotlib.use('Agg')
+
 import numpy as np
-import multiprocessing
-import _pickle as cPickle
 import tensorflow as tf
 import tensorlayer as tl
-from hvd_trainer import HorovodTrainer
-from models import model
-from config import config
 from pycocotools.coco import maskUtils
-from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
-                                keypoint_random_resize_shortestedge, keypoint_random_rotate)
-from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset, tf_repeat)
-import horovod.tensorflow as hvd
+from tensorlayer.prepro import keypoint_random_crop, keypoint_random_flip, keypoint_random_resize, keypoint_random_resize_shortestedge, keypoint_random_rotate
+
+import _pickle as cPickle
+
+sys.path.append('.')
+
+from openpose_plus.config import config
+from openpose_plus.models import model
+from openpose_plus.utils import PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset, tf_repeat
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
@@ -272,7 +275,7 @@ def _parallel_train_model(img, results, mask):
 
 
 def parallel_train(training_dataset):
-    hvd.init() # Horovod
+    hvd.init()  # Horovod
 
     ds = training_dataset.shuffle(buffer_size=4096)
     ds = ds.shard(num_shards=hvd.size(), index=hvd.rank())
@@ -300,12 +303,12 @@ def parallel_train(training_dataset):
         lr_v = tf.Variable(scaled_lr, trainable=False)
 
     opt = tf.train.MomentumOptimizer(lr_v, 0.9)
-    opt = hvd.DistributedOptimizer(opt) # Horovod
+    opt = hvd.DistributedOptimizer(opt)  # Horovod
     train_op = opt.minimize(total_loss, global_step=global_step)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
 
-    config.gpu_options.allow_growth = True # Horovod
-    config.gpu_options.visible_device_list = str(hvd.local_rank()) # Horovod
+    config.gpu_options.allow_growth = True  # Horovod
+    config.gpu_options.visible_device_list = str(hvd.local_rank())  # Horovod
 
     # Add variable initializer.
     init = tf.global_variables_initializer()
@@ -313,17 +316,17 @@ def parallel_train(training_dataset):
     # Horovod: broadcast initial variable states from rank 0 to all other processes.
     # This is necessary to ensure consistent initialization of all workers when
     # training is started with random weights or restored from a checkpoint.
-    bcast = hvd.broadcast_global_variables(0) # Horovod
+    bcast = hvd.broadcast_global_variables(0)  # Horovod
 
     # Horovod: adjust number of steps based on number of GPUs.
     global n_step, lr_decay_every_step
-    n_step = n_step // hvd.size() + 1 # Horovod
-    lr_decay_every_step = lr_decay_every_step // hvd.size() + 1 # Horovod
+    n_step = n_step // hvd.size() + 1  # Horovod
+    lr_decay_every_step = lr_decay_every_step // hvd.size() + 1  # Horovod
 
     # Start training
     with tf.Session(config=config) as sess:
         init.run()
-        bcast.run() # Horovod
+        bcast.run()  # Horovod
         print('Worker{}: Initialized'.format(hvd.rank()))
         print('Worker{}: Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
             hvd.rank(), n_step, batch_size, lr_init, lr_decay_every_step))
@@ -351,27 +354,29 @@ def parallel_train(training_dataset):
 
             # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
             lr = sess.run(lr_v)
-            print('Worker{}: Total Loss at iteration {} / {} is: {} Learning rate {:10e} l2_loss {:10e} Took: {}s'.format(
-                hvd.rank(), step, n_step, _loss, lr, _l2,
-                time.time() - tic))
+            print(
+                'Worker{}: Total Loss at iteration {} / {} is: {} Learning rate {:10e} l2_loss {:10e} Took: {}s'.format(
+                    hvd.rank(), step, n_step, _loss, lr, _l2,
+                    time.time() - tic))
             for ix, ll in enumerate(_stage_losses):
                 print('Worker{}:', hvd.rank(), 'Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
             # save intermediate results and model
-            if hvd.rank() == 0: # Horovod
+            if hvd.rank() == 0:  # Horovod
                 if (step != 0) and (step % save_interval == 0):
                     # save some results
                     [img_out, confs_ground, pafs_ground, conf_result, paf_result,
                      mask_out] = sess.run([x_, confs_, pafs_, last_conf, last_paf, mask])
-                    draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
+                    draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out,
+                                 'train_%d_' % step)
 
                     # save model
                     # tl.files.save_npz(
                     #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                     # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
-                    tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                    tl.files.save_npz_dict(
+                        net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                     tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
-
 
 
 if __name__ == '__main__':
