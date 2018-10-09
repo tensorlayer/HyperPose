@@ -108,7 +108,7 @@ You can build the APIs into a standard C++ library by just running `make pack`, 
 
 We are improving the performance of the engine. 
 Initial benchmark results for running the full OpenPose model are as follows.
-On Jetson TX 2, the inference speed is 13 frames / second (the mobilenet variant is even faster). 
+On Jetson TX2, the inference speed is 13 frames / second (the mobilenet variant is even faster). 
 On Jetson TX1, the speed is 10 frames / second. On Titan 1050, the 
 speed is 38 frames / second.
 
