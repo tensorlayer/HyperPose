@@ -8,9 +8,11 @@ import time
 import tensorflow as tf
 import tensorlayer as tl
 
-from inference.common import measure, plot_humans, read_imgfile
-from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
-from models import get_model
+sys.path.append('.')
+
+from openpose_plus.inference.common import measure, plot_humans, read_imgfile
+from openpose_plus.inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
+from openpose_plus.models import get_model
 
 tf.logging.set_verbosity(tf.logging.INFO)
 tl.logging.set_verbosity(tl.logging.INFO)

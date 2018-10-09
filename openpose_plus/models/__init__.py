@@ -1,6 +1,7 @@
 import tensorflow as tf
-from config import config
-from inference.common import rename_tensor
+
+from ..config import config
+from ..inference.common import rename_tensor
 
 __all__ = [
     'get_base_model',
@@ -22,13 +23,13 @@ def _input_image(height, width, data_format, name):
 
 def get_base_model(name):
     if name == 'vgg':
-        from models_vgg import model
+        from .models_vgg import model
     elif name == 'vggtiny':
-        from models_vggtiny import model
+        from .models_vggtiny import model
     elif name == 'mobilenet':
-        from models_mobilenet import model
+        from .models_mobilenet import model
     elif name == 'hao28_experimental':
-        from models_hao28_experimental import model
+        from .models_hao28_experimental import model
     else:
         raise RuntimeError('unknown base model %s' % name)
     return model

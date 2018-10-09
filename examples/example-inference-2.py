@@ -10,8 +10,10 @@ import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
 
-from inference.common import measure, plot_humans, read_imgfile
-from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
+sys.path.append('.')
+
+from openpose_plus.inference.common import measure, plot_humans, read_imgfile, load_graph
+from openpose_plus.inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
 
 
 class TfPoseEstimator2Loader(TfPoseEstimator2):
