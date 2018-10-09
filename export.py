@@ -1,14 +1,17 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python3
 """Export pre-trained openpose model for C++/TensorRT."""
 
 import argparse
 import os
+import sys
 
 import tensorflow as tf
 import tensorlayer as tl
 
-from inference.common import measure, rename_tensor
-from models import get_model
+sys.path.append('.')
+
+from openpose_plus.inference.common import measure, rename_tensor
+from openpose_plus.models import get_model
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
