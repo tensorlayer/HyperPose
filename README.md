@@ -1,4 +1,4 @@
-# OpenPose-Plus: Fast and Flexible OpenPose Framework based on TensorFlow and TensorLayer
+# OpenPose-Plus: Real-time and Flexible Pose Estimation
 
 </a>
 <p align="center">
@@ -7,19 +7,20 @@
 
 [![Documentation Status](https://readthedocs.org/projects/openpose-plus/badge/?version=latest)](https://openpose-plus.readthedocs.io/en/latest/?badge=latest)
 
-[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art real-time 2D pose estimation algorithm.
-In the official Caffe-based [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
-data processing, training, and neural network blocks are heavily interleaved and mostly hard-coded. This makes it difficult
-to be customised for achieving the best performance in our custom pose estimation applications.
-Hence, we develop OpenPose-Plus, a fast and flexible pose estimation framework that offers the following powerful features:
+[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art pose estimation algorithm.
+In its Caffe [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
+data augmentation, training, and neural networks are most hard-coded. They are difficult
+to be customised for achieving the best performance in real-world applications.
+Necessary features such as embedded platform supports and parallel GPU training are missing as well.
+This motivates us to develop OpenPose-Plus, a real-time and flexible pose estimation framework that offers many powerful features:
 - Flexible combination of standard training dataset with your own custom labelled data.
 - Customisable data augmentation pipeline without compromising performance
 - Deployment on embedded platforms using TensorRT
 - Switchable neural networks (e.g., changing VGG to MobileNet for minimal memory consumption)
-- Integrated training on a single GPU and multiple GPUs
+- High-performance training using multiple GPUs
 
-This project is still under active development, some of the TODOs are as follows:
-- Parallel training (experimental)
+This project is under active development, some TODOs are as follows:
+- Parallel training (experimental support)
 - Pose Proposal Networks, ECCV 2018
 
 ## Custom Model Training
@@ -32,12 +33,11 @@ pip install -r requirements.txt
 pip install pycocotools
 ```
 
-`train.py` will automatically download MSCOCO 2017 dataset into `dataset/coco17`.
-The default model in `models.py` is based on VGG19, which is the same with the original paper.
-If you want to customize the model, simply change it in `models.py`.
-And then `train.py` will train the model to the end.
+`train.py` automatically download MSCOCO 2017 dataset into `dataset/coco17`.
+The default model is VGG19 used in the OpenPose paper.
+To customize the model, simply changing it in `models.py`.
 
-In `config.py`, `config.DATA.train_data` can be:
+You can use `config.py` to configure the training. `config.DATA.train_data` can be:
 * `coco`: training data is COCO dataset only (default)
 * `custom`: training data is your dataset specified by `config.DATA.your_xxx`
 * `coco_and_custom`: training data is COCO and your dataset
@@ -47,7 +47,7 @@ In `config.py`, `config.DATA.train_data` can be:
 * `vggtiny`: VGG tiny version, faster
 * `mobilenet`: MobileNet version, faster
 
-Train your model by simply running:
+Train your model by running:
 
 ```bash
 python train.py
@@ -55,7 +55,9 @@ python train.py
 
 ## Training using Multiple GPUs
 
-We use Horovod to support training using multiple GPUs that can spread across multiple machines. 
+The pose estimation neural network can take days to train.
+To speed up the training, we support multiple GPU training while requiring
+minimal changes in your code. We use Horovod to support training on GPUs that can spread across multiple machines. 
 You need to install the [OpenMPI](https://www.open-mpi.org/) in your machine.
 We also provide an example script (`scripts/install-mpi.sh`) to help you go through the installation. 
 Once OpenMPI is installed, you can install Horovod python library as follows:
@@ -90,10 +92,12 @@ $ mpirun -np 16 \
 
 ## High-performance Inference using TensorRT
 
-Currently we provide two C++ APIs for inference, both defined in `include/openpose-plus.hpp`.
+Real-time inference on resource-constrained embedded platforms
+is important but challenging. To resolve this, we provide a TensorRT-compatible inference engine. 
+The engine has two C++ APIs, both defined in `include/openpose-plus.hpp`.
 They are for running the TensorFlow model with TensorRT and post-processing respectively.
 
-You can look the examples in the `examples` folder to see how to use the APIs.
+You can look at the examples in the `examples` folder to see how to use the APIs.
 Running `./scripts/live-camera.sh` will give you a quick review of how it works.
 
 You can build the APIs into a standard C++ library by just running `make pack`, provided that you have the following dependencies installed
@@ -102,15 +106,15 @@ You can build the APIs into a standard C++ library by just running `make pack`, 
   - opencv
   - gflags
 
-We are improving the performance of the inference, especially on embedded platforms. 
+We are improving the performance of the engine. 
 Initial benchmark results are as follows.
 On Jetson TX 2, the inference speed is 13 frames / second. On Jetson TX1, the 
 speed is 10 frames / second. On Titan 1050, the 
 speed is 38 frames / second.
 
-We also have a Python binding for C++ inference API. The current binding relies on
+We also have a Python binding for the engine. The current binding relies on
 the external tf-pose-estimation project. We are working on providing the Python binding for our high-performance
-C++ implementation. For now, to enable the Python binding, please build C++ library for post processing by:
+C++ implementation. For now, to enable the binding, please build C++ library for post processing by:
 
 ```bash
 cd inference/pafprocess
@@ -164,6 +168,12 @@ For TensorRT float16 (half-float) inferencing, xxx
     1. prepare your data following MSCOCO format, you need to .
     2. concatenate the list of your own data JSON into ...
 -->
+
+## License
+
+You can use the project code under a free [Apache 2.0 license](https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst) ONLY IF you:
+- Cite the [TensorLayer paper](https://github.com/tensorlayer/tensorlayer#cite) and this project in your research article if as an **academic user**.
+- Acknowledge TensorLayer and this project in your project websites/articles as a **commercial user**.
 
 ## Related Discussion
 
