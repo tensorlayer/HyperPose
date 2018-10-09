@@ -13,10 +13,10 @@ import tensorlayer as tl
 sys.path.append('.')
 
 from openpose_plus.inference.common import measure, plot_humans, read_imgfile, load_graph
-from openpose_plus.inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
+from openpose_plus.inference.estimator import TfPoseEstimator
 
 
-class TfPoseEstimator2Loader(TfPoseEstimator2):
+class TfPoseestimatorLoader(TfPoseEstimator):
 
     def __init__(self, path_to_freezed, target_size):
         graph = load_graph(path_to_freezed)
@@ -46,8 +46,8 @@ class TfPoseEstimator2Loader(TfPoseEstimator2):
 
 def inference(path_to_freezed_model, input_files):
     h, w = 368, 432
-    e = measure(lambda: TfPoseEstimator2Loader(path_to_freezed_model, target_size=(w, h)),
-                'create TfPoseEstimator2Loader')
+    e = measure(lambda: TfPoseestimatorLoader(path_to_freezed_model, target_size=(w, h)),
+                'create TfPoseestimatorLoader')
     for idx, img_name in enumerate(input_files):
         image = read_imgfile(img_name, w, h)
         humans, heatMap, pafMap = measure(lambda: e.inference(image), 'inference')

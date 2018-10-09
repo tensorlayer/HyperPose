@@ -11,7 +11,7 @@ import tensorlayer as tl
 sys.path.append('.')
 
 from openpose_plus.inference.common import measure, plot_humans, read_imgfile
-from openpose_plus.inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
+from openpose_plus.inference.estimator import TfPoseEstimator
 from openpose_plus.models import get_model
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -21,8 +21,8 @@ tl.logging.set_verbosity(tl.logging.INFO)
 def inference(base_model_name, path_to_npz, data_format, input_files, plot):
     model_func = get_model(base_model_name)
     height, width = (368, 432)
-    e = measure(lambda: TfPoseEstimator2(path_to_npz, model_func, target_size=(width, height), data_format=data_format),
-                'create TfPoseEstimator2')
+    e = measure(lambda: TfPoseEstimator(path_to_npz, model_func, target_size=(width, height), data_format=data_format),
+                'create TfPoseEstimator')
 
     t0 = time.time()
     for idx, img_name in enumerate(input_files):
