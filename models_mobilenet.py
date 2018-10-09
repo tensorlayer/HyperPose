@@ -10,7 +10,7 @@ __all__ = [
 W_init = tf.contrib.layers.xavier_initializer()  # tf.truncated_normal_initializer(stddev=0.01)
 b_init = None  #tf.constant_initializer(value=0.0)
 b_init2 = tf.constant_initializer(value=0.0)
-decay = 0.99
+decay = 0.999
 
 
 def depthwise_conv_block(n, n_filter, filter_size=(3, 3), strides=(1, 1), is_train=False, name="depth_block"):
