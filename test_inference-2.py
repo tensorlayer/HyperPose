@@ -12,7 +12,6 @@ import tensorlayer as tl
 
 from inference.common import measure, plot_humans, read_imgfile
 from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
-from models import full_model
 
 
 class TfPoseEstimator2Loader(TfPoseEstimator2):

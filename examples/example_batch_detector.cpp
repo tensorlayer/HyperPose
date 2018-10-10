@@ -3,9 +3,10 @@
 
 #include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
+#include <stdtracer>
 
 #include "pose_detector.h"
-#include "tracer.h"
+#include "utils.hpp"
 
 // Model flags
 DEFINE_string(model_file, "vgg.uff", "Path to uff model.");
@@ -17,27 +18,10 @@ DEFINE_int32(repeat, 1, "Number of repeats.");
 DEFINE_int32(batch_size, 4, "Batch size.");
 DEFINE_int32(gauss_kernel_size, 17, "Gauss kernel size for smooth operation.");
 DEFINE_bool(use_f16, false, "Use float16.");
+DEFINE_bool(flip_rgb, true, "Flip RGB.");
 
 // input flags
 DEFINE_string(image_files, "", "Comma separated list of pathes to image.");
-
-std::vector<std::string> split(const std::string &text, const char sep)
-{
-    std::vector<std::string> lines;
-    std::string line;
-    std::istringstream ss(text);
-    while (std::getline(ss, line, sep)) { lines.push_back(line); }
-    return lines;
-}
-
-template <typename T> std::vector<T> repeat(const std::vector<T> &v, int n)
-{
-    std::vector<T> u;
-    for (int i = 0; i < n; ++i) {
-        for (const auto &x : v) { u.push_back(x); }
-    }
-    return u;
-}
 
 int main(int argc, char *argv[])
 {
@@ -47,17 +31,18 @@ int main(int argc, char *argv[])
     // TODO: derive from model
     const int f_height = FLAGS_input_height / 8;
     const int f_width = FLAGS_input_width / 8;
+    auto files = repeat(split(FLAGS_image_files, ','), FLAGS_repeat);
 
     std::unique_ptr<pose_detector> pd(create_pose_detector(
         FLAGS_model_file, FLAGS_input_height, FLAGS_input_width, f_height,
-        f_width, FLAGS_batch_size, FLAGS_use_f16, FLAGS_gauss_kernel_size));
+        f_width, FLAGS_batch_size, FLAGS_use_f16, FLAGS_gauss_kernel_size,
+        FLAGS_flip_rgb));
 
     {
         using clock_t = std::chrono::system_clock;
         using duration_t = std::chrono::duration<double>;
         const auto t0 = clock_t::now();
 
-        auto files = repeat(split(FLAGS_image_files, ','), FLAGS_repeat);
         pd->inference(files);
 
         const int n = files.size();

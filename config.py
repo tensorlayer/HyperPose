@@ -14,7 +14,7 @@ config.TRAIN.lr_init = 4e-5  # initial learning rate
 config.TRAIN.lr_decay_every_step = 136106  # evey number of step to decay lr
 config.TRAIN.lr_decay_factor = 0.333  # decay lr factor
 config.TRAIN.weight_decay_factor = 5e-4
-config.TRAIN.train_mode = 'datasetapi'  # placeholder (debug), datasetapi (single-gpu), distributed (multi-gpus)
+config.TRAIN.train_mode = 'single'  # single, parallel
 
 config.MODEL = edict()
 config.MODEL.model_path = 'models'  # save directory
@@ -29,7 +29,7 @@ if (config.MODEL.hin % 16 != 0) or (config.MODEL.win % 16 != 0):
     raise Exception("image size should be divided by 16")
 
 config.DATA = edict()
-config.DATA.train_data = 'coco_only'  # coco_only, yours_only, coco_and_yours
+config.DATA.train_data = 'coco'  # coco, custom, coco_and_custom
 config.DATA.coco_version = '2017'  # MSCOCO version 2014 or 2017
 config.DATA.data_path = 'data'
 config.DATA.your_images_path = os.path.join('data', 'your_data', 'images')

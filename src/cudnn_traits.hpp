@@ -3,8 +3,7 @@
 #include <cstdlib>
 
 #include <cudnn.h>
-
-#include "tracer.h"
+#include <stdtracer>
 
 /* status checker */
 

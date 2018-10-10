@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+
+# mkdir -p cmake-build
+# cd cmake-build
+
+cmake . -DBUILD_FAKE=1

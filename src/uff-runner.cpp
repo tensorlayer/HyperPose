@@ -11,11 +11,12 @@
 #include <NvInfer.h>
 #include <NvUffParser.h>
 #include <NvUtils.h>
+#include <stdtracer>
+
+#include <openpose-plus.h>
 
 #include "logger.h"
 #include "std_cuda_tensor.hpp"
-#include "tracer.h"
-#include "uff-runner.h"
 
 using input_info_t = std::vector<std::pair<std::string, std::vector<int>>>;
 
@@ -119,7 +120,7 @@ create_engine(const std::string &model_file, const input_info_t &input_info,
     return engine;
 }
 
-class uff_runner_impl : public uff_runner
+class uff_runner_impl : public pose_detection_runner
 {
   public:
     uff_runner_impl(const std::string &model_file,
@@ -128,8 +129,9 @@ class uff_runner_impl : public uff_runner
                     int max_batch_size, bool use_f16);
     ~uff_runner_impl() override;
 
-    void execute(const std::vector<void *> &inputs,
-                 const std::vector<void *> &outputs, int batch_size) override;
+    void operator()(const std::vector<void *> &inputs,
+                    const std::vector<void *> &outputs,
+                    int batch_size) override;
 
   private:
     destroy_ptr<nvinfer1::ICudaEngine> engine_;
@@ -171,10 +173,11 @@ void uff_runner_impl::createBuffers_(int batch_size)
     }
 }
 
-void uff_runner_impl::execute(const std::vector<void *> &inputs,
-                              const std::vector<void *> &outputs, int batch_size)
+void uff_runner_impl::operator()(const std::vector<void *> &inputs,
+                                 const std::vector<void *> &outputs,
+                                 int batch_size)
 {
-    TRACE(__func__);
+    TRACE("uff_runner_impl::operator()");
 
     {
         TRACE("copy input from host");
@@ -187,7 +190,7 @@ void uff_runner_impl::execute(const std::vector<void *> &inputs,
     }
 
     {
-        TRACE("context->execute");
+        TRACE("uff_runner_impl::context->execute");
         auto context = engine_->createExecutionContext();
         std::vector<void *> buffer_ptrs_(buffers_.size());
         for (int i = 0; i < buffers_.size(); ++i) {
@@ -208,9 +211,9 @@ void uff_runner_impl::execute(const std::vector<void *> &inputs,
     }
 }
 
-uff_runner *create_openpose_runner(const std::string &model_file,
-                                   int input_height, int input_width,
-                                   int max_batch_size, bool use_f16)
+pose_detection_runner *
+create_pose_detection_runner(const std::string &model_file, int input_height,
+                             int input_width, int max_batch_size, bool use_f16)
 {
     const input_info_t input_info = {
         {

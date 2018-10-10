@@ -6,19 +6,16 @@
 
 #include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
+#include <stdtensor>
+#include <stdtracer>
+
+using ttl::tensor;
+using ttl::tensor_ref;
+
+#include <openpose-plus.h>
 
 #include "input.h"
-#include "paf.h"
-#include "tensor.h"
-#include "tracer.h"
-#include "uff-runner.h"
 #include "vis.h"
-
-namespace
-{
-const int n_joins = 18 + 1;
-const int n_connections = 17 + 2;
-}  // namespace
 
 class pose_detector_impl : public pose_detector
 {
@@ -26,7 +23,8 @@ class pose_detector_impl : public pose_detector
     pose_detector_impl(const std::string &model_file,          //
                        int input_height, int input_width,      //
                        int feature_height, int feature_width,  //
-                       int batch_size, bool use_f16, int gauss_kernel_size);
+                       int batch_size, bool use_f16, int gauss_kernel_size,
+                       bool flip_rgb);
 
     void one_batch(const std::vector<std::string> &image_files, int start_idx);
 
@@ -40,33 +38,37 @@ class pose_detector_impl : public pose_detector
     const int feature_height;
     const int feature_width;
 
-    tensor_t<float, 4> images;
-    tensor_t<float, 4> confs;
-    tensor_t<float, 4> pafs;
+    const bool flip_rgb;
 
-    std::unique_ptr<paf_processor> paf_process;
-    std::unique_ptr<uff_runner> runner;
+    tensor<uint8_t, 4> hwc_images;
+    tensor<float, 4> chw_images;
+    tensor<float, 4> confs;
+    tensor<float, 4> pafs;
+
+    std::unique_ptr<paf_processor> process_paf;
+    std::unique_ptr<pose_detection_runner> compute_feature_maps;
 };
 
 pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
                                        int input_height, int input_width,  //
                                        int feature_height, int feature_width,
                                        int batch_size, bool use_f16,
-                                       int gauss_kernel_size)
+                                       int gauss_kernel_size, bool flip_rgb)
     : height(input_height),
       width(input_width),
+      batch_size(batch_size),
       feature_height(feature_height),
       feature_width(feature_width),
-      batch_size(batch_size),
-      images(nullptr, batch_size, 3, height, width),
-      confs(nullptr, batch_size, n_joins, feature_height, feature_width),
-      pafs(nullptr, batch_size, n_connections * 2, feature_height,
-           feature_width),
-      paf_process(create_paf_processor(feature_height, feature_width,
+      flip_rgb(flip_rgb),
+      hwc_images(batch_size, height, width, 3),
+      chw_images(batch_size, 3, height, width),
+      confs(batch_size, n_joins, feature_height, feature_width),
+      pafs(batch_size, n_connections * 2, feature_height, feature_width),
+      process_paf(create_paf_processor(feature_height, feature_width,
                                        input_height, input_width, n_joins,
                                        n_connections, gauss_kernel_size)),
-      runner(create_openpose_runner(model_file, height, width, batch_size,
-                                    use_f16))
+      compute_feature_maps(create_pose_detection_runner(
+          model_file, height, width, batch_size, use_f16))
 {
 }
 
@@ -79,25 +81,24 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     {
         TRACE("batch read images");
         for (int i = 0; i < image_files.size(); ++i) {
-            resized_images.push_back(
-                input_image(image_files[i].c_str(), height, width,
-                            images.data() + i * 3 * height * width));
+            input_image(image_files[i].data(), height, width,
+                        hwc_images[i].data(), chw_images[i].data(), flip_rgb);
+            resized_images.push_back(cv::Mat(cv::Size(width, height), CV_8UC(3),
+                                             hwc_images[i].data()));
         }
     }
     {
         TRACE("batch run tensorRT");
-        runner->execute({images.data()}, {confs.data(), pafs.data()},
-                        image_files.size());
+        (*compute_feature_maps)({chw_images.data()},
+                                {confs.data(), pafs.data()},
+                                image_files.size());
     }
     {
         TRACE("batch run process PAF and draw results");
-        const int feature_size = feature_height * feature_width;
         for (int i = 0; i < image_files.size(); ++i) {
             const auto humans = [&]() {
                 TRACE("run paf_process");
-                return (*paf_process)(confs.data() + i * n_joins * feature_size,
-                                      pafs.data() +
-                                          i * 2 * n_connections * feature_size);
+                return (*process_paf)(confs[i].data(), pafs[i].data(), true);
             }();
             auto resized_image = resized_images[i];
             {
@@ -129,9 +130,9 @@ pose_detector *create_pose_detector(const std::string &model_file,      //
                                     int input_height, int input_width,  //
                                     int feature_height, int feature_width,
                                     int batch_size, bool use_f16,
-                                    int gauss_kernel_size)
+                                    int gauss_kernel_size, bool flip_rgb)
 {
     return new pose_detector_impl(model_file, input_height, input_width,
                                   feature_height, feature_width, batch_size,
-                                  use_f16, gauss_kernel_size);
+                                  use_f16, gauss_kernel_size, flip_rgb);
 }

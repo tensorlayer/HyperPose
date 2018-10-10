@@ -2,8 +2,7 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "coco.h"
-#include "human.h"
+#include <openpose-plus.h>
 
 namespace
 {
