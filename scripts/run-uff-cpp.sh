@@ -11,7 +11,7 @@ repeat=20
 gksize=13
 
 run_batch_example() {
-    local BIN=$(pwd)/cmake-build/$(uname -s)/example
+    local BIN=$(pwd)/cmake-build/$(uname -s)/example-batch-detector
     local IMAGES=$(echo $@ | tr ' ' ',')
     local batch_size=4
     ${BIN} \

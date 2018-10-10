@@ -45,6 +45,14 @@ template <typename R, rank_t r> class basic_cuda_tensor
                    cudaMemcpyHostToDevice);
     }
 
+    void partialFromHost(void *buffer, int batch_size, int max_batch_size)
+    {
+        TRACE("basic_cuda_tensor::partialFromHost");
+        cudaMemcpy(data_.get(), buffer,
+                   count / max_batch_size * batch_size * sizeof(R),
+                   cudaMemcpyHostToDevice);
+    }
+
     void toHost(void *buffer)
     {
         TRACE("basic_cuda_tensor::toHost");
@@ -52,10 +60,18 @@ template <typename R, rank_t r> class basic_cuda_tensor
                    cudaMemcpyDeviceToHost);
     }
 
+    void partialToHost(void *buffer, int batch_size, int max_batch_size)
+    {
+        TRACE("basic_cuda_tensor::partialToHost");
+        cudaMemcpy(buffer, data_.get(),
+                   count / max_batch_size * batch_size * sizeof(R),
+                   cudaMemcpyDeviceToHost);
+    }
+
   private:
     const shape<r> shape_;
     const size_t count;
-    const std::unique_ptr<R, cuda_mem_deleter> data_;
+    std::unique_ptr<R, cuda_mem_deleter> data_;
 };
 
 template <typename R, rank_t r> using cuda_tensor = basic_cuda_tensor<R, r>;

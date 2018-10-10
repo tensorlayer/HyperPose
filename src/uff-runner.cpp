@@ -134,6 +134,8 @@ class uff_runner_impl : public pose_detection_runner
                     int batch_size) override;
 
   private:
+    const int max_batch_size;
+
     destroy_ptr<nvinfer1::ICudaEngine> engine_;
 
     using cuda_buffer_t = cuda_tensor<char, 1>;
@@ -146,7 +148,8 @@ uff_runner_impl::uff_runner_impl(const std::string &model_file,
                                  const input_info_t &input_info,
                                  const std::vector<std::string> &output_names,
                                  int max_batch_size, bool use_f16)
-    : engine_(create_engine(model_file, input_info, output_names,
+    : max_batch_size(max_batch_size),
+      engine_(create_engine(model_file, input_info, output_names,
                             max_batch_size, use_f16))
 {
     createBuffers_(max_batch_size);
@@ -178,13 +181,15 @@ void uff_runner_impl::operator()(const std::vector<void *> &inputs,
                                  int batch_size)
 {
     TRACE("uff_runner_impl::operator()");
+    assert(batch_size <= max_batch_size);
 
     {
         TRACE("copy input from host");
         int idx = 0;
         for (int i = 0; i < buffers_.size(); ++i) {
             if (engine_->bindingIsInput(i)) {
-                buffers_[i]->fromHost(inputs[idx++]);
+                buffers_[i]->partialFromHost(inputs[idx++], batch_size,
+                                             max_batch_size);
             }
         }
     }
@@ -205,7 +210,8 @@ void uff_runner_impl::operator()(const std::vector<void *> &inputs,
         int idx = 0;
         for (int i = 0; i < buffers_.size(); ++i) {
             if (!engine_->bindingIsInput(i)) {
-                buffers_[i]->toHost(outputs[idx++]);
+                buffers_[i]->partialToHost(outputs[idx++], batch_size,
+                                           max_batch_size);
             }
         }
     }
