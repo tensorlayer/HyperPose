@@ -61,12 +61,22 @@ def _data_aug_fn(image, ground_truth):
         mask_miss = np.bitwise_and(mask_miss, bin_mask)
 
     ## image data augmentation
-    # randomly resize height and width independently, scale is changed
-    image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
-    # random rotate
-    image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
-    # random left-right flipping
-    image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
+    # # randomly resize height and width independently, scale is changed
+    # image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
+    # # random rotate
+    # image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
+    # # random left-right flipping
+    # image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
+
+    M_rotate = tl.prepro.affine_rotation_matrix(rg=40, is_random=True)
+    M_flip = tl.prepro.affine_horizontal_flip_matrix(is_random=True)
+    M_zoom = tl.prepro.affine_zoom_matrix(zoom_range=(1/1.1, 1/0.5), is_random=True)
+    M_shear = tl.prepro.affine_shear_matrix2(shear=(0.1, 0.1), is_random=True)
+    M_combined = M_rotate.dot(M_flip).dot(M_zoom).dot(M_shear)
+    h, w, _ = image.shape
+    transform_matrix = tl.prepro.transform_matrix_offset_center(M_combined, h, w)
+    image = tl.prepro.affine_transfrom(image, transform_matrix)
+
     # random resize height and width together
     image, annos, mask_miss = keypoint_random_resize_shortestedge(
         image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
