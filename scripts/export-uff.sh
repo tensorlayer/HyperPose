@@ -7,17 +7,29 @@ MODEL_DIR=${HOME}/Downloads
 
 DATA_FORMAT=channels_first # Must use channels_first
 
-# ./export.py --data-format=${DATA_FORMAT} --base-model=vgg --path-to-npz=${MODEL_DIR}/vgg450000_no_cpm.npz --uff-filename=${MODEL_DIR}/vgg.uff
-# ./export.py --data-format=${DATA_FORMAT} --base-model=vggtiny --path-to-npz=${MODEL_DIR}/new-models/hao18/pose350000.npz --uff-filename=${MODEL_DIR}/vggtiny.uff
-# ./export.py --data-format=${DATA_FORMAT} --base-model=hao28_experimental --path-to-npz=${MODEL_DIR}/hao28/pose345000.npz --uff-filename=${MODEL_DIR}/hao28.uff
+height=256
+width=384
 
-./export.py \
-    --data-format=${DATA_FORMAT} \
-    --base-model=hao28_experimental \
-    --path-to-npz=${MODEL_DIR}/hao28/pose345000.npz \
-    --height=256 \
-    --width=384 \
-    --uff-filename=${MODEL_DIR}/hao28-256x384.uff
+export_uff() {
+    local base_model=$1
+    local npz_file=$2
+    local uff_file=$3
+
+    ./export.py \
+        --data-format=${DATA_FORMAT} \
+        --base-model=${base_model} \
+        --path-to-npz=${MODEL_DIR}/${npz_file} \
+        --height=${height} \
+        --width=${width} \
+        --uff-filename=${MODEL_DIR}/${uff_file}
+
+    echo "saved to ${MODEL_DIR}/${uff_file}"
+}
+
+# export_uff vgg vgg450000_no_cpm.npz vgg.uff
+# export_uff vggtiny new-models/hao18/pose350000.npz vggtiny.uff
+export_uff hao28_experimental hao28/pose345000.npz hao28-${height}x${width}.uff
+export_uff hao28_experimental pose600000.npz hao28-600000-${height}x${width}.uff
 
 # TODO: make mobilenet support NCHW
-# ./export.py --data-format=${DATA_FORMAT} --base-model=mobilenet --path-to-npz=${MODEL_DIR}/mbn280000.npz --uff-filename=mobilenet.uff
+# export_uff mobilenet mbn280000.npz mobilenet.uff
