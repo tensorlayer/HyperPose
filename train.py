@@ -139,9 +139,9 @@ def _data_aug_fn(image, ground_truth):
     # # random left-right flipping
     # image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
 
-    M_rotate = tl.prepro.affine_rotation_matrix(angle=40)
+    M_rotate = tl.prepro.affine_rotation_matrix(angle=(-30, 30)) # -40~40
     M_flip = tl.prepro.affine_horizontal_flip_matrix(prob=0.5)
-    M_zoom = tl.prepro.affine_zoom_matrix(zoom_range=(0.5, 1.1))
+    M_zoom = tl.prepro.affine_zoom_matrix(zoom_range=(0.5, 0.8)) # 0.5~1.1
     # M_shear = tl.prepro.affine_shear_matrix(x_shear=(-0.1, 0.1), y_shear=(-0.1, 0.1))
     M_combined = M_rotate.dot(M_flip).dot(M_zoom)#.dot(M_shear)
     h, w, _ = image.shape
@@ -178,11 +178,19 @@ def _map_fn(img_list, annos):
     image = tf.read_file(img_list)
     image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+    # Affine transform and get paf maps
     image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
 
     image = tf.reshape(image, [hin, win, 3])
     resultmap = tf.reshape(resultmap, [hout, wout, 57])
     mask = tf.reshape(mask, [hout, wout, 1])
+
+    # Randomly change brightness.
+    image = tf.image.random_brightness(image, max_delta=0.25) # 255->63
+    # Randomly change contrast.
+    image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
+    # Clip intensities to 0~1
+    image = tf.clip_by_value(image, 0.0, 1.0)
 
     return image, resultmap, mask
 
@@ -253,7 +261,6 @@ def single_train(training_dataset):
                 [img_out, confs_ground, pafs_ground, conf_result, paf_result,
                  mask_out] = sess.run([x_, confs_, pafs_, last_conf, last_paf, mask])
                 draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
-
                 # save model
                 # tl.files.save_npz(
                 #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
