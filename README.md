@@ -1,4 +1,4 @@
-# OpenPose-Plus: Post Estimation in the Wild
+# OpenPose-Plus: Pose Estimation in the Wild
 
 </a>
 <p align="center">
