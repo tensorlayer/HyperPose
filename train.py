@@ -12,14 +12,12 @@ import multiprocessing
 import _pickle as cPickle
 import tensorflow as tf
 import tensorlayer as tl
-# from hvd_trainer import HorovodTrainer
 from models import model
 from config import config
 from pycocotools.coco import maskUtils
 from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
                                 keypoint_random_resize_shortestedge, keypoint_random_rotate)
 from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset, tf_repeat)
-import horovod.tensorflow as hvd
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
@@ -290,6 +288,8 @@ def _parallel_train_model(img, results, mask):
 
 
 def parallel_train(training_dataset):
+    import horovod.tensorflow as hvd
+
     hvd.init() # Horovod
 
     ds = training_dataset.shuffle(buffer_size=4096)
