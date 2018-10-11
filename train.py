@@ -4,9 +4,9 @@ import math
 import multiprocessing
 import os
 import time
+import sys
 
 import cv2
-import horovod.tensorflow as hvd
 import matplotlib
 matplotlib.use('Agg')
 
@@ -20,7 +20,7 @@ import _pickle as cPickle
 
 sys.path.append('.')
 
-from openpose_plus.config import config
+from train_config import config
 from openpose_plus.models import model
 from openpose_plus.utils import PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset, tf_repeat
 

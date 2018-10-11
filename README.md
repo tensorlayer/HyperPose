@@ -1,4 +1,4 @@
-# OpenPose-Plus
+# OpenPose-Plus: Post Estimation in the Wild
 
 </a>
 <p align="center">
@@ -37,7 +37,7 @@ pip install pycocotools
 The default model is VGG19 used in the OpenPose paper.
 To customize the model, simply changing it in `models.py`.
 
-You can use `openpose_plus/config.py` to configure the training. `config.DATA.train_data` can be:
+You can use `train_config.py` to configure the training. `config.DATA.train_data` can be:
 * `coco`: training data is COCO dataset only (default)
 * `custom`: training data is your dataset specified by `config.DATA.your_xxx`
 * `coco_and_custom`: training data is COCO and your dataset
@@ -66,7 +66,7 @@ Once OpenMPI is installed, you can install Horovod python library as follows:
 pip install horovod
 ```
 
-To enable paralle training, set the `config.TRAIN.train_mode` to `parallel` (default is `single`).
+To enable parallel training, in `train_config.py`, set the `config.TRAIN.train_mode` to `parallel` (default is `single`).
 
 (i) To run on a machine with 4 GPUs:
 
