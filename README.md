@@ -97,9 +97,6 @@ is always challenging. To resolve this, we provide a TensorRT-compatible inferen
 The engine has two C++ APIs, both defined in `include/openpose-plus.hpp`.
 They are for running the TensorFlow model with TensorRT and post-processing respectively.
 
-You can look at the examples in the `examples` folder to see how to use the APIs.
-Running `./scripts/live-camera.sh` will give you a quick review of how it works.
-
 You can build the APIs into a standard C++ library by just running `make pack`, provided that you have the following dependencies installed
 
   - tensorRT
@@ -121,6 +118,11 @@ C++ implementation. For now, to enable the binding, please build C++ library for
 ```
 
 See [tf-pose](https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess) for details.
+
+## Live Camera Example
+
+You can look at the examples in the `examples` folder to see how to use the inference C++ APIs.
+Running `./scripts/live-camera.sh` will give you a quick review of how it works.
 
 <!---
 ## 5. Inference
