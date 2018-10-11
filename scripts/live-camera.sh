@@ -5,7 +5,7 @@ make
 echo
 
 MODEL_DIR=$HOME/Downloads
-MODEL_FILE=${MODEL_DIR}/hao28-256x384.uff
+MODEL_FILE=${MODEL_DIR}/hao28-600000-256x384.uff
 
 if [ ! -f ${MODEL_FILE} ]; then
     echo "${MODEL_FILE} NOT exist, please download it first."

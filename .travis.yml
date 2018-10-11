@@ -12,6 +12,7 @@ sudo: required
 
 before_install:
 - docker info
+- sudo apt update
 - sudo apt install -y swig # FIXME: can't install libopencv-dev on travis CI
 - pip install -r requirements.txt
 - pip install pycocotools  # must be installed after cython is installed

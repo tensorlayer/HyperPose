@@ -275,6 +275,8 @@ def _parallel_train_model(img, results, mask):
 
 
 def parallel_train(training_dataset):
+    import horovod.tensorflow as hvd
+
     hvd.init()  # Horovod
 
     ds = training_dataset.shuffle(buffer_size=4096)
