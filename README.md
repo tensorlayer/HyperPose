@@ -10,17 +10,17 @@
 [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art pose estimation algorithm.
 In its Caffe [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
 data augmentation, training, and neural networks are most hard-coded. They are difficult
-to be customised for achieving the best performance in real-world applications.
-Necessary features such as embedded platform supports and parallel GPU training are missing as well.
-This motivates us to develop **OpenPose-Plus**, a high-performance yet flexible pose estimation framework that offers many powerful features:
+to be customised. In addition,
+key performance features such as embedded platform supports and parallel GPU training are missing.
+All these limitations makes OpenPose, in these days, hard to 
+be deployed in the wild. To resolve this, we develop **OpenPose-Plus**, a high-performance yet flexible pose estimation framework that offers many powerful features:
 - Flexible combination of standard training dataset with your own custom labelled data.
 - Customisable data augmentation pipeline without compromising performance
 - Deployment on embedded platforms using TensorRT
 - Switchable neural networks (e.g., changing VGG to MobileNet for minimal memory consumption)
 - High-performance training using multiple GPUs
 
-This project is under active development, some TODOs are as follows:
-- Parallel training (experimental support)
+**Note**: This project is under active development. Some TODOs are as follows:
 - Pose Proposal Networks, ECCV 2018
 
 ## Custom Model Training
