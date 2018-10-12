@@ -15,7 +15,7 @@ import tensorlayer as tl
 from models import model
 from config import config
 from pycocotools.coco import maskUtils
-from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
+from tensorlayer.prepro import (keypoint_random_crop, keypoint_resize_random_crop, keypoint_random_flip, keypoint_random_resize,
                                 keypoint_random_resize_shortestedge, keypoint_random_rotate)
 from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset, tf_repeat)
 
@@ -112,7 +112,6 @@ def make_model(img, results, mask, is_train=True, reuse=False):
     return net, total_loss, log_tensors
     # return total_loss, last_conf, stage_losses, l2_loss, cnn, last_paf, img, confs, pafs, m1, net
 
-
 def _data_aug_fn(image, ground_truth):
     """Data augmentation function."""
     ground_truth = cPickle.loads(ground_truth)
@@ -130,28 +129,29 @@ def _data_aug_fn(image, ground_truth):
         mask_miss = np.bitwise_and(mask_miss, bin_mask)
 
     ## image data augmentation
-    # # randomly resize height and width independently, scale is changed
-    # image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
-    # # random rotate
-    # image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
-    # # random left-right flipping
-    # image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
-
+        # # randomly resize height and width independently, scale is changed
+        # image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))# removed hao
+        # # random rotate
+        # image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)# removed hao
+        # # random left-right flipping
+        # image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)# removed hao
     M_rotate = tl.prepro.affine_rotation_matrix(angle=(-30, 30)) # -40~40
     M_flip = tl.prepro.affine_horizontal_flip_matrix(prob=0.5)
     M_zoom = tl.prepro.affine_zoom_matrix(zoom_range=(0.5, 0.8)) # 0.5~1.1
     # M_shear = tl.prepro.affine_shear_matrix(x_shear=(-0.1, 0.1), y_shear=(-0.1, 0.1))
     M_combined = M_rotate.dot(M_flip).dot(M_zoom)#.dot(M_shear)
+        # M_combined = tl.prepro.affine_zoom_matrix(zoom_range=0.9) # for debug
     h, w, _ = image.shape
     transform_matrix = tl.prepro.transform_matrix_offset_center(M_combined, x=w, y=h)
     image = tl.prepro.affine_transform_cv2(image, transform_matrix)
     annos = tl.prepro.affine_transform_keypoints(annos, transform_matrix)
 
-    # random resize height and width together
-    image, annos, mask_miss = keypoint_random_resize_shortestedge(
-        image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
-    # random crop
-    image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding
+        # random resize height and width together
+        # image, annos, mask_miss = keypoint_random_resize_shortestedge(
+        #     image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6)) # removed hao
+        # random crop
+        # image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding # removed hao
+    image, annos, mask_miss = keypoint_resize_random_crop(image, annos, mask_miss, size=(hin, win))
 
     # generate result maps including keypoints heatmap, pafs and mask
     h, w, _ = np.shape(image)
