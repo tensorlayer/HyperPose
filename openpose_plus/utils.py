@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.distance import cdist
 import tensorflow as tf
-from config import config
+from train_config import config
 from pycocotools.coco import COCO, maskUtils
 from tensorlayer import logging
 from tensorlayer.files.utils import (del_file, folder_exists, maybe_download_and_extract)

@@ -22,7 +22,7 @@ export PYTHONUNBUFFERED=1
 MODEL_DIR=${HOME}/Downloads
 DATA_DIR=$HOME/var/data/openpose
 
-IMAGES=$(ls ${DATA_DIR}/examples/media/*.png | sort | tr '\n' ',')
+IMAGES=$(ls ${DATA_DIR}/examples/media/*.jpg | sort | tr '\n' ',')
 
 REPEAT=10
 LIMIT=1
@@ -41,7 +41,7 @@ profile_model() {
         return
     fi
 
-    ./test_inference.py --path-to-npz=${MODEL_DIR}/$npz \
+    ./examples/example-inference-1.py --path-to-npz=${MODEL_DIR}/$npz \
         --base-model=$model \
         --images=${IMAGES} \
         --data-format=$data_format \
@@ -51,10 +51,10 @@ profile_model() {
 }
 
 mkdir -p logs
-# measure profile_model vggtiny new-models/hao18/pose350000.npz NHWC
+measure profile_model vggtiny new-models/hao18/pose350000.npz NHWC
 # measure profile_model vggtiny new-models/hao18/pose350000.npz NCHW
 # measure profile_model mobilenet mbn280000.npz NHWC
 # measure profile_model vgg vgg450000_no_cpm.npz NHWC
 # measure profile_model vgg vgg450000_no_cpm.npz NCHW
 # measure profile_model hao28_experimental hao28/pose345000.npz NHWC
-measure profile_model hao28_experimental hao28/pose345000.npz NCHW
+# measure profile_model hao28_experimental hao28/pose345000.npz NCHW

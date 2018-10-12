@@ -17,7 +17,6 @@ __pycache__
 /cmake-build
 /coco
 /data
-/models
 /tensorlayer
 /vis
 cmake_install.cmake
@@ -29,7 +28,6 @@ CTestTestfile.cmake
 inference/*png
 libstdtensor-prefix
 libstdtracer-prefix
-models_hao*
 test.py
 test.py
 Testing

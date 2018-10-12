@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-cd $(dirname $0)/../inference
+cd $(dirname $0)/../openpose_plus/inference
 
 [ ! -d pafprocess ] && svn export https://github.com/ildoonet/tf-pose-estimation/trunk/tf_pose/pafprocess
 cd pafprocess
