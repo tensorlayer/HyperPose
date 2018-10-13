@@ -1,6 +1,9 @@
 # https://docs.travis-ci.com/user/languages/python/
 language: python
 
+# https://docs.travis-ci.com/user/caching/#pip-cache
+cache: pip
+
 # https://docs.travis-ci.com/user/docker/
 services:
 - docker
@@ -21,7 +24,7 @@ before_install:
 - ./scripts/download-test-data.sh
 
 script:
-- docker build --rm -t openpose-plus-test:snapshot -f docker/Dockerfile.builder-cpu-bionic .
+- docker build --rm -t openpose-plus-test:snapshot -f docker/Dockerfile.travis-ci .
 - docker run --rm -it openpose-plus-test:snapshot sh -c './configure && make && make test'
 - python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vgg
 - python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vggtiny
