@@ -26,7 +26,7 @@ be deployed in the wild. To resolve this, we develop **OpenPose-Plus**, a high-p
 ## Custom Model Training
 
 Training the model is implemented using TensorFlow. To run `train.py`, you would need to install packages, shown
-in [requirements.txt](https://github.com/tensorlayer/openpose-plus/blob/master/requirements.txt), in your virtual environment (Python <=3.6):
+in [requirements.txt](https://github.com/tensorlayer/openpose-plus/blob/master/requirements.txt), in your virtual environment (**Python 3**):
 
 ```bash
 pip install -r requirements.txt
