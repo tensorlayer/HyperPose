@@ -2,13 +2,17 @@
 set -e
 
 make
-echo
+# echo
 
 MODEL_DIR=$HOME/Downloads
 MODEL_FILE=${MODEL_DIR}/hao28-600000-256x384.uff
 
+MODEL_URL=https://media.githubusercontent.com/media/tensorlayer/pretrained-models/master/models/openpose-plus/hao28-600000-256x384.uff
+
 if [ ! -f ${MODEL_FILE} ]; then
-    echo "${MODEL_FILE} NOT exist, please generate it from trained npz. See export-uff.sh for more details."
+    echo "${MODEL_FILE} NOT exist."
+    echo "Please generate it from trained npz, or download demo from ${MODEL_URL}"
+    echo "See export-uff.sh for more details."
     exit 1
 fi
 
