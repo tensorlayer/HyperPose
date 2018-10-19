@@ -1,29 +1,37 @@
 #!/usr/bin/env python3
 
+
+#!/usr/bin/env python3
+
+import math
+import multiprocessing
 import os
 import time
-import math
+import sys
+
 import cv2
 import matplotlib
-
 matplotlib.use('Agg')
+
 import numpy as np
-import multiprocessing
-import _pickle as cPickle
 import tensorflow as tf
 import tensorlayer as tl
-from models import model
-from config import config
 from pycocotools.coco import maskUtils
-from tensorlayer.prepro import (keypoint_random_crop, keypoint_resize_random_crop, keypoint_random_flip, keypoint_random_resize,
-                                keypoint_random_resize_shortestedge, keypoint_random_rotate)
-from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset, tf_repeat)
+
+import _pickle as cPickle
+
+sys.path.append('.')
+
+from train_config import config
+from openpose_plus.models import model
+from openpose_plus.utils import PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset, tf_repeat
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
 
 tl.files.exists_or_mkdir(config.LOG.vis_path, verbose=False)  # to save visualization results
 tl.files.exists_or_mkdir(config.MODEL.model_path, verbose=False)  # to save model files
+
 
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -151,7 +159,7 @@ def _data_aug_fn(image, ground_truth):
         #     image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6)) # removed hao
         # random crop
         # image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding # removed hao
-    image, annos, mask_miss = keypoint_resize_random_crop(image, annos, mask_miss, size=(hin, win))
+    image, annos, mask_miss = tl.prepro.keypoint_resize_random_crop(image, annos, mask_miss, size=(hin, win))
 
     # generate result maps including keypoints heatmap, pafs and mask
     h, w, _ = np.shape(image)
