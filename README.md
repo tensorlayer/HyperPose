@@ -53,7 +53,7 @@ Train your model by running:
 python3 train.py
 ```
 
-## Additional steps for training on Windows
+### Additional steps for training on Windows
 
 There are a few extra steps to follow with Windows. Please make sure you have the following prerequisites installed
 * [git](https://git-scm.com/downloads)
