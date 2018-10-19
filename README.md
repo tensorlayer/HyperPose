@@ -55,18 +55,19 @@ python3 train.py
 
 ### Additional steps for training on Windows
 
-There are a few extra steps to follow with Windows. Please make sure you have the following prerequisites installed
+There are a few extra steps to follow with Windows. Please make sure you have the following prerequisites installed:
 * [git](https://git-scm.com/downloads)
 * [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
 * [wget](https://eternallybored.org/misc/wget/)
 
-Download the wget executable and copy it into one of your folders in System path to use the wget command from anywhere. Use the `path` command in command line to find the folders. Paste the wget.exe in one of the folders given by `path`. An example folder is `C:\Windows` 
+Download the wget executable and copy it into one of your folders in System path to use the wget command from anywhere. Use the `path` command in command line to find the folders. Paste the wget.exe in one of the folders given by `path`. An example folder is `C:\Windows`.
 
-pycocotools is not supported by default on Windows. Use the pycocotools build for Windows at [here](https://github.com/philferriere/cocoapi)
-Use `pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI` instead of `pip install pycocotools`
-Visual C++ Build Tools are required by the build.
+pycocotools is not supported by default on Windows. Use the pycocotools build for Windows at [here](https://github.com/philferriere/cocoapi). Instead of `pip install pycocotools`, using:
+```bash
+pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
+```
 
-Everything else is the same.
+Visual C++ Build Tools are required by the build. Everything else is the same.
 
 
 ## Training using Multiple GPUs
