@@ -19,7 +19,6 @@ before_install:
 - sudo apt install -y swig # FIXME: can't install libopencv-dev on travis CI
 - pip install -r requirements.txt
 - pip install pycocotools  # must be installed after cython is installed
-- pip install https://github.com/tensorlayer/tensorlayer/archive/bn.zip
 - ./scripts/install-pafprocess.sh
 - ./scripts/download-test-data.sh
 
