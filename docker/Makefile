@@ -10,3 +10,8 @@ $(TENSORRT_REPO_DEB):
 
 run:
 	docker run --rm -it $(TAG) bash
+
+BUILDER_CPU_TAG = tensorlayer/openpose-plus-builder:cpu-ubuntu18
+
+cpu_builder:
+	docker build --rm -t $(BUILDER_CPU_TAG) -f Dockerfile.builder-cpu-ubuntu18 .

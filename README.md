@@ -26,11 +26,11 @@ be deployed in the wild. To resolve this, we develop **OpenPose-Plus**, a high-p
 ## Custom Model Training
 
 Training the model is implemented using TensorFlow. To run `train.py`, you would need to install packages, shown
-in [requirements.txt](https://github.com/tensorlayer/openpose-plus/blob/master/requirements.txt), in your virtual environment (Python <=3.6):
+in [requirements.txt](https://github.com/tensorlayer/openpose-plus/blob/master/requirements.txt), in your virtual environment (**Python 3**):
 
 ```bash
-pip install -r requirements.txt
-pip install pycocotools
+pip3 install -r requirements.txt
+pip3 install pycocotools
 ```
 
 `train.py` automatically download MSCOCO 2017 dataset into `dataset/coco17`.
@@ -50,8 +50,25 @@ You can use `train_config.py` to configure the training. `config.DATA.train_data
 Train your model by running:
 
 ```bash
-python train.py
+python3 train.py
 ```
+
+### Additional steps for training on Windows
+
+There are a few extra steps to follow with Windows. Please make sure you have the following prerequisites installed:
+* [git](https://git-scm.com/downloads)
+* [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+* [wget](https://eternallybored.org/misc/wget/)
+
+Download the wget executable and copy it into one of your folders in System path to use the wget command from anywhere. Use the `path` command in command line to find the folders. Paste the wget.exe in one of the folders given by `path`. An example folder is `C:\Windows`.
+
+pycocotools is not supported by default on Windows. Use the pycocotools build for Windows at [here](https://github.com/philferriere/cocoapi). Instead of `pip install pycocotools`, using:
+```bash
+pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
+```
+
+Visual C++ Build Tools are required by the build. Everything else is the same.
+
 
 ## Training using Multiple GPUs
 
@@ -63,7 +80,7 @@ We also provide an example script (`scripts/install-mpi.sh`) to help you go thro
 Once OpenMPI is installed, you can install Horovod python library as follows:
 
 ```bash
-pip install horovod
+pip3 install horovod
 ```
 
 To enable parallel training, in `train_config.py`, set the `config.TRAIN.train_mode` to `parallel` (default is `single`).
@@ -75,7 +92,7 @@ $ mpirun -np 4 \
     -bind-to none -map-by slot \
     -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
     -mca pml ob1 -mca btl ^openib \
-    python train.py
+    python3 train.py
 ```
 
 (ii) To run on 4 machines with 4 GPUs each:
@@ -86,7 +103,7 @@ $ mpirun -np 16 \
     -bind-to none -map-by slot \
     -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
     -mca pml ob1 -mca btl ^openib \
-    python train.py
+    python3 train.py
 ```
 
 
