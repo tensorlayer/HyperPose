@@ -61,8 +61,8 @@ def get_graph_path(model_name):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Tensorflow Openpose Inference')
-    parser.add_argument('--resize', type=str, default='0x0', help='if provided, resize images before they are processed. default=0x0, Recommends : 432x368 or 656x368 or 1312x736 ')
-    parser.add_argument('--resize-out-ratio', type=float, default=8.0, help='if provided, resize heatmaps before they are post-processed. default=8.0')
+    # parser.add_argument('--resize', type=str, default='0x0', help='if provided, resize images before they are processed. default=0x0, Recommends : 432x368 or 656x368 or 1312x736 ')
+    # parser.add_argument('--resize-out-ratio', type=float, default=8.0, help='if provided, resize heatmaps before they are post-processed. default=8.0')
     parser.add_argument('--base-model', type=str, default='vgg', help='vgg | mobilenet')
     parser.add_argument('--path-to-npz', type=str, default='', help='path to npz', required=True)
     parser.add_argument('--data-format', type=str, default='channels_last', help='channels_last | channels_first.')
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     else:
         keys = [keys[args.data_idx]]
     logger.info('validation %s set size=%d' % (coco_json_file, len(keys)))
-    write_json = 'etcs/%s_%s_%f.json' % (args.model, args.resize, args.resize_out_ratio)
+    write_json = '%s.json' % (args.model)
 
     # logger.debug('initialization %s : %s' % (args.model, get_graph_path(args.model)))
     # w, h = model_wh(args.resize)
