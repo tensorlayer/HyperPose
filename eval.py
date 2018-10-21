@@ -41,24 +41,6 @@ def write_coco_json(human, image_w, image_h):
     return keypoints
 
 
-def get_graph_path(model_name):
-    dyn_graph_path = {
-        'cmu': 'graph/cmu/graph_opt.pb',
-        'mobilenet_thin': 'graph/mobilenet_thin/graph_opt.pb'
-    }
-
-    base_data_dir = dirname(dirname(abspath(__file__)))
-    if os.path.exists(os.path.join(base_data_dir, 'models')):
-        base_data_dir = os.path.join(base_data_dir, 'models')
-    else:
-        base_data_dir = os.path.join(base_data_dir, 'tf_pose_data')
-
-    graph_path = os.path.join(base_data_dir, dyn_graph_path[model_name])
-    if os.path.isfile(graph_path):
-        return graph_path
-
-    raise Exception('Graph file doesn\'t exist, path=%s' % graph_path)
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Tensorflow Openpose Inference')
     # parser.add_argument('--resize', type=str, default='0x0', help='if provided, resize images before they are processed. default=0x0, Recommends : 432x368 or 656x368 or 1312x736 ')
