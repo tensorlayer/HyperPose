@@ -45,7 +45,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='inference')
     parser.add_argument('--path-to-npz', type=str, default='', help='path to npz', required=True)
     parser.add_argument('--images', type=str, default='', help='comma separate list of image filenames', required=True)
-    parser.add_argument('--base-model', type=str, default='vgg', help='vgg | mobilenet')
+    parser.add_argument('--base-model', type=str, default='vgg', help='vgg | vggtiny | mobilenet')
     parser.add_argument('--data-format', type=str, default='channels_last', help='channels_last | channels_first.')
     parser.add_argument('--plot', type=bool, default=False, help='draw the results')
     parser.add_argument('--repeat', type=int, default=1, help='repeat the images for n times for profiling.')
