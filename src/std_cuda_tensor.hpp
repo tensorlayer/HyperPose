@@ -2,11 +2,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <stdtracer>
 
 #include <cuda_runtime.h>
 
-#include <bits/std_shape.hpp>
+#include <bits/std_shape.hpp>  // FIXME: don't include internal header
+
+#include "trace.hpp"
 
 using rank_t = ttl::internal::rank_t;
 template <rank_t r> using shape = ttl::internal::basic_shape<r>;
@@ -33,21 +34,21 @@ template <typename R, rank_t r> class basic_cuda_tensor
           count(shape_.size()),
           data_(cuda_mem_allocator<R>()(count))
     {
-        TRACE(__func__);
+        TRACE_SCOPE(__func__);
     }
 
     R *data() { return data_.get(); }
 
     void fromHost(void *buffer)
     {
-        TRACE("basic_cuda_tensor::fromHost");
+        TRACE_SCOPE("basic_cuda_tensor::fromHost");
         cudaMemcpy(data_.get(), buffer, count * sizeof(R),
                    cudaMemcpyHostToDevice);
     }
 
     void partialFromHost(void *buffer, int batch_size, int max_batch_size)
     {
-        TRACE("basic_cuda_tensor::partialFromHost");
+        TRACE_SCOPE("basic_cuda_tensor::partialFromHost");
         cudaMemcpy(data_.get(), buffer,
                    count / max_batch_size * batch_size * sizeof(R),
                    cudaMemcpyHostToDevice);
@@ -55,14 +56,14 @@ template <typename R, rank_t r> class basic_cuda_tensor
 
     void toHost(void *buffer)
     {
-        TRACE("basic_cuda_tensor::toHost");
+        TRACE_SCOPE("basic_cuda_tensor::toHost");
         cudaMemcpy(buffer, data_.get(), count * sizeof(R),
                    cudaMemcpyDeviceToHost);
     }
 
     void partialToHost(void *buffer, int batch_size, int max_batch_size)
     {
-        TRACE("basic_cuda_tensor::partialToHost");
+        TRACE_SCOPE("basic_cuda_tensor::partialToHost");
         cudaMemcpy(buffer, data_.get(),
                    count / max_batch_size * batch_size * sizeof(R),
                    cudaMemcpyDeviceToHost);

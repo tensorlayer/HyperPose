@@ -4,10 +4,10 @@
 #include <cassert>
 #include <memory>
 
+#include "trace.hpp"
 #include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
 #include <stdtensor>
-#include <stdtracer>
 
 using ttl::tensor;
 using ttl::tensor_ref;
@@ -75,11 +75,11 @@ pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
 void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
                                    int start_idx)
 {
-    TRACE(__func__);
+    TRACE_SCOPE(__func__);
     assert(image_files.size() <= batch_size);
     std::vector<cv::Mat> resized_images;
     {
-        TRACE("batch read images");
+        TRACE_SCOPE("batch read images");
         for (int i = 0; i < image_files.size(); ++i) {
             input_image(image_files[i].data(), height, width,
                         hwc_images[i].data(), chw_images[i].data(), flip_rgb);
@@ -88,21 +88,21 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
         }
     }
     {
-        TRACE("batch run tensorRT");
+        TRACE_SCOPE("batch run tensorRT");
         (*compute_feature_maps)({chw_images.data()},
                                 {confs.data(), pafs.data()},
                                 image_files.size());
     }
     {
-        TRACE("batch run process PAF and draw results");
+        TRACE_SCOPE("batch run process PAF and draw results");
         for (int i = 0; i < image_files.size(); ++i) {
             const auto humans = [&]() {
-                TRACE("run paf_process");
+                TRACE_SCOPE("run paf_process");
                 return (*process_paf)(confs[i].data(), pafs[i].data(), true);
             }();
             auto resized_image = resized_images[i];
             {
-                TRACE("draw_results");
+                TRACE_SCOPE("draw_results");
                 std::cout << "got " << humans.size() << " humans" << std::endl;
                 for (const auto &h : humans) {
                     h.print();
