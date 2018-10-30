@@ -4,6 +4,7 @@ PROJECT(openpose-plus)
 SET(CMAKE_CXX_STANDARD 14)
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
+INCLUDE(cmake/3rdparty.cmake)
 
 OPTION(BUILD_FAKE "Build fake target without CUDA libraries." OFF)
 
@@ -14,7 +15,6 @@ ELSE()
     INCLUDE(cmake/openpose-plus.cmake)
     INCLUDE(cmake/package.cmake)
 ENDIF()
-INCLUDE(cmake/3rdparty.cmake)
 INCLUDE(cmake/examples.cmake)
 
 ENABLE_TESTING()
