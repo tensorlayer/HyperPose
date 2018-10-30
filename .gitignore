@@ -1,5 +1,5 @@
-.DS_Store
 __pycache__
+.DS_Store
 .idea
 *.a
 *.avi
@@ -13,10 +13,12 @@ __pycache__
 *.uff
 /3rdparty
 /bazel-*
+/bin
 /checkpoints
 /cmake-build
 /coco
 /data
+/lib
 /tensorlayer
 /vis
 cmake_install.cmake
@@ -24,12 +26,16 @@ CMakeCache.txt
 CMakeFiles
 cocoapi-master/
 cocoapi/
+compile_commands.json
+CPackConfig.cmake
+CPackSourceConfig.cmake
 CTestTestfile.cmake
 inference/*png
 libstdtensor-prefix
 libstdtracer-prefix
+Makefile
 test.py
 test.py
 Testing
-venv
 third_party
+venv

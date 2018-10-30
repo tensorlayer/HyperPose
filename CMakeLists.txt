@@ -6,10 +6,14 @@ SET(CMAKE_CXX_STANDARD 14)
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
 INCLUDE(cmake/3rdparty.cmake)
 
+OPTION(WITH_TRACE "Build with tracing library." OFF)
 OPTION(BUILD_FAKE "Build fake target without CUDA libraries." OFF)
 
+IF(ENABLE_TRACE)
+    ADD_DEFINITIONS(-DENABLE_TRACE)
+ENDIF()
+
 IF(BUILD_FAKE)
-    MESSAGE(fake)
     ADD_LIBRARY(openpose-plus src/fake_openpose-plus.cpp)
 ELSE()
     INCLUDE(cmake/openpose-plus.cmake)
