@@ -8,7 +8,7 @@ SET(STDTRACER_GIT_URL
     STRING
     "URL for clone stdtracer")
 
-EXTERNALPROJECT_ADD(libstdtracer
+EXTERNALPROJECT_ADD(stdtracer-repo
                     GIT_REPOSITORY
                     ${STDTRACER_GIT_URL}
                     GIT_TAG
@@ -19,19 +19,13 @@ EXTERNALPROJECT_ADD(libstdtracer
                     -DBUILD_EXAMPLES=0
                     -DCMAKE_CXX_FLAGS=-fPIC)
 
-# TODO: write a cmake macro
-ADD_LIBRARY(tracer STATIC)
-SET_TARGET_PROPERTIES(tracer PROPERTIES LINKER_LANGUAGE CXX)
-ADD_DEPENDENCIES(tracer libstdtracer)
-TARGET_LINK_LIBRARIES(tracer stdtracer)
-
 SET(STDTENSOR_GIT_URL
     https://github.com/lgarithm/stdtensor.git
     CACHE
     STRING
     "URL for clone stdtensor")
 
-EXTERNALPROJECT_ADD(libstdtensor
+EXTERNALPROJECT_ADD(stdtensor-repo
                     GIT_REPOSITORY
                     ${STDTENSOR_GIT_URL}
                     GIT_TAG
@@ -41,9 +35,15 @@ EXTERNALPROJECT_ADD(libstdtensor
                     -DBUILD_TESTS=0
                     -DBUILD_EXAMPLES=0)
 
-ADD_LIBRARY(stdtensor STATIC)
-SET_TARGET_PROPERTIES(stdtensor PROPERTIES LINKER_LANGUAGE CXX)
-ADD_DEPENDENCIES(stdtensor libstdtensor)
-
 INCLUDE_DIRECTORIES(${THIRDPARTY_PREFIX}/include)
+
+# a virtual target for other targets to depend on
+ADD_CUSTOM_TARGET(all-external-projects)
+ADD_DEPENDENCIES(all-external-projects stdtracer-repo stdtensor-repo)
+
 LINK_DIRECTORIES(${THIRDPARTY_PREFIX}/lib)
+
+FUNCTION(ADD_GLOBAL_DEPS target)
+    ADD_DEPENDENCIES(${target} all-external-projects)
+    TARGET_LINK_LIBRARIES(${target} stdtracer)
+ENDFUNCTION()

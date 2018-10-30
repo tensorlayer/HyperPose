@@ -11,8 +11,6 @@ LINK_DIRECTORIES(${CUDA_RT}/lib)
 
 ADD_LIBRARY(openpose-plus src/cudnn.cpp src/paf.cpp src/uff-runner.cpp)
 TARGET_LINK_LIBRARIES(openpose-plus
-                      tracer
-                      stdtensor
                       cudnn
                       cudart
                       nvinfer
@@ -20,6 +18,5 @@ TARGET_LINK_LIBRARIES(openpose-plus
                       opencv_core
                       opencv_imgproc)
 TARGET_INCLUDE_DIRECTORIES(openpose-plus
-                           PRIVATE
-                           ${CUDA_RT}/include
-                           ${CUDA_RT}/include/crt)
+                           PRIVATE ${CUDA_RT}/include ${CUDA_RT}/include/crt)
+ADD_GLOBAL_DEPS(openpose-plus)

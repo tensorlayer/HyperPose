@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-#!/usr/bin/env python3
-
 import math
 import multiprocessing
 import os
@@ -320,7 +318,8 @@ def parallel_train(training_dataset):
     l2_loss = net.l2_loss
 
     global_step = tf.Variable(1, trainable=False)
-    scaled_lr = lr_init * hvd.size()  # Horovod: scale the learning rate linearly
+    # scaled_lr = lr_init * hvd.size()  # Horovod: scale the learning rate linearly
+    scaled_lr = lr_init  # Linear scaling rule is not working in openpose training.
     with tf.variable_scope('learning_rate'):
         lr_v = tf.Variable(scaled_lr, trainable=False)
 
