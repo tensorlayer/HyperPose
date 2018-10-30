@@ -1,9 +1,9 @@
 #include <chrono>
 #include <memory>
 
+#include "trace.hpp"
 #include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
-#include <stdtracer>
 
 #include "stream_detector.h"
 
@@ -26,7 +26,7 @@ DEFINE_string(image_files, "", "Comma separated list of pathes to image.");
 
 int main(int argc, char *argv[])
 {
-    TRACE(__func__);
+    TRACE_SCOPE(__func__);
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     // TODO: derive from model

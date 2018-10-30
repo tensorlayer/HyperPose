@@ -5,7 +5,6 @@
 
 #include <opencv2/opencv.hpp>
 #include <stdtensor>
-#include <stdtracer>
 
 using ttl::tensor;
 
@@ -13,6 +12,7 @@ using ttl::tensor;
 
 #include "channel.hpp"
 #include "input.h"
+#include "trace.hpp"
 #include "vis.h"
 
 struct default_inputer : stream_detector::inputer_t {
@@ -83,7 +83,7 @@ class stream_detector_impl : public stream_detector
 
     void run(inputer_t &in, handler_t &handle, int count) override
     {
-        TRACE(__func__);
+        TRACE_SCOPE(__func__);
         std::vector<std::thread> ths;
 
         for (int i = 0; i < buffer_size; ++i) {

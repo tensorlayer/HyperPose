@@ -2,7 +2,6 @@
 #include <functional>
 
 #include <stdtensor>
-#include <stdtracer>
 
 using ttl::tensor;
 using ttl::tensor_ref;
@@ -10,6 +9,7 @@ using ttl::tensor_ref;
 #include <openpose-plus.h>
 
 #include "post-process.h"
+#include "trace.hpp"
 
 struct VectorXY {
     float x;
@@ -40,9 +40,9 @@ class paf_processor_impl : public paf_processor
         const float *paf_ /* [n_connections * 2, input_height, input_width] */,
         bool use_gpu)
     {
-        TRACE("paf_processor_impl::operator()");
+        TRACE_SCOPE("paf_processor_impl::operator()");
         {
-            TRACE("resize heatmap and PAF");
+            TRACE_SCOPE("resize heatmap and PAF");
             resize_area(tensor_ref<float, 3>((float *)conf_, n_joins,
                                              input_height, input_width),
                         upsample_conf);
@@ -178,7 +178,7 @@ class paf_processor_impl : public paf_processor
     getHumans(const std::vector<peak_info> &all_peaks,
               const std::vector<std::vector<Connection>> &all_connections)
     {
-        TRACE(__func__);
+        TRACE_SCOPE(__func__);
 
         std::vector<human_ref_t> human_refs;
         for (int pair_id = 0; pair_id < COCO_N_PAIRS; pair_id++) {
@@ -266,7 +266,7 @@ class paf_processor_impl : public paf_processor
                       const std::vector<peak_info> &all_peaks,
                       const std::vector<std::vector<int>> &peak_ids_by_channel)
     {
-        TRACE(__func__);
+        TRACE_SCOPE(__func__);
 
         std::vector<std::vector<Connection>> all_connections;
         for (int pair_id = 0; pair_id < COCO_N_PAIRS; pair_id++) {
@@ -281,7 +281,7 @@ class paf_processor_impl : public paf_processor
             const std::vector<std::vector<int>> &peak_ids_by_channel,
             const tensor<float, 3> &pafmap /* [2c, h, w] */)
     {
-        TRACE("paf_processor_impl::process");
+        TRACE_SCOPE("paf_processor_impl::process");
 
         const std::vector<std::vector<Connection>> all_connections =
             getAllConnections(pafmap, all_peaks, peak_ids_by_channel);
@@ -290,7 +290,7 @@ class paf_processor_impl : public paf_processor
         printf("got %lu humans\n", human_refs.size());
 
         {
-            TRACE("generate output");
+            TRACE_SCOPE("generate output");
             std::vector<human_t> humans;
             for (const auto &hr : human_refs) {
                 human_t human;

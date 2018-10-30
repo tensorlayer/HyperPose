@@ -2,10 +2,10 @@
 #include <memory>
 #include <thread>
 
+#include "trace.hpp"
 #include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
 #include <stdtensor>
-#include <stdtracer>
 
 using ttl::tensor_ref;
 
@@ -113,7 +113,7 @@ struct handler : screen_t, stream_detector::handler_t {
 
 int main(int argc, char *argv[])
 {
-    TRACE(__func__);
+    TRACE_SCOPE(__func__);
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     // TODO: derive from model

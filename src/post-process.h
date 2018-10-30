@@ -8,7 +8,6 @@
 #include <cuda_runtime.h>
 #include <opencv2/opencv.hpp>
 #include <stdtensor>
-#include <stdtracer>
 
 using ttl::tensor;
 using ttl::tensor_ref;
@@ -17,6 +16,7 @@ using ttl::tensor_ref;
 
 #include "cudnn.hpp"
 #include "std_cuda_tensor.hpp"
+#include "trace.hpp"
 
 // tf.image.resize_area
 // This is the same as OpenCV's INTER_AREA.
@@ -24,7 +24,7 @@ using ttl::tensor_ref;
 template <typename T>
 void resize_area(const tensor_ref<T, 3> &input, tensor<T, 3> &output)
 {
-    TRACE(__func__);
+    TRACE_SCOPE(__func__);
 
     const int channel = input.shape().dims[0];
     const int height = input.shape().dims[1];
@@ -155,27 +155,27 @@ template <typename T> class peak_finder_t
     std::vector<peak_info> find_peak_coords(const tensor<float, 3> &heatmap,
                                             float threshold, bool use_gpu)
     {
-        TRACE(__func__);
+        TRACE_SCOPE(__func__);
 
         {
-            TRACE("find_peak_coords::smooth");
+            TRACE_SCOPE("find_peak_coords::smooth");
             smooth(heatmap, smoothed_cpu, ksize);
         }
 
         if (use_gpu) {
-            TRACE("find_peak_coords::max pooling on GPU");
+            TRACE_SCOPE("find_peak_coords::max pooling on GPU");
             pool_input_gpu.fromHost(smoothed_cpu.data());
             same_max_pool_3x3_gpu(pool_input_gpu.data(), pooled_gpu.data());
             // cudaDeviceSynchronize();
             pooled_gpu.toHost(pooled_cpu.data());
         } else {
-            TRACE("find_peak_coords::max pooling on CPU");
+            TRACE_SCOPE("find_peak_coords::max pooling on CPU");
             same_max_pool_3x3(smoothed_cpu, pooled_cpu);
         }
 
         std::vector<peak_info> all_peaks;
         {
-            TRACE("find_peak_coords::find all peaks");
+            TRACE_SCOPE("find_peak_coords::find all peaks");
 
             const auto maybe_add_peak_info = [&](int k, int i, int j, int off) {
                 if (k < COCO_N_PARTS &&  //

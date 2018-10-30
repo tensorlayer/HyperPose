@@ -3,7 +3,8 @@
 #include <cstdlib>
 
 #include <cudnn.h>
-#include <stdtracer>
+
+#include "trace.hpp"
 
 /* status checker */
 
@@ -105,7 +106,7 @@ struct PoolingDescriptorDeleter {
 
 inline cudnnHandle_t createHandle()
 {
-    TRACE(__func__);
+    TRACE_SCOPE(__func__);
 
     cudnnHandle_t handle;
     check << cudnnCreate(&handle);

@@ -1,7 +1,47 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
-# mkdir -p cmake-build
-# cd cmake-build
+CMAKE_FLAGS=
 
-cmake . -DBUILD_FAKE=1
+add_cmake_flag() {
+    echo "usinig $1=$2"
+    CMAKE_FLAGS="$CMAKE_FLAGS -D$1=$2"
+}
+
+parse_args() {
+    for i in "$@"; do
+        case $i in
+        --prefix=*)
+            PREFIX="${i#*=}"
+            ;;
+        --with-trace)
+            WITH_TRACE=1
+            ;;
+        --build-fake)
+            BUILD_FAKE=1
+            ;;
+        *)
+            echo "unknown argument $1"
+            exit
+            ;;
+        esac
+    done
+}
+
+add_cmake_flags() {
+    if [ "${BUILD_FAKE}" == 1 ]; then
+        add_cmake_flag BUILD_FAKE ON
+    fi
+    if [ "${WITH_TRACE}" == 1 ]; then
+        add_cmake_flag WITH_TRACE ON
+    fi
+
+    add_cmake_flag CMAKE_EXPORT_COMPILE_COMMANDS ON
+    add_cmake_flag CMAKE_BUILD_TYPE Release
+    add_cmake_flag EXECUTABLE_OUTPUT_PATH $(pwd)/bin
+    add_cmake_flag LIBRARY_OUTPUT_PATH $(pwd)/lib
+}
+
+parse_args $@
+add_cmake_flags
+cmake . $CMAKE_FLAGS

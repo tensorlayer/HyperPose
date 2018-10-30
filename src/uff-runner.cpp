@@ -11,12 +11,12 @@
 #include <NvInfer.h>
 #include <NvUffParser.h>
 #include <NvUtils.h>
-#include <stdtracer>
 
 #include <openpose-plus.h>
 
 #include "logger.h"
 #include "std_cuda_tensor.hpp"
+#include "trace.hpp"
 
 using input_info_t = std::vector<std::pair<std::string, std::vector<int>>>;
 
@@ -97,7 +97,7 @@ create_engine(const std::string &model_file, const input_info_t &input_info,
               const std::vector<std::string> &output_names, int max_batch_size,
               bool use_f16)
 {
-    TRACE(__func__);
+    TRACE_SCOPE(__func__);
     destroy_ptr<nvuffparser::IUffParser> parser(nvuffparser::createUffParser());
     for (const auto &info : input_info) {
         const auto dims = info.second;
@@ -159,7 +159,7 @@ uff_runner_impl::~uff_runner_impl() { nvuffparser::shutdownProtobufLibrary(); }
 
 void uff_runner_impl::createBuffers_(int batch_size)
 {
-    TRACE(__func__);
+    TRACE_SCOPE(__func__);
 
     const int n = engine_->getNbBindings();
     for (int i = 0; i < n; ++i) {
@@ -180,11 +180,11 @@ void uff_runner_impl::operator()(const std::vector<void *> &inputs,
                                  const std::vector<void *> &outputs,
                                  int batch_size)
 {
-    TRACE("uff_runner_impl::operator()");
+    TRACE_SCOPE("uff_runner_impl::operator()");
     assert(batch_size <= max_batch_size);
 
     {
-        TRACE("copy input from host");
+        TRACE_SCOPE("copy input from host");
         int idx = 0;
         for (int i = 0; i < buffers_.size(); ++i) {
             if (engine_->bindingIsInput(i)) {
@@ -195,7 +195,7 @@ void uff_runner_impl::operator()(const std::vector<void *> &inputs,
     }
 
     {
-        TRACE("uff_runner_impl::context->execute");
+        TRACE_SCOPE("uff_runner_impl::context->execute");
         auto context = engine_->createExecutionContext();
         std::vector<void *> buffer_ptrs_(buffers_.size());
         for (int i = 0; i < buffers_.size(); ++i) {
@@ -206,7 +206,7 @@ void uff_runner_impl::operator()(const std::vector<void *> &inputs,
     }
 
     {
-        TRACE("copy output to host");
+        TRACE_SCOPE("copy output to host");
         int idx = 0;
         for (int i = 0; i < buffers_.size(); ++i) {
             if (!engine_->bindingIsInput(i)) {

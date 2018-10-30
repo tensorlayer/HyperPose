@@ -24,7 +24,7 @@ before_install:
 
 script:
 - docker build --rm -t openpose-plus-test:snapshot -f docker/Dockerfile.travis-ci .
-- docker run --rm -it openpose-plus-test:snapshot sh -c './configure && make && make test'
+- docker run --rm -it openpose-plus-test:snapshot sh -c './configure --build-fake --with-trace && make && make test'
 - python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vgg
 - python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vggtiny
 - python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=mobilenet
