@@ -1,6 +1,9 @@
 # https://docs.travis-ci.com/user/languages/python/
 language: python
 
+# https://docs.travis-ci.com/user/caching/#pip-cache
+cache: pip
+
 # https://docs.travis-ci.com/user/docker/
 services:
 - docker
@@ -12,17 +15,17 @@ sudo: required
 
 before_install:
 - docker info
+- sudo apt update
 - sudo apt install -y swig # FIXME: can't install libopencv-dev on travis CI
 - pip install -r requirements.txt
 - pip install pycocotools  # must be installed after cython is installed
-- pip install https://github.com/tensorlayer/tensorlayer/archive/bn.zip
 - ./scripts/install-pafprocess.sh
 - ./scripts/download-test-data.sh
 
 script:
-- docker build --rm -t openpose-plus-test:snapshot -f docker/Dockerfile.builder-cpu-bionic .
+- docker build --rm -t openpose-plus-test:snapshot -f docker/Dockerfile.travis-ci .
 - docker run --rm -it openpose-plus-test:snapshot sh -c './configure && make && make test'
-- python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vgg
-- python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vggtiny
-- python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=mobilenet
-- python ./test_inference.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=hao28_experimental
+- python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vgg
+- python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vggtiny
+- python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=mobilenet
+- python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=hao28_experimental

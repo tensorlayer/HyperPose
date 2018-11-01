@@ -2,8 +2,8 @@ import numpy as np
 import scipy.stats as st
 import tensorflow as tf
 
-from inference import common
-from inference.common import CocoPart
+from . import common
+from .common import CocoPart
 
 
 def _normalize(t):
@@ -82,7 +82,7 @@ class BodyPart:
 
 
 def estimate_paf(peaks, heat_mat, paf_mat):
-    from inference.pafprocess import pafprocess  # TODO: don't depend on it
+    from .pafprocess import pafprocess  # TODO: don't depend on it
     pafprocess.process_paf(peaks, heat_mat, paf_mat)
 
     humans = []
@@ -141,11 +141,12 @@ class PostProcessor(object):
             heatmap_input = heatmap_input.transpose(p)
             pafmap_input = pafmap_input.transpose(p)
 
-        peaks, heatmap, pafmap = self.sess.run([self.peaks, self.heapmap_upsample, self.paf_upsample],
-                                               feed_dict={
-                                                   self.heatmap_input: [heatmap_input],
-                                                   self.paf_input: [pafmap_input],
-                                               })
+        peaks, heatmap, pafmap = self.sess.run(
+            [self.peaks, self.heapmap_upsample, self.paf_upsample],
+            feed_dict={
+                self.heatmap_input: [heatmap_input],
+                self.paf_input: [pafmap_input],
+            })
 
         humans = estimate_paf(peaks[0], heatmap[0], pafmap[0])
         return humans, heatmap[0], pafmap[0]

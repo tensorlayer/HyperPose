@@ -4,7 +4,7 @@ import time
 import tensorflow as tf
 import tensorlayer as tl
 
-from inference.post_process import PostProcessor
+from .post_process import PostProcessor
 
 logger = logging.getLogger('TfPoseEstimator')
 logger.setLevel(logging.DEBUG)
@@ -33,10 +33,10 @@ class TfPoseEstimator:
         self.persistent_sess.close()
 
     def inference(self, npimg):
-        heatmap, pafmap = self.persistent_sess.run([self.tensor_heatmap, self.tensor_paf],
-                                                   feed_dict={
-                                                       self.tensor_image: [npimg],
-                                                   })
+        heatmap, pafmap = self.persistent_sess.run(
+            [self.tensor_heatmap, self.tensor_paf], feed_dict={
+                self.tensor_image: [npimg],
+            })
 
         t = time.time()
         humans, heatmap_up, pafmap_up = self.post_processor(heatmap[0], pafmap[0])

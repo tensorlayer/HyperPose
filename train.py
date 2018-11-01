@@ -1,25 +1,29 @@
 #!/usr/bin/env python3
 
+#!/usr/bin/env python3
+
+import math
+import multiprocessing
 import os
 import time
-import math
+import sys
+
 import cv2
 import matplotlib
-
 matplotlib.use('Agg')
+
 import numpy as np
-import multiprocessing
-import _pickle as cPickle
 import tensorflow as tf
 import tensorlayer as tl
-from hvd_trainer import HorovodTrainer
-from models import model
-from config import config
 from pycocotools.coco import maskUtils
-from tensorlayer.prepro import (keypoint_random_crop, keypoint_random_flip, keypoint_random_resize,
-                                keypoint_random_resize_shortestedge, keypoint_random_rotate)
-from utils import (PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset, tf_repeat)
-import horovod.tensorflow as hvd
+
+import _pickle as cPickle
+
+sys.path.append('.')
+
+from train_config import config
+from openpose_plus.models import model
+from openpose_plus.utils import PoseInfo, draw_results, get_heatmap, get_vectormap, load_mscoco_dataset, tf_repeat
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
@@ -133,26 +137,28 @@ def _data_aug_fn(image, ground_truth):
 
     ## image data augmentation
     # # randomly resize height and width independently, scale is changed
-    # image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))
+    # image, annos, mask_miss = keypoint_random_resize(image, annos, mask_miss, zoom_range=(0.8, 1.2))# removed hao
     # # random rotate
-    # image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)
+    # image, annos, mask_miss = keypoint_random_rotate(image, annos, mask_miss, rg=15.0)# removed hao
     # # random left-right flipping
-    # image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)
-
-    M_rotate = tl.prepro.affine_rotation_matrix(rg=40, is_random=True)
-    M_flip = tl.prepro.affine_horizontal_flip_matrix(is_random=True)
-    M_zoom = tl.prepro.affine_zoom_matrix(zoom_range=(1/1.1, 1/0.5), is_random=True)
-    M_shear = tl.prepro.affine_shear_matrix2(shear=(0.1, 0.1), is_random=True)
-    M_combined = M_rotate.dot(M_flip).dot(M_zoom).dot(M_shear)
+    # image, annos, mask_miss = keypoint_random_flip(image, annos, mask_miss, prob=0.5)# removed hao
+    M_rotate = tl.prepro.affine_rotation_matrix(angle=(-30, 30))  # -40~40
+    M_flip = tl.prepro.affine_horizontal_flip_matrix(prob=0.5)
+    M_zoom = tl.prepro.affine_zoom_matrix(zoom_range=(0.5, 0.8))  # 0.5~1.1
+    # M_shear = tl.prepro.affine_shear_matrix(x_shear=(-0.1, 0.1), y_shear=(-0.1, 0.1))
+    M_combined = M_rotate.dot(M_flip).dot(M_zoom)#.dot(M_shear)
+    # M_combined = tl.prepro.affine_zoom_matrix(zoom_range=0.9) # for debug
     h, w, _ = image.shape
-    transform_matrix = tl.prepro.transform_matrix_offset_center(M_combined, h, w)
-    image = tl.prepro.affine_transfrom(image, transform_matrix)
+    transform_matrix = tl.prepro.transform_matrix_offset_center(M_combined, x=w, y=h)
+    image = tl.prepro.affine_transform_cv2(image, transform_matrix)
+    annos = tl.prepro.affine_transform_keypoints(annos, transform_matrix)
 
     # random resize height and width together
-    image, annos, mask_miss = keypoint_random_resize_shortestedge(
-        image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6))
+    # image, annos, mask_miss = keypoint_random_resize_shortestedge(
+    #     image, annos, mask_miss, min_size=(hin, win), zoom_range=(0.95, 1.6)) # removed hao
     # random crop
-    image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding
+    # image, annos, mask_miss = keypoint_random_crop(image, annos, mask_miss, size=(hin, win))  # with padding # removed hao
+    image, annos, mask_miss = tl.prepro.keypoint_resize_random_crop(image, annos, mask_miss, size=(hin, win))
 
     # generate result maps including keypoints heatmap, pafs and mask
     h, w, _ = np.shape(image)
@@ -177,11 +183,19 @@ def _map_fn(img_list, annos):
     image = tf.read_file(img_list)
     image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+    # Affine transform and get paf maps
     image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
 
     image = tf.reshape(image, [hin, win, 3])
     resultmap = tf.reshape(resultmap, [hout, wout, 57])
     mask = tf.reshape(mask, [hout, wout, 1])
+
+    # # Randomly change brightness.
+    # image = tf.image.random_brightness(image, max_delta=0.25)  # 255->63
+    # # Randomly change contrast.
+    # image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
+    # # Clip intensities to 0~1
+    # image = tf.clip_by_value(image, 0.0, 1.0)
 
     return image, resultmap, mask
 
@@ -252,7 +266,6 @@ def single_train(training_dataset):
                 [img_out, confs_ground, pafs_ground, conf_result, paf_result,
                  mask_out] = sess.run([x_, confs_, pafs_, last_conf, last_paf, mask])
                 draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
-
                 # save model
                 # tl.files.save_npz(
                 #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
@@ -282,7 +295,9 @@ def _parallel_train_model(img, results, mask):
 
 
 def parallel_train(training_dataset):
-    hvd.init() # Horovod
+    import horovod.tensorflow as hvd
+
+    hvd.init()  # Horovod
 
     ds = training_dataset.shuffle(buffer_size=4096)
     ds = ds.shard(num_shards=hvd.size(), index=hvd.rank())
@@ -310,12 +325,12 @@ def parallel_train(training_dataset):
         lr_v = tf.Variable(scaled_lr, trainable=False)
 
     opt = tf.train.MomentumOptimizer(lr_v, 0.9)
-    opt = hvd.DistributedOptimizer(opt) # Horovod
+    opt = hvd.DistributedOptimizer(opt)  # Horovod
     train_op = opt.minimize(total_loss, global_step=global_step)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
 
-    config.gpu_options.allow_growth = True # Horovod
-    config.gpu_options.visible_device_list = str(hvd.local_rank()) # Horovod
+    config.gpu_options.allow_growth = True  # Horovod
+    config.gpu_options.visible_device_list = str(hvd.local_rank())  # Horovod
 
     # Add variable initializer.
     init = tf.global_variables_initializer()
@@ -323,17 +338,17 @@ def parallel_train(training_dataset):
     # Horovod: broadcast initial variable states from rank 0 to all other processes.
     # This is necessary to ensure consistent initialization of all workers when
     # training is started with random weights or restored from a checkpoint.
-    bcast = hvd.broadcast_global_variables(0) # Horovod
+    bcast = hvd.broadcast_global_variables(0)  # Horovod
 
     # Horovod: adjust number of steps based on number of GPUs.
     global n_step, lr_decay_every_step
-    n_step = n_step // hvd.size() + 1 # Horovod
-    lr_decay_every_step = lr_decay_every_step // hvd.size() + 1 # Horovod
+    n_step = n_step // hvd.size() + 1  # Horovod
+    lr_decay_every_step = lr_decay_every_step // hvd.size() + 1  # Horovod
 
     # Start training
     with tf.Session(config=config) as sess:
         init.run()
-        bcast.run() # Horovod
+        bcast.run()  # Horovod
         print('Worker{}: Initialized'.format(hvd.rank()))
         print('Worker{}: Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
             hvd.rank(), n_step, batch_size, lr_init, lr_decay_every_step))
@@ -361,27 +376,29 @@ def parallel_train(training_dataset):
 
             # tstring = time.strftime('%d-%m %H:%M:%S', time.localtime(time.time()))
             lr = sess.run(lr_v)
-            print('Worker{}: Total Loss at iteration {} / {} is: {} Learning rate {:10e} l2_loss {:10e} Took: {}s'.format(
-                hvd.rank(), step, n_step, _loss, lr, _l2,
-                time.time() - tic))
+            print(
+                'Worker{}: Total Loss at iteration {} / {} is: {} Learning rate {:10e} l2_loss {:10e} Took: {}s'.format(
+                    hvd.rank(), step, n_step, _loss, lr, _l2,
+                    time.time() - tic))
             for ix, ll in enumerate(_stage_losses):
                 print('Worker{}:', hvd.rank(), 'Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
             # save intermediate results and model
-            if hvd.rank() == 0: # Horovod
+            if hvd.rank() == 0:  # Horovod
                 if (step != 0) and (step % save_interval == 0):
                     # save some results
                     [img_out, confs_ground, pafs_ground, conf_result, paf_result,
                      mask_out] = sess.run([x_, confs_, pafs_, last_conf, last_paf, mask])
-                    draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out, 'train_%d_' % step)
+                    draw_results(img_out, confs_ground, conf_result, pafs_ground, paf_result, mask_out,
+                                 'train_%d_' % step)
 
                     # save model
                     # tl.files.save_npz(
                     #    net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                     # tl.files.save_npz(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
-                    tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
+                    tl.files.save_npz_dict(
+                        net.all_params, os.path.join(model_path, 'pose' + str(step) + '.npz'), sess=sess)
                     tl.files.save_npz_dict(net.all_params, os.path.join(model_path, 'pose.npz'), sess=sess)
-
 
 
 if __name__ == '__main__':

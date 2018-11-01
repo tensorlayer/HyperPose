@@ -8,9 +8,11 @@ import time
 import tensorflow as tf
 import tensorlayer as tl
 
-from inference.common import measure, plot_humans, read_imgfile
-from inference.estimator2 import TfPoseEstimator as TfPoseEstimator2
-from models import get_model
+sys.path.append('.')
+
+from openpose_plus.inference.common import measure, plot_humans, read_imgfile
+from openpose_plus.inference.estimator import TfPoseEstimator
+from openpose_plus.models import get_model
 
 tf.logging.set_verbosity(tf.logging.INFO)
 tl.logging.set_verbosity(tl.logging.INFO)
@@ -19,8 +21,8 @@ tl.logging.set_verbosity(tl.logging.INFO)
 def inference(base_model_name, path_to_npz, data_format, input_files, plot):
     model_func = get_model(base_model_name)
     height, width = (368, 432)
-    e = measure(lambda: TfPoseEstimator2(path_to_npz, model_func, target_size=(width, height), data_format=data_format),
-                'create TfPoseEstimator2')
+    e = measure(lambda: TfPoseEstimator(path_to_npz, model_func, target_size=(width, height), data_format=data_format),
+                'create TfPoseEstimator')
 
     t0 = time.time()
     for idx, img_name in enumerate(input_files):
@@ -43,7 +45,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='inference')
     parser.add_argument('--path-to-npz', type=str, default='', help='path to npz', required=True)
     parser.add_argument('--images', type=str, default='', help='comma separate list of image filenames', required=True)
-    parser.add_argument('--base-model', type=str, default='vgg', help='vgg | mobilenet')
+    parser.add_argument('--base-model', type=str, default='vgg', help='vgg | vggtiny | mobilenet')
     parser.add_argument('--data-format', type=str, default='channels_last', help='channels_last | channels_first.')
     parser.add_argument('--plot', type=bool, default=False, help='draw the results')
     parser.add_argument('--repeat', type=int, default=1, help='repeat the images for n times for profiling.')

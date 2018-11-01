@@ -5,13 +5,13 @@ make
 echo
 
 MODEL_DIR=$HOME/Downloads
-MODEL_FILE=${MODEL_DIR}/hao28-256x384.uff
+MODEL_FILE=${MODEL_DIR}/hao28-600000-256x384.uff
 
 repeat=20
 gksize=13
 
 run_batch_example() {
-    local BIN=$(pwd)/cmake-build/$(uname -s)/example
+    local BIN=$(pwd)/cmake-build/$(uname -s)/example-batch-detector
     local IMAGES=$(echo $@ | tr ' ' ',')
     local batch_size=4
     ${BIN} \

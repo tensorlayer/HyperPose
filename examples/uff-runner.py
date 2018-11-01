@@ -96,7 +96,7 @@ def parse_args():
         default='./data/media/COCO_val2014_000000000192.jpg',
         help='comma separated list of image filenames',
         required=False)
-    parser.add_argument('--base-model', type=str, default='vgg', help='vgg | mobilenet')
+    parser.add_argument('--base-model', type=str, default='vgg', help='vgg | vggtiny | mobilenet')
     return parser.parse_args()
 
 
