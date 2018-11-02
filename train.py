@@ -151,7 +151,7 @@ def _data_aug_fn(image, ground_truth):
     h, w, _ = image.shape
     transform_matrix = tl.prepro.transform_matrix_offset_center(M_combined, x=w, y=h)
     image = tl.prepro.affine_transform_cv2(image, transform_matrix)
-    mask_miss = tl.prepro.affine_transform_cv2(mask_miss, transform_matrix)
+    mask_miss = tl.prepro.affine_transform_cv2(mask_miss, transform_matrix, border_mode='replicate')
     annos = tl.prepro.affine_transform_keypoints(annos, transform_matrix)
 
     # random resize height and width together
