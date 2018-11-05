@@ -151,7 +151,7 @@ def _data_aug_fn(image, ground_truth):
     h, w, _ = image.shape
     transform_matrix = tl.prepro.transform_matrix_offset_center(M_combined, x=w, y=h)
     image = tl.prepro.affine_transform_cv2(image, transform_matrix)
-    mask_miss = tl.prepro.affine_transform_cv2(mask_miss, transform_matrix)
+    mask_miss = tl.prepro.affine_transform_cv2(mask_miss, transform_matrix, border_mode='replicate')
     annos = tl.prepro.affine_transform_keypoints(annos, transform_matrix)
 
     # random resize height and width together
@@ -190,15 +190,14 @@ def _map_fn(img_list, annos):
     image, resultmap, mask = tf.py_func(_data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
 
     image = tf.reshape(image, [hin, win, 3])
-    resultmap = tf.reshape(resultmap, [hout, wout, 57])
+    resultmap = tf.reshape(resultmap, [hout, wout, n_pos * 3])
     mask = tf.reshape(mask, [hout, wout, 1])
 
-    # Randomly change brightness.
-    image = tf.image.random_brightness(image, max_delta=0.25)  # 255->63
-    # Randomly change contrast.
-    image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
-    # Clip intensities to 0~1
-    image = tf.clip_by_value(image, 0.0, 1.0)
+    image = tf.image.random_brightness(image, max_delta=45./255.)   # 64./255. 32./255.)  caffe -30~50
+    image = tf.image.random_contrast(image, lower=0.5, upper=1.5)   # lower=0.2, upper=1.8)  caffe 0.3~1.5
+    # image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+    # image = tf.image.random_hue(image, max_delta=0.1)
+    image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
 
     return image, resultmap, mask
 
