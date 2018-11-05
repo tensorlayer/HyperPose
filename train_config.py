@@ -38,6 +38,12 @@ config.DATA.your_annos_path = os.path.join('data', 'your_data', 'coco.json')
 config.LOG = edict()
 config.LOG.vis_path = 'vis'
 
+config.EVAL = edict()
+config.EVAL.model = 'pose.npz'
+config.EVAL.data_idx = -1 # data_idx >= 0 to use specified data
+config.EVAL.eval_size = -1 # use first eval_size elements to evaluate, only when data_idx < 0
+config.EVAL.plot = True
+
 # config.VALID = edict()
 
 # import json

@@ -13,6 +13,8 @@ from openpose_plus.inference.estimator import TfPoseEstimator
 from openpose_plus.models import get_model
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
+from tqdm import tqdm
+from train_config import config
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
@@ -23,8 +25,6 @@ ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
-
-eval_size = -1
 
 
 def round_int(val):
@@ -44,50 +44,25 @@ def write_coco_json(human, image_w, image_h):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Tensorflow Openpose Inference')
-    # parser.add_argument('--resize', type=str, default='0x0', help='if provided, resize images before they are processed. default=0x0, Recommends : 432x368 or 656x368 or 1312x736 ')
-    # parser.add_argument('--resize-out-ratio', type=float, default=8.0, help='if provided, resize heatmaps before they are post-processed. default=8.0')
-    parser.add_argument('--base-model', type=str, default='vgg', help='vgg | mobilenet')
-    parser.add_argument('--path-to-npz', type=str, default='', help='path to npz', required=True)
-    parser.add_argument('--data-format', type=str, default='channels_last', help='channels_last | channels_first.')
-    parser.add_argument('--cocoyear', type=str, default='2017')
-    parser.add_argument('--coco-dir', type=str, default='data/mscoco2017/')
-    parser.add_argument('--data-idx', type=int, default=-1)
-    parser.add_argument('--multi-scale', type=bool, default=False)
-    args = parser.parse_args()
-
-    height, width = (368, 432)
-
-    cocoyear_list = ['2014', '2017']
-    if args.cocoyear not in cocoyear_list:
-        logger.error('cocoyear should be one of %s' % str(cocoyear_list))
-        sys.exit(-1)
 
     # TODO : Scales
 
-    image_dir = args.coco_dir + 'val%s/' % args.cocoyear
-    coco_json_file = args.coco_dir + 'annotations/person_keypoints_val%s.json' % args.cocoyear
+    image_dir = os.path.join(config.DATA.data_path, 'mscoco%s' % config.DATA.coco_version, 'val%s' % config.DATA.coco_version)
+    coco_json_file = os.path.join(config.DATA.data_path, 'mscoco%s' % config.DATA.coco_version, 'annotations/person_keypoints_val%s.json' % config.DATA.coco_version)
     cocoGt = COCO(coco_json_file)
     catIds = cocoGt.getCatIds(catNms=['person'])
     keys = cocoGt.getImgIds(catIds=catIds)
-    if args.data_idx < 0:
-        if eval_size > 0:
-            keys = keys[:eval_size]  # only use the first #eval_size elements.
+    if config.EVAL.data_idx < 0:
+        if config.EVAL.eval_size > 0:
+            keys = keys[:config.EVAL.eval_size]  # only use the first #eval_size elements.
         pass
     else:
-        keys = [keys[args.data_idx]]
+        keys = [keys[config.EVAL.data_idx]]
     logger.info('validation %s set size=%d' % (coco_json_file, len(keys)))
-    write_json = '%s.json' % (args.model)
 
-    # logger.debug('initialization %s : %s' % (args.model, get_graph_path(args.model)))
-    # w, h = model_wh(args.resize)
-    # if w == 0 or h == 0:
-    #     e = TfPoseEstimator(get_graph_path(args.model), target_size=(432, 368))
-    # else:
-    #     e = TfPoseEstimator(get_graph_path(args.model), target_size=(w, h))
-    model_func = get_model(args.base_model)
-    estimator = TfPoseEstimator(args.path_to_npz, model_func, target_size=(width, height), data_format=args.data_format)
-    plot = True
+    height, width = (config.MODEL.win, config.MODEL.hin)
+    model_func = get_model(config.MODEL.name)
+    estimator = TfPoseEstimator(os.path.join(config.MODEL.model_path, config.EVAL.model), model_func, target_size=(width, height))
 
     result = []
     for i, k in enumerate(tqdm(keys)):
@@ -95,7 +70,7 @@ if __name__ == '__main__':
         img_idx = img_meta['id']
 
         img_name = os.path.join(image_dir, img_meta['file_name'])
-        image = read_imgfile(img_name, width, height, data_format=args.data_format)
+        image = read_imgfile(img_name, width, height)
         if image is None:
             logger.error('image not found, path=%s' % img_name)
             sys.exit(-1)
@@ -117,17 +92,16 @@ if __name__ == '__main__':
             scores += item['score']
 
         avg_score = scores / len(humans) if len(humans) > 0 else 0
-        if args.data_idx >= 0:
-            logger.info('score:', k, len(humans), len(anns), avg_score)
+        logger.info('image: %s humans: %d anns: %d score: %f' % (img_name, len(humans), len(anns), avg_score))
 
+        if config.EVAL.data_idx >= 0:
             if humans:
                 for h in humans:
                     logger.info(h)
-            if plot:
-                if args.data_format == 'channels_first':
-                    image = image.transpose([1, 2, 0])
-                plot_humans(image, heatMap, pafMap, humans, '%02d' % (img_idx + 1))
+        if config.EVAL.plot:
+            plot_humans(image, heatMap, pafMap, humans, '%06d' % (img_idx+1))
 
+    write_json = 'eval.json'
     fp = open(write_json, 'w')
     json.dump(result, fp)
     fp.close()
@@ -138,7 +112,3 @@ if __name__ == '__main__':
     cocoEval.evaluate()
     cocoEval.accumulate()
     cocoEval.summarize()
-
-    print(''.join(["%11.4f |" % x for x in cocoEval.stats]))
-
-    pred = json.load(open(write_json, 'r'))
