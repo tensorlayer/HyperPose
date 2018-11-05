@@ -193,12 +193,11 @@ def _map_fn(img_list, annos):
     resultmap = tf.reshape(resultmap, [hout, wout, 57])
     mask = tf.reshape(mask, [hout, wout, 1])
 
-    # Randomly change brightness.
-    image = tf.image.random_brightness(image, max_delta=0.25)  # 255->63
-    # Randomly change contrast.
-    image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
-    # Clip intensities to 0~1
-    image = tf.clip_by_value(image, 0.0, 1.0)
+    image = tf.image.random_brightness(image, max_delta=32. / 255.) # 0.25)  # 255->63
+    image = tf.image.random_contrast(image, lower=0.5, upper=1.5)   # lower=0.2, upper=1.8)
+    image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+    image = tf.image.random_hue(image, max_delta=0.2)
+    image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
 
     return image, resultmap, mask
 
