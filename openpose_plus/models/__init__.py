@@ -28,8 +28,10 @@ def get_base_model(name):
         from .models_vggtiny import model
     elif name == 'mobilenet':
         from .models_mobilenet import model
-    elif name == 'hao28_experimental':
+    elif name == 'hao28':
         from .models_hao28_experimental import model
+    elif name == 'hao30':
+        from .models_hao30_experimental import model
     else:
         raise RuntimeError('unknown base model %s' % name)
     return model

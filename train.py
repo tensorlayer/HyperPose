@@ -205,9 +205,9 @@ def _map_fn(img_list, annos):
 def single_train(training_dataset):
     ds = training_dataset.shuffle(buffer_size=4096)  # shuffle before loading images
     ds = ds.repeat(n_epoch)
-    ds = ds.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count() // 2)  # decouple the heavy map_fn
+    ds = ds.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count())  # decouple the heavy map_fn
     ds = ds.batch(batch_size)  # TODO: consider using tf.contrib.map_and_batch
-    ds = ds.prefetch(2)
+    ds = ds.prefetch(10)
     iterator = ds.make_one_shot_iterator()
     one_element = iterator.get_next()
     net, total_loss, log_tensors = make_model(*one_element, is_train=True, reuse=False)
@@ -304,9 +304,9 @@ def parallel_train(training_dataset):
     ds = training_dataset.shuffle(buffer_size=4096)
     ds = ds.shard(num_shards=hvd.size(), index=hvd.rank())
     ds = ds.repeat(n_epoch)
-    ds = ds.map(_map_fn, num_parallel_calls=4)
+    ds = ds.map(_map_fn, num_parallel_calls=multiprocessing.cpu_count() // hvd.size())
     ds = ds.batch(batch_size)
-    ds = ds.prefetch(buffer_size=1)
+    ds = ds.prefetch(5)
 
     iterator = ds.make_one_shot_iterator()
     one_element = iterator.get_next()
