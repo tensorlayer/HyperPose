@@ -115,6 +115,7 @@ CocoColors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255
 def read_imgfile(path, width, height, data_format='channels_last'):
     """Read image file and resize to network input size."""
     val_image = cv2.imread(path, cv2.IMREAD_COLOR)
+    val_image = val_image[:,:,::-1]
     if width is not None and height is not None:
         val_image = cv2.resize(val_image, (width, height))
     if data_format == 'channels_first':
