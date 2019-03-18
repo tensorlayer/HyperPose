@@ -12,7 +12,7 @@ import tensorlayer as tl
 
 sys.path.append('.')
 
-from openpose_plus.inference.common import measure, plot_humans, read_imgfile, load_graph
+from openpose_plus.inference.common import measure, plot_humans, read_imgfile, load_graph, get_op
 from openpose_plus.inference.estimator import TfPoseEstimator
 
 
