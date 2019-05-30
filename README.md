@@ -20,8 +20,7 @@ be deployed in the wild. To resolve this, we develop **OpenPose-Plus**, a high-p
 - Switchable neural networks (e.g., changing VGG to MobileNet for minimal memory consumption)
 - High-performance training using multiple GPUs
 
-**Note**: This project is under active development. Some TODOs are as follows:
-- Pose Proposal Networks, ECCV 2018
+🔥🔥🔥🔥 **Note**: This project will be deleted and moved to [HERE](https://github.com/tensorlayer/tensorlayer/tree/master/examples)
 
 ## Custom Model Training
 
