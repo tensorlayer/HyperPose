@@ -296,7 +296,7 @@ def _parallel_train_model(img, results, mask):
     return net, total_loss, log_tensors
 
 
-def parallel_train(training_dataset):
+def parallel_train(training_dataset, kungfu_option):
     from kungfu import current_cluster_size, current_rank
     from kungfu.tensorflow.optimizers import SynchronousSGDOptimizer, SynchronousAveragingOptimizer, PairAveragingOptimizer
 
@@ -329,11 +329,11 @@ def parallel_train(training_dataset):
     opt = tf.train.MomentumOptimizer(lr_v, 0.9)
 
     # KungFu
-    if config.TRAIN.kungfu_option = 'sync-sgd':
+    if kungfu_option == 'sync-sgd':
         opt = SynchronousSGDOptimizer(opt)
-    elif config.TRAIN.kungfu_option = 'async-sgd':
+    elif kungfu_option == 'async-sgd':
         opt = PairAveragingOptimizer(opt)
-    elif config.TRAIN.kungfu_option = 'sma':
+    elif kungfu_option == 'sma':
         opt = SynchronousAveragingOptimizer(opt)
     else:
         raise RuntimeError('Unknown distributed training optimizer.')
@@ -470,11 +470,11 @@ if __name__ == '__main__':
             yield _input.encode('utf-8'), cPickle.dumps(_target)
 
     n_epoch = math.ceil(n_step / (len(imgs_file_list) / batch_size))
-    dataset = tf.data.Dataset().from_generator(generator, output_types=(tf.string, tf.string))
+    dataset = tf.data.Dataset.from_generator(generator, output_types=(tf.string, tf.string))
 
     if config.TRAIN.train_mode == 'single':
         single_train(dataset)
     elif config.TRAIN.train_mode == 'parallel':
-        parallel_train(dataset)
+        parallel_train(dataset, config.TRAIN.kungfu_option)
     else:
         raise Exception('Unknown training mode')

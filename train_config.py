@@ -14,8 +14,8 @@ config.TRAIN.lr_init = 4e-5  # initial learning rate
 config.TRAIN.lr_decay_every_step = 136106  # evey number of step to decay lr
 config.TRAIN.lr_decay_factor = 0.333  # decay lr factor
 config.TRAIN.weight_decay_factor = 5e-4
-config.TRAIN.train_mode = 'single'  # single, parallel
-config.TRAIN.kungfu_option = 'sync-sgd' # sync-sgd, async-sgd, sma
+config.TRAIN.train_mode = 'parallel'  # single, parallel
+config.TRAIN.kungfu_option = 'sma' # sync-sgd, async-sgd, sma
 
 config.MODEL = edict()
 config.MODEL.model_path = 'models'  # save directory
