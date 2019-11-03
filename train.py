@@ -5,6 +5,7 @@ import multiprocessing
 import os
 import time
 import sys
+import argparse
 
 import cv2
 import matplotlib
@@ -410,6 +411,16 @@ def parallel_train(training_dataset, kungfu_option):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='OpenPose-plus.')
+    parser.add_argument('--kf-optimizer',
+                        type=str,
+                        default='sma',
+                        help='available options: sync-sgd, async-sgd, sma')
+    parser.add_argument('--parallel',
+                        action='store_true',
+                        default=False,
+                        help='enable parallel training')
+    args = parser.parse_args()
 
     if 'coco' in config.DATA.train_data:
         # automatically download MSCOCO data to "data/mscoco..."" folder
@@ -472,9 +483,7 @@ if __name__ == '__main__':
     n_epoch = math.ceil(n_step / (len(imgs_file_list) / batch_size))
     dataset = tf.data.Dataset.from_generator(generator, output_types=(tf.string, tf.string))
 
-    if config.TRAIN.train_mode == 'single':
-        single_train(dataset)
-    elif config.TRAIN.train_mode == 'parallel':
-        parallel_train(dataset, config.TRAIN.kungfu_option)
+    if args.parallel:
+        parallel_train(dataset, args.kf_optimizer)
     else:
-        raise Exception('Unknown training mode')
+        single_train(dataset)

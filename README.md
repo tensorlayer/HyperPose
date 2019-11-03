@@ -75,22 +75,22 @@ KungFu is very easy to install and run (compared to the previously used Horovod 
 which depends on OpenMPI), and simply follow
 the [instruction](https://github.com/lsds/KungFu#install).
 
-To enable parallel training, in `train_config.py`, set the `config.TRAIN.train_mode` to `parallel` (default is `single`).
-KungFu supports multiple distributed optimizers. You can set which KungFu distributed optimizer to use via the
-`config.TRAIN.kungfu_option` option.
-
 In the following, we assume that you have added `kungfu-run` into the `$PATH`.
 
 (i) To run on a machine with 4 GPUs:
 
 ```bash
-kungfu-run -np 4 python3 train.py
+kungfu-run -np 4 python3 train.py --parallel --kf-optimizer=sma
 ```
+
+The default KungFu optimizer is `sma` which implements synchronous model averaging.
+You can also use other KungFu optimizers: `sync-sgd` (which is the same as the DistributedOptimizer in Horovod)
+and `async-sgd` if you train your model in a cluster that has limited bandwidth and straggelers.
 
 (ii) To run on 2 machines (which have the nic `eth0` with IPs as `192.168.0.1` and `192.168.0.2`):
 
 ```bash
-kungfu-run -np 8 -H 192.168.0.1:4,192.168.0.1:4 -nic eth0 python3 train.py
+kungfu-run -np 8 -H 192.168.0.1:4,192.168.0.1:4 -nic eth0 python3 train.py --parallel --kf-optimizer=sma
 ```
 
 ## High-performance Inference using TensorRT
