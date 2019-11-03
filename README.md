@@ -10,17 +10,15 @@
 [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art pose estimation algorithm.
 In its Caffe [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
 data augmentation, training, and neural networks are most hard-coded. They are difficult
-to be customised. In addition,
+to be customized. In addition,
 key performance features such as embedded platform supports and parallel GPU training are missing.
-All these limitations makes OpenPose, in these days, hard to 
+All these limitations makes OpenPose, in these days, hard to
 be deployed in the wild. To resolve this, we develop **OpenPose-Plus**, a high-performance yet flexible pose estimation framework that offers many powerful features:
 - Flexible combination of standard training dataset with your own custom labelled data.
-- Customisable data augmentation pipeline without compromising performance
+- Customizable data augmentation pipeline without compromising performance
 - Deployment on embedded platforms using TensorRT
 - Switchable neural networks (e.g., changing VGG to MobileNet for minimal memory consumption)
 - High-performance training using multiple GPUs
-
-🔥🔥🔥🔥 **Note**: This project will be deleted and moved to [HERE](https://github.com/tensorlayer/tensorlayer/tree/master/examples)
 
 ## Custom Model Training
 
@@ -68,43 +66,28 @@ pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonA
 
 Visual C++ Build Tools are required by the build. Everything else is the same.
 
-
-## Training using Multiple GPUs
+## Distributed Training
 
 The pose estimation neural network can take days to train.
-To speed up the training, we support multiple GPU training while requiring
-minimal changes in your code. We use Horovod to support training on GPUs that can spread across multiple machines.
-You need to install the [OpenMPI](https://www.open-mpi.org/) in your machine.
-We also provide an example script (`scripts/install-mpi.sh`) to help you go through the installation.
-Once OpenMPI is installed, you can install Horovod python library as follows:
-
-```bash
-pip3 install horovod
-```
+To speed up the training, we support distributed GPU training.
+We use [KungFu](https://github.com/lsds/KungFu) to achieve distributed training.
+Please follow the KungFu [install](https://github.com/lsds/KungFu#install)
+instruction before running the following commands.
+In the following, we assume that you have added `kungfu-run` into the `$PATH`.
 
 To enable parallel training, in `train_config.py`, set the `config.TRAIN.train_mode` to `parallel` (default is `single`).
 
 (i) To run on a machine with 4 GPUs:
 
 ```bash
-$ mpirun -np 4 \
-    -bind-to none -map-by slot \
-    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
-    -mca pml ob1 -mca btl ^openib \
-    python3 train.py
+kungfu-run -np 4 python3 train.py
 ```
 
-(ii) To run on 4 machines with 4 GPUs each:
+(ii) To run on 2 machines (which both have the nic `eth0` with IPs as `192.168.0.1` and `192.168.0.2`) with 4 GPUs each:
 
 ```bash
-$ mpirun -np 16 \
-    -H server1:4,server2:4,server3:4,server4:4 \
-    -bind-to none -map-by slot \
-    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
-    -mca pml ob1 -mca btl ^openib \
-    python3 train.py
+kungfu-run -np 8 -H 192.168.0.1:4,192.168.0.1:4 -nic eth0 python3 train.py
 ```
-
 
 ## High-performance Inference using TensorRT
 

@@ -297,12 +297,11 @@ def _parallel_train_model(img, results, mask):
 
 
 def parallel_train(training_dataset):
-    import horovod.tensorflow as hvd
-
-    hvd.init()  # Horovod
+    from kungfu import current_cluster_size, current_rank
+    from kungfu.tensorflow.optimizers import SynchronousSGDOptimizer, SynchronousAveragingOptimizer, PairAveragingOptimizer
 
     ds = training_dataset.shuffle(buffer_size=4096)
-    ds = ds.shard(num_shards=hvd.size(), index=hvd.rank())
+    ds = ds.shard(num_shards=current_cluster_size(), index=current_rank())
     ds = ds.repeat(n_epoch)
     ds = ds.map(_map_fn, num_parallel_calls=4)
     ds = ds.batch(batch_size)
@@ -322,39 +321,45 @@ def parallel_train(training_dataset):
     l2_loss = net.l2_loss
 
     global_step = tf.Variable(1, trainable=False)
-    # scaled_lr = lr_init * hvd.size()  # Horovod: scale the learning rate linearly
+    # scaled_lr = lr_init * current_cluster_size()  # Horovod: scale the learning rate linearly
     scaled_lr = lr_init  # Linear scaling rule is not working in openpose training.
     with tf.variable_scope('learning_rate'):
         lr_v = tf.Variable(scaled_lr, trainable=False)
 
     opt = tf.train.MomentumOptimizer(lr_v, 0.9)
-    opt = hvd.DistributedOptimizer(opt)  # Horovod
+
+    # KungFu
+    if config.TRAIN.kungfu_option = 'sync-sgd':
+        opt = SynchronousSGDOptimizer(opt)
+    elif config.TRAIN.kungfu_option = 'async-sgd':
+        opt = PairAveragingOptimizer(opt)
+    elif config.TRAIN.kungfu_option = 'sma':
+        opt = SynchronousAveragingOptimizer(opt)
+    else:
+        raise RuntimeError('Unknown distributed training optimizer.')
+
     train_op = opt.minimize(total_loss, global_step=global_step)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
-
-    config.gpu_options.allow_growth = True  # Horovod
-    config.gpu_options.visible_device_list = str(hvd.local_rank())  # Horovod
+    config.gpu_options.allow_growth = True
 
     # Add variable initializer.
     init = tf.global_variables_initializer()
 
-    # Horovod: broadcast initial variable states from rank 0 to all other processes.
-    # This is necessary to ensure consistent initialization of all workers when
-    # training is started with random weights or restored from a checkpoint.
-    bcast = hvd.broadcast_global_variables(0)  # Horovod
+    # KungFu
+    from kungfu.tensorflow.initializer import BroadcastGlobalVariablesOp
+    bcast = BroadcastGlobalVariablesOp()
 
-    # Horovod: adjust number of steps based on number of GPUs.
     global n_step, lr_decay_every_step
-    n_step = n_step // hvd.size() + 1  # Horovod
-    lr_decay_every_step = lr_decay_every_step // hvd.size() + 1  # Horovod
+    n_step = n_step // current_cluster_size() + 1  # KungFu
+    lr_decay_every_step = lr_decay_every_step // current_cluster_size() + 1  # KungFu
 
     # Start training
     with tf.Session(config=config) as sess:
         init.run()
-        bcast.run()  # Horovod
-        print('Worker{}: Initialized'.format(hvd.rank()))
+        bcast.run()  # KungFu
+        print('Worker{}: Initialized'.format(current_rank()))
         print('Worker{}: Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
-            hvd.rank(), n_step, batch_size, lr_init, lr_decay_every_step))
+            current_rank(), n_step, batch_size, lr_init, lr_decay_every_step))
 
         # restore pre-trained weights
         try:
@@ -381,13 +386,13 @@ def parallel_train(training_dataset):
             lr = sess.run(lr_v)
             print(
                 'Worker{}: Total Loss at iteration {} / {} is: {} Learning rate {:10e} l2_loss {:10e} Took: {}s'.format(
-                    hvd.rank(), step, n_step, _loss, lr, _l2,
+                    current_rank(), step, n_step, _loss, lr, _l2,
                     time.time() - tic))
             for ix, ll in enumerate(_stage_losses):
-                print('Worker{}:', hvd.rank(), 'Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
+                print('Worker{}:', current_rank(), 'Network#', ix, 'For Branch', ix % 2 + 1, 'Loss:', ll)
 
             # save intermediate results and model
-            if hvd.rank() == 0:  # Horovod
+            if current_rank() == 0:  # KungFu
                 if (step != 0) and (step % save_interval == 0):
                     # save some results
                     [img_out, confs_ground, pafs_ground, conf_result, paf_result,
