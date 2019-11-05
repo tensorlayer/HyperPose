@@ -177,7 +177,7 @@ def _data_aug_fn(image, ground_truth):
     image = image * np.repeat(img_mask, 3, 2)
 
     resultmap = np.array(resultmap, dtype=np.float32)
-    mask_miss = cv2.resize(mask_miss, (hout, wout), interpolation=cv2.INTER_AREA)
+    mask_miss = cv2.resize(mask_miss,(0,0),fx=0.125,fy=0.125, interpolation=cv2.INTER_CUBIC)
     mask_miss = np.array(mask_miss, dtype=np.float32)
     return image, resultmap, mask_miss
 
