@@ -394,7 +394,7 @@ def get_heatmap(annos, height, width):
 
     mapholder = []
     for i in range(0, 19):
-        a = cv2.resize(np.array(joints_heatmap[:, :, i]), (hout, wout))
+        a = cv2.resize(np.array(joints_heatmap[:, :, i]), (wout, hout))
         mapholder.append(a)
     mapholder = np.array(mapholder)
     joints_heatmap = mapholder.transpose(1, 2, 0)
