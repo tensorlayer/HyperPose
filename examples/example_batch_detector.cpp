@@ -3,7 +3,7 @@
 
 #include "trace.hpp"
 #include <gflags/gflags.h>
-#include <opencv2/opencv.hpp>
+#include <iostream>
 
 #include "pose_detector.h"
 #include "utils.hpp"
@@ -15,13 +15,24 @@ DEFINE_int32(input_width, 384, "Width of input image.");
 
 // profiling flags
 DEFINE_int32(repeat, 1, "Number of repeats.");
-DEFINE_int32(batch_size, 2, "Batch size.");
+DEFINE_int32(batch_size, 8, "Batch size.");
 DEFINE_int32(gauss_kernel_size, 17, "Gauss kernel size for smooth operation.");
 DEFINE_bool(use_f16, false, "Use float16.");
 DEFINE_bool(flip_rgb, true, "Flip RGB.");
 
 // input flags
-DEFINE_string(image_files, "../../data/media/COCO_val2014_000000000192.jpg,../../data/media/COCO_val2014_000000000459.jpg", "Comma separated list of pathes to image.");
+DEFINE_string(
+        image_files,
+        "../../data/media/COCO_val2014_000000000192.jpg,"
+        "../../data/media/COCO_val2014_000000000459.jpg,"
+        "../../data/media/COCO_val2014_000000000415.jpg,"
+        "../../data/media/COCO_val2014_000000000564.jpg,"
+        "../../data/media/COCO_val2014_000000000294.jpg,"
+        "../../data/media/COCO_val2014_000000000623.jpg,"
+        "../../data/media/COCO_val2014_000000000357.jpg,"
+        "../../data/media/COCO_val2014_000000000488.jpg",
+        "Comma separated list of paths to image."
+        );
 
 int main(int argc, char *argv[])
 {
@@ -37,6 +48,8 @@ int main(int argc, char *argv[])
         FLAGS_model_file, FLAGS_input_height, FLAGS_input_width, f_height,
         f_width, FLAGS_batch_size, FLAGS_use_f16, FLAGS_gauss_kernel_size,
         FLAGS_flip_rgb));
+
+    std::cout << "Arguments parsed, running models..." << std::endl;
 
     {
         using clock_t = std::chrono::system_clock;

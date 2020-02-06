@@ -7,6 +7,5 @@ cd $(dirname $0)/../openpose_plus/inference
 
 cd pafprocess
 
-conda install -c anaconda swig # https://anaconda.org/anaconda/swig
 swig -python -c++ pafprocess.i
 python setup.py build_ext --inplace
