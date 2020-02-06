@@ -78,6 +78,7 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     TRACE_SCOPE(__func__);
     assert(image_files.size() <= batch_size);
     std::vector<cv::Mat> resized_images;
+    resized_images.reserve(image_files.size());
     {
         TRACE_SCOPE("batch read images");
         for (int i = 0; i < image_files.size(); ++i) {
@@ -90,7 +91,7 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     {
         TRACE_SCOPE("batch run tensorRT");
         (*compute_feature_maps)({chw_images.data()},
-                                {confs.data(), pafs.data()},
+                                {pafs.data(), confs.data()},
                                 image_files.size());
     }
     {
