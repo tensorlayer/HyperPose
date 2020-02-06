@@ -106,6 +106,8 @@ You can build the APIs into a standard C++ library by just running `make pack`, 
   - opencv
   - gflags
 
+To run our default model(VGG-19), you can click [here](https://media.githubusercontent.com/media/tensorlayer/pretrained-models/master/models/openpose-plus/hao28-600000-256x384.uff) to download it automatically.
+
 We are improving the performance of the engine.
 Initial benchmark results for running the full OpenPose model are as follows.
 On Jetson TX2, the inference speed is 13 frames / second (the mobilenet variant is even faster).
