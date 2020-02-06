@@ -95,22 +95,16 @@ kungfu-run -np 8 -H 192.168.0.1:4,192.168.0.1:4 -nic eth0 python3 train.py --par
 
 ## High-performance Inference using TensorRT
 
-Real-time inference on resource-constrained embedded platforms
-is always challenging. To resolve this, we provide a TensorRT-compatible inference engine.
+Real-time inference on resource-constrained embedded platforms is always challenging. To resolve this, we provide a TensorRT-compatible inference engine.
 The engine has two C++ APIs, both defined in `include/openpose-plus.hpp`.
 They are for running the TensorFlow model with TensorRT and post-processing respectively.
 
-You can build the APIs into a standard C++ library by just running `make pack`, provided that you have the following dependencies installed
-
-  - tensorRT
-  - opencv
-  - gflags
+For details of inference(dependencies/quick start), please refer to [**cpp-inference**](doc/markdown-doc/cpp-inference.md).
 
 We are improving the performance of the engine.
 Initial benchmark results for running the full OpenPose model are as follows.
 On Jetson TX2, the inference speed is 13 frames / second (the mobilenet variant is even faster).
-On Jetson TX1, the speed is 10 frames / second. On Titan 1050, the
-speed is 38 frames / second.
+On Jetson TX1, the speed is 10 frames / second. On 1070Ti, the speed is 20 FPS(fp32)/30FPS(fp16). On Titan 1050, the speed is 38 frames / second.
 
 We also have a Python binding for the engine. The current binding relies on
 the external tf-pose-estimation project. We are working on providing the Python binding for our high-performance
@@ -118,6 +112,7 @@ C++ implementation. For now, to enable the binding, please build C++ library for
 
 ```bash
 ./scripts/install-pafprocess.sh
+# swig is required. Run `conda install -c anaconda swig` to install swig.
 ```
 
 See [tf-pose](https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess) for details.

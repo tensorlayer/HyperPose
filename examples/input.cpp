@@ -16,6 +16,7 @@ void _input_image(const std::string &filename, int target_height,
     const auto img = cv::imread(filename);
     if (img.empty()) {
         // TODO: handle error
+        std::cerr << "[ERROR] cv::Mat of " << filename << "is empty.\n";
         exit(1);
     }
     cv::resize(img, resized_image, resized_image.size(), 0, 0);

@@ -44,7 +44,7 @@ void resize_area(const tensor_ref<T, 3> &input, tensor<T, 3> &output)
         cv::Mat output_image(target_size, cv::DataType<T>::type,
                              output[k].data());
         cv::resize(input_image, output_image, output_image.size(), 0, 0,
-                   CV_INTER_AREA);
+                   cv::INTER_AREA);
     }
 }
 

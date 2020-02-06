@@ -48,12 +48,14 @@ inline size_t elementSize(nvinfer1::DataType t)
 
 std::string to_string(const nvinfer1::Dims &d)
 {
-    std::string s;
-    for (int64_t i = 0; i < d.nbDims; i++) {
-        if (!s.empty()) { s += ", "; }
-        s += std::to_string(d.d[i]);
+    std::string s{"("};
+    if (d.nbDims != 0) {
+        for (int64_t i = 0; i < d.nbDims; i++)
+            (s += std::to_string(d.d[i])) += ", ";
+        s.pop_back();
+        s.pop_back();
     }
-    return "(" + s + ")";
+    return s + ")";
 }
 
 std::string to_string(const nvinfer1::DataType dtype)
