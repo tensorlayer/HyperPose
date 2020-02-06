@@ -36,7 +36,7 @@ DEFINE_string(
 
 int main(int argc, char *argv[])
 {
-    TRACE_SCOPE(__func__)
+    TRACE_SCOPE(__func__);
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     // TODO: derive from model
