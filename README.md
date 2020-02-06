@@ -99,7 +99,7 @@ Real-time inference on resource-constrained embedded platforms is always challen
 The engine has two C++ APIs, both defined in `include/openpose-plus.hpp`.
 They are for running the TensorFlow model with TensorRT and post-processing respectively.
 
-For details of inference(dependencies/quick start), please refer to [cpp-inference](doc/cpp-inference.md).
+For details of inference(dependencies/quick start), please refer to [**cpp-inference**](doc/markdown-doc/cpp-inference.md).
 
 We are improving the performance of the engine.
 Initial benchmark results for running the full OpenPose model are as follows.
