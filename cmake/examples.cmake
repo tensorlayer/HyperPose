@@ -2,7 +2,7 @@ FIND_PACKAGE(OpenCV)
 FIND_PACKAGE(gflags)
 FIND_PACKAGE(Threads REQUIRED)
 
-ADD_LIBRARY(helpers examples/input.cpp examples/vis.cpp)
+ADD_LIBRARY(helpers examples/input.cpp examples/vis.cpp examples/thread_pool.cpp)
 TARGET_LINK_LIBRARIES(helpers
                       opencv_core
                       opencv_imgproc

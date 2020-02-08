@@ -38,6 +38,12 @@ void resize_area(const tensor_ref<T, 3> &input, tensor<T, 3> &output)
 
     const cv::Size size(width, height);
     const cv::Size target_size(target_width, target_height);
+
+    // What if blob => Image => Resize => Blob?
+//    cv::Mat feature_map(size, cv::DataType<T>::type, );
+// TODO: Optimize here. (50% runtime cost in PAF as the channel size is too big(38)).
+// Back soon when I get up.
+
     for (int k = 0; k < channel; ++k) {
         const cv::Mat input_image(size, cv::DataType<T>::type,
                                   (T *)input[k].data());
@@ -150,6 +156,7 @@ template <typename T> class peak_finder_t
           pooled_gpu(channel, height, width),
           same_max_pool_3x3_gpu(1, channel, height, width, 3, 3)
     {
+//        std::cout << "Appread Once\n" << '\n';
     }
 
     std::vector<peak_info> find_peak_coords(const tensor<float, 3> &heatmap,

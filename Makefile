@@ -21,3 +21,10 @@ docker-build-gpu:
 
 pack: cmake_targets
 	make -C $(BUILD_DIR) -j $(NPROC) package
+
+cmake_targets_with_trace:
+	mkdir -p $(BUILD_DIR)
+	cd $(BUILD_DIR); cmake -DWITH_TRACE=ON $(CMAKE_FLAGS) $(CURDIR)
+
+pack_trace: cmake_targets_with_trace
+	make -C $(BUILD_DIR) -j  $(NPROC) package

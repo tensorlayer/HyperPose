@@ -1,5 +1,6 @@
 #include <chrono>
 #include <memory>
+#include <ratio>
 
 #include "trace.hpp"
 #include <gflags/gflags.h>
@@ -30,7 +31,15 @@ DEFINE_string(
         "../../data/media/COCO_val2014_000000000294.jpg,"
         "../../data/media/COCO_val2014_000000000623.jpg,"
         "../../data/media/COCO_val2014_000000000357.jpg,"
-        "../../data/media/COCO_val2014_000000000488.jpg",
+        "../../data/media/COCO_val2014_000000000488.jpg,"
+        "../../data/media/COCO_val2014_000000000589.jpg,"
+        "../../data/media/COCO_val2014_000000000474.jpg,"
+        "../../data/media/COCO_val2014_000000000338.jpg,"
+        "../../data/media/COCO_val2014_000000000569.jpg,"
+        "../../data/media/COCO_val2014_000000000544.jpg,"
+        "../../data/media/COCO_val2014_000000000428.jpg,"
+        "../../data/media/COCO_val2014_000000000536.jpg,"
+        "../../data/media/COCO_val2014_000000000395.jpg",
         "Comma separated list of paths to image."
         );
 
