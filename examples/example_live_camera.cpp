@@ -5,9 +5,7 @@
 #include "trace.hpp"
 #include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
-#include <stdtensor>
-
-using ttl::tensor_ref;
+#include <ttl/tensor>
 
 #include "channel.hpp"
 #include "stream_detector.h"
@@ -84,8 +82,8 @@ struct inputer : stream_detector::inputer_t {
         cv::Mat resized_image(cv::Size(width, height), CV_8UC(3), hwc_ptr);
         cv::resize(img, resized_image, resized_image.size(), 0, 0);
 
-        tensor_ref<uint8_t, 3> s(hwc_ptr, height, width, 3);
-        tensor_ref<float, 3> t(chw_ptr, 3, height, width);
+        ttl::tensor_ref<uint8_t, 3> s(hwc_ptr, height, width, 3);
+        ttl::tensor_ref<float, 3> t(chw_ptr, 3, height, width);
         for (int k = 0; k < 3; ++k) {
             for (int i = 0; i < height; ++i) {
                 for (int j = 0; j < width; ++j) {
