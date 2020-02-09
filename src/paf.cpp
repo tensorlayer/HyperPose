@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <functional>
 
-#include <stdtensor>
+#include <ttl/tensor>
 
 using ttl::tensor;
 using ttl::tensor_ref;

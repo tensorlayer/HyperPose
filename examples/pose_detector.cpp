@@ -7,10 +7,7 @@
 #include "trace.hpp"
 #include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
-#include <stdtensor>
-
-using ttl::tensor;
-using ttl::tensor_ref;
+#include <ttl/tensor>
 
 #include <openpose-plus.h>
 
@@ -41,10 +38,10 @@ private:
 
     const bool flip_rgb;
 
-    tensor<uint8_t, 4> hwc_images;
-    tensor<float, 4> chw_images;
-    tensor<float, 4> confs;
-    tensor<float, 4> pafs;
+    ttl::tensor<uint8_t, 4> hwc_images;
+    ttl::tensor<float, 4> chw_images;
+    ttl::tensor<float, 4> confs;
+    ttl::tensor<float, 4> pafs;
 
     std::unique_ptr<paf_processor> process_paf;
     std::unique_ptr<pose_detection_runner> compute_feature_maps;

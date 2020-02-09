@@ -4,9 +4,7 @@
 #include <thread>
 
 #include <opencv2/opencv.hpp>
-#include <stdtensor>
-
-using ttl::tensor;
+#include <ttl/tensor>
 
 #include <openpose-plus.h>
 
@@ -156,10 +154,10 @@ class stream_detector_impl : public stream_detector
 
     const bool flip_rgb;
 
-    tensor<uint8_t, 4> hwc_images;
-    tensor<float, 4> chw_images;
-    tensor<float, 4> confs;
-    tensor<float, 4> pafs;
+    ttl::tensor<uint8_t, 4> hwc_images;
+    ttl::tensor<float, 4> chw_images;
+    ttl::tensor<float, 4> confs;
+    ttl::tensor<float, 4> pafs;
 
     struct in_stream_t {
         uint8_t *hwc_ptr;

@@ -3,9 +3,8 @@
 
 #include <opencv2/opencv.hpp>
 
-#include <stdtensor>
+#include <ttl/tensor>
 
-using ttl::tensor_ref;
 
 void _input_image(const std::string &filename, int target_height,
                   int target_width, uint8_t *hwc_buffer)
@@ -27,8 +26,8 @@ void input_image(const std::string &filename, int target_height,
                  bool flip_rgb)
 {
     _input_image(filename, target_height, target_width, hwc_buffer);
-    tensor_ref<uint8_t, 3> s(hwc_buffer, target_height, target_width, 3);
-    tensor_ref<float, 3> t(chw_buffer, 3, target_height, target_width);
+    ttl::tensor_ref<uint8_t, 3> s(hwc_buffer, target_height, target_width, 3);
+    ttl::tensor_ref<float, 3> t(chw_buffer, 3, target_height, target_width);
     for (int k = 0; k < 3; ++k) {
         for (int i = 0; i < target_height; ++i) {
             for (int j = 0; j < target_width; ++j) {
