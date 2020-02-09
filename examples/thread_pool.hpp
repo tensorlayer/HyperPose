@@ -40,10 +40,11 @@ class simple_thread_pool final
     // https://www.boost.org/doc/libs/1_45_0/doc/html/function/faq.html#id1284915
     struct pool_src {
         std::mutex queue_mu;
+        std::mutex wait_mu;
         std::condition_variable cv;
-        std::queue<task_type> queue;
-        std::atomic<std::size_t> n_working{0};
         std::condition_variable wait_cv;
+        std::queue<task_type> queue;
+        std::atomic<std::size_t> to_finish{0};
         bool shutdown{false};
     };
     std::shared_ptr<pool_src> m_shared_src;
@@ -52,6 +53,7 @@ class simple_thread_pool final
 template <typename Type, typename Func, typename... Args>
 static void try_allocate(Type &task, Func &&f, Args &&... args)
 {
+    std::condition_variable wait_cv;
     try {
         task = new typename std::remove_pointer<Type>::type(
             std::bind(std::forward<Func>(f), std::forward<Args>(args)...));
@@ -77,6 +79,7 @@ auto simple_thread_pool::enqueue(Func &&f, Args &&... args)
             delete task;
         });
     }
+    m_shared_src->to_finish.fetch_add(1, std::memory_order_relaxed);
     m_shared_src->cv.notify_one();
     return result;
 }

@@ -1,10 +1,6 @@
 #include <algorithm>
-#include <functional>
 
 #include <ttl/tensor>
-
-using ttl::tensor;
-using ttl::tensor_ref;
 
 #include <openpose-plus.h>
 
@@ -29,14 +25,9 @@ class paf_processor_impl : public paf_processor
           input_width(input_width),
           n_joins(n_joins),
           n_connections(n_connections),
-          upsample_conf_dim({n_joins, height, width}),
-          upsample_paf_dim({n_connections * 2, height, width}),
-          //              upsample_conf(n_joins, height, width),          // :
-          //              Deprecated upsample_paf(n_connections * 2, height,
-          //              width), // : Deprecated
-          peak_param({n_joins, height, width, gauss_kernel_size})
-    //              peak_finder(n_joins, height, width, gauss_kernel_size) // :
-    //              Deprecated.
+          upsample_conf_dim(n_joins, height, width),
+          upsample_paf_dim(n_connections * 2, height, width),
+          peak_param(n_joins, height, width, gauss_kernel_size)
     {
     }
 
@@ -48,13 +39,11 @@ class paf_processor_impl : public paf_processor
         TRACE_SCOPE("paf_processor_impl::operator()");
         // TODO: To be optimized here.
         thread_local tensor<float, 3> upsample_conf_(
-            upsample_conf_dim[0], upsample_conf_dim[1],
-            upsample_conf_dim[2]);  // 5FPS
-        thread_local tensor<float, 3> upsample_paf_(
-            upsample_paf_dim[0], upsample_paf_dim[1],
-            upsample_paf_dim[2]);  // 5FPS
+            upsample_conf_dim);                                         // 5FPS
+        thread_local tensor<float, 3> upsample_paf_(upsample_paf_dim);  // 5FPS
         thread_local peak_finder_t<float> peak_finder_(
-            peak_param[0], peak_param[1], peak_param[2], peak_param[3]);
+            peak_param.dims()[0], peak_param.dims()[1], peak_param.dims()[2],
+            peak_param.dims()[3]);
         {
             TRACE_SCOPE("resize heatmap and PAF");
 
@@ -86,16 +75,13 @@ class paf_processor_impl : public paf_processor
     const int n_joins;
     const int n_connections;
 
-    using tensor_param_t = std::array<int, 3>;
-    tensor_param_t upsample_conf_dim;
-    tensor_param_t upsample_paf_dim;
+    ttl::shape<3> upsample_conf_dim;
+    ttl::shape<3> upsample_paf_dim;
 
     //    tensor<float, 3> upsample_conf;  // [J, H, W]
     //    tensor<float, 3> upsample_paf;   // [2C, H, W]
 
-    using peak_finder_param_t = std::array<int, 4>;
-    peak_finder_param_t peak_param;
-    //    peak_finder_t<float> peak_finder;
+    ttl::shape<4> peak_param;
 
     std::vector<ConnectionCandidate>
     getConnectionCandidates(const tensor<float, 3> &pafmap,

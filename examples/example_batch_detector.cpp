@@ -1,6 +1,5 @@
 #include <chrono>
 #include <memory>
-#include <ratio>
 
 #include "trace.hpp"
 #include <gflags/gflags.h>
