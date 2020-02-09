@@ -18,36 +18,43 @@ struct VectorXY {
 
 class paf_processor_impl : public paf_processor
 {
-public:
+  public:
     paf_processor_impl(int input_height, int input_width, int height, int width,
                        int n_joins /* 1 + COCO_N_PARTS */,
                        int n_connections /* COCO_N_PAIRS */,
                        int gauss_kernel_size)
-            : height(height),
-              width(width),
-              input_height(input_height),
-              input_width(input_width),
-              n_joins(n_joins),
-              n_connections(n_connections),
-              upsample_conf_dim({n_joins, height, width}),
-              upsample_paf_dim({n_connections * 2, height, width}),
-//              upsample_conf(n_joins, height, width),          // : Deprecated
-//              upsample_paf(n_connections * 2, height, width), // : Deprecated
-              peak_param({n_joins, height, width, gauss_kernel_size})
-//              peak_finder(n_joins, height, width, gauss_kernel_size) // : Deprecated.
+        : height(height),
+          width(width),
+          input_height(input_height),
+          input_width(input_width),
+          n_joins(n_joins),
+          n_connections(n_connections),
+          upsample_conf_dim({n_joins, height, width}),
+          upsample_paf_dim({n_connections * 2, height, width}),
+          //              upsample_conf(n_joins, height, width),          // :
+          //              Deprecated upsample_paf(n_connections * 2, height,
+          //              width), // : Deprecated
+          peak_param({n_joins, height, width, gauss_kernel_size})
+    //              peak_finder(n_joins, height, width, gauss_kernel_size) // :
+    //              Deprecated.
     {
     }
 
     std::vector<human_t> operator()(
-            const float *conf_, /* [n_joins, input_height, input_width] */
-            const float *paf_ /* [n_connections * 2, input_height, input_width] */,
-            bool use_gpu)
+        const float *conf_, /* [n_joins, input_height, input_width] */
+        const float *paf_ /* [n_connections * 2, input_height, input_width] */,
+        bool use_gpu)
     {
         TRACE_SCOPE("paf_processor_impl::operator()");
         // TODO: To be optimized here.
-        thread_local tensor<float, 3> upsample_conf_(upsample_conf_dim[0], upsample_conf_dim[1], upsample_conf_dim[2]); // 5FPS
-        thread_local tensor<float, 3> upsample_paf_(upsample_paf_dim[0], upsample_paf_dim[1], upsample_paf_dim[2]);     // 5FPS
-        thread_local peak_finder_t<float> peak_finder_(peak_param[0], peak_param[1], peak_param[2], peak_param[3]);
+        thread_local tensor<float, 3> upsample_conf_(
+            upsample_conf_dim[0], upsample_conf_dim[1],
+            upsample_conf_dim[2]);  // 5FPS
+        thread_local tensor<float, 3> upsample_paf_(
+            upsample_paf_dim[0], upsample_paf_dim[1],
+            upsample_paf_dim[2]);  // 5FPS
+        thread_local peak_finder_t<float> peak_finder_(
+            peak_param[0], peak_param[1], peak_param[2], peak_param[3]);
         {
             TRACE_SCOPE("resize heatmap and PAF");
 
@@ -59,12 +66,12 @@ public:
                         upsample_paf_);
         }
         const auto all_peaks =
-                peak_finder_.find_peak_coords(upsample_conf_, THRESH_HEAT, use_gpu);
+            peak_finder_.find_peak_coords(upsample_conf_, THRESH_HEAT, use_gpu);
         const auto peak_ids_by_channel = peak_finder_.group_by(all_peaks);
         return process(all_peaks, peak_ids_by_channel, upsample_paf_);
     }
 
-private:
+  private:
     const float THRESH_HEAT = 0.05;
     const float THRESH_VECTOR_SCORE = 0.05;
     const int THRESH_VECTOR_CNT1 = 8;
@@ -79,18 +86,16 @@ private:
     const int n_joins;
     const int n_connections;
 
-
     using tensor_param_t = std::array<int, 3>;
     tensor_param_t upsample_conf_dim;
     tensor_param_t upsample_paf_dim;
 
-//    tensor<float, 3> upsample_conf;  // [J, H, W]
-//    tensor<float, 3> upsample_paf;   // [2C, H, W]
-
+    //    tensor<float, 3> upsample_conf;  // [J, H, W]
+    //    tensor<float, 3> upsample_paf;   // [2C, H, W]
 
     using peak_finder_param_t = std::array<int, 4>;
-    peak_finder_param_t  peak_param;
-//    peak_finder_t<float> peak_finder;
+    peak_finder_param_t peak_param;
+    //    peak_finder_t<float> peak_finder;
 
     std::vector<ConnectionCandidate>
     getConnectionCandidates(const tensor<float, 3> &pafmap,
@@ -111,10 +116,10 @@ private:
             vec.y /= norm;
 
             const std::vector<VectorXY> paf_vecs =
-                    get_paf_vectors(pafmap,                //
-                                    coco_pair_net.first,   //
-                                    coco_pair_net.second,  //
-                                    peak_a.pos, peak_b.pos);
+                get_paf_vectors(pafmap,                //
+                                coco_pair_net.first,   //
+                                coco_pair_net.second,  //
+                                peak_a.pos, peak_b.pos);
 
             float scores = 0.0f;
 
@@ -122,14 +127,14 @@ private:
             int criterion1 = 0;
             for (int i = 0; i < STEP_PAF; i++) {
                 const float score =
-                        vec.x * paf_vecs[i].x + vec.y * paf_vecs[i].y;
+                    vec.x * paf_vecs[i].x + vec.y * paf_vecs[i].y;
                 scores += score;
 
                 if (score > THRESH_VECTOR_SCORE) criterion1 += 1;
             }
 
             float criterion2 =
-                    scores / STEP_PAF + std::min(0.0, 0.5 * height / norm - 1.0);
+                scores / STEP_PAF + std::min(0.0, 0.5 * height / norm - 1.0);
 
             if (criterion1 > THRESH_VECTOR_CNT1 && criterion2 > 0) {
                 ConnectionCandidate candidate;
@@ -159,9 +164,9 @@ private:
         const auto coco_pair_net = COCOPAIRS_NET[pair_id];
 
         std::vector<ConnectionCandidate> candidates = getConnectionCandidates(
-                pafmap, all_peaks,  //
-                peak_ids_by_channel[coco_pair.first],
-                peak_ids_by_channel[coco_pair.second], coco_pair_net, height);
+            pafmap, all_peaks,  //
+            peak_ids_by_channel[coco_pair.first],
+            peak_ids_by_channel[coco_pair.second], coco_pair_net, height);
 
         // nms
         std::sort(candidates.begin(), candidates.end(),
@@ -269,9 +274,9 @@ private:
         human_refs.erase(std::remove_if(human_refs.begin(), human_refs.end(),
                                         [&](const human_ref_t &hr) {
                                             return (hr.n_parts <
-                                                    THRESH_PART_CNT ||
+                                                        THRESH_PART_CNT ||
                                                     hr.score / hr.n_parts <
-                                                    THRESH_HUMAN_SCORE);
+                                                        THRESH_HUMAN_SCORE);
                                         }),
                          human_refs.end());
         return human_refs;
@@ -287,7 +292,7 @@ private:
         std::vector<std::vector<Connection>> all_connections;
         for (int pair_id = 0; pair_id < COCO_N_PAIRS; pair_id++) {
             all_connections.push_back(getConnections(
-                    pafmap, all_peaks, peak_ids_by_channel, pair_id, height));
+                pafmap, all_peaks, peak_ids_by_channel, pair_id, height));
         }
         return all_connections;
     }
@@ -300,7 +305,7 @@ private:
         TRACE_SCOPE("paf_processor_impl::process");
 
         const std::vector<std::vector<Connection>> all_connections =
-                getAllConnections(pafmap, all_peaks, peak_ids_by_channel);
+            getAllConnections(pafmap, all_peaks, peak_ids_by_channel);
 
         const auto human_refs = getHumans(all_peaks, all_connections);
         printf("got %lu humans\n", human_refs.size());

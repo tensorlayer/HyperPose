@@ -17,7 +17,7 @@
 
 class pose_detector_impl : public pose_detector
 {
-public:
+  public:
     pose_detector_impl(const std::string &model_file,          //
                        int input_height, int input_width,      //
                        int feature_height, int feature_width,  //
@@ -28,7 +28,7 @@ public:
 
     void inference(const std::vector<std::string> &image_files) override;
 
-private:
+  private:
     const int height;
     const int width;
     const int batch_size;
@@ -52,29 +52,28 @@ pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
                                        int feature_height, int feature_width,
                                        int batch_size, bool use_f16,
                                        int gauss_kernel_size, bool flip_rgb)
-        : height(input_height),
-          width(input_width),
-          batch_size(batch_size),
-          feature_height(feature_height),
-          feature_width(feature_width),
-          flip_rgb(flip_rgb),
-          hwc_images(batch_size, height, width, 3),
-          chw_images(batch_size, 3, height, width),
-          confs(batch_size, n_joins, feature_height, feature_width),
-          pafs(batch_size, n_connections * 2, feature_height, feature_width),
-          process_paf(create_paf_processor(feature_height, feature_width,
-                                           input_height, input_width, n_joins,
-                                           n_connections, gauss_kernel_size)),
-          compute_feature_maps(create_pose_detection_runner(
-                  model_file, height, width, batch_size, use_f16))
+    : height(input_height),
+      width(input_width),
+      batch_size(batch_size),
+      feature_height(feature_height),
+      feature_width(feature_width),
+      flip_rgb(flip_rgb),
+      hwc_images(batch_size, height, width, 3),
+      chw_images(batch_size, 3, height, width),
+      confs(batch_size, n_joins, feature_height, feature_width),
+      pafs(batch_size, n_connections * 2, feature_height, feature_width),
+      process_paf(create_paf_processor(feature_height, feature_width,
+                                       input_height, input_width, n_joins,
+                                       n_connections, gauss_kernel_size)),
+      compute_feature_maps(create_pose_detection_runner(
+          model_file, height, width, batch_size, use_f16))
 {
 }
 
 void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
                                    int start_idx)
 {
-    if(image_files.size() == 0)
-        return;
+    if (image_files.size() == 0) return;
     TRACE_SCOPE(__func__);
     assert(image_files.size() <= batch_size);
     std::vector<cv::Mat> resized_images;
@@ -96,15 +95,16 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     }
     {
         TRACE_SCOPE("batch run process PAF and draw results");
-        static thread_pool pool(std::min(std::thread::hardware_concurrency(), (unsigned)image_files.size()-1));
+        static thread_pool pool(std::min(std::thread::hardware_concurrency(),
+                                         (unsigned)image_files.size() - 1));
 
         std::vector<std::future<void>> tasks(image_files.size() - 1);
-        // ================================== task definition ===================
+        // ================================== task definition
+        // ===================
         // TODO: About use gpu or not, it's a question.(AutoTuning!)
-        auto task = [start_idx, this, &resized_images](std::size_t i, bool use_gpu = false)
-        {
-            const auto humans = [this, i, use_gpu]()
-            {
+        auto task = [start_idx, this, &resized_images](std::size_t i,
+                                                       bool use_gpu = false) {
+            const auto humans = [this, i, use_gpu]() {
                 TRACE_SCOPE("run paf_process");
                 return (*process_paf)(confs[i].data(), pafs[i].data(), use_gpu);
             }();
@@ -112,26 +112,23 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
             {
                 TRACE_SCOPE("draw_results");
                 std::cout << "got " << humans.size() << " humans" << std::endl;
-                for (const auto &h : humans)
-                {
+                for (const auto &h : humans) {
                     h.print();
                     draw_human(resized_image, h);
                 }
                 const auto name =
-                        "output" + std::to_string(start_idx + i) + ".png";
+                    "output" + std::to_string(start_idx + i) + ".png";
                 cv::imwrite(name, resized_image);
             }
         };
         // ======================================================================
 
-        for (int i = 0; i < tasks.size(); ++i)
-        {
+        for (int i = 0; i < tasks.size(); ++i) {
             tasks[i] = pool.enqueue(task, i);
         }
         task(tasks.size(), false);
-//        pool.wait();
-        for(auto&& f : tasks)
-            f.wait();
+        //        pool.wait();
+        for (auto &&f : tasks) f.wait();
     }
 }
 
@@ -139,8 +136,8 @@ void pose_detector_impl::inference(const std::vector<std::string> &image_files)
 {
     for (int i = 0; i < image_files.size(); i += batch_size) {
         std::vector<std::string> batch(
-                image_files.begin() + i,
-                std::min(image_files.begin() + i + batch_size, image_files.end()));
+            image_files.begin() + i,
+            std::min(image_files.begin() + i + batch_size, image_files.end()));
         one_batch(batch, i);
     }
 }

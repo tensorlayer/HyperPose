@@ -10,7 +10,8 @@
 #include "utils.hpp"
 
 // Model flags
-DEFINE_string(model_file, "../../data/models/hao28-600000-256x384.uff", "Path to uff model.");
+DEFINE_string(model_file, "../../data/models/hao28-600000-256x384.uff",
+              "Path to uff model.");
 DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
 
@@ -22,26 +23,24 @@ DEFINE_bool(use_f16, false, "Use float16.");
 DEFINE_bool(flip_rgb, true, "Flip RGB.");
 
 // input flags
-DEFINE_string(
-        image_files,
-        "../../data/media/COCO_val2014_000000000192.jpg,"
-        "../../data/media/COCO_val2014_000000000459.jpg,"
-        "../../data/media/COCO_val2014_000000000415.jpg,"
-        "../../data/media/COCO_val2014_000000000564.jpg,"
-        "../../data/media/COCO_val2014_000000000294.jpg,"
-        "../../data/media/COCO_val2014_000000000623.jpg,"
-        "../../data/media/COCO_val2014_000000000357.jpg,"
-        "../../data/media/COCO_val2014_000000000488.jpg,"
-        "../../data/media/COCO_val2014_000000000589.jpg,"
-        "../../data/media/COCO_val2014_000000000474.jpg,"
-        "../../data/media/COCO_val2014_000000000338.jpg,"
-        "../../data/media/COCO_val2014_000000000569.jpg,"
-        "../../data/media/COCO_val2014_000000000544.jpg,"
-        "../../data/media/COCO_val2014_000000000428.jpg,"
-        "../../data/media/COCO_val2014_000000000536.jpg,"
-        "../../data/media/COCO_val2014_000000000395.jpg",
-        "Comma separated list of paths to image."
-        );
+DEFINE_string(image_files,
+              "../../data/media/COCO_val2014_000000000192.jpg,"
+              "../../data/media/COCO_val2014_000000000459.jpg,"
+              "../../data/media/COCO_val2014_000000000415.jpg,"
+              "../../data/media/COCO_val2014_000000000564.jpg,"
+              "../../data/media/COCO_val2014_000000000294.jpg,"
+              "../../data/media/COCO_val2014_000000000623.jpg,"
+              "../../data/media/COCO_val2014_000000000357.jpg,"
+              "../../data/media/COCO_val2014_000000000488.jpg,"
+              "../../data/media/COCO_val2014_000000000589.jpg,"
+              "../../data/media/COCO_val2014_000000000474.jpg,"
+              "../../data/media/COCO_val2014_000000000338.jpg,"
+              "../../data/media/COCO_val2014_000000000569.jpg,"
+              "../../data/media/COCO_val2014_000000000544.jpg,"
+              "../../data/media/COCO_val2014_000000000428.jpg,"
+              "../../data/media/COCO_val2014_000000000536.jpg,"
+              "../../data/media/COCO_val2014_000000000395.jpg",
+              "Comma separated list of paths to image.");
 
 int main(int argc, char *argv[])
 {

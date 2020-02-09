@@ -5,7 +5,6 @@
 
 #include <ttl/tensor>
 
-
 void _input_image(const std::string &filename, int target_height,
                   int target_width, uint8_t *hwc_buffer)
 {
