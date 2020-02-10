@@ -20,7 +20,6 @@
 class simple_thread_pool final
 {  // Simple thread-safe & container-free thread pool.
   public:
-    const std::size_t size{0};
     explicit simple_thread_pool(std::size_t /* suggested size */ =
                                     std::thread::hardware_concurrency() + 2);
     ~simple_thread_pool();
@@ -53,7 +52,6 @@ class simple_thread_pool final
 template <typename Type, typename Func, typename... Args>
 static void try_allocate(Type &task, Func &&f, Args &&... args)
 {
-    std::condition_variable wait_cv;
     try {
         task = new typename std::remove_pointer<Type>::type(
             std::bind(std::forward<Func>(f), std::forward<Args>(args)...));

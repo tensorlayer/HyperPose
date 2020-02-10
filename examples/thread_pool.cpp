@@ -2,7 +2,7 @@
 
 // Implementation:
 simple_thread_pool::simple_thread_pool(std::size_t sz)
-    : m_shared_src(std::make_shared<pool_src>()), size(sz)
+    : m_shared_src(std::make_shared<pool_src>())
 {
     for (int i = 0; i < sz; ++i) {
         std::thread(
