@@ -8,6 +8,10 @@
 #include <string>
 #include <vector>
 
+#include <ttl/cuda_tensor>
+#include <ttl/experimental/copy>
+#include <ttl/range>
+
 #include <NvInfer.h>
 #include <NvUffParser.h>
 #include <NvUtils.h>
@@ -15,7 +19,6 @@
 #include <openpose-plus.h>
 
 #include "logger.h"
-#include "std_cuda_tensor.hpp"
 #include "trace.hpp"
 
 using input_info_t = std::vector<std::pair<std::string, std::vector<int>>>;
@@ -25,7 +28,7 @@ Logger gLogger;
 inline int64_t volume(const nvinfer1::Dims &d)
 {
     int64_t v = 1;
-    for (int i = 0; i < d.nbDims; i++) v *= d.d[i];
+    for (int i = 0; i < d.nbDims; i++) { v *= d.d[i]; }
     return v;
 }
 
@@ -140,8 +143,8 @@ class uff_runner_impl : public pose_detection_runner
 
     destroy_ptr<nvinfer1::ICudaEngine> engine_;
 
-    using cuda_buffer_t = cuda_tensor<char, 1>;
-    std::vector<std::unique_ptr<cuda_buffer_t>> buffers_;
+    using cuda_buffer_t = ttl::cuda_tensor<char, 2>;  // [batch_size, data_size]
+    std::vector<cuda_buffer_t> buffers_;
 
     void createBuffers_(int batch_size);
 };
@@ -162,19 +165,15 @@ uff_runner_impl::~uff_runner_impl() { nvuffparser::shutdownProtobufLibrary(); }
 void uff_runner_impl::createBuffers_(int batch_size)
 {
     TRACE_SCOPE(__func__);
-
-    const int n = engine_->getNbBindings();
-    for (int i = 0; i < n; ++i) {
+    for (auto i : ttl::range(engine_->getNbBindings())) {
         const nvinfer1::Dims dims = engine_->getBindingDimensions(i);
         const nvinfer1::DataType dtype = engine_->getBindingDataType(i);
         const std::string name(engine_->getBindingName(i));
-
         std::cout << "binding " << i << ":"
                   << " name: " << name << " type" << to_string(dtype)
                   << to_string(dims) << std::endl;
-        const size_t mem_size = batch_size * volume(dims) * elementSize(dtype);
         buffers_.push_back(
-            std::unique_ptr<cuda_buffer_t>(new cuda_buffer_t(mem_size)));
+            cuda_buffer_t(batch_size, volume(dims) * elementSize(dtype)));
     }
 }
 
@@ -188,10 +187,12 @@ void uff_runner_impl::operator()(const std::vector<void *> &inputs,
     {
         TRACE_SCOPE("copy input from host");
         int idx = 0;
-        for (int i = 0; i < buffers_.size(); ++i) {
+        for (auto i : ttl::range(buffers_.size())) {
             if (engine_->bindingIsInput(i)) {
-                buffers_[i]->partialFromHost(inputs[idx++], batch_size,
-                                             max_batch_size);
+                const auto buffer = buffers_[i].slice(0, batch_size);
+                ttl::tensor_view<char, 2> input(
+                    reinterpret_cast<char *>(inputs[idx++]), buffer.shape());
+                ttl::copy(buffer, input);
             }
         }
     }
@@ -200,9 +201,8 @@ void uff_runner_impl::operator()(const std::vector<void *> &inputs,
         TRACE_SCOPE("uff_runner_impl::context->execute");
         auto context = engine_->createExecutionContext();
         std::vector<void *> buffer_ptrs_(buffers_.size());
-        for (int i = 0; i < buffers_.size(); ++i) {
-            buffer_ptrs_[i] = buffers_[i]->data();
-        }
+        std::transform(buffers_.begin(), buffers_.end(), buffer_ptrs_.begin(),
+                       [](const auto &b) { return b.data(); });
         context->execute(batch_size, buffer_ptrs_.data());
         context->destroy();
     }
@@ -210,10 +210,12 @@ void uff_runner_impl::operator()(const std::vector<void *> &inputs,
     {
         TRACE_SCOPE("copy output to host");
         int idx = 0;
-        for (int i = 0; i < buffers_.size(); ++i) {
+        for (auto i : ttl::range(buffers_.size())) {
             if (!engine_->bindingIsInput(i)) {
-                buffers_[i]->partialToHost(outputs[idx++], batch_size,
-                                           max_batch_size);
+                const auto buffer = buffers_[i].slice(0, batch_size);
+                ttl::tensor_ref<char, 2> output(
+                    reinterpret_cast<char *>(outputs[idx++]), buffer.shape());
+                ttl::copy(output, ttl::view(buffer));
             }
         }
     }

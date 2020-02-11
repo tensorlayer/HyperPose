@@ -38,21 +38,21 @@ class paf_processor_impl : public paf_processor
     {
         TRACE_SCOPE("paf_processor_impl::operator()");
         // TODO: To be optimized here.
-        thread_local tensor<float, 3> upsample_conf_(
-            upsample_conf_dim);                                         // 5FPS
-        thread_local tensor<float, 3> upsample_paf_(upsample_paf_dim);  // 5FPS
+        thread_local ttl::tensor<float, 3> upsample_conf_(
+            upsample_conf_dim);  // 5FPS
+        thread_local ttl::tensor<float, 3> upsample_paf_(
+            upsample_paf_dim);  // 5FPS
         thread_local peak_finder_t<float> peak_finder_(
             peak_param.dims()[0], peak_param.dims()[1], peak_param.dims()[2],
             peak_param.dims()[3]);
         {
             TRACE_SCOPE("resize heatmap and PAF");
-
-            resize_area(tensor_ref<float, 3>((float *)conf_, n_joins,
-                                             input_height, input_width),
-                        upsample_conf_);
-            resize_area(tensor_ref<float, 3>((float *)paf_, n_connections * 2,
-                                             input_height, input_width),
-                        upsample_paf_);
+            resize_area(ttl::tensor_view<float, 3>(conf_, n_joins, input_height,
+                                                   input_width),
+                        ttl::ref(upsample_conf_));
+            resize_area(ttl::tensor_view<float, 3>(paf_, n_connections * 2,
+                                                   input_height, input_width),
+                        ttl::ref(upsample_paf_));
         }
         const auto all_peaks =
             peak_finder_.find_peak_coords(upsample_conf_, THRESH_HEAT, use_gpu);
@@ -78,13 +78,13 @@ class paf_processor_impl : public paf_processor
     ttl::shape<3> upsample_conf_dim;
     ttl::shape<3> upsample_paf_dim;
 
-    //    tensor<float, 3> upsample_conf;  // [J, H, W]
-    //    tensor<float, 3> upsample_paf;   // [2C, H, W]
+    //    ttl::tensor<float, 3> upsample_conf;  // [J, H, W]
+    //    ttl::tensor<float, 3> upsample_paf;   // [2C, H, W]
 
     ttl::shape<4> peak_param;
 
     std::vector<ConnectionCandidate>
-    getConnectionCandidates(const tensor<float, 3> &pafmap,
+    getConnectionCandidates(const ttl::tensor<float, 3> &pafmap,
                             const std::vector<peak_info> &all_peaks,
                             const std::vector<int> &peak_index_1,
                             const std::vector<int> &peak_index_2,
@@ -141,7 +141,7 @@ class paf_processor_impl : public paf_processor
     }
 
     std::vector<Connection>
-    getConnections(const tensor<float, 3> &pafmap,
+    getConnections(const ttl::tensor<float, 3> &pafmap,
                    const std::vector<peak_info> &all_peaks,
                    const std::vector<std::vector<int>> &peak_ids_by_channel,
                    int pair_id, int height)
@@ -269,7 +269,7 @@ class paf_processor_impl : public paf_processor
     }
 
     std::vector<std::vector<Connection>>
-    getAllConnections(const tensor<float, 3> &pafmap,
+    getAllConnections(const ttl::tensor<float, 3> &pafmap,
                       const std::vector<peak_info> &all_peaks,
                       const std::vector<std::vector<int>> &peak_ids_by_channel)
     {
@@ -286,7 +286,7 @@ class paf_processor_impl : public paf_processor
     std::vector<human_t>
     process(const std::vector<peak_info> &all_peaks,
             const std::vector<std::vector<int>> &peak_ids_by_channel,
-            const tensor<float, 3> &pafmap /* [2c, h, w] */)
+            const ttl::tensor<float, 3> &pafmap /* [2c, h, w] */)
     {
         TRACE_SCOPE("paf_processor_impl::process");
 
@@ -317,7 +317,7 @@ class paf_processor_impl : public paf_processor
         }
     }
 
-    std::vector<VectorXY> get_paf_vectors(const tensor<float, 3> &pafmap,
+    std::vector<VectorXY> get_paf_vectors(const ttl::tensor<float, 3> &pafmap,
                                           const int &ch_id1,           //
                                           const int &ch_id2,           //
                                           const point_2d<int> &peak1,  //
