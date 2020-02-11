@@ -50,13 +50,11 @@ void resize_area(const ttl::tensor_view<T, 3> &input,
 }
 
 template <typename T>
-void smooth(const ttl::tensor<T, 3> &input, ttl::tensor<T, 3> &output,
-            int ksize)
+void smooth(const ttl::tensor_view<T, 3> &input,
+            const ttl::tensor_ref<T, 3> &output, int ksize)
 {
-    const T sigma = 3.0;
-
+    constexpr T sigma = 3.0;
     const auto [channel, height, width] = input.dims();
-
     const cv::Size size(width, height);
     for (auto k : ttl::range(channel)) {
         const cv::Mat input_image(size, cv::DataType<T>::type,
@@ -91,12 +89,11 @@ void same_max_pool_3x3_2d(const int height, const int width,  //
 }
 
 template <typename T>
-void same_max_pool_3x3(const ttl::tensor<T, 3> &input,
-                       ttl::tensor<T, 3> &output)
+void same_max_pool_3x3(const ttl::tensor_view<T, 3> &input,
+                       const ttl::tensor_ref<T, 3> &output)
 {
     const auto [channel, height, width] = input.dims();
-
-    for (int k = 0; k < channel; ++k) {
+    for (auto k : ttl::range(channel)) {
         same_max_pool_3x3_2d(height, width, input[k].data(), output[k].data());
     }
 }
@@ -145,25 +142,26 @@ template <typename T> class peak_finder_t
     }
 
     std::vector<peak_info>
-    find_peak_coords(const ttl::tensor<float, 3> &heatmap, float threshold,
+    find_peak_coords(const ttl::tensor_view<T, 3> &heatmap, float threshold,
                      bool use_gpu)
     {
         TRACE_SCOPE(__func__);
 
         {
             TRACE_SCOPE("find_peak_coords::smooth");
-            smooth(heatmap, smoothed_cpu, ksize);
+            smooth(heatmap, ttl::ref(smoothed_cpu), ksize);
         }
 
         if (use_gpu) {
             TRACE_SCOPE("find_peak_coords::max pooling on GPU");
             ttl::copy(ttl::ref(pool_input_gpu), ttl::view(smoothed_cpu));
+            // FIXME: pass ttl::tensor_{ref/view}
             same_max_pool_3x3_gpu(pool_input_gpu.data(), pooled_gpu.data());
             // cudaDeviceSynchronize();
             ttl::copy(ttl::ref(pooled_cpu), ttl::view(pooled_gpu));
         } else {
             TRACE_SCOPE("find_peak_coords::max pooling on CPU");
-            same_max_pool_3x3(smoothed_cpu, pooled_cpu);
+            same_max_pool_3x3(ttl::view(smoothed_cpu), ttl::ref(pooled_cpu));
         }
 
         std::vector<peak_info> all_peaks;
