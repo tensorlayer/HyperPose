@@ -7,14 +7,12 @@
 #include "trace.hpp"
 #include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
-#include <stdtensor>
-
-using ttl::tensor;
-using ttl::tensor_ref;
+#include <ttl/tensor>
 
 #include <openpose-plus.h>
 
 #include "input.h"
+#include "thread_pool.hpp"
 #include "vis.h"
 
 class pose_detector_impl : public pose_detector
@@ -40,10 +38,10 @@ class pose_detector_impl : public pose_detector
 
     const bool flip_rgb;
 
-    tensor<uint8_t, 4> hwc_images;
-    tensor<float, 4> chw_images;
-    tensor<float, 4> confs;
-    tensor<float, 4> pafs;
+    ttl::tensor<uint8_t, 4> hwc_images;
+    ttl::tensor<float, 4> chw_images;
+    ttl::tensor<float, 4> confs;
+    ttl::tensor<float, 4> pafs;
 
     std::unique_ptr<paf_processor> process_paf;
     std::unique_ptr<pose_detection_runner> compute_feature_maps;
@@ -75,6 +73,7 @@ pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
 void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
                                    int start_idx)
 {
+    if (image_files.size() == 0) return;
     TRACE_SCOPE(__func__);
     assert(image_files.size() <= batch_size);
     std::vector<cv::Mat> resized_images;
@@ -96,10 +95,18 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     }
     {
         TRACE_SCOPE("batch run process PAF and draw results");
-        for (int i = 0; i < image_files.size(); ++i) {
-            const auto humans = [&]() {
+        static thread_pool pool(std::min(std::thread::hardware_concurrency(),
+                                         (unsigned)image_files.size() - 1));
+
+        std::vector<std::future<void>> tasks(image_files.size() - 1);
+        // ================================== task definition
+        // ===================
+        // TODO: About use gpu or not, it's a question.(AutoTuning!)
+        auto task = [start_idx, this, &resized_images](std::size_t i,
+                                                       bool use_gpu = false) {
+            const auto humans = [this, i, use_gpu]() {
                 TRACE_SCOPE("run paf_process");
-                return (*process_paf)(confs[i].data(), pafs[i].data(), true);
+                return (*process_paf)(confs[i].data(), pafs[i].data(), use_gpu);
             }();
             auto resized_image = resized_images[i];
             {
@@ -113,7 +120,15 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
                     "output" + std::to_string(start_idx + i) + ".png";
                 cv::imwrite(name, resized_image);
             }
+        };
+        // ======================================================================
+
+        for (int i = 0; i < tasks.size(); ++i) {
+            tasks[i] = pool.enqueue(task, i);
         }
+        task(tasks.size(), false);
+        //        pool.wait();
+        for (auto &&f : tasks) f.wait();
     }
 }
 

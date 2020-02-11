@@ -5,7 +5,7 @@
 
 #include <cuda_runtime.h>
 
-#include <bits/std_shape.hpp>  // FIXME: don't include internal header
+#include <ttl/bits/std_shape.hpp>  // FIXME: don't include internal header
 
 #include "trace.hpp"
 

@@ -16,6 +16,7 @@ __pycache__
 /bin
 /checkpoints
 /cmake-build
+/cmake-build-debug
 /coco
 /data
 /lib
@@ -34,7 +35,6 @@ inference/*png
 libstdtensor-prefix
 libstdtracer-prefix
 Makefile
-test.py
 test.py
 Testing
 third_party

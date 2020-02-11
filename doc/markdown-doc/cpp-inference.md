@@ -34,7 +34,7 @@ Or you may need to set `CUDA_RT` as `/path/to/TensorRT` when executing cmake com
 # Tools we need when building.
 sudo apt-get install subversion 
 
-make pack
+make pack # If you want to enable profiling tracing, use `make pack_trace`
 ./scripts/download-test-data.sh
 ./scripts/download-pretrained-inf-models.sh
 cd cmake-build/Linux
@@ -50,7 +50,6 @@ If you cannot execute the binary file successfully, you can refer to the `tensor
 
 If you want to share your results on your machine, welcome to PR!
 
-#### 1070Ti + Intel@i7
+#### 1070Ti + Intel@i7(12 cores)
 
-- FP32: ~20 FPS
-- FP16: ~30 FPS
+- FP32: ~50 FPS

@@ -1,10 +1,6 @@
 #include <algorithm>
-#include <functional>
 
-#include <stdtensor>
-
-using ttl::tensor;
-using ttl::tensor_ref;
+#include <ttl/tensor>
 
 #include <openpose-plus.h>
 
@@ -29,9 +25,9 @@ class paf_processor_impl : public paf_processor
           input_width(input_width),
           n_joins(n_joins),
           n_connections(n_connections),
-          upsample_conf(n_joins, height, width),
-          upsample_paf(n_connections * 2, height, width),
-          peak_finder(n_joins, height, width, gauss_kernel_size)
+          upsample_conf_dim(n_joins, height, width),
+          upsample_paf_dim(n_connections * 2, height, width),
+          peak_param(n_joins, height, width, gauss_kernel_size)
     {
     }
 
@@ -41,19 +37,27 @@ class paf_processor_impl : public paf_processor
         bool use_gpu)
     {
         TRACE_SCOPE("paf_processor_impl::operator()");
+        // TODO: To be optimized here.
+        thread_local tensor<float, 3> upsample_conf_(
+            upsample_conf_dim);                                         // 5FPS
+        thread_local tensor<float, 3> upsample_paf_(upsample_paf_dim);  // 5FPS
+        thread_local peak_finder_t<float> peak_finder_(
+            peak_param.dims()[0], peak_param.dims()[1], peak_param.dims()[2],
+            peak_param.dims()[3]);
         {
             TRACE_SCOPE("resize heatmap and PAF");
+
             resize_area(tensor_ref<float, 3>((float *)conf_, n_joins,
                                              input_height, input_width),
-                        upsample_conf);
+                        upsample_conf_);
             resize_area(tensor_ref<float, 3>((float *)paf_, n_connections * 2,
                                              input_height, input_width),
-                        upsample_paf);
+                        upsample_paf_);
         }
         const auto all_peaks =
-            peak_finder.find_peak_coords(upsample_conf, THRESH_HEAT, use_gpu);
-        const auto peak_ids_by_channel = peak_finder.group_by(all_peaks);
-        return process(all_peaks, peak_ids_by_channel, upsample_paf);
+            peak_finder_.find_peak_coords(upsample_conf_, THRESH_HEAT, use_gpu);
+        const auto peak_ids_by_channel = peak_finder_.group_by(all_peaks);
+        return process(all_peaks, peak_ids_by_channel, upsample_paf_);
     }
 
   private:
@@ -71,10 +75,13 @@ class paf_processor_impl : public paf_processor
     const int n_joins;
     const int n_connections;
 
-    tensor<float, 3> upsample_conf;  // [J, H, W]
-    tensor<float, 3> upsample_paf;   // [2C, H, W]
+    ttl::shape<3> upsample_conf_dim;
+    ttl::shape<3> upsample_paf_dim;
 
-    peak_finder_t<float> peak_finder;
+    //    tensor<float, 3> upsample_conf;  // [J, H, W]
+    //    tensor<float, 3> upsample_paf;   // [2C, H, W]
+
+    ttl::shape<4> peak_param;
 
     std::vector<ConnectionCandidate>
     getConnectionCandidates(const tensor<float, 3> &pafmap,

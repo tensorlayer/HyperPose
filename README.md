@@ -104,7 +104,9 @@ For details of inference(dependencies/quick start), please refer to [**cpp-infer
 We are improving the performance of the engine.
 Initial benchmark results for running the full OpenPose model are as follows.
 On Jetson TX2, the inference speed is 13 frames / second (the mobilenet variant is even faster).
-On Jetson TX1, the speed is 10 frames / second. On 1070Ti, the speed is 20 FPS(fp32)/30FPS(fp16). On Titan 1050, the speed is 38 frames / second.
+On Jetson TX1, the speed is 10 frames / second. On Titan 1050, the speed is 38 frames / second. 
+
+After our first optimization, we achieved 50FPS(float32) on 1070Ti. 
 
 We also have a Python binding for the engine. The current binding relies on
 the external tf-pose-estimation project. We are working on providing the Python binding for our high-performance

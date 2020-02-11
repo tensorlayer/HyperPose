@@ -2,7 +2,7 @@ FIND_PACKAGE(OpenCV)
 FIND_PACKAGE(gflags)
 FIND_PACKAGE(Threads REQUIRED)
 
-ADD_LIBRARY(helpers examples/input.cpp examples/vis.cpp)
+ADD_LIBRARY(helpers examples/input.cpp examples/vis.cpp examples/thread_pool.cpp)
 TARGET_LINK_LIBRARIES(helpers
                       opencv_core
                       opencv_imgproc
@@ -36,3 +36,7 @@ TARGET_LINK_LIBRARIES(example-live-camera
                       opencv_videoio
                       Threads::Threads)
 ADD_GLOBAL_DEPS(example-live-camera)
+
+ADD_EXECUTABLE(test-thread-pool examples/test_thread_pool.cpp)
+TARGET_LINK_LIBRARIES(test-thread-pool helpers Threads::Threads)
+ADD_GLOBAL_DEPS(test-thread-pool)
