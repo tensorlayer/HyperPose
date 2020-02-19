@@ -73,7 +73,7 @@ pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
 void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
                                    int start_idx)
 {
-    if (image_files.size() == 0) return;
+    if (image_files.size() == 0) { return; }
     TRACE_SCOPE(__func__);
     assert(image_files.size() <= batch_size);
     std::vector<cv::Mat> resized_images;
@@ -81,8 +81,7 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     {
         TRACE_SCOPE("batch read images");
         for (int i = 0; i < image_files.size(); ++i) {
-            input_image(image_files[i].data(), height, width,
-                        hwc_images[i].data(), chw_images[i].data(), flip_rgb);
+            input_image(image_files[i], hwc_images[i], chw_images[i], flip_rgb);
             resized_images.push_back(cv::Mat(cv::Size(width, height), CV_8UC(3),
                                              hwc_images[i].data()));
         }
