@@ -3,6 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 
+#include <ttl/range>
 #include <ttl/tensor>
 
 void _input_image(const std::string &filename,
@@ -25,9 +26,9 @@ void input_image(const std::string &filename,
                  bool flip_rgb)
 {
     _input_image(filename, hwc_buffer);
-    for (int k = 0; k < 3; ++k) {
-        for (int i = 0; i < target_height; ++i) {
-            for (int j = 0; j < target_width; ++j) {
+    for (auto k : ttl::range(3)) {
+        for (auto i : ttl::range<1>(chw_buffer)) {
+            for (auto j : ttl::range<2>(chw_buffer)) {
                 chw_buffer.at(k, i, j) =
                     hwc_buffer.at(i, j, flip_rgb ? 2 - k : k) / 255.0;
             }
