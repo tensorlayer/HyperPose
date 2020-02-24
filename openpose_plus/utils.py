@@ -488,7 +488,7 @@ def get_vectormap(annos, height, width):
 
     mapholder = []
     for i in range(0, n_pos * 2):
-        a = cv2.resize(np.array(vectormap[:, :, i]), (hout, wout), interpolation=cv2.INTER_AREA)
+        a = cv2.resize(np.array(vectormap[:, :, i]), (wout, hout), interpolation=cv2.INTER_AREA)
         mapholder.append(a)
     mapholder = np.array(mapholder)
     vectormap = mapholder.transpose(1, 2, 0)
