@@ -24,6 +24,8 @@ class pose_detector_impl : public pose_detector
                        int batch_size, bool use_f16, int gauss_kernel_size,
                        bool flip_rgb);
 
+    ~pose_detector_impl() { pool.wait(); }
+
     void one_batch(const std::vector<std::string> &image_files, int start_idx);
 
     void inference(const std::vector<std::string> &image_files) override;
@@ -45,6 +47,8 @@ class pose_detector_impl : public pose_detector
 
     std::unique_ptr<paf_processor> process_paf;
     std::unique_ptr<pose_detection_runner> compute_feature_maps;
+
+    thread_pool pool;
 };
 
 pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
@@ -66,7 +70,8 @@ pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
                                        input_height, input_width, n_joins,
                                        n_connections, gauss_kernel_size)),
       compute_feature_maps(create_pose_detection_runner(
-          model_file, height, width, batch_size, use_f16))
+          model_file, height, width, batch_size, use_f16)),
+      pool(std::thread::hardware_concurrency())
 {
 }
 
@@ -95,10 +100,8 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     }
     {
         TRACE_SCOPE("batch run process PAF and draw results");
-        static thread_pool pool(std::min(std::thread::hardware_concurrency(),
-                                         (unsigned)image_files.size() - 1));
 
-        std::vector<std::future<void>> tasks(image_files.size() - 1);
+        std::vector<std::future<void>> tasks(image_files.size());
         // ================================== task definition
         // ===================
         // TODO: About use gpu or not, it's a question.(AutoTuning!)
@@ -126,9 +129,7 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
         for (int i = 0; i < tasks.size(); ++i) {
             tasks[i] = pool.enqueue(task, i);
         }
-        task(tasks.size(), false);
-        //        pool.wait();
-        for (auto &&f : tasks) f.wait();
+        for (auto &&f : tasks) { f.wait(); }
     }
 }
 
