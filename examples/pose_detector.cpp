@@ -95,8 +95,7 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     }
     {
         TRACE_SCOPE("batch run process PAF and draw results");
-        static thread_pool pool(std::min(std::thread::hardware_concurrency(),
-                                         (unsigned)image_files.size() - 1));
+        static thread_pool pool(1);
 
         std::vector<std::future<void>> tasks(image_files.size() - 1);
         // ================================== task definition
