@@ -10,6 +10,7 @@ cd ../data/models
 
 echo "Installing Pretrained VGG uff model file..."
 if [ ! -f hao28-600000-256x384.uff ]; then
-    curl -LOJ https://github.com/tensorlayer/pretrained-models/trunk/models/openpose-plus/hao28-600000-256x384.uff
+    URL=https://media.githubusercontent.com/media/tensorlayer/pretrained-models/master/models/openpose-plus/hao28-600000-256x384.uff
+    curl -vLOJ $URL
 fi
 echo "Installation completed!"

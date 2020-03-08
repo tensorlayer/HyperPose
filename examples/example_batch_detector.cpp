@@ -22,24 +22,35 @@ DEFINE_bool(use_f16, false, "Use float16.");
 DEFINE_bool(flip_rgb, true, "Flip RGB.");
 
 // input flags
+DEFINE_string(data_dir, "../../data/media", "path to data folder");
 DEFINE_string(image_files,
-              "../../data/media/COCO_val2014_000000000192.jpg,"
-              "../../data/media/COCO_val2014_000000000459.jpg,"
-              "../../data/media/COCO_val2014_000000000415.jpg,"
-              "../../data/media/COCO_val2014_000000000564.jpg,"
-              "../../data/media/COCO_val2014_000000000294.jpg,"
-              "../../data/media/COCO_val2014_000000000623.jpg,"
-              "../../data/media/COCO_val2014_000000000357.jpg,"
-              "../../data/media/COCO_val2014_000000000488.jpg,"
-              "../../data/media/COCO_val2014_000000000589.jpg,"
-              "../../data/media/COCO_val2014_000000000474.jpg,"
-              "../../data/media/COCO_val2014_000000000338.jpg,"
-              "../../data/media/COCO_val2014_000000000569.jpg,"
-              "../../data/media/COCO_val2014_000000000544.jpg,"
-              "../../data/media/COCO_val2014_000000000428.jpg,"
-              "../../data/media/COCO_val2014_000000000536.jpg,"
-              "../../data/media/COCO_val2014_000000000395.jpg",
+              "COCO_val2014_000000000192.jpg,"
+              "COCO_val2014_000000000459.jpg,"
+              "COCO_val2014_000000000415.jpg,"
+              "COCO_val2014_000000000564.jpg,"
+              "COCO_val2014_000000000294.jpg,"
+              "COCO_val2014_000000000623.jpg,"
+              "COCO_val2014_000000000357.jpg,"
+              "COCO_val2014_000000000488.jpg,"
+              "COCO_val2014_000000000589.jpg,"
+              "COCO_val2014_000000000474.jpg,"
+              "COCO_val2014_000000000338.jpg,"
+              "COCO_val2014_000000000569.jpg,"
+              "COCO_val2014_000000000544.jpg,"
+              "COCO_val2014_000000000428.jpg,"
+              "COCO_val2014_000000000536.jpg,"
+              "COCO_val2014_000000000395.jpg",
               "Comma separated list of paths to image.");
+
+std::vector<std::string> get_input_files(const std::string &dir,
+                                         const std::string &names)
+{
+    std::vector<std::string> paths;
+    for (const auto &name : split(names, ',')) {
+        paths.push_back(dir + "/" + name);
+    }
+    return paths;
+}
 
 int main(int argc, char *argv[])
 {
@@ -49,7 +60,8 @@ int main(int argc, char *argv[])
     // TODO: derive from model
     const int f_height = FLAGS_input_height / 8;
     const int f_width = FLAGS_input_width / 8;
-    auto files = repeat(split(FLAGS_image_files, ','), FLAGS_repeat);
+    const auto files = repeat(
+        get_input_files(FLAGS_data_dir, FLAGS_image_files), FLAGS_repeat);
 
     std::unique_ptr<pose_detector> pd(create_pose_detector(
         FLAGS_model_file, FLAGS_input_height, FLAGS_input_width, f_height,

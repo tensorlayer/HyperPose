@@ -8,6 +8,7 @@ INCLUDE(cmake/3rdparty.cmake)
 
 OPTION(WITH_TRACE "Build with tracing library." OFF)
 OPTION(BUILD_FAKE "Build fake target without CUDA libraries." OFF)
+OPTION(ENABLE_CUDA "Build with CUDA support." ON)
 
 IF(WITH_TRACE)
     MESSAGE(STATUS "[OPENPOSE-PLUS] Trace Enabled.")
