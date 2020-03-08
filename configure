@@ -1,12 +1,9 @@
 #!/bin/bash
 set -e
 
-CMAKE_FLAGS=
-
-add_cmake_flag() {
-    echo "usinig $1=$2"
-    CMAKE_FLAGS="$CMAKE_FLAGS -D$1=$2"
-}
+if [ -d /usr/local/cuda ]; then
+    CUDA_HOME=/usr/local/cuda
+fi
 
 parse_args() {
     for i in "$@"; do
@@ -20,12 +17,23 @@ parse_args() {
         --build-fake)
             BUILD_FAKE=1
             ;;
+        --with-cuda=*)
+            CUDA_HOME="${i#*=}"
+            echo "configure --with-cuda=$CUDA_HOME"
+            ;;
         *)
-            echo "unknown argument $1"
+            echo "unknown argument $i"
             exit
             ;;
         esac
     done
+}
+
+CMAKE_FLAGS=
+
+add_cmake_flag() {
+    echo "using $1=$2"
+    CMAKE_FLAGS="$CMAKE_FLAGS -D$1=$2"
 }
 
 add_cmake_flags() {
@@ -35,11 +43,14 @@ add_cmake_flags() {
     if [ "${WITH_TRACE}" == 1 ]; then
         add_cmake_flag WITH_TRACE ON
     fi
-
-    add_cmake_flag CMAKE_EXPORT_COMPILE_COMMANDS ON
+    if [ ! -z "${CUDA_HOME}" ]; then
+        add_cmake_flag CUDA_TOOLKIT_ROOT_DIR $CUDA_HOME
+        add_cmake_flag CMAKE_CUDA_COMPILER $CUDA_HOME/bin/nvcc
+    fi
     add_cmake_flag CMAKE_BUILD_TYPE Release
-    add_cmake_flag EXECUTABLE_OUTPUT_PATH $(pwd)/bin
-    add_cmake_flag LIBRARY_OUTPUT_PATH $(pwd)/lib
+    add_cmake_flag CMAKE_EXPORT_COMPILE_COMMANDS ON
+    add_cmake_flag EXECUTABLE_OUTPUT_PATH $PWD/bin
+    add_cmake_flag LIBRARY_OUTPUT_PATH $PWD/lib
 }
 
 parse_args $@

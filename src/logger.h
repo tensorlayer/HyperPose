@@ -1,5 +1,4 @@
 #pragma once
-
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -9,6 +8,14 @@
 // Logger for TensorRT info/warning/errors
 class Logger : public nvinfer1::ILogger
 {
+    std::string log_file = "tensorrt.log";
+    std::fstream fs;
+
+    void log_with(std::ostream &os, const char *prefix, const char *msg) const
+    {
+        os << prefix << msg << std::endl;
+    }
+
   public:
     Logger() : Logger(Severity::kINFO) {}
 
@@ -21,31 +28,28 @@ class Logger : public nvinfer1::ILogger
     {
         // suppress messages with severity enum value greater than the
         // reportable
-        if (severity > reportableSeverity) return;
+        if (severity > reportableSeverity) { return; }
 
         switch (severity) {
         case Severity::kINTERNAL_ERROR:
-            fs << "INTERNAL_ERROR: ";
+            log_with(fs, "INTERNAL_ERROR: ", msg);
+            log_with(std::cerr, "INTERNAL_ERROR: ", msg);
             break;
         case Severity::kERROR:
-            fs << "ERROR: ";
+            log_with(fs, "ERROR: ", msg);
+            log_with(std::cerr, "ERROR: ", msg);
             break;
         case Severity::kWARNING:
-            fs << "WARNING: ";
+            log_with(fs, "WARNING: ", msg);
             break;
         case Severity::kINFO:
-            fs << "INFO: ";
+            log_with(fs, "INFO: ", msg);
             break;
         default:
-            fs << "UNKNOWN: ";
+            log_with(fs, "UNKNOWN: ", msg);
             break;
         }
-        fs << msg << std::endl;
     }
 
     Severity reportableSeverity{Severity::kWARNING};
-
-  private:
-    std::string log_file = "tensorrt.log";
-    std::fstream fs;
 };
