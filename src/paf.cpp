@@ -38,11 +38,9 @@ class paf_processor_impl : public paf_processor
     {
         TRACE_SCOPE("paf_processor_impl::operator()");
         // TODO: To be optimized here.
-        thread_local ttl::tensor<float, 3> upsample_conf_(
-            upsample_conf_dim);  // 5FPS
-        thread_local ttl::tensor<float, 3> upsample_paf_(
-            upsample_paf_dim);  // 5FPS
-        thread_local peak_finder_t<float> peak_finder_(
+        ttl::tensor<float, 3> upsample_conf_(upsample_conf_dim);  // 5FPS
+        ttl::tensor<float, 3> upsample_paf_(upsample_paf_dim);    // 5FPS
+        peak_finder_t<float> peak_finder_(
             peak_param.dims()[0], peak_param.dims()[1], peak_param.dims()[2],
             peak_param.dims()[3]);
         {
