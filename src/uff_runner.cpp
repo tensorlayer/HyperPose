@@ -172,8 +172,7 @@ void uff_runner_impl::createBuffers_(int batch_size)
         std::cout << "binding " << i << ":"
                   << " name: " << name << " type" << to_string(dtype)
                   << to_string(dims) << std::endl;
-        buffers_.emplace_back(
-            cuda_buffer_t(batch_size, volume(dims) * elementSize(dtype)));
+        buffers_.emplace_back(batch_size, volume(dims) * elementSize(dtype));
     }
 }
 
