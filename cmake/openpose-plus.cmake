@@ -1,16 +1,7 @@
+INCLUDE(cmake/cuda.cmake)
 FIND_PACKAGE(OpenCV)
 
 ADD_DEFINITIONS(-Ofast -march=native)
-
-FIND_PACKAGE(CUDA REQUIRED)
-INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
-EXECUTE_PROCESS(
-    COMMAND arch
-    COMMAND tr -d '\n'
-    OUTPUT_VARIABLE ARCH)
-SET(CUDA_RT /usr/local/cuda/targets/${ARCH}-linux)
-
-LINK_DIRECTORIES(${CUDA_RT}/lib)
 
 ADD_LIBRARY(openpose-plus src/cudnn.cpp src/paf.cpp src/uff_runner.cpp)
 TARGET_LINK_LIBRARIES(
