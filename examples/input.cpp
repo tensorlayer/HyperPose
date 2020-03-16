@@ -17,7 +17,7 @@ void _input_image(const std::string &filename, int target_height,
         std::cerr << "[ERROR] cv::Mat of " << filename << "is empty.\n";
         exit(1);
     }
-    cv::resize(img, resized_image, resized_image.size(), 0, 0);
+    cv::resize(img, resized_image, resized_image.size());
 }
 
 void input_image(const std::string &filename, int target_height,

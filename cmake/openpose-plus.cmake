@@ -19,8 +19,7 @@ TARGET_LINK_LIBRARIES(
     cudart
     nvinfer
     nvparsers
-    opencv_core
-    opencv_imgproc)
+    ${OpenCV_LIBS})
 TARGET_INCLUDE_DIRECTORIES(openpose-plus PRIVATE ${CUDA_RT}/include
                                                  ${CUDA_RT}/include/crt)
 ADD_GLOBAL_DEPS(openpose-plus)

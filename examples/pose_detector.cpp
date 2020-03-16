@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "trace.hpp"
-#include <gflags/gflags.h>
+
 #include <opencv2/opencv.hpp>
 #include <ttl/tensor>
 
@@ -81,7 +81,7 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
     {
         TRACE_SCOPE("batch read images");
         for (int i = 0; i < image_files.size(); ++i) {
-            input_image(image_files[i].data(), height, width,
+            input_image(image_files[i], height, width,
                         hwc_images[i].data(), chw_images[i].data(), flip_rgb);
             resized_images.push_back(cv::Mat(cv::Size(width, height), CV_8UC(3),
                                              hwc_images[i].data()));
@@ -123,12 +123,12 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
         };
         // ======================================================================
 
-        for (int i = 0; i < tasks.size(); ++i) {
+        for (int i = 0; i < tasks.size(); ++i)
             tasks[i] = pool.enqueue(task, i);
-        }
+
         task(tasks.size(), false);
-        //        pool.wait();
-        for (auto &&f : tasks) f.wait();
+        for (auto &&f : tasks)
+            f.wait();
     }
 }
 

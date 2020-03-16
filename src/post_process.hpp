@@ -134,8 +134,6 @@ template <typename T> class peak_finder_t
           ksize(ksize),
           smoothed_cpu(channel, height, width),
           pooled_cpu(channel, height, width),
-          pool_input_gpu(channel, height, width),
-          pooled_gpu(channel, height, width),
           same_max_pool_3x3_gpu(1, channel, height, width, 3, 3)
     {
         //        std::cout << "Appread Once\n" << '\n';
@@ -154,6 +152,8 @@ template <typename T> class peak_finder_t
 
         if (use_gpu) {
             TRACE_SCOPE("find_peak_coords::max pooling on GPU");
+            ttl::cuda_tensor<T, 3> pool_input_gpu(channel, height, width),
+                pooled_gpu(channel, height, width);
             ttl::copy(ttl::ref(pool_input_gpu), ttl::view(smoothed_cpu));
             // FIXME: pass ttl::tensor_{ref/view}
             same_max_pool_3x3_gpu(pool_input_gpu.data(), pooled_gpu.data());
@@ -211,8 +211,6 @@ template <typename T> class peak_finder_t
 
     ttl::tensor<T, 3> smoothed_cpu;
     ttl::tensor<T, 3> pooled_cpu;
-    ttl::cuda_tensor<T, 3> pool_input_gpu;
-    ttl::cuda_tensor<T, 3> pooled_gpu;
 
     Pool_NCHW_PaddingSame_Max<T> same_max_pool_3x3_gpu;
 };
