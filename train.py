@@ -20,7 +20,7 @@ from models import get_model,get_train
 from datasets import get_dataset
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='FastPose.')
+    parser = argparse.ArgumentParser(description='SwiftPose')
     parser.add_argument("--model_type",
                         type=str,
                         default="lightweight_openpose",
