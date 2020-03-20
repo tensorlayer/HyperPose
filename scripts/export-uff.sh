@@ -14,5 +14,4 @@ export_uff()
     convert-to-uff -o ${output_dir}/${model_name}.uff ${output_dir}/frozen_${model_name}.uff
     echo "convertion finished!"
 }
-
 export_uff $1 $2 $3
