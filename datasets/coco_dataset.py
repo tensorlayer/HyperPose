@@ -1,24 +1,80 @@
-# -*- coding: utf-8 -*-
-
-## xxx
-import math
 import os
-from distutils.dir_util import mkpath
-
 import cv2
-import matplotlib.pyplot as plt
+import math
+import _pickle as cPickle
 import numpy as np
-from scipy.spatial.distance import cdist
 import tensorflow as tf
-from train_config import config
-from pycocotools.coco import COCO, maskUtils
+import tensorlayer as tl
 from tensorlayer import logging
 from tensorlayer.files.utils import (del_file, folder_exists, maybe_download_and_extract)
 
-n_pos = config.MODEL.n_pos
-hout = config.MODEL.hout
-wout = config.MODEL.wout
+import matplotlib.pyplot as plt
+from distutils.dir_util import mkpath
+from scipy.spatial.distance import cdist
+from pycocotools.coco import COCO, maskUtils
 
+def get_dataset(config):
+    if 'coco' in config.DATA.train_data:
+        # automatically download MSCOCO data to "data/mscoco..."" folder
+        train_im_path, train_ann_path, val_im_path, val_ann_path, _, _ = \
+            load_mscoco_dataset(config.DATA.data_path, config.DATA.coco_version, task='person')
+
+        # read coco training images contains valid people
+        train_imgs_file_list, train_objs_info_list, train_mask_list, train_target_list = \
+            get_pose_data_list(train_im_path, train_ann_path)
+
+        # read coco validating images contains valid people (you can use it for training as well)
+        val_imgs_file_list, val_objs_info_list, val_mask_list, val_target_list = \
+            get_pose_data_list(val_im_path, val_ann_path)
+
+    if 'custom' in config.DATA.train_data:
+        ## read your own images contains valid people
+        ## 1. if you only have one folder as follow:
+        ##   data/your_data
+        ##           /images
+        ##               0001.jpeg
+        ##               0002.jpeg
+        ##           /coco.json
+        # your_imgs_file_list, your_objs_info_list, your_mask_list, your_targets = \
+        #     get_pose_data_list(config.DATA.your_images_path, config.DATA.your_annos_path)
+        ## 2. if you have a folder with many folders: (which is common in industry)
+        folder_list = tl.files.load_folder_list(path='data/your_data')
+        your_imgs_file_list, your_objs_info_list, your_mask_list,your_target_list= [], [], [],[]
+        for folder in folder_list:
+            _imgs_file_list, _objs_info_list, _mask_list, _targets = \
+                get_pose_data_list(os.path.join(folder, 'images'), os.path.join(folder, 'coco.json'))
+            print(len(_imgs_file_list))
+            your_imgs_file_list.extend(_imgs_file_list)
+            your_objs_info_list.extend(_objs_info_list)
+            your_mask_list.extend(_mask_list)
+            your_target_list.extend(_targets)
+        print("number of own images found:", len(your_imgs_file_list))
+
+    # choose dataset for training
+    if config.DATA.train_data == 'coco':
+        # 1. only coco training set
+        imgs_file_list = train_imgs_file_list
+        train_target_list = train_target_list
+    elif config.DATA.train_data == 'custom':
+        # 2. only your own data
+        imgs_file_list = your_imgs_file_list
+        train_target_list = your_target_list
+    elif config.DATA.train_data == 'coco_and_custom':
+        # 3. your own data and coco training set
+        imgs_file_list = train_imgs_file_list + your_imgs_file_list
+        train_target_list = train_target_list+your_target_list
+    else:
+        raise Exception('please choose a valid config.DATA.train_data setting.')
+    
+    #tensorflow data pipeline
+    def generator():
+        """TF Dataset generator."""
+        assert len(imgs_file_list) == len(train_target_list)
+        for _input, _target in zip(imgs_file_list, train_target_list):
+            yield _input.encode('utf-8'), cPickle.dumps(_target)
+
+    train_dataset = tf.data.Dataset.from_generator(generator, output_types=(tf.string, tf.string))
+    return train_dataset
 
 ## download dataset
 def load_mscoco_dataset(path='data', dataset='2017', task='person'):  # TODO move to tl.files later
@@ -128,7 +184,7 @@ def load_mscoco_dataset(path='data', dataset='2017', task='person'):  # TODO mov
             del_file(os.path.join(path, "train2017.zip"))
         else:
             logging.info("    training images exists")
-
+        
         if folder_exists(os.path.join(path, "test2017")) is False:
             logging.info("    downloading testing images")
             os.system("wget http://images.cocodataset.org/zips/test2017.zip -P {}".format(path))
@@ -136,7 +192,6 @@ def load_mscoco_dataset(path='data', dataset='2017', task='person'):  # TODO mov
             del_file(os.path.join(path, "test2017.zip"))
         else:
             logging.info("    testing images exists")
-
     else:
         raise Exception("dataset can only be 2014 and 2017, see MSCOCO website for more details.")
 
@@ -192,6 +247,24 @@ def load_mscoco_dataset(path='data', dataset='2017', task='person'):  # TODO mov
                 test_images_path, test_annotations_file_path
 
 
+def get_pose_data_list(im_path, ann_path):
+    """
+    train_im_path : image folder name
+    train_ann_path : coco json file name
+    """
+    print("[x] Get pose data from {}".format(im_path))
+    data = PoseInfo(im_path, ann_path, False)
+    imgs_file_list = data.get_image_list()
+    objs_info_list = data.get_joint_list()
+    mask_list = data.get_mask()
+    bbx_list=data.get_bbx_list()
+    targets = list(zip(objs_info_list, mask_list,bbx_list))
+    if len(imgs_file_list) != len(objs_info_list):
+        raise Exception("number of images and annotations do not match")
+    else:
+        print("{} has {} images".format(im_path, len(imgs_file_list)))
+    return imgs_file_list, objs_info_list, mask_list, targets
+
 ## read coco data
 class CocoMeta:
     """ Be used in PoseInfo. """
@@ -199,13 +272,14 @@ class CocoMeta:
         zip([2, 9, 10, 2, 12, 13, 2, 3, 4, 3, 2, 6, 7, 6, 2, 1, 1, 15, 16],
             [9, 10, 11, 12, 13, 14, 3, 4, 5, 17, 6, 7, 8, 18, 1, 15, 16, 17, 18]))
 
-    def __init__(self, idx, img_url, img_meta, annotations, masks):
+    def __init__(self, idx, img_url, img_meta, annotations, masks, bbxs):
         self.idx = idx
         self.img_url = img_url
         self.img = None
         self.height = int(img_meta['height'])
         self.width = int(img_meta['width'])
         self.masks = masks
+        self.bbx_list=bbxs
         joint_list = []
 
         for anno in annotations:
@@ -217,7 +291,7 @@ class CocoMeta:
             ys = kp[1::3]
             vs = kp[2::3]
             # if joint is marked
-            joint_list.append([(x, y) if v >= 1 else (-1000, -1000) for x, y, v in zip(xs, ys, vs)])
+            joint_list.append([[x, y] if v >= 1 else (-1000, -1000) for x, y, v in zip(xs, ys, vs)])
 
         self.joint_list = []
         # 对原 COCO 数据集的转换 其中第二位之所以不一样是为了计算 Neck 等于左右 shoulder 的中点
@@ -231,12 +305,12 @@ class CocoMeta:
                 j2 = prev_joint[idx2 - 1]
 
                 if j1[0] <= 0 or j1[1] <= 0 or j2[0] <= 0 or j2[1] <= 0:
-                    new_joint.append((-1000, -1000))
+                    new_joint.append([-1000, -1000])
                 else:
-                    new_joint.append(((j1[0] + j2[0]) / 2, (j1[1] + j2[1]) / 2))
+                    new_joint.append([(j1[0] + j2[0]) / 2, (j1[1] + j2[1]) / 2])
 
             # for background
-            new_joint.append((-1000, -1000))
+            new_joint.append([-1000, -1000])
             if len(new_joint) != 19:
                 print('The Length of joints list should be 0 or 19 but actually:', len(new_joint))
             self.joint_list.append(new_joint)
@@ -264,6 +338,13 @@ class PoseInfo:
             annolist.append(adjust_anno)
         return annolist
 
+    @staticmethod    
+    def get_bbxs(annos_info):
+        bbxlist=[]
+        for anno in annos_info:
+            bbxlist.append(anno["bbox"])
+        return bbxlist
+
     def get_image_annos(self):
         """Read JSON file, and get and check the image list.
         Skip missing images.
@@ -282,6 +363,7 @@ class PoseInfo:
             annos_ids = self.coco.getAnnIds(imgIds=images_ids[idx])
             annos_info = self.coco.loadAnns(annos_ids)
             keypoints = self.get_keypoints(annos_info)
+            bbxs=self.get_bbxs(annos_info)
 
             #############################################################################
             anns = annos_info
@@ -329,7 +411,7 @@ class PoseInfo:
             ############################################################################
             total_keypoints = sum([ann.get('num_keypoints', 0) for ann in annos_info])
             if total_keypoints > 0:
-                meta = CocoMeta(images_ids[idx], image_path, images_info[0], keypoints, masks)
+                meta = CocoMeta(images_ids[idx], image_path, images_info[0], keypoints, masks, bbxs)
                 self.metas.append(meta)
 
         print("Overall get {} valid pose images from {} and {}".format(
@@ -355,391 +437,12 @@ class PoseInfo:
         for meta in self.metas:
             mask_list.append(meta.masks)
         return mask_list
-
-
-def get_heatmap(annos, height, width):
-    """
-
-    Parameters
-    -----------
-
-
-    Returns
-    --------
-
-
-    """
-
-    # 19 for coco, 15 for MPII
-    num_joints = 19
-
-    # the heatmap for every joints takes the maximum over all people
-    joints_heatmap = np.zeros((num_joints, height, width), dtype=np.float32)
-
-    # among all people
-    for joint in annos:
-        # generate heatmap for every keypoints
-        # loop through all people and keep the maximum
-
-        for i, points in enumerate(joint):
-            if points[0] < 0 or points[1] < 0:
-                continue
-            joints_heatmap = put_heatmap(joints_heatmap, i, points, 8.0)
-
-    # 0: joint index, 1:y, 2:x
-    joints_heatmap = joints_heatmap.transpose((1, 2, 0))
-
-    # background
-    joints_heatmap[:, :, -1] = np.clip(1 - np.amax(joints_heatmap, axis=2), 0.0, 1.0)
-
-    mapholder = []
-    for i in range(0, 19):
-        a = cv2.resize(np.array(joints_heatmap[:, :, i]), (hout, wout))
-        mapholder.append(a)
-    mapholder = np.array(mapholder)
-    joints_heatmap = mapholder.transpose(1, 2, 0)
-
-    return joints_heatmap.astype(np.float16)
-
-
-def put_heatmap(heatmap, plane_idx, center, sigma):
-    """
-
-    Parameters
-    -----------
-
-
-    Returns
-    --------
-
-
-    """
-    center_x, center_y = center
-    _, height, width = heatmap.shape[:3]
-
-    th = 4.6052
-    delta = math.sqrt(th * 2)
-
-    x0 = int(max(0, center_x - delta * sigma + 0.5))
-    y0 = int(max(0, center_y - delta * sigma + 0.5))
-
-    x1 = int(min(width - 1, center_x + delta * sigma + 0.5))
-    y1 = int(min(height - 1, center_y + delta * sigma + 0.5))
-
-    exp_factor = 1 / 2.0 / sigma / sigma
-
-    ## fast - vectorize
-    arr_heatmap = heatmap[plane_idx, y0:y1 + 1, x0:x1 + 1]
-    y_vec = (np.arange(y0, y1 + 1) - center_y)**2  # y1 included
-    x_vec = (np.arange(x0, x1 + 1) - center_x)**2
-    xv, yv = np.meshgrid(x_vec, y_vec)
-    arr_sum = exp_factor * (xv + yv)
-    arr_exp = np.exp(-arr_sum)
-    arr_exp[arr_sum > th] = 0
-    heatmap[plane_idx, y0:y1 + 1, x0:x1 + 1] = np.maximum(arr_heatmap, arr_exp)
-    return heatmap
-
-
-def get_vectormap(annos, height, width):
-    """
-
-    Parameters
-    -----------
-
-
-    Returns
-    --------
-
-
-    """
-    num_joints = 19
-
-    limb = list(
-        zip([2, 9, 10, 2, 12, 13, 2, 3, 4, 3, 2, 6, 7, 6, 2, 1, 1, 15, 16],
-            [9, 10, 11, 12, 13, 14, 3, 4, 5, 17, 6, 7, 8, 18, 1, 15, 16, 17, 18]))
-
-    vectormap = np.zeros((num_joints * 2, height, width), dtype=np.float32)
-    counter = np.zeros((num_joints, height, width), dtype=np.int16)
-
-    for joint in annos:
-        if len(joint) != 19:
-            print('THE LENGTH IS NOT 19 ERROR:', len(joint))
-        for i, (a, b) in enumerate(limb):
-            a -= 1
-            b -= 1
-
-            v_start = joint[a]
-            v_end = joint[b]
-            # exclude invisible or unmarked point
-            if v_start[0] < -100 or v_start[1] < -100 or v_end[0] < -100 or v_end[1] < -100:
-                continue
-            vectormap = cal_vectormap(vectormap, counter, i, v_start, v_end)
-
-    vectormap = vectormap.transpose((1, 2, 0))
-    # normalize the PAF (otherwise longer limb gives stronger absolute strength)
-    nonzero_vector = np.nonzero(counter)
-
-    for i, y, x in zip(nonzero_vector[0], nonzero_vector[1], nonzero_vector[2]):
-
-        if counter[i][y][x] <= 0:
-            continue
-        vectormap[y][x][i * 2 + 0] /= counter[i][y][x]
-        vectormap[y][x][i * 2 + 1] /= counter[i][y][x]
-
-    mapholder = []
-    for i in range(0, n_pos * 2):
-        a = cv2.resize(np.array(vectormap[:, :, i]), (hout, wout), interpolation=cv2.INTER_AREA)
-        mapholder.append(a)
-    mapholder = np.array(mapholder)
-    vectormap = mapholder.transpose(1, 2, 0)
-
-    return vectormap.astype(np.float16)
-
-
-def cal_vectormap(vectormap, countmap, i, v_start, v_end):
-    """
-
-    Parameters
-    -----------
-
-
-    Returns
-    --------
-
-
-    """
-    _, height, width = vectormap.shape[:3]
-
-    threshold = 8
-    vector_x = v_end[0] - v_start[0]
-    vector_y = v_end[1] - v_start[1]
-    length = math.sqrt(vector_x**2 + vector_y**2)
-    if length == 0:
-        return vectormap
-
-    min_x = max(0, int(min(v_start[0], v_end[0]) - threshold))
-    min_y = max(0, int(min(v_start[1], v_end[1]) - threshold))
-
-    max_x = min(width, int(max(v_start[0], v_end[0]) + threshold))
-    max_y = min(height, int(max(v_start[1], v_end[1]) + threshold))
-
-    norm_x = vector_x / length
-    norm_y = vector_y / length
-
-    for y in range(min_y, max_y):
-        for x in range(min_x, max_x):
-            bec_x = x - v_start[0]
-            bec_y = y - v_start[1]
-            dist = abs(bec_x * norm_y - bec_y * norm_x)
-
-            # orthogonal distance is < then threshold
-            if dist > threshold:
-                continue
-            countmap[i][y][x] += 1
-            vectormap[i * 2 + 0][y][x] = norm_x
-            vectormap[i * 2 + 1][y][x] = norm_y
-
-    return vectormap
-
-
-def fast_vectormap(vectormap, countmap, i, v_start, v_end):
-    """
-
-    Parameters
-    -----------
-
-
-    Returns
-    --------
-
-
-    """
-    _, height, width = vectormap.shape[:3]
-    _, height, width = vectormap.shape[:3]
-
-    threshold = 8
-    vector_x = v_end[0] - v_start[0]
-    vector_y = v_end[1] - v_start[1]
-
-    length = math.sqrt(vector_x**2 + vector_y**2)
-    if length == 0:
-        return vectormap
-
-    min_x = max(0, int(min(v_start[0], v_end[0]) - threshold))
-    min_y = max(0, int(min(v_start[1], v_end[1]) - threshold))
-
-    max_x = min(width, int(max(v_start[0], v_end[0]) + threshold))
-    max_y = min(height, int(max(v_start[1], v_end[1]) + threshold))
-
-    norm_x = vector_x / length
-    norm_y = vector_y / length
-
-    x_vec = (np.arange(min_x, max_x) - v_start[0]) * norm_y
-    y_vec = (np.arange(min_y, max_y) - v_start[1]) * norm_x
-
-    xv, yv = np.meshgrid(x_vec, y_vec)
-
-    dist_matrix = abs(xv - yv)
-    filter_matrix = np.where(dist_matrix > threshold, 0, 1)
-    countmap[i, min_y:max_y, min_x:max_x] += filter_matrix
-    for y in range(max_y - min_y):
-        for x in range(max_x - min_x):
-            if filter_matrix[y, x] != 0:
-                vectormap[i * 2 + 0, min_y + y, min_x + x] = norm_x
-                vectormap[i * 2 + 1, min_y + y, min_x + x] = norm_y
-    return vectormap
-
-
-def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, masks, name=''):
-    """Save results for debugging.
-
-    Parameters
-    -----------
-    images : a list of RGB images
-    heats_ground : a list of keypoint heat maps or None
-    heats_result : a list of keypoint heat maps or None
-    pafs_ground : a list of paf vector maps or None
-    pafs_result : a list of paf vector maps or None
-    masks : a list of mask for people
-    """
-    # interval = len(images)
-    for i in range(len(images)):
-        if heats_ground is not None:
-            heat_ground = heats_ground[i]
-        if heats_result is not None:
-            heat_result = heats_result[i]
-        if pafs_ground is not None:
-            paf_ground = pafs_ground[i]
-        if pafs_result is not None:
-            paf_result = pafs_result[i]
-        if masks is not None:
-            # print(masks.shape)
-            mask = masks[i, :, :, 0]
-            # print(mask.shape)
-            mask = mask[:, :, np.newaxis]
-            # mask = masks[:,:,:,0]
-            # mask = mask.reshape(hout, wout, 1)
-            mask1 = np.repeat(mask, n_pos, 2)
-            mask2 = np.repeat(mask, n_pos * 2, 2)
-            # print(mask1.shape, mask2.shape)
-        image = images[i]
-
-        fig = plt.figure(figsize=(8, 8))
-        a = fig.add_subplot(2, 3, 1)
-        plt.imshow(image)
-
-        if pafs_ground is not None:
-            a = fig.add_subplot(2, 3, 2)
-            a.set_title('Vectormap_ground')
-            vectormap = paf_ground * mask2
-            tmp2 = vectormap.transpose((2, 0, 1))
-            tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
-            tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
-
-            # tmp2_odd = tmp2_odd * 255
-            # tmp2_odd = tmp2_odd.astype(np.int)
-            plt.imshow(tmp2_odd, alpha=0.3)
-
-            # tmp2_even = tmp2_even * 255
-            # tmp2_even = tmp2_even.astype(np.int)
-            plt.colorbar()
-            plt.imshow(tmp2_even, alpha=0.3)
-
-        if pafs_result is not None:
-            a = fig.add_subplot(2, 3, 3)
-            a.set_title('Vectormap result')
-            if masks is not None:
-                vectormap = paf_result * mask2
-            else:
-                vectormap = paf_result
-            tmp2 = vectormap.transpose((2, 0, 1))
-            tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
-            tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
-            plt.imshow(tmp2_odd, alpha=0.3)
-
-            plt.colorbar()
-            plt.imshow(tmp2_even, alpha=0.3)
-
-        if heats_result is not None:
-            a = fig.add_subplot(2, 3, 4)
-            a.set_title('Heatmap result')
-            if masks is not None:
-                heatmap = heat_result * mask1
-            else:
-                heatmap = heat_result
-            tmp = heatmap
-            tmp = np.amax(heatmap[:, :, :-1], axis=2)
-
-            plt.colorbar()
-            plt.imshow(tmp, alpha=0.3)
-
-        if heats_ground is not None:
-            a = fig.add_subplot(2, 3, 5)
-            a.set_title('Heatmap ground truth')
-            if masks is not None:
-                heatmap = heat_ground * mask1
-            else:
-                heatmap = heat_ground
-            tmp = heatmap
-            tmp = np.amax(heatmap[:, :, :-1], axis=2)
-
-            plt.colorbar()
-            plt.imshow(tmp, alpha=0.3)
-
-        if masks is not None:
-            a = fig.add_subplot(2, 3, 6)
-            a.set_title('Mask')
-            # print(mask.shape, tmp.shape)
-            plt.colorbar()
-            plt.imshow(mask[:, :, 0], alpha=0.3)
-        # plt.savefig(str(i)+'.png',dpi=300)
-        # plt.show()
-
-        mkpath(config.LOG.vis_path)
-        plt.savefig(os.path.join(config.LOG.vis_path, '%s%d.png' % (name, i)), dpi=300)
-
-
-def vis_annos(image, annos, name=''):
-    """Save results for debugging.
-
-    Parameters
-    -----------
-    images : single RGB image
-    annos  : annotation, list of lists
-    """
-
-    fig = plt.figure(figsize=(8, 8))
-    a = fig.add_subplot(1, 1, 1)
-
-    plt.imshow(image)
-    for people in annos:
-        for idx, jo in enumerate(people):
-            if jo[0] > 0 and jo[1] > 0:
-                plt.plot(jo[0], jo[1], '*')
-
-    mkpath(config.LOG.vis_path)
-    plt.savefig(os.path.join(config.LOG.vis_path, 'keypoints%s%d.png' % (name, i)), dpi=300)
-
-
-def tf_repeat(tensor, repeats):
-    """
-    Args:
-
-    input: A Tensor. 1-D or higher.
-    repeats: A list. Number of repeat for each dimension, length must be the same as the number of dimensions in input
-
-    Returns:
-
-    A Tensor. Has the same type as input. Has the shape of tensor.shape * repeats
-    """
-
-    expanded_tensor = tf.expand_dims(tensor, -1)
-    multiples = [1] + repeats
-    tiled_tensor = tf.tile(expanded_tensor, multiples=multiples)
-    repeated_tesnor = tf.reshape(tiled_tensor, tf.shape(tensor) * repeats)
-
-    return repeated_tesnor
-
+    
+    def get_bbx_list(self):
+        bbx_list=[]
+        for meta in self.metas:
+            bbx_list.append(meta.bbx_list)
+        return bbx_list
 
 if __name__ == '__main__':
     data_dir = '/Users/Joel/Desktop/coco'

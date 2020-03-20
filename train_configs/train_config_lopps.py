@@ -16,32 +16,35 @@ config.TRAIN.lr_decay_factor = 0.333  # decay lr factor
 config.TRAIN.weight_decay_factor = 5e-4
 
 config.MODEL = edict()
-config.MODEL.model_path = 'models'  # save directory
 config.MODEL.n_pos = 19  # number of keypoints + 1 for background
+config.MODEL.num_channels=128
 config.MODEL.hin = 368  # input size during training , 240
 config.MODEL.win = 368
-config.MODEL.hout = int(config.MODEL.hin / 8)  # output size during training (default 46)
-config.MODEL.wout = int(config.MODEL.win / 8)
-config.MODEL.name = 'vgg'  # vgg, vggtiny, mobilenet
+config.MODEL.hout = 46 # output size during training (default 46)
+config.MODEL.wout = 46
+config.MODEL.model_type = "lightweight_openpose"  # lightweight_openpose, pose_proposal
+config.MODEL.model_name = "default_name"
+config.MODEL.model_dir = f"save_dir/{config.MODEL.model_name}/model_dir"  # save directory
 
 if (config.MODEL.hin % 16 != 0) or (config.MODEL.win % 16 != 0):
     raise Exception("image size should be divided by 16")
 
 config.DATA = edict()
-config.DATA.train_data = 'coco'  # coco, custom, coco_and_custom
-config.DATA.coco_version = '2017'  # MSCOCO version 2014 or 2017
-config.DATA.data_path = 'data'
-config.DATA.your_images_path = os.path.join('data', 'your_data', 'images')
-config.DATA.your_annos_path = os.path.join('data', 'your_data', 'coco.json')
+config.DATA.train_data = "coco"  # coco, custom, coco_and_custom
+config.DATA.coco_version = "2017"  # MSCOCO version 2014 or 2017
+config.DATA.data_path = "data"
+config.DATA.your_images_path = os.path.join("data", "your_data", "images")
+config.DATA.your_annos_path = os.path.join("data", "your_data", "coco.json")
 
 config.LOG = edict()
-config.LOG.vis_path = 'vis'
+config.LOG.vis_dir = f"save_dir/{config.MODEL.model_name}/vis_dir"
+config.LOG.log_path= f"save_dir/{config.MODEL.model_name}/log.txt"
 
 # config.VALID = edict()
 
 # import json
 # def log_config(filename, cfg):
-#     with open(filename, 'w') as f:
+#     with open(filename, "w") as f:
 #         f.write("================================================\n")
 #         f.write(json.dumps(cfg, indent=4))
 #         f.write("\n================================================\n")
