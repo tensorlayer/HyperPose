@@ -12,16 +12,13 @@ cmake_targets_with_trace:
 	mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR); cmake -DWITH_TRACE=ON $(CMAKE_FLAGS) $(CURDIR)
 
-build_with_cmake:
-	cmake_targets
+build_with_cmake: cmake_targets
 	make -C $(BUILD_DIR) -j $(NPROC)
 
-pack:
-	cmake_targets
+pack: cmake_targets
 	make -C $(BUILD_DIR) -j $(NPROC) package
 
-pack_trace:
-	cmake_targets_with_trace
+pack_trace: cmake_targets_with_trace
 	make -C $(BUILD_DIR) -j  $(NPROC) package
 
 # Using Docker.

@@ -177,7 +177,7 @@ tensorrt::sync_inference(const std::vector<cv::Mat>& batch)
     // NHWC -> NCHW.
     thread_local std::vector<float> cpu_image_batch_buffer;
     {
-        TRACE_SCOPE("INFERENCE::Images2NCHW")
+        TRACE_SCOPE("INFERENCE::Images2NCHW");
         images2nchw(cpu_image_batch_buffer, batch, m_inp_size, m_factor, m_flip_rgb);
     }
 
@@ -187,6 +187,7 @@ tensorrt::sync_inference(const std::vector<cv::Mat>& batch)
             TRACE_SCOPE("INFERENCE::TensorRT::host2dev");
             for (auto i : ttl::range(m_cuda_buffers.size()))
                 if (m_engine->bindingIsInput(i)) {
+                    std::cout << "Got Input Binding! " << i << '\n';
                     const auto buffer = m_cuda_buffers.front().slice(i, batch.size());
                     ttl::tensor_view<char, 2> input(
                             reinterpret_cast<char *>(cpu_image_batch_buffer.data()), buffer.shape());

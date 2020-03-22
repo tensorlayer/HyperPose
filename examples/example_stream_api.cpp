@@ -4,23 +4,26 @@
 #include <gflags/gflags.h>
 
 // Model flags
-DEFINE_string(model_file, "../../data/models/hao28-600000-256x384.uff", "Path to uff model.");
+DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff", "Path to uff model.");
 DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
-DEFINE_string(input_folder, "../../data/media", "Folder of images to inference.");
+DEFINE_string(input_folder, "../data/media", "Folder of images to inference.");
 DEFINE_string(output_foler, ".", "Folder to save outputs.");
 
 int main() {
+//    assert(0); // No Debug.
+
     namespace fs = std::experimental::filesystem;
     constexpr auto log = []() -> std::ostream& {
-        std::cout << "[SwiftPose::EXAMPLE]";
+        std::cout << "[SwiftPose::EXAMPLE] ";
         return std::cout;
     };
 
     // Collect data into batch.
+    log() << "Your current path: " << fs::current_path() << '\n';
     std::regex image_regex{R"((.*)\.(jpeg|jpg|png))" };
     std::vector<cv::Mat> batch;
-    for(auto&& file : fs::directory_iterator("."))
+    for(auto&& file : fs::directory_iterator(FLAGS_input_folder))
     {
         auto file_name = file.path().string();
         if (std::regex_match(file_name, image_regex))
@@ -42,5 +45,8 @@ int main() {
             FLAGS_model_file,
             {FLAGS_input_width, FLAGS_input_height},
             "image",
-            {"outputs/conf", "outputs/paf"});
+            {"outputs/conf", "outputs/paf"},
+            batch.size(), nvinfer1::DataType::kHALF);
+
+    auto result = engine.sync_inference(batch);
 }

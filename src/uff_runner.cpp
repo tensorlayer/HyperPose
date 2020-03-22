@@ -1,8 +1,6 @@
 #include <algorithm>
 #include <cassert>
-#include <cstdio>
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -14,7 +12,6 @@
 
 #include <NvInfer.h>
 #include <NvUffParser.h>
-#include <NvUtils.h>
 
 #include <openpose-plus.h>
 
