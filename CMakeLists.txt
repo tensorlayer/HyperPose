@@ -2,6 +2,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 PROJECT(openpose-plus)
 
 SET(CMAKE_CXX_STANDARD 17)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
 INCLUDE(cmake/3rdparty.cmake)
@@ -20,8 +21,10 @@ IF(BUILD_FAKE)
     ADD_LIBRARY(openpose-plus src/fake_openpose_plus.cpp)
 ELSE()
     INCLUDE(cmake/openpose-plus.cmake)
+    INCLUDE(cmake/swiftpose.cmake) # TODO.!
     INCLUDE(cmake/package.cmake)
 ENDIF()
+
 INCLUDE(cmake/examples.cmake)
 
 ENABLE_TESTING()

@@ -1,5 +1,7 @@
+# TODO: Replace openpose-plus with this when code refactoring is done.
+
 # Library Name
-set(POSE_LIB_NAME pose)
+set(POSE_LIB_NAME swiftpose)
 
 # Compiler Flags
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native")
@@ -19,7 +21,9 @@ LINK_DIRECTORIES(${CUDA_RT}/lib)
 
 ADD_LIBRARY(
         ${POSE_LIB_NAME}
-        src/*.cpp)
+        src/tensorrt.cpp
+        src/data.cpp
+        src/viz.cpp)
 TARGET_LINK_LIBRARIES(
         ${POSE_LIB_NAME}
         cudnn

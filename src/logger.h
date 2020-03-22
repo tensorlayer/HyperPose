@@ -1,9 +1,11 @@
 #pragma once
+
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <string_view>
 
-#include "NvInfer.h"
+#include <NvInfer.h>
 
 // Logger for TensorRT info/warning/errors
 class Logger : public nvinfer1::ILogger
@@ -11,8 +13,9 @@ class Logger : public nvinfer1::ILogger
     std::string log_file = "tensorrt.log";
     std::fstream fs;
 
-    void log_with(std::ostream &os, const char *prefix, const char *msg) const
+    void log_with(std::ostream &os, std::string_view prefix, std::string_view msg) const
     {
+        std::cout << prefix << msg << '\n';
         os << prefix << msg << std::endl;
     }
 
@@ -24,7 +27,7 @@ class Logger : public nvinfer1::ILogger
     {
     }
 
-    void log(Severity severity, const char *msg) override
+    void log(Severity severity, const char* msg) override
     {
         // suppress messages with severity enum value greater than the
         // reportable
