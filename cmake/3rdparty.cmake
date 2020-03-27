@@ -3,7 +3,7 @@ INCLUDE(ExternalProject)
 SET(THIRDPARTY_PREFIX ${CMAKE_SOURCE_DIR}/3rdparty)
 
 SET(STDTRACER_GIT_URL
-    https://github.com/lgarithm/stdtracer.git
+    https://github.com/stdml/stdtracer.git
     CACHE STRING "URL for clone stdtracer")
 
 EXTERNALPROJECT_ADD(
@@ -18,7 +18,7 @@ EXTERNALPROJECT_ADD(
                -DBUILD_EXAMPLES=0 -DCMAKE_CXX_FLAGS=-fPIC)
 
 SET(STDTENSOR_GIT_URL
-    https://github.com/lgarithm/stdtensor.git
+    https://github.com/stdml/stdtensor.git
     CACHE STRING "URL for clone stdtensor")
 
 EXTERNALPROJECT_ADD(
@@ -27,7 +27,7 @@ EXTERNALPROJECT_ADD(
     LOG_INSTALL ON
     LOG_CONFIGURE ON
     GIT_REPOSITORY ${STDTENSOR_GIT_URL}
-    GIT_TAG v0.6.1
+    GIT_TAG v0.9.0
     PREFIX ${THIRDPARTY_PREFIX}
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${THIRDPARTY_PREFIX} -DBUILD_TESTS=0
                -DBUILD_EXAMPLES=0)
