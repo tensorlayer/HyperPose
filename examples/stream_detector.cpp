@@ -27,7 +27,9 @@ struct default_inputer : stream_detector::inputer_t {
                     float *chw_ptr) override
     {
         if (idx >= filenames.size()) { return false; }
-        input_image(filenames[idx++], height, width, hwc_ptr, chw_ptr,
+        input_image(filenames[idx++],
+                    ttl::tensor_ref<uint8_t, 3>(hwc_ptr, height, width, 3),
+                    ttl::tensor_ref<float, 3>(chw_ptr, 3, height, width),
                     flip_rgb);
         return true;
     }
