@@ -10,7 +10,7 @@ cv::Mat result_t::visualize_copied() const
     return copied;
 }
 
-void images2nchw(std::vector<float> data, std::vector<cv::Mat> images,
+void images2nchw(std::vector<float>& data, std::vector<cv::Mat> images,
                  cv::Size size, double factor, bool flip_rb)
 {
     data.clear();

@@ -5,6 +5,11 @@ namespace swiftpose
 
 namespace parser
 {
+
+class paf {
+
+};
+
 }
 
 }  // namespace swiftpose

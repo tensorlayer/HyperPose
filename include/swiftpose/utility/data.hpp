@@ -39,7 +39,7 @@ struct result_t {
     cv::Mat visualize_copied() const;
 };
 
-void images2nchw(std::vector<float> data, std::vector<cv::Mat> images,
+void images2nchw(std::vector<float>& data, std::vector<cv::Mat> images,
                  cv::Size size, double factor = 1.0, bool flip_rb = true);
 
 }  // namespace swiftpose

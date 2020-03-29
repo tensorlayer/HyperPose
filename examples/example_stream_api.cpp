@@ -46,5 +46,8 @@ int main()
                                     "image", {"outputs/conf", "outputs/paf"},
                                     batch.size(), nvinfer1::DataType::kHALF);
 
-    auto result = engine.sync_inference(batch);
+    auto feature_maps = engine.sync_inference(batch);
+    for (const auto& feature_map : feature_maps)
+        std::cout <<
+
 }
