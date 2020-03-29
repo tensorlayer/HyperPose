@@ -17,16 +17,22 @@ template <typename... MatType> std::vector<cv::Mat> make_batch(MatType... mats)
     return ret;
 }
 
-struct feature_map_t : std::pair<std::string, ttl::tensor<float, 4>> {
-    using std::pair<std::string, ttl::tensor<float, 4>>::pair;
+struct feature_map_t : public ttl::tensor_ref<float, 4> {
+public:
 
-    inline std::string &name() { return first; }
+    feature_map_t(std::string name_, std::unique_ptr<ttl::tensor<float, 4>>&& ptr) :
+    ttl::tensor_ref<float, 4>(*ptr),
+    m_name(std::move(name_)),
+    m_tensor_ptr(std::move(ptr))
+    {}
 
-    inline const std::string &name() const { return first; }
-
-    inline ttl::tensor<float, 4> &tensor() { return second; }
-
-    inline const ttl::tensor<float, 4> &tensor() const { return second; }
+    friend std::ostream& operator << (std::ostream& out, const feature_map_t& map)  {
+        out << map.m_name << ":[" << map.dims()[0] << ", " << map.dims()[1] << ", " << map.dims()[2] << ", " << map.dims()[3] << ']';
+        return out;
+    }
+private:
+    std::unique_ptr<ttl::tensor<float, 4>> m_tensor_ptr;
+    std::string m_name;
 };
 
 using internal_t = std::vector<feature_map_t>;

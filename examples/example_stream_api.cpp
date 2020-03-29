@@ -41,13 +41,14 @@ int main()
           << ", " << FLAGS_input_width << "]\n";
 
     // Create TensorRT engine.
-    swiftpose::dnn::tensorrt engine(FLAGS_model_file,
+    namespace sp = swiftpose;
+    sp::dnn::tensorrt engine(FLAGS_model_file,
                                     {FLAGS_input_width, FLAGS_input_height},
                                     "image", {"outputs/conf", "outputs/paf"},
                                     batch.size(), nvinfer1::DataType::kHALF);
 
     auto feature_maps = engine.sync_inference(batch);
     for (const auto& feature_map : feature_maps)
-        std::cout <<
+        std::cout << feature_map << '\n';
 
 }

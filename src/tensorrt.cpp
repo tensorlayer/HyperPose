@@ -190,8 +190,6 @@ internal_t tensorrt::sync_inference(const std::vector<cv::Mat> &batch)
                     std::cout << "Got Input Binding! " << i << '\n';
                     const auto buffer =
                         m_cuda_buffers.at(i).slice(0, batch.size());
-                    std::cout << "[Input Data Copy] CPU data bytes: " << cpu_image_batch_buffer.size() * sizeof(float) << std::endl;
-                    std::cout << "[Input Data Copy] GPU buffer bytes: " << buffer.size() << std::endl;
                     ttl::tensor_view<char, 2> input(
                         reinterpret_cast<char *>(cpu_image_batch_buffer.data()),
                         buffer.shape());
@@ -213,7 +211,6 @@ internal_t tensorrt::sync_inference(const std::vector<cv::Mat> &batch)
 
         {
             TRACE_SCOPE("INFERENCE::TensorRT::dev2host");
-            int idx = 0;
             for (auto i : ttl::range(m_cuda_buffers.size())) {
                 if (!m_engine->bindingIsInput(i)) {
                     const auto buffer =
@@ -222,19 +219,16 @@ internal_t tensorrt::sync_inference(const std::vector<cv::Mat> &batch)
                     const nvinfer1::Dims out_dims =
                         m_engine->getBindingDimensions(i);
 
+                    auto name = m_engine->getBindingName(i);
                     std::cout << "Get Inference Result: "
-                              << m_engine->getBindingName(i) << ' '
+                              << name << ": "
                               << to_string(out_dims) << std::endl;
-                    ttl::tensor<float, 4> aim_cpu_data(
-                            batch.size(), out_dims.d[0], out_dims.d[1], out_dims.d[2]);
+
+                    auto host_tensor_ptr = std::make_unique<ttl::tensor<float, 4>>(batch.size(), out_dims.d[0], out_dims.d[1], out_dims.d[2]);
                     ttl::tensor_ref<char, 2> output(
-                        reinterpret_cast<char *>(aim_cpu_data.data()),
+                        reinterpret_cast<char *>(host_tensor_ptr->data()),
                         buffer.shape());
-                    std::cout << "[Output Data Copy] CPU data bytes: " << aim_cpu_data.data_size() << std::endl;
-                    std::cout << "[Output Data Copy] GPU buffer bytes: " << buffer.size() << std::endl;
-                    ret.emplace_back(
-                            m_engine->getBindingName(i),
-                            std::move(aim_cpu_data));
+                    ret.emplace_back(name, std::move(host_tensor_ptr));
                     ttl::copy(output, ttl::view(buffer));
                 }
             }
