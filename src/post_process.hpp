@@ -26,6 +26,9 @@ void resize_area(const ttl::tensor_view<T, 3> &input,
 {
     TRACE_SCOPE(__func__);
 
+    if (input.dims() == output.dims())
+        return;
+
     const auto [channel, height, width] = input.dims();
     const auto [target_channel, target_height, target_width] = output.dims();
 
@@ -60,8 +63,8 @@ void smooth(const ttl::tensor_view<T, 3> &input,
         const cv::Mat input_image(size, cv::DataType<T>::type,
                                   (T *)input[k].data());
         cv::Mat output_image(size, cv::DataType<T>::type, output[k].data());
-        cv::GaussianBlur(input_image, output_image, cv::Size(ksize, ksize),
-                         sigma);
+        if (ksize > 1)
+            cv::GaussianBlur(input_image, output_image, cv::Size(ksize, ksize), sigma);
     }
 }
 

@@ -12,6 +12,8 @@ FIND_PACKAGE(OpenCV)
 
 ADD_LIBRARY(
         ${POSE_LIB_NAME}
+        src/paf_.cpp
+        src/logging.cpp
         src/tensorrt.cpp
         src/data.cpp
         src/viz.cpp)

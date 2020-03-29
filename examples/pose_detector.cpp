@@ -58,15 +58,15 @@ pose_detector_impl::pose_detector_impl(const std::string &model_file,      //
       feature_height(feature_height),
       feature_width(feature_width),
       flip_rgb(flip_rgb),
-      hwc_images(batch_size, height, width, 3),
-      chw_images(batch_size, 3, height, width),
+      hwc_images(batch_size, input_height, input_width, 3),
+      chw_images(batch_size, 3, input_height, input_width),
       confs(batch_size, n_joins, feature_height, feature_width),
       pafs(batch_size, n_connections * 2, feature_height, feature_width),
       process_paf(create_paf_processor(feature_height, feature_width,
                                        input_height, input_width, n_joins,
                                        n_connections, gauss_kernel_size)),
       compute_feature_maps(create_pose_detection_runner(
-          model_file, height, width, batch_size, use_f16))
+          model_file, input_height, input_width, batch_size, use_f16))
 {
 }
 
