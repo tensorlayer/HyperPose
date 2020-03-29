@@ -2,14 +2,16 @@
 #include <memory>
 
 #include "trace.hpp"
+#include <experimental/filesystem>
 #include <gflags/gflags.h>
 #include <iostream>
+#include <regex>
 
 #include "pose_detector.h"
 #include "utils.hpp"
 
 // Model flags
-DEFINE_string(model_file, "../../data/models/hao28-600000-256x384.uff",
+DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",
               "Path to uff model.");
 DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
@@ -22,32 +24,19 @@ DEFINE_bool(use_f16, false, "Use float16.");
 DEFINE_bool(flip_rgb, true, "Flip RGB.");
 
 // input flags
-DEFINE_string(data_dir, "../../data/media", "path to data folder");
-DEFINE_string(image_files,
-              "COCO_val2014_000000000192.jpg,"
-              "COCO_val2014_000000000459.jpg,"
-              "COCO_val2014_000000000415.jpg,"
-              "COCO_val2014_000000000564.jpg,"
-              "COCO_val2014_000000000294.jpg,"
-              "COCO_val2014_000000000623.jpg,"
-              "COCO_val2014_000000000357.jpg,"
-              "COCO_val2014_000000000488.jpg,"
-              "COCO_val2014_000000000589.jpg,"
-              "COCO_val2014_000000000474.jpg,"
-              "COCO_val2014_000000000338.jpg,"
-              "COCO_val2014_000000000569.jpg,"
-              "COCO_val2014_000000000544.jpg,"
-              "COCO_val2014_000000000428.jpg,"
-              "COCO_val2014_000000000536.jpg,"
-              "COCO_val2014_000000000395.jpg",
-              "Comma separated list of paths to image.");
+DEFINE_string(data_dir, "../data/media", "path to data folder");
 
-std::vector<std::string> get_input_files(const std::string &dir,
-                                         const std::string &names)
+std::vector<std::string> get_input_files(const std::string &dir)
 {
+    namespace fs = std::experimental::filesystem;
     std::vector<std::string> paths;
-    for (const auto &name : split(names, ',')) {
-        paths.push_back(dir + "/" + name);
+    std::regex image_regex{R"((.*)\.(jpeg|jpg|png))"};
+    for (auto &&file : fs::directory_iterator(FLAGS_data_dir)) {
+        auto file_name = file.path().string();
+        if (std::regex_match(file_name, image_regex)) {
+            std::cout << "Add file: " << file_name << " into batch.\n";
+            paths.push_back(std::move(file_name));
+        }
     }
     return paths;
 }
@@ -60,8 +49,7 @@ int main(int argc, char *argv[])
     // TODO: derive from model
     const int f_height = FLAGS_input_height / 8;
     const int f_width = FLAGS_input_width / 8;
-    const auto files = repeat(
-        get_input_files(FLAGS_data_dir, FLAGS_image_files), FLAGS_repeat);
+    const auto files = repeat(get_input_files(FLAGS_data_dir), FLAGS_repeat);
 
     std::unique_ptr<pose_detector> pd(create_pose_detector(
         FLAGS_model_file, FLAGS_input_height, FLAGS_input_width, f_height,
@@ -86,6 +74,4 @@ int main(int argc, char *argv[])
                1 / mean, FLAGS_batch_size, FLAGS_use_f16,
                FLAGS_gauss_kernel_size);
     }
-
-    return 0;
 }

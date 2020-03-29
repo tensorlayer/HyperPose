@@ -3,11 +3,10 @@
 #include "viz.hpp"
 
 #include <opencv2/opencv.hpp>
-#include <openpose-plus/human.h>
 #include <ttl/tensor>
 #include <vector>
 
-namespace sp
+namespace swiftpose
 {
 
 template <typename... MatType> std::vector<cv::Mat> make_batch(MatType... mats)
@@ -18,30 +17,19 @@ template <typename... MatType> std::vector<cv::Mat> make_batch(MatType... mats)
     return ret;
 }
 
-
-struct inference_output_node : std::pair<std::string, ttl::tensor<float, 4>>
-{
+struct feature_map_t : std::pair<std::string, ttl::tensor<float, 4>> {
     using std::pair<std::string, ttl::tensor<float, 4>>::pair;
 
-    inline std::string& name() {
-        return first;
-    }
+    inline std::string &name() { return first; }
 
-    inline const std::string& name() const {
-        return first;
-    }
+    inline const std::string &name() const { return first; }
 
-    inline ttl::tensor<float, 4>& tensor() {
-        return second;
-    }
+    inline ttl::tensor<float, 4> &tensor() { return second; }
 
-    inline const ttl::tensor<float, 4>& tensor() const {
-        return second;
-    }
-
+    inline const ttl::tensor<float, 4> &tensor() const { return second; }
 };
 
-using inference_result_t = std::vector<inference_output_node>;
+using internal_t = std::vector<feature_map_t>;
 
 struct result_t {
     cv::Mat mat;
@@ -51,11 +39,7 @@ struct result_t {
     cv::Mat visualize_copied() const;
 };
 
-void images2nchw(
-        std::vector<float> data,
-        std::vector<cv::Mat> images,
-        cv::Size size,
-        double factor=1.0,
-        bool flip_rb = true);
+void images2nchw(std::vector<float> data, std::vector<cv::Mat> images,
+                 cv::Size size, double factor = 1.0, bool flip_rb = true);
 
-}  // namespace sp
+}  // namespace swiftpose

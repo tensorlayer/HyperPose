@@ -7,17 +7,8 @@ set(POSE_LIB_NAME swiftpose)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native")
 
 # Dependencies(OpenCV & CUDA)
+INCLUDE(cmake/cuda.cmake)
 FIND_PACKAGE(OpenCV)
-FIND_PACKAGE(CUDA REQUIRED)
-INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
-
-EXECUTE_PROCESS(
-        COMMAND arch
-        COMMAND tr -d '\n'
-        OUTPUT_VARIABLE ARCH)
-SET(CUDA_RT /usr/local/cuda/targets/${ARCH}-linux)
-
-LINK_DIRECTORIES(${CUDA_RT}/lib)
 
 ADD_LIBRARY(
         ${POSE_LIB_NAME}

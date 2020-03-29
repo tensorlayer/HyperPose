@@ -122,12 +122,10 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
         };
         // ======================================================================
 
-        for (int i = 0; i < tasks.size(); ++i)
-            tasks[i] = pool.enqueue(task, i);
+        for (int i = 0; i < tasks.size(); ++i) tasks[i] = pool.enqueue(task, i);
 
         task(tasks.size(), false);
-        for (auto &&f : tasks)
-            f.wait();
+        for (auto &&f : tasks) f.wait();
     }
 }
 

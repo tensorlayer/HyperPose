@@ -32,15 +32,15 @@ inline int64_t volume(const nvinfer1::Dims &d)
 inline size_t elementSize(nvinfer1::DataType t)
 {
     switch (t) {
-        // TODO: check nvinfer1 version
-        // case nvinfer1::DataType::kINT32:
-        //     return 4;
-        case nvinfer1::DataType::kFLOAT:
-            return 4;
-        case nvinfer1::DataType::kHALF:
-            return 2;
-        case nvinfer1::DataType::kINT8:
-            return 1;
+    // TODO: check nvinfer1 version
+    // case nvinfer1::DataType::kINT32:
+    //     return 4;
+    case nvinfer1::DataType::kFLOAT:
+        return 4;
+    case nvinfer1::DataType::kHALF:
+        return 2;
+    case nvinfer1::DataType::kINT8:
+        return 1;
     }
     assert(0);
     return 0;
@@ -76,14 +76,14 @@ nvinfer1::ICudaEngine *loadModelAndCreateEngine(const char *uffFile,
                                                 nvinfer1::DataType dtype)
 {
     destroy_ptr<nvinfer1::IBuilder> builder(
-            nvinfer1::createInferBuilder(gLogger));
+        nvinfer1::createInferBuilder(gLogger));
     destroy_ptr<nvinfer1::INetworkDefinition> network(builder->createNetwork());
 
-    if (!parser->parse(uffFile, *network, dtype))
-    {
+    if (!parser->parse(uffFile, *network, dtype)) {
         gLogger.log(
-                nvinfer1::ILogger::Severity::kERROR,
-                ("Failed to created engine of data type: " + to_string(dtype)).c_str());
+            nvinfer1::ILogger::Severity::kERROR,
+            ("Failed to created engine of data type: " + to_string(dtype))
+                .c_str());
         return nullptr;
     }
 
@@ -101,11 +101,11 @@ create_engine(const std::string &model_file, const input_info_t &input_info,
     for (const auto &info : input_info) {
         const auto dims = info.second;
         parser->registerInput(
-                info.first.c_str(),
-                // Always provide your dimensions in CHW even if your
-                // network input was in HWC in your original framework.
-                nvinfer1::DimsCHW(dims[0], dims[1], dims[2]),
-                nvuffparser::UffInputOrder::kNCHW  //
+            info.first.c_str(),
+            // Always provide your dimensions in CHW even if your
+            // network input was in HWC in your original framework.
+            nvinfer1::DimsCHW(dims[0], dims[1], dims[2]),
+            nvuffparser::UffInputOrder::kNCHW  //
         );
     }
     for (auto &name : output_names) { parser->registerOutput(name.c_str()); }
@@ -121,7 +121,7 @@ create_engine(const std::string &model_file, const input_info_t &input_info,
 
 class uff_runner_impl : public pose_detection_runner
 {
-public:
+  public:
     uff_runner_impl(const std::string &model_file,
                     const input_info_t &input_info,
                     const std::vector<std::string> &output_names,
@@ -132,7 +132,7 @@ public:
                     const std::vector<void *> &outputs,
                     int batch_size) override;
 
-private:
+  private:
     const int max_batch_size;
 
     destroy_ptr<nvinfer1::ICudaEngine> engine_;
@@ -147,9 +147,9 @@ uff_runner_impl::uff_runner_impl(const std::string &model_file,
                                  const input_info_t &input_info,
                                  const std::vector<std::string> &output_names,
                                  int max_batch_size, nvinfer1::DataType dtype)
-        : max_batch_size(max_batch_size),
-          engine_(create_engine(model_file, input_info, output_names,
-                                max_batch_size, dtype))
+    : max_batch_size(max_batch_size),
+      engine_(create_engine(model_file, input_info, output_names,
+                            max_batch_size, dtype))
 {
     createBuffers_(max_batch_size);
 }
@@ -170,7 +170,8 @@ void uff_runner_impl::createBuffers_(int batch_size)
     }
 }
 
-std::vector<internal_result_t> uff_runner_impl::operator()(const std::vector<void *> &inputs, int batch_size)
+std::vector<internal_result_t> uff_runner_impl::
+operator()(const std::vector<void *> &inputs, int batch_size)
 {
     TRACE_SCOPE("uff_runner_impl::operator()");
     assert(batch_size <= max_batch_size);
@@ -182,8 +183,8 @@ std::vector<internal_result_t> uff_runner_impl::operator()(const std::vector<voi
             if (engine_->bindingIsInput(i)) {
                 const auto buffer = buffers_[i].slice(0, batch_size);
                 ttl::tensor_view<char, 2> input(
-                        reinterpret_cast<char *>(inputs[idx++]), buffer.shape());
-                ttl::copy(buffer, input); // CPU data -> CUDA data.
+                    reinterpret_cast<char *>(inputs[idx++]), buffer.shape());
+                ttl::copy(buffer, input);  // CPU data -> CUDA data.
                 //         dst <-- src
             }
         }
@@ -206,7 +207,7 @@ std::vector<internal_result_t> uff_runner_impl::operator()(const std::vector<voi
             if (!engine_->bindingIsInput(i)) {
                 const auto buffer = buffers_[i].slice(0, batch_size);
                 ttl::tensor_ref<char, 2> output(
-                        reinterpret_cast<char *>(outputs[idx++]), buffer.shape());
+                    reinterpret_cast<char *>(outputs[idx++]), buffer.shape());
                 ttl::copy(output, ttl::view(buffer));
                 //          dst <-- src
             }
@@ -219,15 +220,15 @@ create_pose_detection_runner(const std::string &model_file, int input_height,
                              int input_width, int max_batch_size, bool use_f16)
 {
     const input_info_t input_info = {
-            {
-                    "image",
-                    {3, input_height, input_width} /* must be (C, H, W) */,
-            },
+        {
+            "image",
+            {3, input_height, input_width} /* must be (C, H, W) */,
+        },
     };
 
     const std::vector<std::string> output_names = {
-            "outputs/conf",
-            "outputs/paf",
+        "outputs/conf",
+        "outputs/paf",
     };
     return new uff_runner_impl(model_file, input_info, output_names,
                                max_batch_size, use_f16);

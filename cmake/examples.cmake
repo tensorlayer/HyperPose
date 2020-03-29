@@ -1,6 +1,11 @@
 FIND_PACKAGE(OpenCV)
 FIND_PACKAGE(gflags)
 FIND_PACKAGE(Threads REQUIRED)
+if (CMAKE_CXX_COMPILER_ID STREQUAL GNU)
+    set(CXX_FILESYSTEM_LIBRARIES stdc++fs)
+else()
+    set(CXX_FILESYSTEM_LIBRARIES)
+endif()
 
 # Helper Lib.
 ADD_LIBRARY(helpers
@@ -12,7 +17,8 @@ TARGET_LINK_LIBRARIES(helpers
         opencv_imgproc
         opencv_highgui
         opencv_imgcodecs
-        Threads::Threads)
+        Threads::Threads
+        ${CXX_FILESYSTEM_LIBRARIES})
 ADD_GLOBAL_DEPS(helpers)
 
 # [LIBRARY] Pose Detector Lib.
@@ -60,11 +66,6 @@ TARGET_LINK_LIBRARIES(test-thread-pool helpers)
 ADD_GLOBAL_DEPS(test-thread-pool)
 
 # [EXAMPLE] Stream API.
-if (CMAKE_CXX_COMPILER_ID STREQUAL GNU)
-    set(CXX_FILESYSTEM_LIBRARIES stdc++fs)
-else()
-    set(CXX_FILESYSTEM_LIBRARIES)
-endif()
 ADD_EXECUTABLE(example_stream_api examples/example_stream_api.cpp)
-TARGET_LINK_LIBRARIES(example_stream_api helpers swiftpose gflags ${CXX_FILESYSTEM_LIBRARIES})
+TARGET_LINK_LIBRARIES(example_stream_api helpers swiftpose gflags)
 ADD_GLOBAL_DEPS(example_stream_api)

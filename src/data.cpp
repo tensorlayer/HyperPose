@@ -1,7 +1,7 @@
 #include <swiftpose/utility/data.hpp>
 
-namespace sp {
-
+namespace swiftpose
+{
 
 cv::Mat result_t::visualize_copied() const
 {
@@ -10,37 +10,34 @@ cv::Mat result_t::visualize_copied() const
     return copied;
 }
 
-void images2nchw(
-        std::vector<float> data, std::vector<cv::Mat> images, cv::Size size, double factor, bool flip_rb) {
+void images2nchw(std::vector<float> data, std::vector<cv::Mat> images,
+                 cv::Size size, double factor, bool flip_rb)
+{
     data.clear();
     data.reserve(size.area() * 3 * images.size());
 
-    for(auto&& image : images)
-    {
+    for (auto &&image : images) {
         assert(image.type() == CV_8UC3);
         cv::resize(image, image, size);
 
         int iter_rows = image.rows;
         int iter_cols = image.cols;
 
-        if(image.isContinuous())
-        {
+        if (image.isContinuous()) {
             iter_cols = image.total();
             iter_rows = 1;
         }
 
-        constexpr std::array<int, 3> no_swap {0, 1, 2};
-        constexpr std::array<int, 3> swap_rb {2, 1, 0};
-        const auto& index_ref = flip_rb ? swap_rb : no_swap;
-        for(auto c : index_ref)
-            for (int i = 0; i < iter_rows; ++i)
-            {
-                const auto* line = image.ptr<cv::Vec3b>(i);
-                for(int j = 0; j < iter_cols; ++j)
+        constexpr std::array<int, 3> no_swap{0, 1, 2};
+        constexpr std::array<int, 3> swap_rb{2, 1, 0};
+        const auto &index_ref = flip_rb ? swap_rb : no_swap;
+        for (auto c : index_ref)
+            for (int i = 0; i < iter_rows; ++i) {
+                const auto *line = image.ptr<cv::Vec3b>(i);
+                for (int j = 0; j < iter_cols; ++j)
                     data.push_back((*line++)[c]);
             }
     }
-} // TODO: Parallel.
+}  // TODO: Parallel.
 
-
-}
+}  // namespace swiftpose

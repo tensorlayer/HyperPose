@@ -40,6 +40,7 @@ make pack # If you want to enable profiling tracing, use `make pack_trace`
 cd cmake-build/Linux
 ./example-batch-detector 
 # Or `./example-batch-detector --use_f16=true` if your GPU support float16
+# Use `./example-batch-detector --help` to find out the usage of flags.  
 ```
 
 Then you'll see the output images in the `cmake-build/Linux` folder.

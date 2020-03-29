@@ -1,10 +1,10 @@
 #pragma once
 
-namespace sp {
+namespace swiftpose
+{
 
-namespace parser {
-
-
+namespace parser
+{
 }
 
-}
+}  // namespace swiftpose

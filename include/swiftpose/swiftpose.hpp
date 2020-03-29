@@ -1,7 +1,7 @@
 #pragma once
 
-#include "utility/macro.hpp"
 #include "utility/data.hpp"
+#include "utility/macro.hpp"
 #include "utility/viz.hpp"
 
 #include "operator/dnn/tensorrt.hpp"

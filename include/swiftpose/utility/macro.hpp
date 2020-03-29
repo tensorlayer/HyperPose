@@ -1,9 +1,9 @@
 #pragma once
 
-#define SP_VERSION_MAJOR 0
-#define SP_VERSION_MINOR 0
-#define SP_MINIMUM_STD_REQUIREMENT (__cplusplus > 201402L)
+#define SWIFTPOSE_VERSION_MAJOR 0
+#define SWIFTPOSE_VERSION_MINOR 1
+#define SWIFTPOSE_MINIMUM_STD_REQUIREMENT (__cplusplus > 201402L)
 
-#if !(SP_MINIMUM_STD_REQUIREMENT)
+#if !(SWIFTPOSE_MINIMUM_STD_REQUIREMENT)
 #error "SwiftPose Compile Error: C++17 required."
 #endif
