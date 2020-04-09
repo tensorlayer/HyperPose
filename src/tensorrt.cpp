@@ -134,7 +134,7 @@ create_engine(const std::string &model_file, cv::Size input_size,
 // * Class impl.
 tensorrt::tensorrt(const std::string &model_path, cv::Size input_size,
                    const std::string &input_name,
-                   const std::vector<std::string>& output_names,
+                   const std::vector<std::string> &output_names,
                    int max_batch_size, nvinfer1::DataType dtype, double factor,
                    bool flip_rgb)
     : m_inp_size(input_size),
@@ -159,11 +159,10 @@ tensorrt::tensorrt(const std::string &model_path, cv::Size input_size,
     }
 }
 
-internal_t tensorrt::sync_inference(const std::vector<cv::Mat> &batch)
+std::vector<internal_t> tensorrt::inference(const std::vector<cv::Mat> &batch)
 {
     TRACE_SCOPE("INFERENCE");
-    internal_t ret;
-    ret.reserve(m_cuda_buffers.size() - 1 /* Input Buffer */);
+    std::vector<internal_t> ret(batch.size());
 
     if (batch.size() > m_max_batch_size) {
         std::string err_msg = "Input batch size overflow: Yours@" +
@@ -193,8 +192,8 @@ internal_t tensorrt::sync_inference(const std::vector<cv::Mat> &batch)
                     ttl::tensor_view<char, 2> input(
                         reinterpret_cast<char *>(cpu_image_batch_buffer.data()),
                         buffer.shape());
-                    ttl::copy(buffer, input); // Bug here.
-                    break;  // ! Only one input node.
+                    ttl::copy(buffer, input);  // Bug here.
+                    break;                     // ! Only one input node.
                 }
         }
 
@@ -220,20 +219,26 @@ internal_t tensorrt::sync_inference(const std::vector<cv::Mat> &batch)
                         m_engine->getBindingDimensions(i);
 
                     auto name = m_engine->getBindingName(i);
-                    std::cout << "Get Inference Result: "
-                              << name << ": "
+                    std::cout << "Get Inference Result: " << name << ": "
                               << to_string(out_dims) << std::endl;
 
-                    auto host_tensor_ptr = std::make_unique<ttl::tensor<float, 4>>(batch.size(), out_dims.d[0], out_dims.d[1], out_dims.d[2]);
+                    auto single_offset =
+                        out_dims.d[0] * out_dims.d[1] * out_dims.d[2];
+                    auto host_tensor_ptr =
+                        std::make_shared<ttl::tensor<float, 4>>(
+                            batch.size(), out_dims.d[0], out_dims.d[1],
+                            out_dims.d[2]);
                     ttl::tensor_ref<char, 2> output(
                         reinterpret_cast<char *>(host_tensor_ptr->data()),
                         buffer.shape());
-                    ret.emplace_back(name, std::move(host_tensor_ptr));
                     ttl::copy(output, ttl::view(buffer));
+                    for (int j = 0; j < batch.size(); ++j)
+                        ret[j].emplace_back(std::move(name), host_tensor_ptr,
+                                            j * single_offset, out_dims.d[0],
+                                            out_dims.d[1], out_dims.d[2]);
                 }
             }
         }
-
         return ret;
     }
 }

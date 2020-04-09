@@ -15,14 +15,15 @@ struct VectorXY {
 class paf_processor_impl : public paf_processor
 {
   public:
-    paf_processor_impl(int input_height, int input_width, /* Original Inp Size */ int height, int width,
+    paf_processor_impl(int input_height, int input_width,
+                       /* Original Inp Size */ int height, int width,
                        int n_joins /* 1 + COCO_N_PARTS */,
                        int n_connections /* COCO_N_PAIRS */,
                        int gauss_kernel_size)
         : height(height),
           width(width),
-          input_height(input_height), // TO BE OPTIMIZED.
-          input_width(input_width),   // TO BE OPTIMIZED.
+          input_height(input_height),  // TO BE OPTIMIZED.
+          input_width(input_width),    // TO BE OPTIMIZED.
           n_joins(n_joins),
           n_connections(n_connections),
           upsample_conf_dim(n_joins, height, width),

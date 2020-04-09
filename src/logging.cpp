@@ -1,38 +1,32 @@
-#include <swiftpose/utility/logging.hpp>
-#include <functional>
 #include "logging.hpp"
+#include <swiftpose/utility/logging.hpp>
 
-namespace swiftpose {
+namespace swiftpose
+{
 
-std::ostream* _info_ptr = nullptr;
-std::ostream* _warning_ptr = nullptr;
-std::ostream* _error_ptr = nullptr;
+std::ostream *_info_ptr = nullptr;
+std::ostream *_warning_ptr = nullptr;
+std::ostream *_error_ptr = nullptr;
 
-
-std::ostream& _info() {
+std::ostream &get_info_logger()
+{
     return (nullptr == _info_ptr) ? std::cout : (*_info_ptr);
 }
 
-std::ostream& _warning() {
+std::ostream &get_warning_logger()
+{
     return (nullptr == _error_ptr) ? std::cout : (*_warning_ptr);
 }
 
-std::ostream& _error() {
+std::ostream &get_error_logger()
+{
     return (nullptr == _error_ptr) ? std::cerr : (*_error_ptr);
 }
 
-std::ostream& a = std::cout;
+void set_info_stream(std::ostream &os) { _info_ptr = &os; }
 
-void set_info_stream(std::ostream& os) {
-    _info_ptr = &os;
-}
+void set_warning_stream(std::ostream &os) { _warning_ptr = &os; }
 
-void set_warning_stream(std::ostream& os) {
-    _warning_ptr = &os;
-}
+void set_error_stream(std::ostream &os) { _error_ptr = &os; }
 
-void set_error_stream(std::ostream& os) {
-    _error_ptr = &os;
-}
-
-}
+}  // namespace swiftpose

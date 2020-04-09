@@ -3,14 +3,20 @@
 namespace swiftpose
 {
 
-cv::Mat result_t::visualize_copied() const
+cv::Mat &output_t::visualize()
 {
-    auto copied = mat.clone();
-    draw_human(copied, pose);
-    return copied;
+    for (auto &&p : poses) draw_human(mat, p);
+    return mat;
 }
 
-void images2nchw(std::vector<float>& data, std::vector<cv::Mat> images,
+cv::Mat output_t::visualize_copied() const
+{
+    cv::Mat mat_ = mat.clone();
+    for (auto &&p : poses) draw_human(mat_, p);
+    return mat_;
+}
+
+void images2nchw(std::vector<float> &data, std::vector<cv::Mat> images,
                  cv::Size size, double factor, bool flip_rb)
 {
     data.clear();

@@ -26,7 +26,7 @@ class tensorrt
   public:
     explicit tensorrt(const std::string &model_path, cv::Size input_size,
                       const std::string &input_name,
-                      const std::vector<std::string>& output_names,
+                      const std::vector<std::string> &output_names,
                       int max_batch_size = 8,
                       nvinfer1::DataType dtype = nvinfer1::DataType::kFLOAT,
                       double factor = 1., bool flip_rgb = true);
@@ -37,9 +37,7 @@ class tensorrt
 
     inline cv::Size input_size() noexcept { return m_inp_size; }
 
-    std::future<internal_t> async_inference(const std::vector<cv::Mat> &);
-
-    internal_t sync_inference(const std::vector<cv::Mat> &);
+    std::vector<internal_t> inference(const std::vector<cv::Mat> &);
 
   private:
     const cv::Size m_inp_size;  // w, h

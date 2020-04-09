@@ -15,6 +15,7 @@ ADD_LIBRARY(
         src/paf_.cpp
         src/logging.cpp
         src/tensorrt.cpp
+        src/paf_.cpp
         src/data.cpp
         src/viz.cpp)
 TARGET_LINK_LIBRARIES(
