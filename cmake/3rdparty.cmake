@@ -22,8 +22,7 @@ SET(STDTENSOR_GIT_URL
     CACHE STRING "URL for clone stdtensor")
 
 SET(STDTENSOR_GIT_TAG
-    "7f8a42b188bd75cbcec2a49bb6b9b33779343e3c" # FIXME: use stable tag (v0.9.1)
-                                               # before merge master
+    "v0.9.1"
     CACHE STRING "git tag for checkout stdtensor")
 
 EXTERNALPROJECT_ADD(
