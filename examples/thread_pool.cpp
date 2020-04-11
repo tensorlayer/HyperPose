@@ -13,9 +13,9 @@ simple_thread_pool::simple_thread_pool(std::size_t sz)
                     {
                         std::unique_lock<std::mutex> lock(ptr->queue_mu);
                         ptr->cv.wait(lock, [&] {
-                            return ptr->shutdown or !ptr->queue.empty();
+                            return ptr->shutdown || !ptr->queue.empty();
                         });
-                        if (ptr->shutdown and ptr->queue.empty())
+                        if (ptr->shutdown && ptr->queue.empty())
                             return;  // Conditions to let the thread go.
                         task = std::move(ptr->queue.front());
                         ptr->queue.pop();
