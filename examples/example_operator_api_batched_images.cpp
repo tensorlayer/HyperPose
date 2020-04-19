@@ -43,7 +43,7 @@ int main()
     sp::dnn::tensorrt engine(FLAGS_model_file,
                              {FLAGS_input_width, FLAGS_input_height}, "image",
                              {"outputs/conf", "outputs/paf"}, batch.size(),
-                             nvinfer1::DataType::kHALF, 1. / 255);
+                             nvinfer1::DataType::kFLOAT, 1. / 255);
     sp::parser::paf parser({FLAGS_input_width / 8, FLAGS_input_height / 8},
                            {FLAGS_input_width, FLAGS_input_height});
 
@@ -51,7 +51,7 @@ int main()
     auto beg = clk_t::now();
     {
         // * TensorRT Inference.
-        auto feature_map_packets = engine.inference(batch);
+        auto feature_map_packets = engine.inference(std::move(batch));
         for (const auto &packet : feature_map_packets)
             for (const auto &feature_map : packet)
                 log() << feature_map << std::endl;
@@ -64,18 +64,13 @@ int main()
         }
 
         std::cout << batch.size() << " images got processed. FPS = "
-                  << 1000. * batch.size() / std::chrono::duration<double, std::milli>(clk_t::now() - beg).count();
+                  << 1000. * batch.size() / std::chrono::duration<double, std::milli>(clk_t::now() - beg).count() << '\n';
 
-        for (size_t i = 0; i < batch.size(); ++i)
-        {
+        for (size_t i = 0; i < batch.size(); ++i) {
             cv::resize(batch[i], batch[i], {FLAGS_input_width, FLAGS_input_height});
-            for (auto&& pose : pose_vectors[i]) {
-                pose.print();
+            for (auto&& pose : pose_vectors[i])
                 sp::draw_human(batch[i], pose);
-            }
             cv::imwrite("output_" + std::to_string(i) + ".png", batch[i]);
         }
     }
-
-
 }

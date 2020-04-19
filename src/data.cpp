@@ -16,15 +16,13 @@ cv::Mat output_t::visualize_copied() const
     return mat_;
 }
 
-void images2nchw(std::vector<float> &data, std::vector<cv::Mat> images,
-                 cv::Size size, double factor, bool flip_rb)
+void nhwc_images_append_nchw_batch(std::vector<float> &data, std::vector<cv::Mat> images,
+                                   cv::Size size, double factor, bool flip_rb)
 {
-    data.clear();
-    data.reserve(size.area() * 3 * images.size());
+    data.reserve(size.area() * 3 * images.size() + data.size());
 
     for (auto &&image : images) {
         assert(image.type() == CV_8UC3);
-        cv::resize(image, image, size);
 
         int iter_rows = image.rows;
         int iter_cols = image.cols;

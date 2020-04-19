@@ -186,7 +186,6 @@ void uff_runner_impl::operator()(const std::vector<void *> &inputs,
         for (auto i : ttl::range(buffers_.size())) {
             if (engine_->bindingIsInput(i)) {
                 const auto buffer = buffers_[i].slice(0, batch_size);
-                std::cout << "Resize debugging: " << ((float*)inputs[0])[0] << std::endl;
                 ttl::tensor_view<char, 2> input(
                     reinterpret_cast<char *>(inputs[idx++]), buffer.shape());
                 ttl::copy(buffer, input);

@@ -16,6 +16,14 @@ namespace swiftpose
 namespace dnn
 {
 
+template <typename T>
+struct engine_deleter {
+    void operator()(T *ptr) { ptr->destroy(); }
+};
+
+template <typename T>
+using destroy_ptr = std::unique_ptr<T, engine_deleter<T>>;
+
 /*
  * Hided functions.
  */
@@ -159,11 +167,74 @@ tensorrt::tensorrt(const std::string &model_path, cv::Size input_size,
     }
 }
 
-std::vector<internal_t> tensorrt::inference(const std::vector<cv::Mat> &batch)
+void tensorrt::_batching(std::vector<cv::Mat>& batch, std::vector<float>& cpu_image_batch_buffer) {
+    TRACE_SCOPE("INFERENCE::Images2NCHW");
+    nhwc_images_append_nchw_batch(cpu_image_batch_buffer, batch, m_inp_size, m_factor, m_flip_rgb);
+}
+
+std::vector<internal_t > tensorrt::_raw_inference(std::vector<float>& cpu_image_batch_buffer, size_t batch_size) {
+    std::vector<internal_t> ret(batch_size);
+    TRACE_SCOPE("INFERENCE::TensorRT");
+    {
+        TRACE_SCOPE("INFERENCE::TensorRT::host2dev");
+        for (auto i : ttl::range(m_cuda_buffers.size()))
+            if (m_engine->bindingIsInput(i)) {
+                std::cout << "Got Input Binding! " << i << '\n';
+                const auto buffer =
+                        m_cuda_buffers.at(i).slice(0, batch_size);
+                ttl::tensor_view<char, 2> input(
+                        reinterpret_cast<char *>(cpu_image_batch_buffer.data()),
+                        buffer.shape());
+                ttl::copy(buffer, input);  // Bug here.
+                break;                     // ! Only one input node.
+            }
+    }
+
+    {
+        TRACE_SCOPE("INFERENCE::TensorRT::context->execute");
+        auto context = m_engine->createExecutionContext();
+        std::vector<void *> buffer_ptrs_(m_cuda_buffers.size());
+        std::transform(m_cuda_buffers.begin(), m_cuda_buffers.end(),
+                       buffer_ptrs_.begin(),
+                       [](const auto &b) { return b.data(); });
+        context->execute(batch_size, buffer_ptrs_.data());
+        context->destroy();
+    }
+
+    {
+        TRACE_SCOPE("INFERENCE::TensorRT::dev2host");
+        for (auto i : ttl::range(m_cuda_buffers.size())) {
+            if (!m_engine->bindingIsInput(i)) {
+                const auto buffer =
+                        m_cuda_buffers[i].slice(0, batch_size);
+
+                const nvinfer1::Dims out_dims =
+                        m_engine->getBindingDimensions(i);
+
+                auto name = m_engine->getBindingName(i);
+
+                std::cout << "Get Inference Result: " << name << ": "
+                          << to_string(out_dims) << std::endl;
+
+                auto host_tensor_ptr =
+                        std::make_shared<ttl::tensor<float, 4>>(
+                                batch_size, out_dims.d[0], out_dims.d[1],
+                                out_dims.d[2]);
+
+                ttl::tensor_ref<char, 2> output(
+                        reinterpret_cast<char *>(host_tensor_ptr->data()), buffer.shape());
+                ttl::copy(output, ttl::view(buffer));
+                for (int j = 0; j < batch_size; ++j)
+                    ret[j].emplace_back(name, host_tensor_ptr, (*host_tensor_ptr)[j]);
+            }
+        }
+    }
+    return ret;
+}
+
+std::vector<internal_t> tensorrt::inference(std::vector<cv::Mat> batch)
 {
     TRACE_SCOPE("INFERENCE");
-    std::vector<internal_t> ret(batch.size());
-
     if (batch.size() > m_max_batch_size) {
         std::string err_msg = "Input batch size overflow: Yours@" +
                               std::to_string(batch.size()) + " Max@" +
@@ -172,73 +243,18 @@ std::vector<internal_t> tensorrt::inference(const std::vector<cv::Mat> &batch)
         std::exit(-1);
     }
 
-    // NHWC -> NCHW.
+    // * Step1: Resize.
+    for(auto&& mat : batch)
+        cv::resize(mat, mat, m_inp_size); // This involves in copy.
+
     thread_local std::vector<float> cpu_image_batch_buffer;
-    {
-        TRACE_SCOPE("INFERENCE::Images2NCHW");
-        images2nchw(cpu_image_batch_buffer, batch, m_inp_size, m_factor,
-                    m_flip_rgb);
-        std::cout << "Resize debugging: " << cpu_image_batch_buffer[0] << std::endl;
-    }
+    cpu_image_batch_buffer.clear();
 
-    {
-        TRACE_SCOPE("INFERENCE::TensorRT");
-        {
-            TRACE_SCOPE("INFERENCE::TensorRT::host2dev");
-            for (auto i : ttl::range(m_cuda_buffers.size()))
-                if (m_engine->bindingIsInput(i)) {
-                    std::cout << "Got Input Binding! " << i << '\n';
-                    const auto buffer =
-                        m_cuda_buffers.at(i).slice(0, batch.size());
-                    ttl::tensor_view<char, 2> input(
-                        reinterpret_cast<char *>(cpu_image_batch_buffer.data()),
-                        buffer.shape());
-                    ttl::copy(buffer, input);  // Bug here.
-                    break;                     // ! Only one input node.
-                }
-        }
+    // * Step2: NHWC -> NCHW && Batching,
+    this->_batching(batch, cpu_image_batch_buffer);
 
-        {
-            TRACE_SCOPE("INFERENCE::TensorRT::context->execute");
-            auto context = m_engine->createExecutionContext();
-            std::vector<void *> buffer_ptrs_(m_cuda_buffers.size());
-            std::transform(m_cuda_buffers.begin(), m_cuda_buffers.end(),
-                           buffer_ptrs_.begin(),
-                           [](const auto &b) { return b.data(); });
-            context->execute(batch.size(), buffer_ptrs_.data());
-            context->destroy();
-        }
-
-        {
-            TRACE_SCOPE("INFERENCE::TensorRT::dev2host");
-            for (auto i : ttl::range(m_cuda_buffers.size())) {
-                if (!m_engine->bindingIsInput(i)) {
-                    const auto buffer =
-                        m_cuda_buffers[i].slice(0, batch.size());
-
-                    const nvinfer1::Dims out_dims =
-                        m_engine->getBindingDimensions(i);
-
-                    auto name = m_engine->getBindingName(i);
-
-                    std::cout << "Get Inference Result: " << name << ": "
-                              << to_string(out_dims) << std::endl;
-
-                    auto host_tensor_ptr =
-                        std::make_shared<ttl::tensor<float, 4>>(
-                            batch.size(), out_dims.d[0], out_dims.d[1],
-                            out_dims.d[2]);
-
-                    ttl::tensor_ref<char, 2> output(
-                        reinterpret_cast<char *>(host_tensor_ptr->data()), buffer.shape());
-                    ttl::copy(output, ttl::view(buffer));
-                    for (int j = 0; j < batch.size(); ++j)
-                        ret[j].emplace_back(name, host_tensor_ptr, (*host_tensor_ptr)[j]);
-                }
-            }
-        }
-        return ret;
-    }
+    // * Step3: Do Inference.
+    return this->_raw_inference(cpu_image_batch_buffer, batch.size());
 }
 
 tensorrt::~tensorrt() { nvuffparser::shutdownProtobufLibrary(); }
