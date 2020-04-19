@@ -9,7 +9,7 @@ template <typename T>
 class thread_safe_queue {
 public:
     thread_safe_queue(size_t max_size)
-            : m_capacity(max_size), m_array(new T[max_size+1]), m_head(0), m_back(0), m_size(0)
+        : m_capacity(max_size), m_array(new T[max_size+1]), m_head(0), m_back(0), m_size(0)
     {}
 
     ~thread_safe_queue() {
@@ -35,10 +35,10 @@ public:
 
         size_t back2cap = m_capacity - m_back;
         if (back2cap >= container.size())
-            std::copy(container.begin(), container.end(), m_array + m_head);
+            std::move(container.begin(), container.end(), m_array + m_head);
         else {
-            std::copy(container.begin(), std::next(container.begin(), back2cap), m_array + m_head);
-            std::copy(std::next(container.begin(), back2cap), container.end(), m_array);
+            std::move(std::next(container.begin(), back2cap), container.end(), m_array);
+            std::move(container.begin(), std::next(container.begin(), back2cap), m_array + m_head);
         }
 
         unsafe_step_back(container.size());
