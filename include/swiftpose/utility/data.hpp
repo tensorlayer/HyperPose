@@ -20,9 +20,8 @@ template <typename... MatType> std::vector<cv::Mat> make_batch(MatType... mats)
 struct feature_map_t : public ttl::tensor_ref<float, 3> {
   public:
     feature_map_t(std::string name_, std::shared_ptr<ttl::tensor<float, 4>> ptr,
-                  size_t offset, size_t c, size_t h, size_t w)
-        : ttl::tensor_ref<float, 3>(
-              ptr->data(), ttl::tensor_ref<float, 3>::shape_type(c, h, w)),
+                  ttl::tensor_ref<float, 3> ref)
+        : ttl::tensor_ref<float, 3>(ref),
           m_name(std::move(name_)),
           m_tensor_ptr(std::move(ptr))
     {
@@ -30,9 +29,14 @@ struct feature_map_t : public ttl::tensor_ref<float, 3> {
 
     friend std::ostream &operator<<(std::ostream &out, const feature_map_t &map)
     {
+        std::cout << "value test: " << map.data()[2] << std::endl; // TODO. Debug
         out << map.m_name << ":[" << map.dims()[0] << ", " << map.dims()[1]
             << ", " << map.dims()[2] << ']';
         return out;
+    }
+
+    inline const std::string& name() {
+        return m_name;
     }
 
   private:

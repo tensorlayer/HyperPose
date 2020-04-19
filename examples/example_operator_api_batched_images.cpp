@@ -9,7 +9,6 @@ DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",
 DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
 DEFINE_string(input_folder, "../data/media", "Folder of images to inference.");
-DEFINE_string(output_foler, ".", "Folder to save outputs.");
 
 int main()
 {
@@ -44,18 +43,39 @@ int main()
     sp::dnn::tensorrt engine(FLAGS_model_file,
                              {FLAGS_input_width, FLAGS_input_height}, "image",
                              {"outputs/conf", "outputs/paf"}, batch.size(),
-                             nvinfer1::DataType::kHALF);
+                             nvinfer1::DataType::kHALF, 1. / 255);
     sp::parser::paf parser({FLAGS_input_width / 8, FLAGS_input_height / 8},
                            {FLAGS_input_width, FLAGS_input_height});
 
-    auto feature_map_packets = engine.inference(batch);
-    for (const auto &packet : feature_map_packets)
-        for (const auto &feature_map : packet)
-            log() << feature_map << std::endl;
+    using clk_t = std::chrono::high_resolution_clock;
+    auto beg = clk_t::now();
+    {
+        // * TensorRT Inference.
+        auto feature_map_packets = engine.inference(batch);
+        for (const auto &packet : feature_map_packets)
+            for (const auto &feature_map : packet)
+                log() << feature_map << std::endl;
 
-    // * Paf.
-    for (auto &&packet : feature_map_packets) {
-        auto human_vec = parser.process(packet[0], packet[1]);
-        for (auto &&h : human_vec) h.print();
+        // * Paf.
+        std::vector<std::vector<sp::human_t >> pose_vectors;
+        pose_vectors.reserve(feature_map_packets.size());
+        for (auto &&packet : feature_map_packets) {
+            pose_vectors.push_back(parser.process(packet[0], packet[1]));
+        }
+
+        std::cout << batch.size() << " images got processed. FPS = "
+                  << 1000. * batch.size() / std::chrono::duration<double, std::milli>(clk_t::now() - beg).count();
+
+        for (size_t i = 0; i < batch.size(); ++i)
+        {
+            cv::resize(batch[i], batch[i], {FLAGS_input_width, FLAGS_input_height});
+            for (auto&& pose : pose_vectors[i]) {
+                pose.print();
+                sp::draw_human(batch[i], pose);
+            }
+            cv::imwrite("output_" + std::to_string(i) + ".png", batch[i]);
+        }
     }
+
+
 }

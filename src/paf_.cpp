@@ -243,13 +243,14 @@ paf::paf(cv::Size feature_size, cv::Size image_size, int n_joins,
       m_upsample_paf(n_connections * 2, image_size.height, image_size.width),
       m_peak_finder_ptr(std::make_unique<paf::peak_finder_impl>(
           n_joins, image_size.height, image_size.width,
-          0 /* Do not use any gauss_kernel */))
+          17 /* Do not use any gauss_kernel */))
 {
 }
 
-std::vector<human_t> paf::process(feature_map_t &conf_map,
-                                  feature_map_t &paf_map)
+std::vector<human_t> paf::process(feature_map_t &paf_map,
+                                  feature_map_t &conf_map)
 {
+    TRACE_SCOPE("PAF");
     output_t ret;
 
     auto &m_peak_finder = *m_peak_finder_ptr;
@@ -267,40 +268,44 @@ std::vector<human_t> paf::process(feature_map_t &conf_map,
                                                m_feature_size.width),
                     ttl::ref(m_upsample_paf));
     }
+
+    // Get all peaks.
     const auto all_peaks = m_peak_finder.find_peak_coords(
         ttl::view(m_upsample_conf), THRESH_HEAT, false /* use_gpu */);
     const auto peak_ids_by_channel = m_peak_finder.group_by(all_peaks);
-    //    return process(all_peaks, peak_ids_by_channel,
-    //    ttl::view(m_upsample_paf));
 
-    const ttl::tensor_view<float, 3> &pafmap = ttl::view(m_upsample_paf);
+    const ttl::tensor_view<float, 3>& pafmap = ttl::view(m_upsample_paf);
 
     std::vector<std::vector<connection>> all_connections;
+
     for (int pair_id = 0; pair_id < COCO_N_PAIRS; pair_id++)
         all_connections.push_back(get_connections(pafmap, all_peaks,
                                                   peak_ids_by_channel, pair_id,
-                                                  m_image_size.height));
+                                                  m_feature_size.height));
 
-    const auto human_refs = get_humans(all_peaks, all_connections);
-    printf("got %lu humans\n", human_refs.size());
 
-    std::vector<human_t> humans{};
-    for (const auto &hr : human_refs) {
-        human_t human;
-        human.score = hr.score;
-        for (int i = 0; i < COCO_N_PARTS; ++i) {
-            if (hr.parts[i].id != -1) {
-                human.parts[i].has_value = true;
-                const auto p = all_peaks[hr.parts[i].id];
-                human.parts[i].score = p.score;
-                human.parts[i].x = p.pos.x;
-                human.parts[i].y = p.pos.y;
+    {
+        TRACE_SCOPE("PAF::Calculate humans.");
+        const auto human_refs = get_humans(all_peaks, all_connections);
+        printf("got %lu humans\n", human_refs.size());
+
+        std::vector<human_t> humans{};
+        for (const auto &hr : human_refs) {
+            human_t human;
+            human.score = hr.score;
+            for (int i = 0; i < COCO_N_PARTS; ++i) {
+                if (hr.parts[i].id != -1) {
+                    human.parts[i].has_value = true;
+                    const auto p = all_peaks[hr.parts[i].id];
+                    human.parts[i].score = p.score;
+                    human.parts[i].x = p.pos.x;
+                    human.parts[i].y = p.pos.y;
+                }
             }
+            humans.push_back(human);
         }
-        humans.push_back(human);
+        return humans;
     }
-
-    return humans;
 }
 
 }  // namespace parser

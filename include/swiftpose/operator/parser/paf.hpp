@@ -14,7 +14,7 @@ class paf
     paf(cv::Size feature_size, cv::Size image_size,
         int n_joins = 1 + COCO_N_PAIRS /* 1 + COCO_N_PARTS */,
         int n_connections = COCO_N_PAIRS /* COCO_N_PAIRS */);
-    std::vector<human_t> process(feature_map_t &conf, feature_map_t &paf);
+    std::vector<human_t> process(feature_map_t &paf, feature_map_t &conf);
     ~paf();
 
   private:

@@ -41,7 +41,7 @@ void images2nchw(std::vector<float> &data, std::vector<cv::Mat> images,
             for (int i = 0; i < iter_rows; ++i) {
                 const auto *line = image.ptr<cv::Vec3b>(i);
                 for (int j = 0; j < iter_cols; ++j)
-                    data.push_back((*line++)[c]);
+                    data.push_back((*line++)[c] * factor);
             }
     }
 }  // TODO: Parallel.

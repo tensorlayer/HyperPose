@@ -86,9 +86,9 @@ std::string to_string(const nvinfer1::DataType dtype)
 
 // * Initialize the TensorRT engine using the .uff file.
 static nvinfer1::ICudaEngine *
-loadModelAndCreateEngine(const char *uffFile, int max_batch_size,
-                         nvuffparser::IUffParser *parser,
-                         nvinfer1::DataType dtype)
+load_model_and_create_engine(const char *uffFile, int max_batch_size,
+                             nvuffparser::IUffParser *parser,
+                             nvinfer1::DataType dtype)
 {
     destroy_ptr<nvinfer1::IBuilder> builder(
         nvinfer1::createInferBuilder(gLogger));
@@ -121,8 +121,8 @@ create_engine(const std::string &model_file, cv::Size input_size,
         nvuffparser::UffInputOrder::kNCHW);
 
     for (auto &name : output_names) { parser->registerOutput(name.c_str()); }
-    auto engine = loadModelAndCreateEngine(model_file.c_str(), max_batch_size,
-                                           parser.get(), dtype);
+    auto engine = load_model_and_create_engine(model_file.c_str(), max_batch_size,
+                                               parser.get(), dtype);
     if (nullptr == engine) {
         gLogger.log(nvinfer1::ILogger::Severity::kERROR,
                     "Failed to created engine");
@@ -178,6 +178,7 @@ std::vector<internal_t> tensorrt::inference(const std::vector<cv::Mat> &batch)
         TRACE_SCOPE("INFERENCE::Images2NCHW");
         images2nchw(cpu_image_batch_buffer, batch, m_inp_size, m_factor,
                     m_flip_rgb);
+        std::cout << "Resize debugging: " << cpu_image_batch_buffer[0] << std::endl;
     }
 
     {
@@ -219,23 +220,20 @@ std::vector<internal_t> tensorrt::inference(const std::vector<cv::Mat> &batch)
                         m_engine->getBindingDimensions(i);
 
                     auto name = m_engine->getBindingName(i);
+
                     std::cout << "Get Inference Result: " << name << ": "
                               << to_string(out_dims) << std::endl;
 
-                    auto single_offset =
-                        out_dims.d[0] * out_dims.d[1] * out_dims.d[2];
                     auto host_tensor_ptr =
                         std::make_shared<ttl::tensor<float, 4>>(
                             batch.size(), out_dims.d[0], out_dims.d[1],
                             out_dims.d[2]);
+
                     ttl::tensor_ref<char, 2> output(
-                        reinterpret_cast<char *>(host_tensor_ptr->data()),
-                        buffer.shape());
+                        reinterpret_cast<char *>(host_tensor_ptr->data()), buffer.shape());
                     ttl::copy(output, ttl::view(buffer));
                     for (int j = 0; j < batch.size(); ++j)
-                        ret[j].emplace_back(std::move(name), host_tensor_ptr,
-                                            j * single_offset, out_dims.d[0],
-                                            out_dims.d[1], out_dims.d[2]);
+                        ret[j].emplace_back(name, host_tensor_ptr, (*host_tensor_ptr)[j]);
                 }
             }
         }

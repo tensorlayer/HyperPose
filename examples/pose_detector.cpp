@@ -105,6 +105,7 @@ void pose_detector_impl::one_batch(const std::vector<std::string> &image_files,
                                                        bool use_gpu = false) {
             const auto humans = [this, i, use_gpu]() {
                 TRACE_SCOPE("run paf_process");
+                std::cout << pafs[i].data()[2] << ' ' << confs[i].data()[2] << std::endl;
                 return (*process_paf)(confs[i].data(), pafs[i].data(), use_gpu);
             }();
             auto resized_image = resized_images[i];

@@ -139,7 +139,6 @@ template <typename T> class peak_finder_t
           pooled_cpu(channel, height, width),
           same_max_pool_3x3_gpu(1, channel, height, width, 3, 3)
     {
-        //        std::cout << "Appread Once\n" << '\n';
     }
 
     std::vector<peak_info>
