@@ -43,7 +43,7 @@ int main()
     sp::dnn::tensorrt engine(FLAGS_model_file,
                              {FLAGS_input_width, FLAGS_input_height}, "image",
                              {"outputs/conf", "outputs/paf"}, batch.size(),
-                             nvinfer1::DataType::kFLOAT, 1. / 255);
+                             sp::data_type::kFLOAT, 2. / 255);
     sp::parser::paf parser({FLAGS_input_width / 8, FLAGS_input_height / 8},
                            {FLAGS_input_width, FLAGS_input_height});
 
@@ -51,7 +51,7 @@ int main()
     auto beg = clk_t::now();
     {
         // * TensorRT Inference.
-        auto feature_map_packets = engine.inference(std::move(batch));
+        auto feature_map_packets = engine.inference(batch);
         for (const auto &packet : feature_map_packets)
             for (const auto &feature_map : packet)
                 log() << feature_map << std::endl;

@@ -231,8 +231,6 @@ class paf::peak_finder_impl : public peak_finder_t<float>
     using peak_finder_t::peak_finder_t;
 };
 
-paf::~paf() = default;
-
 paf::paf(cv::Size feature_size, cv::Size image_size, int n_joins,
          int n_connections)
     : m_feature_size(feature_size),
@@ -307,6 +305,8 @@ std::vector<human_t> paf::process(feature_map_t &paf_map,
         return humans;
     }
 }
+
+paf::~paf() = default;
 
 }  // namespace parser
 

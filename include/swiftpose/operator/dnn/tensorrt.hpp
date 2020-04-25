@@ -11,6 +11,8 @@
 namespace swiftpose
 {
 
+using data_type = nvinfer1::DataType;
+
 namespace dnn
 {
 

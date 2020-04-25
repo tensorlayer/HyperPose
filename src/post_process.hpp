@@ -205,6 +205,10 @@ template <typename T> class peak_finder_t
         return peak_ids_by_channel;
     }
 
+    int kernel_size() const {
+        return ksize;
+    }
+
   private:
     const int channel;
     const int height;
