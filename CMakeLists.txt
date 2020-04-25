@@ -25,7 +25,6 @@ ELSE()
     INCLUDE(cmake/package.cmake)
 ENDIF()
 
+INCLUDE(cmake/helpers.cmake)
 INCLUDE(cmake/examples.cmake)
-
-ENABLE_TESTING()
-# TODO: add tests
+INCLUDE(cmake/tests.cmake)

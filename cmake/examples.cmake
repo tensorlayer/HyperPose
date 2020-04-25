@@ -1,25 +1,4 @@
-FIND_PACKAGE(OpenCV)
-FIND_PACKAGE(gflags)
-FIND_PACKAGE(Threads REQUIRED)
-if (CMAKE_CXX_COMPILER_ID STREQUAL GNU)
-    set(CXX_FILESYSTEM_LIBRARIES stdc++fs)
-else()
-    set(CXX_FILESYSTEM_LIBRARIES)
-endif()
-
-# Helper Lib.
-ADD_LIBRARY(helpers
-        examples/input.cpp
-        examples/vis.cpp
-        examples/thread_pool.cpp)
-TARGET_LINK_LIBRARIES(helpers
-        opencv_core
-        opencv_imgproc
-        opencv_highgui
-        opencv_imgcodecs
-        Threads::Threads
-        ${CXX_FILESYSTEM_LIBRARIES})
-ADD_GLOBAL_DEPS(helpers)
+INCLUDE(${CMAKE_SOURCE_DIR}/cmake/helpers.cmake)
 
 # [LIBRARY] Pose Detector Lib.
 ADD_LIBRARY(pose-detetor
@@ -59,11 +38,6 @@ TARGET_LINK_LIBRARIES(example-live-camera
         opencv_videoio
         Threads::Threads)
 ADD_GLOBAL_DEPS(example-live-camera)
-
-# [EXAMPLE] Test Thread Pool.
-ADD_EXECUTABLE(test-thread-pool examples/test_thread_pool.cpp)
-TARGET_LINK_LIBRARIES(test-thread-pool helpers)
-ADD_GLOBAL_DEPS(test-thread-pool)
 
 # [EXAMPLE] Operator API.
 ADD_EXECUTABLE(example_operator_api_batched_images examples/example_operator_api_batched_images.cpp)

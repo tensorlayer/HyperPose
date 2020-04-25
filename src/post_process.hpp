@@ -205,15 +205,11 @@ template <typename T> class peak_finder_t
         return peak_ids_by_channel;
     }
 
-    int kernel_size() const {
-        return ksize;
-    }
-
+    const int ksize;
   private:
     const int channel;
     const int height;
     const int width;
-    const int ksize;
 
     ttl::tensor<T, 3> smoothed_cpu;
     ttl::tensor<T, 3> pooled_cpu;

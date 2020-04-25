@@ -245,6 +245,19 @@ paf::paf(cv::Size feature_size, cv::Size image_size, int n_joins,
 {
 }
 
+paf::paf(const paf& p) :
+        m_feature_size(p.m_feature_size),
+        m_image_size(p.m_image_size),
+        m_n_joints(p.m_n_joints),
+        m_n_connections(p.m_n_connections),
+        m_upsample_conf(p.m_upsample_conf.shape()),
+        m_upsample_paf(p.m_upsample_paf.shape()),
+        m_peak_finder_ptr(std::make_unique<paf::peak_finder_impl>(
+                p.m_n_joints,
+                p.m_image_size.height,
+                p.m_image_size.width,
+                p.m_peak_finder_ptr->ksize)){}
+
 std::vector<human_t> paf::process(feature_map_t &paf_map,
                                   feature_map_t &conf_map)
 {
