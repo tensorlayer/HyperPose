@@ -13,8 +13,7 @@ foreach(TEST_FULL_PATH ${POSE_TESTS})
     SET(TEST_TAR test.${TEST_NAME})
     add_executable(${TEST_TAR} ${TEST_FULL_PATH})
     set_property(
-            TARGET ${TEST_TAR}
-            PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+            TARGET ${TEST_TAR} PROPERTY COMPILE_FLAGS "")
     target_link_libraries(${TEST_TAR} PRIVATE helpers)
     add_test(NAME ${TEST_TAR} COMMAND ${TEST_TAR})
 endforeach()

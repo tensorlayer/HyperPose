@@ -17,6 +17,7 @@ ADD_LIBRARY(
         src/tensorrt.cpp
         src/paf_.cpp
         src/data.cpp
+        src/stream.cpp
         src/viz.cpp)
 TARGET_LINK_LIBRARIES(
         ${POSE_LIB_NAME}

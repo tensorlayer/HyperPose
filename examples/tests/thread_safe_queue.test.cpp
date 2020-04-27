@@ -4,7 +4,9 @@
 int main()
 {
     using namespace swiftpose;
-
+#ifdef NDEBUG
+    std::cerr << "Debug Flags not set!\n";
+#endif
     { // Test 1
         constexpr size_t iters = 10;
         thread_safe_queue<std::vector<int>> queue(iters * 3);

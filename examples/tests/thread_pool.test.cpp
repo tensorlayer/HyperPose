@@ -41,7 +41,7 @@ static void quick_sort(Iter beg, Iter end, thread_pool& pool)
     const auto dis = std::distance(beg, end);
     if (dis > 1) {
         auto piv = ::naive::partition(beg, end);
-        if (dis > 2048) {
+        if (dis > (1 << 12)) {
             using future_t = std::future<void>;
             auto l = pool.enqueue([beg, piv, &pool]() { quick_sort(beg, piv, pool); });
             quick_sort(piv + 1, end, pool);
@@ -62,7 +62,7 @@ void quick_sort(Iter beg, Iter end)
     const auto dis = std::distance(beg, end);
     if (dis > 1) {
         auto piv = ::naive::partition(beg, end);
-        if (dis > 10000) {
+        if (dis > (1 << 12)) {
             auto foo1 = std::async(std::launch::async,
                 [beg, piv]() { quick_sort(beg, piv); });
             auto foo2 = std::async(std::launch::async,

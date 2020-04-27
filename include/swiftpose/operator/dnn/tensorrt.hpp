@@ -30,6 +30,7 @@ namespace dnn {
         inline cv::Size input_size() noexcept { return m_inp_size; }
 
         std::vector<internal_t> inference(std::vector<cv::Mat>);
+        std::vector<internal_t> inference(const std::vector<float>&, size_t batch_size);
 
     private:
         const cv::Size m_inp_size; // w, h
@@ -47,7 +48,6 @@ namespace dnn {
 
     private:
         void _batching(std::vector<cv::Mat>&, std::vector<float>&);
-        std::vector<internal_t> _raw_inference(std::vector<float>&, size_t);
     };
 
 } // namespace dnn

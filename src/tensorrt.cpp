@@ -11,7 +11,6 @@
 #include "trace.hpp"
 
 namespace swiftpose {
-
 namespace dnn {
 
     template <typename T>
@@ -21,10 +20,6 @@ namespace dnn {
 
     template <typename T>
     using destroy_ptr = std::unique_ptr<T, engine_deleter<T>>;
-
-    /*
- * Hided functions.
- */
 
     Logger gLogger;
 
@@ -168,8 +163,7 @@ namespace dnn {
         }
     }
 
-    void tensorrt::_batching(std::vector<cv::Mat>& batch,
-        std::vector<float>& cpu_image_batch_buffer)
+    void tensorrt::_batching(std::vector<cv::Mat>& batch, std::vector<float>& cpu_image_batch_buffer)
     {
         TRACE_SCOPE("INFERENCE::Images2NCHW");
         nhwc_images_append_nchw_batch(cpu_image_batch_buffer, batch, m_inp_size,
@@ -177,8 +171,7 @@ namespace dnn {
     }
 
     std::vector<internal_t>
-    tensorrt::_raw_inference(std::vector<float>& cpu_image_batch_buffer,
-        size_t batch_size)
+    tensorrt::inference(const std::vector<float>& cpu_image_batch_buffer, size_t batch_size)
     {
         std::vector<internal_t> ret(batch_size);
         TRACE_SCOPE("INFERENCE::TensorRT");
@@ -189,7 +182,7 @@ namespace dnn {
                     std::cout << "Got Input Binding! " << i << '\n';
                     const auto buffer = m_cuda_buffers.at(i).slice(0, batch_size);
                     ttl::tensor_view<char, 2> input(
-                        reinterpret_cast<char*>(cpu_image_batch_buffer.data()),
+                        reinterpret_cast<const char*>(cpu_image_batch_buffer.data()),
                         buffer.shape());
                     ttl::copy(buffer, input); // Bug here.
                     break; // ! Only one input node.
@@ -238,7 +231,10 @@ namespace dnn {
     {
         TRACE_SCOPE("INFERENCE");
         if (batch.size() > m_max_batch_size) {
-            std::string err_msg = "Input batch size overflow: Yours@" + std::to_string(batch.size()) + " Max@" + std::to_string(m_max_batch_size);
+            std::string err_msg = "Input batch size overflow: Yours@"
+                + std::to_string(batch.size())
+                + " Max@"
+                + std::to_string(m_max_batch_size);
             gLogger.log(nvinfer1::ILogger::Severity::kERROR, err_msg.c_str());
             std::exit(-1);
         }
@@ -254,7 +250,7 @@ namespace dnn {
         this->_batching(batch, cpu_image_batch_buffer);
 
         // * Step3: Do Inference.
-        return this->_raw_inference(cpu_image_batch_buffer, batch.size());
+        return this->inference(cpu_image_batch_buffer, batch.size());
     }
 
     tensorrt::~tensorrt() { nvuffparser::shutdownProtobufLibrary(); }
