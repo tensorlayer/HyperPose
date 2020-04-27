@@ -2,38 +2,36 @@
 
 #include "../../utility/data.hpp"
 
-namespace swiftpose
-{
+namespace swiftpose {
 
-namespace parser
-{
+namespace parser {
 
-class paf
-{
-  public:
-    paf(cv::Size feature_size, cv::Size image_size,
-        int n_joins = 1 + COCO_N_PAIRS /* 1 + COCO_N_PARTS */,
-        int n_connections = COCO_N_PAIRS /* COCO_N_PAIRS */);
-    std::vector<human_t> process(feature_map_t &paf, feature_map_t &conf);
+    class paf {
+    public:
+        paf(cv::Size feature_size, cv::Size image_size,
+            int n_joins = 1 + COCO_N_PAIRS /* 1 + COCO_N_PARTS */,
+            int n_connections = COCO_N_PAIRS /* COCO_N_PAIRS */);
+        std::vector<human_t> process(feature_map_t& paf, feature_map_t& conf);
 
-    template <typename C>
-    std::vector<human_t> process(C&& feature_map_containers) {
-        // 1@paf, 2@conf.
-        process(feature_map_containers[0], feature_map_containers[1]);
-    }
+        template <typename C>
+        std::vector<human_t> process(C&& feature_map_containers)
+        {
+            // 1@paf, 2@conf.
+            process(feature_map_containers[0], feature_map_containers[1]);
+        }
 
-    paf(const paf& p);
+        paf(const paf& p);
 
-    ~paf();
+        ~paf();
 
-  private:
-    cv::Size m_feature_size, m_image_size;
-    int m_n_joints, m_n_connections;
-    ttl::tensor<float, 3> m_upsample_conf, m_upsample_paf;
-    class peak_finder_impl;
-    std::unique_ptr<peak_finder_impl> m_peak_finder_ptr;
-};
+    private:
+        cv::Size m_feature_size, m_image_size;
+        int m_n_joints, m_n_connections;
+        ttl::tensor<float, 3> m_upsample_conf, m_upsample_paf;
+        class peak_finder_impl;
+        std::unique_ptr<peak_finder_impl> m_peak_finder_ptr;
+    };
 
-}  // namespace parser
+} // namespace parser
 
-}  // namespace swiftpose
+} // namespace swiftpose

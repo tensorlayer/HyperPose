@@ -24,7 +24,7 @@ DEFINE_bool(flip_rgb, true, "Flip RGB.");
 // input flags
 DEFINE_string(image_files, "", "Comma separated list of pathes to image.");
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TRACE_SCOPE(__func__);
     gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -52,9 +52,8 @@ int main(int argc, char *argv[])
         double mean = d.count() / n;
         printf("// inferenced %d images of %d x %d, took %.2fs, mean: %.2fms, "
                "FPS: %f, buffer size: %d, use f16: %d, gauss kernel size: %d\n",
-               n, FLAGS_input_height, FLAGS_input_width, d.count(), mean * 1000,
-               1 / mean, FLAGS_buffer_size, FLAGS_use_f16,
-               FLAGS_gauss_kernel_size);
+            n, FLAGS_input_height, FLAGS_input_width, d.count(), mean * 1000,
+            1 / mean, FLAGS_buffer_size, FLAGS_use_f16, FLAGS_gauss_kernel_size);
     }
 
     return 0;

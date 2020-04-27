@@ -15,16 +15,16 @@
 
 namespace swiftpose {
 
-class simple_thread_pool final {  // Simple thread-safe & container-free thread pool.
+class simple_thread_pool
+    final { // Simple thread-safe & container-free thread pool.
 public:
-    explicit simple_thread_pool(std::size_t /* suggested size */ =
-    std::thread::hardware_concurrency() + 2);
+    explicit simple_thread_pool(std::size_t /* suggested size */ = std::thread::hardware_concurrency() + 2);
 
     ~simple_thread_pool();
 
-    template<typename Func, typename... Args>
-    auto enqueue(Func &&f, Args &&... args) /* For Cpp14+ -> decltype(auto). */
-    -> std::future<typename std::result_of<Func(Args...)>::type>;
+    template <typename Func, typename... Args>
+    auto enqueue(Func&& f, Args&&... args) /* For Cpp14+ -> decltype(auto). */
+        -> std::future<typename std::result_of<Func(Args...)>::type>;
 
     //    template <typename Func, typename ... Args>
     //    auto enqueue_advance(Func &&f, Args &&... args) /* For Cpp14+ ->
@@ -43,22 +43,24 @@ private:
         std::condition_variable cv;
         std::condition_variable wait_cv;
         std::queue<task_type> queue;
-        std::atomic<std::size_t> to_finish{0};
-        bool shutdown{false};
+        std::atomic<std::size_t> to_finish{ 0 };
+        bool shutdown{ false };
     };
     std::shared_ptr<pool_src> m_shared_src;
 };
 
-template<typename Func, typename... Args>
-auto simple_thread_pool::enqueue(Func &&f, Args &&... args)
--> std::future<typename std::result_of<Func(Args...)>::type> {
+template <typename Func, typename... Args>
+auto simple_thread_pool::enqueue(Func&& f, Args&&... args)
+    -> std::future<typename std::result_of<Func(Args...)>::type>
+{
     using return_type = typename std::result_of<Func(Args...)>::type;
     using package_t = std::packaged_task<return_type()>;
-    package_t *task_ptr = nullptr;
+    package_t* task_ptr = nullptr;
 
     try {
-        task_ptr = new package_t(std::bind(std::forward<Func>(f), std::forward<Args>(args)...));
-    } catch (const std::exception &e) {
+        task_ptr = new package_t(
+            std::bind(std::forward<Func>(f), std::forward<Args>(args)...));
+    } catch (const std::exception& e) {
         if (task_ptr != nullptr)
             delete task_ptr;
         throw e;
@@ -80,4 +82,4 @@ auto simple_thread_pool::enqueue(Func &&f, Args &&... args)
 
 using thread_pool = simple_thread_pool;
 
-}
+} // namespace swiftpose

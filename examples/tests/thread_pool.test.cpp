@@ -6,21 +6,23 @@
 // TODO: Change a test case. My recursive parallel qsort seems to be slower than
 // single-thread version in "release" mode.
 // =============== About test ================
-namespace naive
-{
+namespace naive {
 
-template <typename Iter> static Iter partition(const Iter beg, const Iter end)
+template <typename Iter>
+static Iter partition(const Iter beg, const Iter end)
 {
     std::swap(*(end - 1), *(beg + std::rand() % std::distance(beg, end)));
     const auto par = *(end - 1);
     auto base_iter = beg;
     for (auto it = beg; it < end - 1; ++it)
-        if (*it < *(end - 1)) std::swap(*it, *(base_iter++));
+        if (*it < *(end - 1))
+            std::swap(*it, *(base_iter++));
     std::swap(*(end - 1), *base_iter);
     return base_iter;
 }
 
-template <typename Iter> static void quick_sort(Iter beg, Iter end)
+template <typename Iter>
+static void quick_sort(Iter beg, Iter end)
 {
     if (std::distance(beg, end) > 1) {
         auto piv = partition(beg, end);
@@ -29,21 +31,19 @@ template <typename Iter> static void quick_sort(Iter beg, Iter end)
     }
 }
 
-}  // namespace naive
+} // namespace naive
 
-namespace pool_v
-{
+namespace pool_v {
 
 template <typename Iter>
-static void quick_sort(Iter beg, Iter end, thread_pool &pool)
+static void quick_sort(Iter beg, Iter end, thread_pool& pool)
 {
     const auto dis = std::distance(beg, end);
     if (dis > 1) {
         auto piv = ::naive::partition(beg, end);
         if (dis > 2048) {
             using future_t = std::future<void>;
-            auto l = pool.enqueue(
-                [beg, piv, &pool]() { quick_sort(beg, piv, pool); });
+            auto l = pool.enqueue([beg, piv, &pool]() { quick_sort(beg, piv, pool); });
             quick_sort(piv + 1, end, pool);
         } else {
             naive::quick_sort(beg, piv);
@@ -52,21 +52,21 @@ static void quick_sort(Iter beg, Iter end, thread_pool &pool)
     }
 }
 
-}  // namespace pool_v
+} // namespace pool_v
 
-namespace async_v
-{
+namespace async_v {
 
-template <typename Iter> void quick_sort(Iter beg, Iter end)
+template <typename Iter>
+void quick_sort(Iter beg, Iter end)
 {
     const auto dis = std::distance(beg, end);
     if (dis > 1) {
         auto piv = ::naive::partition(beg, end);
         if (dis > 10000) {
             auto foo1 = std::async(std::launch::async,
-                                   [beg, piv]() { quick_sort(beg, piv); });
+                [beg, piv]() { quick_sort(beg, piv); });
             auto foo2 = std::async(std::launch::async,
-                                   [piv, end]() { quick_sort(piv + 1, end); });
+                [piv, end]() { quick_sort(piv + 1, end); });
         } else {
             naive::quick_sort(beg, piv);
             naive::quick_sort(piv + 1, end);
@@ -74,28 +74,29 @@ template <typename Iter> void quick_sort(Iter beg, Iter end)
     }
 }
 
-}  // namespace async_v
+} // namespace async_v
 
 // Test this thread pool using quick sort.
 
 template <typename Func, typename S>
-static void bench(Func &&func, const S &log, int loop_tms = 1)
+static void bench(Func&& func, const S& log, int loop_tms = 1)
 {
     std::cout << "[Bench = beg] \t@ " << log << std::endl;
     {
         auto beg = std::chrono::system_clock::now();
-        for (int i = 0; i < loop_tms; ++i) { func(); }
+        for (int i = 0; i < loop_tms; ++i) {
+            func();
+        }
         auto end = std::chrono::system_clock::now();
-        std::cout
-            << "[Bench = end] \t@ " << log << ": \tFor \t<<< " << loop_tms
-            << " >>> times, cost \t<<<"
-            << std::chrono::duration<double, std::milli>(end - beg).count()
-            << ">>> ms" << std::endl;
+        std::cout << "[Bench = end] \t@ " << log << ": \tFor \t<<< " << loop_tms
+                  << " >>> times, cost \t<<<"
+                  << std::chrono::duration<double, std::milli>(end - beg).count()
+                  << ">>> ms" << std::endl;
     }
 }
 
 template <typename... Args>
-void real_assert(bool result, std::size_t line_number, Args &&... args)
+void real_assert(bool result, std::size_t line_number, Args&&... args)
 {
     if (!result) {
         std::cerr << "[TEST FAILED] at line " << line_number;

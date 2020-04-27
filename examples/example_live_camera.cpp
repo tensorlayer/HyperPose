@@ -26,9 +26,13 @@ DEFINE_bool(flip_rgb, true, "Flip RGB.");
 struct camera_t {
     const int fps;
 
-    channel<cv::Mat> &ch;
+    channel<cv::Mat>& ch;
 
-    camera_t(channel<cv::Mat> &ch, int fps = 24) : fps(fps), ch(ch) {}
+    camera_t(channel<cv::Mat>& ch, int fps = 24)
+        : fps(fps)
+        , ch(ch)
+    {
+    }
 
     void monitor()
     {
@@ -44,8 +48,7 @@ struct camera_t {
         cv::Mat frame(cv::Size(height, width), CV_8UC(3));
         for (int i = 0;; ++i) {
             cap >> frame;
-            printf("#%d :: %d x %d\n", i, frame.size().height,
-                   frame.size().width);
+            printf("#%d :: %d x %d\n", i, frame.size().height, frame.size().width);
             ch.put(frame);
             cv::waitKey(delay);
         }
@@ -57,12 +60,14 @@ struct screen_t {
     const int fps;
     const int delay;
 
-    screen_t(const std::string &name, int fps = 24)
-        : name(name), fps(fps), delay(1000 / fps)
+    screen_t(const std::string& name, int fps = 24)
+        : name(name)
+        , fps(fps)
+        , delay(1000 / fps)
     {
     }
 
-    void display(const cv::Mat &frame)
+    void display(const cv::Mat& frame)
     {
         cv::imshow(name, frame);
         cv::waitKey(delay);
@@ -70,12 +75,15 @@ struct screen_t {
 };
 
 struct inputer : stream_detector::inputer_t {
-    channel<cv::Mat> &ch;
+    channel<cv::Mat>& ch;
 
-    inputer(channel<cv::Mat> &ch) : ch(ch) {}
+    inputer(channel<cv::Mat>& ch)
+        : ch(ch)
+    {
+    }
 
-    bool operator()(int height, int width, uint8_t *hwc_ptr,
-                    float *chw_ptr) override
+    bool operator()(int height, int width, uint8_t* hwc_ptr,
+        float* chw_ptr) override
     {
         const auto img = ch.get();
 
@@ -98,11 +106,14 @@ struct inputer : stream_detector::inputer_t {
 };
 
 struct handler : screen_t, stream_detector::handler_t {
-    handler(const std::string &name) : screen_t(name) {}
-
-    void operator()(cv::Mat &image, const std::vector<human_t> &humans) override
+    handler(const std::string& name)
+        : screen_t(name)
     {
-        for (const auto &h : humans) {
+    }
+
+    void operator()(cv::Mat& image, const std::vector<human_t>& humans) override
+    {
+        for (const auto& h : humans) {
             h.print();
             draw_human(image, h);
         }
@@ -110,7 +121,7 @@ struct handler : screen_t, stream_detector::handler_t {
     }
 };
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TRACE_SCOPE(__func__);
     gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -139,6 +150,8 @@ int main(int argc, char *argv[])
         sd->run(in, handle, 1000000);
     }));
 
-    for (auto &th : ths) { th.join(); }
+    for (auto& th : ths) {
+        th.join();
+    }
     return 0;
 }

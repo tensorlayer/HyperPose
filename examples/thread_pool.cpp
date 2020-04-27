@@ -12,18 +12,16 @@ simple_thread_pool::simple_thread_pool(std::size_t sz)
                     // >>> Critical region => Begin
                     {
                         std::unique_lock<std::mutex> lock(ptr->queue_mu);
-                        ptr->cv.wait(lock, [&] {
-                            return ptr->shutdown or !ptr->queue.empty();
-                        });
+                        ptr->cv.wait(
+                            lock, [&] { return ptr->shutdown or !ptr->queue.empty(); });
                         if (ptr->shutdown and ptr->queue.empty())
-                            return;  // Conditions to let the thread go.
+                            return; // Conditions to let the thread go.
                         task = std::move(ptr->queue.front());
                         ptr->queue.pop();
                     }
                     // >>> Critical region => End
                     task();
-                    if (ptr->to_finish.fetch_add(
-                            -1, std::memory_order_relaxed) == 1)
+                    if (ptr->to_finish.fetch_add(-1, std::memory_order_relaxed) == 1)
                         ptr->wait_cv.notify_one();
                 }
             },
@@ -34,7 +32,7 @@ simple_thread_pool::simple_thread_pool(std::size_t sz)
 
 void simple_thread_pool::wait()
 {
-    std::unique_lock lock{m_shared_src->wait_mu};
+    std::unique_lock lock{ m_shared_src->wait_mu };
     m_shared_src->wait_cv.wait(lock, [&] {
         return m_shared_src->to_finish.load(std::memory_order_relaxed) == 0;
     });

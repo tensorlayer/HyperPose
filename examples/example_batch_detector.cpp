@@ -12,7 +12,7 @@
 
 // Model flags
 DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",
-              "Path to uff model.");
+    "Path to uff model.");
 DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
 
@@ -26,12 +26,12 @@ DEFINE_bool(flip_rgb, true, "Flip RGB.");
 // input flags
 DEFINE_string(data_dir, "../data/media", "path to data folder");
 
-std::vector<std::string> get_input_files(const std::string &dir)
+std::vector<std::string> get_input_files(const std::string& dir)
 {
     namespace fs = std::experimental::filesystem;
     std::vector<std::string> paths;
-    std::regex image_regex{R"((.*)\.(jpeg|jpg|png))"};
-    for (auto &&file : fs::directory_iterator(FLAGS_data_dir)) {
+    std::regex image_regex{ R"((.*)\.(jpeg|jpg|png))" };
+    for (auto&& file : fs::directory_iterator(FLAGS_data_dir)) {
         auto file_name = file.path().string();
         if (std::regex_match(file_name, image_regex)) {
             std::cout << "Add file: " << file_name << " into batch.\n";
@@ -41,7 +41,7 @@ std::vector<std::string> get_input_files(const std::string &dir)
     return paths;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TRACE_SCOPE(__func__);
     gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -70,8 +70,7 @@ int main(int argc, char *argv[])
         double mean = d.count() / n;
         printf("// inferenced %d images of %d x %d, took %.2fs, mean: %.2fms, "
                "FPS: %f, batch size: %d, use f16: %d, gauss kernel size: %d\n",
-               n, FLAGS_input_height, FLAGS_input_width, d.count(), mean * 1000,
-               1 / mean, FLAGS_batch_size, FLAGS_use_f16,
-               FLAGS_gauss_kernel_size);
+            n, FLAGS_input_height, FLAGS_input_width, d.count(), mean * 1000,
+            1 / mean, FLAGS_batch_size, FLAGS_use_f16, FLAGS_gauss_kernel_size);
     }
 }

@@ -4,10 +4,13 @@
 #include <queue>
 
 // FIXME: double check
-template <typename T> class channel
-{
-  public:
-    channel(int cap) : cap(cap) {}
+template <typename T>
+class channel {
+public:
+    channel(int cap)
+        : cap(cap)
+    {
+    }
 
     T get()
     {
@@ -35,7 +38,7 @@ template <typename T> class channel
         cv.notify_one();
     }
 
-  private:
+private:
     const int cap;
 
     std::mutex mu;
