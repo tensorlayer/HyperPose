@@ -16,9 +16,10 @@ class basic_stream_manager {
 private:
     template <typename NameGetter>
     using enable_if_name_getter_t = std::enable_if_t<
-            std::is_convertible_v<
-                    std::result_of_t<decltype(&NameGetter::operator())()>,
-                    std::string>>;
+        std::is_convertible_v<
+            std::result_of_t<decltype (&NameGetter::operator())()>,
+            std::string>>;
+
 public:
     template <typename, typename>
     friend class stream;
@@ -55,7 +56,7 @@ private:
 
     using pose_set = std::vector<human_t>;
 
-/*
+    /*
 * Connections:
 * input -> resize.
 * input -> replica.
@@ -93,51 +94,60 @@ public:
             m_parser_refs.push_back(std::ref(x));
     }
 
-    class async_handler{
+    class async_handler {
         stream& m_stream;
+
     public:
         template <typename S>
-        friend async_handler& operator << (async_handler& handler, S&& source) {
+        friend async_handler& operator<<(async_handler& handler, S&& source)
+        {
             handler.m_stream.m_stream_manager.m_thread_tracer.push_back(
-                    handler.m_stream.add_input_stream(std::forward<S>(source)));
+                handler.m_stream.add_input_stream(std::forward<S>(source)));
             return handler;
         }
 
         template <typename S>
-        friend async_handler& operator >> (async_handler& handler, S&& source) {
+        friend async_handler& operator>>(async_handler& handler, S&& source)
+        {
             handler.m_stream.m_stream_manager.m_thread_tracer.push_back(
                 handler.m_stream.add_output_stream(std::forward<S>(source)));
             return handler;
         }
     };
 
-    class sync_handler{
+    class sync_handler {
         stream& m_stream;
+
     public:
         template <typename S>
-        friend async_handler& operator << (async_handler& handler, S&& source) {
+        friend async_handler& operator<<(async_handler& handler, S&& source)
+        {
             handler.m_stream.add_input_stream(std::forward<S>(source));
             return handler;
         }
 
         template <typename S>
-        friend async_handler& operator >> (async_handler& handler, S&& source) {
+        friend async_handler& operator>>(async_handler& handler, S&& source)
+        {
             handler.m_stream.add_output_stream(std::forward<S>(source));
             return handler;
         }
     };
 
-    async_handler async() {
+    async_handler async()
+    {
         return *this;
     }
 
-    sync_handler sync() {
+    sync_handler sync()
+    {
         return *this;
     }
 
 private:
     template <typename S>
-    auto add_input_stream(S&& s) {
+    auto add_input_stream(S&& s)
+    {
         auto& tracer = m_stream_manager.m_thread_tracer;
 
         return std::async([this, &s] {
@@ -146,7 +156,8 @@ private:
     }
 
     template <typename S>
-    auto add_output_stream(S&& s) {
+    auto add_output_stream(S&& s)
+    {
         auto& tracer = m_stream_manager.m_thread_tracer;
 
         return std::async([this, &s] {
@@ -166,7 +177,7 @@ private:
             m_stream_manager.dnn_inference_from_resized_images(m_engine_ref);
         }));
 
-        tracer.push_back(std::async([this]{
+        tracer.push_back(std::async([this] {
             m_stream_manager.parse_from_internals(m_parser_refs);
         }));
     }
@@ -244,10 +255,11 @@ void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
 
 template <typename NameGetter>
 basic_stream_manager::enable_if_name_getter_t<NameGetter>
-basic_stream_manager::write_to(NameGetter&& name_getter) {
+basic_stream_manager::write_to(NameGetter&& name_getter)
+{
     std::unique_lock lk{ m_pose_sets_queue.m_mu };
     m_cv_post_processing.wait(lk,
-                              [this] { return m_pose_sets_queue.m_size > 0; });
+        [this] { return m_pose_sets_queue.m_size > 0; });
 
     auto&& pose_set = m_pose_sets_queue.dump_all();
     for (auto&& poses : pose_set) {
@@ -260,5 +272,4 @@ basic_stream_manager::write_to(NameGetter&& name_getter) {
 
     m_shutdown_notifier.notify_one();
 }
-
 }

@@ -52,9 +52,8 @@ struct output_t {
     cv::Mat visualize_copied() const;
 };
 
-
 void nhwc_images_append_nchw_batch(
-        std::vector<float>& data, std::vector<cv::Mat> images,
-        cv::Size size, double factor = 1.0, bool flip_rb = true);
+    std::vector<float>& data, std::vector<cv::Mat> images,
+    cv::Size size, double factor = 1.0, bool flip_rb = true);
 
 } // namespace swiftpose
