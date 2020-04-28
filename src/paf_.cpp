@@ -1,6 +1,7 @@
 #include "logging.hpp"
 #include "post_process.hpp"
 #include <swiftpose/operator/parser/paf.hpp>
+#include <thread>
 
 namespace swiftpose {
 
@@ -253,11 +254,10 @@ namespace parser {
     {
     }
 
-    std::vector<human_t> paf::process(feature_map_t& paf_map,
-        feature_map_t& conf_map)
+    std::vector<human_t> paf::process(feature_map_t paf_map, feature_map_t conf_map)
     {
         TRACE_SCOPE("PAF");
-        output_t ret;
+        std::vector<human_t> humans{};
 
         auto& m_peak_finder = *m_peak_finder_ptr;
         auto conf_ = conf_map.data();
@@ -289,28 +289,27 @@ namespace parser {
                 peak_ids_by_channel, pair_id,
                 m_feature_size.height));
 
-        {
-            TRACE_SCOPE("PAF::Calculate humans.");
-            const auto human_refs = get_humans(all_peaks, all_connections);
-            printf("got %lu humans\n", human_refs.size());
+        const auto human_refs = get_humans(all_peaks, all_connections);
+        std::cout << "Got " << human_refs.size() << " humans\n";
 
-            std::vector<human_t> humans{};
-            for (const auto& hr : human_refs) {
-                human_t human;
-                human.score = hr.score;
-                for (int i = 0; i < COCO_N_PARTS; ++i) {
-                    if (hr.parts[i].id != -1) {
-                        human.parts[i].has_value = true;
-                        const auto p = all_peaks[hr.parts[i].id];
-                        human.parts[i].score = p.score;
-                        human.parts[i].x = p.pos.x;
-                        human.parts[i].y = p.pos.y;
-                    }
+        for (const auto& hr : human_refs) {
+            human_t human;
+            human.score = hr.score;
+            for (int i = 0; i < COCO_N_PARTS; ++i) {
+                if (hr.parts[i].id != -1) {
+                    human.parts[i].has_value = true;
+                    const auto p = all_peaks[hr.parts[i].id];
+                    human.parts[i].score = p.score;
+                    human.parts[i].x = p.pos.x;
+                    human.parts[i].y = p.pos.y;
                 }
-                humans.push_back(human);
             }
-            return humans;
+            humans.push_back(human);
         }
+
+        std::cout << std::this_thread::get_id() << "Returned " << humans.size() << '\n';
+
+        return humans;
     }
 
     paf::~paf() = default;

@@ -1,9 +1,9 @@
 INCLUDE(cmake/cuda.cmake)
 FIND_PACKAGE(OpenCV)
 
-ADD_DEFINITIONS(-Ofast -march=native)
+#ADD_DEFINITIONS(-Ofast -march=native)
 
-ADD_LIBRARY(openpose-plus src/cudnn.cpp src/paf.cpp src/uff_runner.cpp)
+ADD_LIBRARY(openpose-plus src/paf.cpp src/uff_runner.cpp)
 TARGET_LINK_LIBRARIES(
     openpose-plus
     cudnn

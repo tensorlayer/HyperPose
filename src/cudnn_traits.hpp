@@ -19,7 +19,7 @@ struct cudnn_status_checker {
     }
 };
 
-extern cudnn_status_checker check;
+inline cudnn_status_checker check;
 
 /* tensor formats */
 

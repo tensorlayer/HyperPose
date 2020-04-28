@@ -55,15 +55,13 @@ void draw_human(cv::Mat& img, const human_t& human)
 
     // draw lines
     for (int pair_id = 0; pair_id < COCO_N_PAIRS; ++pair_id) {
-        const auto pair = COCOPAIRS[pair_id];
+        const auto& pair = COCOPAIRS[pair_id];
         const auto p1 = human.parts[pair.first];
         const auto p2 = human.parts[pair.second];
         const auto color = coco_colors[pair_id];
 
-        if (p1.has_value && p2.has_value) {
-            cv::line(img, cv::Point(p1.x, p1.y), cv::Point(p2.x, p2.y), color,
-                thickness);
-        }
+        if (p1.has_value && p2.has_value)
+            cv::line(img, cv::Point(p1.x, p1.y), cv::Point(p2.x, p2.y), color, thickness);
     }
 
     // draw points

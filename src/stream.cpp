@@ -26,12 +26,15 @@ void basic_stream_manager::read_from(const std::vector<cv::Mat>& inputs)
 
 void basic_stream_manager::read_from(cv::VideoCapture& cap)
 {
+    // TODO: Support camera frame counting.
+    m_remaining_num += cap.get(cv::CAP_PROP_FRAME_COUNT) - cap.get(cv::CAP_PROP_POS_FRAMES);
     while (cap.isOpened()) {
         cv::Mat mat;
         cap >> mat;
         if (mat.empty())
             break;
-        this->read_from(std::move(mat));
+        m_input_queue.push(std::move(mat));
+        m_cv_data_i.notify_one();
     }
 }
 
@@ -55,12 +58,11 @@ void basic_stream_manager::resize_from_inputs(cv::Size size)
 
         auto inputs = m_input_queue.dump_all();
 
-        auto f = std::async([this, &inputs] { m_input_queue_replica.push(inputs); });
-
         std::vector<cv::Mat> after_resize_mats(inputs.size());
         for (size_t i = 0; i < after_resize_mats.size(); ++i)
             cv::resize(inputs[i], after_resize_mats[i], size);
 
+        m_input_queue_replica.push(after_resize_mats);
         m_resized_queue.push(std::move(after_resize_mats));
         m_cv_resize.notify_one();
     }
@@ -78,9 +80,9 @@ void basic_stream_manager::write_to(cv::VideoWriter& writer)
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             return;
 
-        auto&& pose_set = m_pose_sets_queue.dump_all();
+        auto pose_set = m_pose_sets_queue.dump_all();
         for (auto&& poses : pose_set) {
-            auto&& raw_image = m_input_queue_replica.dump().value();
+            auto raw_image = std::move(m_input_queue_replica.dump().value());
             for (auto&& pose : poses)
                 draw_human(raw_image, pose);
             writer << raw_image;

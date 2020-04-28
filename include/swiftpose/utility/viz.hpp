@@ -71,9 +71,9 @@ struct body_part_t {
     }
 };
 
-template <int J>
+template <size_t J>
 struct human_t_ {
-    body_part_t parts[J];
+    std::array<body_part_t, J> parts;
     float score;
 
     inline void print() const

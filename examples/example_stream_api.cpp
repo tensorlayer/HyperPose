@@ -8,7 +8,7 @@ DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",
 DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
 DEFINE_string(input_video, "../data/media/video.avi", "Video to be processed.");
-DEFINE_int32(max_batch_size, 32, "Max batch size for inference engine to execute.");
+DEFINE_int32(max_batch_size, 16, "Max batch size for inference engine to execute.");
 DEFINE_string(output_video, "output_video.avi", "The name of output video.");
 
 int main()
@@ -53,7 +53,7 @@ int main()
 
     auto stream = sp::make_stream(engine, parser);
 
-    stream.add_monitor(2000);
+    stream.add_monitor(1000);
 
     stream.async() << capture;
     stream.sync() >> writer;

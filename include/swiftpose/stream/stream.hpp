@@ -56,7 +56,7 @@ private:
 
     using pose_set = std::vector<human_t>;
 
-    /*
+/*
 * Connections:
 * input -> resize.
 * input -> replica.
@@ -237,8 +237,9 @@ void basic_stream_manager::dnn_inference_from_resized_images(Engine&& engine)
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             return;
 
-        auto&& resized_inputs = m_resized_queue.dump(engine.max_batch_size());
-        auto&& internals = engine.inference(std::move(resized_inputs));
+        auto resized_inputs = m_resized_queue.dump(engine.max_batch_size());
+        auto internals = engine.inference(std::move(resized_inputs));
+
         m_after_inference_queue.push(std::move(internals));
 
         m_cv_dnn_inf.notify_one();
@@ -258,7 +259,9 @@ void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             return;
 
-        auto&& internals = m_after_inference_queue.dump_all();
+        auto internals = m_after_inference_queue.dump_all();
+
+        std::cout << std::this_thread::get_id() << "Got internals " << internals.size() << '\n';
 
         std::vector<std::future<pose_set>> futures;
         futures.reserve(internals.size());
@@ -268,8 +271,11 @@ void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
                 futures[round_robin - parser_list.size()].wait();
 
             futures.push_back(m_thread_pool.enqueue(
-                [&]() -> pose_set {
-                    return parser_list.at(round_robin % parser_list.size()).get().process(std::move(internals[round_robin]));
+                [&parser_list, &internals, rb = round_robin]() -> pose_set {
+                    auto blob = internals[rb];
+                    auto poses = parser_list.at(rb % parser_list.size()).get().process(blob);
+                    std::cout << std::this_thread::get_id() << "Got real humans: " << poses.size() << std::endl; // FIXME: Why???
+                    return poses;
                 }));
         }
 
@@ -297,9 +303,10 @@ basic_stream_manager::write_to(NameGetter&& name_getter)
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             return;
 
-        auto&& pose_set = m_pose_sets_queue.dump_all();
+        auto pose_set = m_pose_sets_queue.dump_all();
         for (auto&& poses : pose_set) {
             auto&& raw_image = m_input_queue_replica.dump().value();
+            std::cout << poses.size() << std::endl;
             for (auto&& pose : poses)
                 draw_human(raw_image, pose);
             cv::imwrite(name_getter(), raw_image);
