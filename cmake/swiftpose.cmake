@@ -18,6 +18,7 @@ ADD_LIBRARY(
         src/paf_.cpp
         src/data.cpp
         src/stream.cpp
+        src/thread_pool.cpp
         src/viz.cpp)
 TARGET_LINK_LIBRARIES(
         ${POSE_LIB_NAME}

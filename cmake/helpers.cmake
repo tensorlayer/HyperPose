@@ -1,3 +1,4 @@
+# The same as #pragma once.
 if(__CURRENT_FILE_VAR__)
     return()
 endif()
@@ -17,6 +18,7 @@ endif()
 ADD_LIBRARY(helpers
         examples/input.cpp
         examples/vis.cpp
+        examples/utils.cpp
         examples/thread_pool.cpp)
 TARGET_LINK_LIBRARIES(helpers
         opencv_core

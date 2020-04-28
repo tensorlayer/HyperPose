@@ -82,34 +82,44 @@ private:
 template <typename DNNEngine, typename Parser>
 class stream {
 public:
-    stream(DNNEngine& engine, Parser& parser, size_t parser_replica = 4,
+    stream(DNNEngine& engine, Parser& parser, size_t parser_cnt = 0,
         size_t queue_max_size = 64)
         : m_stream_manager(queue_max_size)
         , m_engine_ref(engine)
         , m_main_parser_ref(parser)
-        , m_parser_replicas(parser_replica, parser)
+        , m_parser_replicas(parser_cnt == 0 ? engine.max_batch_size() : parser_cnt, parser)
     {
         m_parser_refs.push_back(std::ref(parser));
         for (auto&& x : m_parser_replicas)
             m_parser_refs.push_back(std::ref(x));
+        build_internal_running_graph();
     }
+
+    //    template <typename, typename>
+    friend class async_handler;
+    //    template <typename, typename>
+    friend class sync_handler;
 
     class async_handler {
         stream& m_stream;
 
     public:
-        template <typename S>
-        friend async_handler& operator<<(async_handler& handler, S&& source)
+        async_handler(stream& s)
+            : m_stream(s)
         {
-            handler.m_stream.m_stream_manager.m_thread_tracer.push_back(
+        }
+        template <typename S>
+        friend async_handler& operator<<(async_handler&& handler, S& source)
+        {
+            handler.m_stream.get_tracer().push_back(
                 handler.m_stream.add_input_stream(std::forward<S>(source)));
             return handler;
         }
 
         template <typename S>
-        friend async_handler& operator>>(async_handler& handler, S&& source)
+        friend async_handler& operator>>(async_handler&& handler, S& source)
         {
-            handler.m_stream.m_stream_manager.m_thread_tracer.push_back(
+            handler.m_stream.get_tracer().push_back(
                 handler.m_stream.add_output_stream(std::forward<S>(source)));
             return handler;
         }
@@ -119,32 +129,33 @@ public:
         stream& m_stream;
 
     public:
+        sync_handler(stream& s)
+            : m_stream(s)
+        {
+        }
         template <typename S>
-        friend async_handler& operator<<(async_handler& handler, S&& source)
+        friend async_handler& operator<<(async_handler&& handler, S&& source)
         {
             handler.m_stream.add_input_stream(std::forward<S>(source));
             return handler;
         }
 
         template <typename S>
-        friend async_handler& operator>>(async_handler& handler, S&& source)
+        friend async_handler& operator>>(async_handler&& handler, S&& source)
         {
             handler.m_stream.add_output_stream(std::forward<S>(source));
             return handler;
         }
     };
-
-    async_handler async()
-    {
-        return *this;
-    }
-
-    sync_handler sync()
-    {
-        return *this;
-    }
+    async_handler async() { return *this; }
+    sync_handler sync() { return *this; }
 
 private:
+    auto& get_tracer()
+    {
+        return m_stream_manager.m_thread_tracer;
+    }
+
     template <typename S>
     auto add_input_stream(S&& s)
     {
@@ -193,10 +204,11 @@ private:
 };
 
 template <typename DNNEngine, typename Parser, typename... Others>
-stream<DNNEngine, Parser> make_stream(DNNEngine&& engine, Parser&& parser,
-    Others&&... others)
+auto make_stream(DNNEngine&& engine, Parser&& parser, Others&&... others)
 {
-    return stream<DNNEngine, Parser>(std::forward<DNNEngine>(engine),
+    return stream<
+        std::remove_reference_t<DNNEngine>,
+        std::remove_reference_t<Parser>>(std::forward<DNNEngine>(engine),
         std::forward<Parser>(parser),
         std::forward<Others>(others)...);
 }
@@ -209,67 +221,81 @@ namespace swiftpose {
 template <typename Engine>
 void basic_stream_manager::dnn_inference_from_resized_images(Engine&& engine)
 {
-    std::unique_lock lk{ m_resized_queue.m_mu };
-    m_cv_resize.wait(lk, [this] { return m_resized_queue.m_size > 0; });
+    while (true) {
+        std::unique_lock lk{ m_resized_queue.m_mu };
+        m_cv_resize.wait(lk, [this] { return m_resized_queue.m_size > 0 || m_shutdown; });
 
-    auto&& resized_inputs = m_resized_queue.dump(engine.max_batch_size());
-    auto&& internals = engine.inference(std::move(resized_inputs));
-    m_after_inference_queue.push(std::move(internals));
+        if (m_pose_sets_queue.m_size == 0 && m_shutdown)
+            return;
 
-    m_cv_dnn_inf.notify_one();
+        auto&& resized_inputs = m_resized_queue.dump(engine.max_batch_size());
+        auto&& internals = engine.inference(std::move(resized_inputs));
+        m_after_inference_queue.push(std::move(internals));
+
+        m_cv_dnn_inf.notify_one();
+    }
 }
 
 template <typename ParserList>
 void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
 {
-    std::unique_lock lk{ m_after_inference_queue.m_mu };
-    m_cv_dnn_inf.wait(lk,
-        [this] { return m_after_inference_queue.m_size > 0; });
+    while (true) {
+        std::unique_lock lk{ m_after_inference_queue.m_mu };
+        m_cv_dnn_inf.wait(lk,
+            [this] { return m_after_inference_queue.m_size > 0 || m_shutdown; });
 
-    auto&& internals = m_after_inference_queue.dump_all();
+        if (m_pose_sets_queue.m_size == 0 && m_shutdown)
+            return;
 
-    std::vector<std::future<pose_set>> futures;
-    futures.reserve(internals.size());
+        auto&& internals = m_after_inference_queue.dump_all();
 
-    for (size_t round_robin = 0; round_robin < internals.size();
-         ++round_robin) {
-        futures.push_back(m_thread_pool.enqueue(
-            [&](size_t robin) {
-                return parser_list.at(robin % parser_list.size())
-                    .process(std::move(internals[round_robin]));
-            },
-            round_robin));
-        if ((1 + round_robin) % parser_list.size() == 0 && round_robin != 1)
-            futures[round_robin + 1 - parser_list.size()].wait();
+        std::vector<std::future<pose_set>> futures;
+        futures.reserve(internals.size());
+
+        for (size_t round_robin = 0; round_robin < internals.size(); ++round_robin) {
+            if (round_robin >= parser_list.size())
+                futures[round_robin - parser_list.size()].wait();
+
+            futures.push_back(m_thread_pool.enqueue(
+                [&](size_t robin) {
+                    return parser_list.at(robin % parser_list.size())
+                        .process(std::move(internals[round_robin]));
+                },
+                round_robin));
+        }
+
+        std::vector<pose_set> pose_sets;
+        pose_sets.reserve(internals.size());
+
+        for (auto&& f : futures)
+            pose_sets.push_back(f.get());
+
+        m_pose_sets_queue.push(std::move(pose_sets));
+        m_cv_post_processing.notify_one();
     }
-
-    std::vector<pose_set> pose_sets;
-    pose_sets.reserve(internals.size());
-
-    for (auto&& f : futures)
-        pose_sets.push_back(f.get());
-
-    m_pose_sets_queue.push(std::move(pose_sets));
-    m_cv_post_processing.notify_one();
 }
 
 template <typename NameGetter>
 basic_stream_manager::enable_if_name_getter_t<NameGetter>
 basic_stream_manager::write_to(NameGetter&& name_getter)
 {
-    std::unique_lock lk{ m_pose_sets_queue.m_mu };
-    m_cv_post_processing.wait(lk,
-        [this] { return m_pose_sets_queue.m_size > 0; });
+    while (true) {
+        std::unique_lock lk{ m_pose_sets_queue.m_mu };
+        m_cv_post_processing.wait(lk, [this] { return m_pose_sets_queue.m_size > 0 || m_shutdown; });
 
-    auto&& pose_set = m_pose_sets_queue.dump_all();
-    for (auto&& poses : pose_set) {
-        auto&& raw_image = m_input_queue_replica.dump().value();
-        for (auto&& pose : poses)
-            draw_human(raw_image, pose);
-        cv::imwrite(name_getter(), raw_image);
-        --m_remaining_num;
+        if (m_pose_sets_queue.m_size == 0 && m_shutdown)
+            return;
+
+        auto&& pose_set = m_pose_sets_queue.dump_all();
+        for (auto&& poses : pose_set) {
+            auto&& raw_image = m_input_queue_replica.dump().value();
+            for (auto&& pose : poses)
+                draw_human(raw_image, pose);
+            cv::imwrite(name_getter(), raw_image);
+            --m_remaining_num;
+        }
+
+        m_shutdown_notifier.notify_one();
     }
-
-    m_shutdown_notifier.notify_one();
 }
 }

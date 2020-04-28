@@ -8,7 +8,6 @@
 #include <regex>
 
 #include "pose_detector.h"
-#include "utils.hpp"
 
 // Model flags
 DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",
@@ -49,7 +48,12 @@ int main(int argc, char* argv[])
     // TODO: derive from model
     const int f_height = FLAGS_input_height / 8;
     const int f_width = FLAGS_input_width / 8;
-    const auto files = repeat(get_input_files(FLAGS_data_dir), FLAGS_repeat);
+
+    const std::vector<std::string> base = get_input_files(FLAGS_data_dir);
+    std::vector<std::string> files;
+
+    for (int i = 0; i < FLAGS_repeat; ++i)
+        std::copy(base.begin(), base.end(), std::back_insert_iterator(files));
 
     std::unique_ptr<pose_detector> pd(create_pose_detector(
         FLAGS_model_file, FLAGS_input_height, FLAGS_input_width, f_height,

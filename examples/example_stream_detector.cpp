@@ -33,7 +33,11 @@ int main(int argc, char* argv[])
     const int f_height = FLAGS_input_height / 8;
     const int f_width = FLAGS_input_width / 8;
 
-    const auto files = repeat(split(FLAGS_image_files, ','), FLAGS_repeat);
+    const std::vector<std::string> base = split(FLAGS_image_files, ',');
+    std::vector<std::string> files;
+
+    for (int i = 0; i < FLAGS_repeat; ++i)
+        std::copy(base.begin(), base.end(), std::back_insert_iterator(files));
 
     std::unique_ptr<stream_detector> sd(stream_detector::create(
         FLAGS_model_file, FLAGS_input_height, FLAGS_input_width, f_height,

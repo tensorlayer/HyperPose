@@ -29,6 +29,8 @@ void basic_stream_manager::read_from(cv::VideoCapture& cap)
     while (cap.isOpened()) {
         cv::Mat mat;
         cap >> mat;
+        if (mat.empty())
+            break;
         m_input_queue.wait_until_pushed(std::move(mat));
         ++m_remaining_num;
         m_cv_data_i.notify_one();
@@ -44,38 +46,48 @@ void basic_stream_manager::read_from(cv::Mat mat)
 
 void basic_stream_manager::resize_from_inputs(cv::Size size)
 {
-    std::unique_lock lk{ m_input_queue.m_mu };
-    m_cv_data_i.wait(lk, [this] { return m_input_queue.m_size > 0; });
+    while (true) {
+        std::unique_lock lk{ m_input_queue.m_mu };
+        m_cv_data_i.wait(lk, [this] { return m_input_queue.m_size > 0 || m_shutdown; });
 
-    const int queue_size = m_input_queue.capacity();
-    auto&& inputs = m_input_queue.dump_all();
+        if (m_pose_sets_queue.m_size == 0 && m_shutdown)
+            return;
 
-    auto&& f = std::async([this, &inputs] { m_input_queue_replica.push(inputs); });
+        const int queue_size = m_input_queue.capacity();
+        auto&& inputs = m_input_queue.dump_all();
 
-    std::vector<cv::Mat> after_resize_mats(inputs.size());
-    for (size_t i = 0; i < after_resize_mats.size(); ++i)
-        cv::resize(inputs[i], after_resize_mats[i], size);
+        auto&& f = std::async([this, &inputs] { m_input_queue_replica.push(inputs); });
 
-    m_resized_queue.push(std::move(after_resize_mats));
-    m_cv_resize.notify_one();
+        std::vector<cv::Mat> after_resize_mats(inputs.size());
+        for (size_t i = 0; i < after_resize_mats.size(); ++i)
+            cv::resize(inputs[i], after_resize_mats[i], size);
+
+        m_resized_queue.push(std::move(after_resize_mats));
+        m_cv_resize.notify_one();
+    }
 }
 
 void basic_stream_manager::write_to(cv::VideoWriter& writer)
 {
-    std::unique_lock lk{ m_pose_sets_queue.m_mu };
-    m_cv_post_processing.wait(lk,
-        [this] { return m_pose_sets_queue.m_size > 0; });
+    while (true) {
+        std::unique_lock lk{ m_pose_sets_queue.m_mu };
+        m_cv_post_processing.wait(lk,
+            [this] { return m_pose_sets_queue.m_size > 0 || m_shutdown; });
 
-    auto&& pose_set = m_pose_sets_queue.dump_all();
-    for (auto&& poses : pose_set) {
-        auto&& raw_image = m_input_queue_replica.dump().value();
-        for (auto&& pose : poses)
-            draw_human(raw_image, pose);
-        writer << raw_image;
-        --m_remaining_num;
+        if (m_pose_sets_queue.m_size == 0 && m_shutdown)
+            return;
+
+        auto&& pose_set = m_pose_sets_queue.dump_all();
+        for (auto&& poses : pose_set) {
+            auto&& raw_image = m_input_queue_replica.dump().value();
+            for (auto&& pose : poses)
+                draw_human(raw_image, pose);
+            writer << raw_image;
+            --m_remaining_num;
+        }
+
+        m_shutdown_notifier.notify_one();
     }
-
-    m_shutdown_notifier.notify_one();
 }
 
 void basic_stream_manager::add_queue_monitor(double milli)

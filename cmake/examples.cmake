@@ -44,7 +44,7 @@ ADD_EXECUTABLE(example_operator_api_batched_images examples/example_operator_api
 TARGET_LINK_LIBRARIES(example_operator_api_batched_images helpers swiftpose gflags)
 ADD_GLOBAL_DEPS(example_operator_api_batched_images)
 
-## [EXAMPLE] Stream API.
-#ADD_EXECUTABLE(example_stream_api examples/example_stream_api.cpp)
-#TARGET_LINK_LIBRARIES(example_stream_api helpers swiftpose gflags)
-#ADD_GLOBAL_DEPS(example_stream_api)
+# [EXAMPLE] Stream API.
+ADD_EXECUTABLE(example_stream_api examples/example_stream_api.cpp)
+TARGET_LINK_LIBRARIES(example_stream_api helpers swiftpose gflags)
+ADD_GLOBAL_DEPS(example_stream_api)
