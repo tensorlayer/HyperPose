@@ -25,6 +25,13 @@ int main()
             capture.get(cv::CAP_PROP_FRAME_WIDTH),
             capture.get(cv::CAP_PROP_FRAME_HEIGHT)));
 
+    // Basic information about videos.
+    swiftpose_log() << "Input video name: " << FLAGS_input_video << std::endl;
+    swiftpose_log() << "Output video name: " << FLAGS_output_video << std::endl;
+    swiftpose_log() << "Frame: Size@"
+                    << cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT))
+                    << " Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
+
     // Checks.
     if (!capture.isOpened()) {
         swiftpose_log() << "Video: " << FLAGS_input_video << " cannot be opened\n";
@@ -46,6 +53,8 @@ int main()
 
     auto stream = sp::make_stream(engine, parser);
 
+    stream.add_monitor(2000);
+
     stream.async() << capture;
-    stream.async() >> writer;
+    stream.sync() >> writer;
 }

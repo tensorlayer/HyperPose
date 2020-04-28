@@ -31,15 +31,13 @@ void basic_stream_manager::read_from(cv::VideoCapture& cap)
         cap >> mat;
         if (mat.empty())
             break;
-        m_input_queue.wait_until_pushed(std::move(mat));
-        ++m_remaining_num;
-        m_cv_data_i.notify_one();
+        this->read_from(std::move(mat));
     }
 }
 
 void basic_stream_manager::read_from(cv::Mat mat)
 {
-    m_input_queue.push(mat);
+    m_input_queue.push(std::move(mat));
     ++m_remaining_num;
     m_cv_data_i.notify_one();
 }
@@ -47,16 +45,17 @@ void basic_stream_manager::read_from(cv::Mat mat)
 void basic_stream_manager::resize_from_inputs(cv::Size size)
 {
     while (true) {
-        std::unique_lock lk{ m_input_queue.m_mu };
-        m_cv_data_i.wait(lk, [this] { return m_input_queue.m_size > 0 || m_shutdown; });
+        {
+            std::unique_lock lk{ m_input_queue.m_mu };
+            m_cv_data_i.wait(lk, [this] { return m_input_queue.m_size > 0 || m_shutdown; });
+        }
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             return;
 
-        const int queue_size = m_input_queue.capacity();
-        auto&& inputs = m_input_queue.dump_all();
+        auto inputs = m_input_queue.dump_all();
 
-        auto&& f = std::async([this, &inputs] { m_input_queue_replica.push(inputs); });
+        auto f = std::async([this, &inputs] { m_input_queue_replica.push(inputs); });
 
         std::vector<cv::Mat> after_resize_mats(inputs.size());
         for (size_t i = 0; i < after_resize_mats.size(); ++i)
@@ -70,9 +69,11 @@ void basic_stream_manager::resize_from_inputs(cv::Size size)
 void basic_stream_manager::write_to(cv::VideoWriter& writer)
 {
     while (true) {
-        std::unique_lock lk{ m_pose_sets_queue.m_mu };
-        m_cv_post_processing.wait(lk,
-            [this] { return m_pose_sets_queue.m_size > 0 || m_shutdown; });
+        {
+            std::unique_lock lk{ m_pose_sets_queue.m_mu };
+            m_cv_post_processing.wait(lk,
+                                      [this] { return m_pose_sets_queue.m_size > 0 || m_shutdown; });
+        }
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             return;
@@ -95,7 +96,8 @@ void basic_stream_manager::add_queue_monitor(double milli)
     std::lock_guard lk{ m_global_mutex };
     m_thread_tracer.push_back(std::async([this, milli] {
         while (!m_shutdown) {
-            std::cout << "Reporting Queue Status:";
+            std::cout << "Reporting Stream Status:\n";
+            std::cout << "Remaining frames: " << m_remaining_num << '\n';
             std::cout << "thread_safe_queue<cv::Mat> m_input_queue -> Size = "
                       << m_input_queue.unsafe_size() << '\n'
                       << "thread_safe_queue<cv::Mat> m_input_queue_replica -> Size = "
@@ -114,8 +116,10 @@ void basic_stream_manager::add_queue_monitor(double milli)
 
 basic_stream_manager::~basic_stream_manager()
 {
-    std::unique_lock lk{ m_global_mutex };
-    m_shutdown_notifier.wait(lk, [this] { return m_remaining_num == 0; });
+    {
+        std::unique_lock lk{ m_global_mutex };
+        m_shutdown_notifier.wait(lk, [this] { return m_remaining_num == 0; });
+    }
     m_shutdown = true;
     m_shutdown_notifier.notify_all();
     for (auto&& x : m_thread_tracer)

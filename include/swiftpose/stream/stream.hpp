@@ -95,11 +95,6 @@ public:
         build_internal_running_graph();
     }
 
-    //    template <typename, typename>
-    friend class async_handler;
-    //    template <typename, typename>
-    friend class sync_handler;
-
     class async_handler {
         stream& m_stream;
 
@@ -108,21 +103,11 @@ public:
             : m_stream(s)
         {
         }
-        template <typename S>
-        friend async_handler& operator<<(async_handler&& handler, S& source)
-        {
-            handler.m_stream.get_tracer().push_back(
-                handler.m_stream.add_input_stream(std::forward<S>(source)));
-            return handler;
-        }
 
         template <typename S>
-        friend async_handler& operator>>(async_handler&& handler, S& source)
-        {
-            handler.m_stream.get_tracer().push_back(
-                handler.m_stream.add_output_stream(std::forward<S>(source)));
-            return handler;
-        }
+        friend async_handler& operator<<(async_handler&& handler, S& source);
+        template <typename S>
+        friend async_handler& operator>>(async_handler&& handler, S& source);
     };
 
     class sync_handler {
@@ -134,21 +119,47 @@ public:
         {
         }
         template <typename S>
-        friend async_handler& operator<<(async_handler&& handler, S&& source)
-        {
-            handler.m_stream.add_input_stream(std::forward<S>(source));
-            return handler;
-        }
-
+        friend sync_handler& operator<<(sync_handler&& handler, S&& source);
         template <typename S>
-        friend async_handler& operator>>(async_handler&& handler, S&& source)
-        {
-            handler.m_stream.add_output_stream(std::forward<S>(source));
-            return handler;
-        }
+        friend sync_handler& operator>>(sync_handler&& handler, S&& source);
     };
+
     async_handler async() { return *this; }
     sync_handler sync() { return *this; }
+
+    template <typename S>
+    friend async_handler& operator<<(async_handler&& handler, S& source)
+    {
+        handler.m_stream.get_tracer().push_back(
+                handler.m_stream.add_input_stream(source));
+        return handler;
+    }
+
+    template <typename S>
+    friend async_handler& operator>>(async_handler&& handler, S& source)
+    {
+        handler.m_stream.get_tracer().push_back(
+                handler.m_stream.add_output_stream(source));
+        return handler;
+    }
+
+    template <typename S>
+    friend sync_handler& operator<<(sync_handler&& handler, S&& source)
+    {
+        handler.m_stream.add_input_stream(source);
+        return handler;
+    }
+
+    template <typename S>
+    friend sync_handler& operator>>(sync_handler&& handler, S&& source)
+    {
+        handler.m_stream.add_output_stream(source);
+        return handler;
+    }
+
+    void add_monitor(size_t milli_count) {
+        m_stream_manager.add_queue_monitor(milli_count);
+    }
 
 private:
     auto& get_tracer()
@@ -159,8 +170,6 @@ private:
     template <typename S>
     auto add_input_stream(S&& s)
     {
-        auto& tracer = m_stream_manager.m_thread_tracer;
-
         return std::async([this, &s] {
             m_stream_manager.read_from(std::forward<S>(s));
         });
@@ -169,8 +178,6 @@ private:
     template <typename S>
     auto add_output_stream(S&& s)
     {
-        auto& tracer = m_stream_manager.m_thread_tracer;
-
         return std::async([this, &s] {
             m_stream_manager.write_to(std::forward<S>(s));
         });
@@ -222,8 +229,10 @@ template <typename Engine>
 void basic_stream_manager::dnn_inference_from_resized_images(Engine&& engine)
 {
     while (true) {
-        std::unique_lock lk{ m_resized_queue.m_mu };
-        m_cv_resize.wait(lk, [this] { return m_resized_queue.m_size > 0 || m_shutdown; });
+        {
+            std::unique_lock lk{ m_resized_queue.m_mu };
+            m_cv_resize.wait(lk, [this] { return m_resized_queue.m_size > 0 || m_shutdown; });
+        }
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             return;
@@ -240,9 +249,11 @@ template <typename ParserList>
 void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
 {
     while (true) {
-        std::unique_lock lk{ m_after_inference_queue.m_mu };
-        m_cv_dnn_inf.wait(lk,
-            [this] { return m_after_inference_queue.m_size > 0 || m_shutdown; });
+        {
+            std::unique_lock lk{ m_after_inference_queue.m_mu };
+            m_cv_dnn_inf.wait(lk,
+                              [this] { return m_after_inference_queue.m_size > 0 || m_shutdown; });
+        }
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             return;
@@ -257,11 +268,9 @@ void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
                 futures[round_robin - parser_list.size()].wait();
 
             futures.push_back(m_thread_pool.enqueue(
-                [&](size_t robin) {
-                    return parser_list.at(robin % parser_list.size())
-                        .process(std::move(internals[round_robin]));
-                },
-                round_robin));
+                [&]() -> pose_set {
+                    return parser_list.at(round_robin % parser_list.size()).get().process(std::move(internals[round_robin]));
+                }));
         }
 
         std::vector<pose_set> pose_sets;
@@ -280,8 +289,10 @@ basic_stream_manager::enable_if_name_getter_t<NameGetter>
 basic_stream_manager::write_to(NameGetter&& name_getter)
 {
     while (true) {
-        std::unique_lock lk{ m_pose_sets_queue.m_mu };
-        m_cv_post_processing.wait(lk, [this] { return m_pose_sets_queue.m_size > 0 || m_shutdown; });
+        {
+            std::unique_lock lk{ m_pose_sets_queue.m_mu };
+            m_cv_post_processing.wait(lk, [this] { return m_pose_sets_queue.m_size > 0 || m_shutdown; });
+        }
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             return;
