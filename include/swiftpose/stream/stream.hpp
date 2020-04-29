@@ -56,7 +56,7 @@ private:
 
     using pose_set = std::vector<human_t>;
 
-/*
+    /*
 * Connections:
 * input -> resize.
 * input -> replica.
@@ -105,9 +105,9 @@ public:
         }
 
         template <typename S>
-        friend async_handler& operator<<(async_handler&& handler, S& source);
+        friend async_handler& operator<<(async_handler&&, S&&);
         template <typename S>
-        friend async_handler& operator>>(async_handler&& handler, S& source);
+        friend async_handler& operator>>(async_handler&&, S&&);
     };
 
     class sync_handler {
@@ -119,27 +119,27 @@ public:
         {
         }
         template <typename S>
-        friend sync_handler& operator<<(sync_handler&& handler, S&& source);
+        friend sync_handler& operator<<(sync_handler&&, S&&);
         template <typename S>
-        friend sync_handler& operator>>(sync_handler&& handler, S&& source);
+        friend sync_handler& operator>>(sync_handler&&, S&&);
     };
 
     async_handler async() { return *this; }
     sync_handler sync() { return *this; }
 
     template <typename S>
-    friend async_handler& operator<<(async_handler&& handler, S& source)
+    friend async_handler& operator<<(async_handler&& handler, S&& source)
     {
         handler.m_stream.get_tracer().push_back(
-                handler.m_stream.add_input_stream(source));
+            handler.m_stream.add_input_stream(source));
         return handler;
     }
 
     template <typename S>
-    friend async_handler& operator>>(async_handler&& handler, S& source)
+    friend async_handler& operator>>(async_handler&& handler, S&& source)
     {
         handler.m_stream.get_tracer().push_back(
-                handler.m_stream.add_output_stream(source));
+            handler.m_stream.add_output_stream(source));
         return handler;
     }
 
@@ -157,7 +157,8 @@ public:
         return handler;
     }
 
-    void add_monitor(size_t milli_count) {
+    void add_monitor(size_t milli_count)
+    {
         m_stream_manager.add_queue_monitor(milli_count);
     }
 
@@ -253,7 +254,7 @@ void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
         {
             std::unique_lock lk{ m_after_inference_queue.m_mu };
             m_cv_dnn_inf.wait(lk,
-                              [this] { return m_after_inference_queue.m_size > 0 || m_shutdown; });
+                [this] { return m_after_inference_queue.m_size > 0 || m_shutdown; });
         }
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)

@@ -74,7 +74,7 @@ void basic_stream_manager::write_to(cv::VideoWriter& writer)
         {
             std::unique_lock lk{ m_pose_sets_queue.m_mu };
             m_cv_post_processing.wait(lk,
-                                      [this] { return m_pose_sets_queue.m_size > 0 || m_shutdown; });
+                [this] { return m_pose_sets_queue.m_size > 0 || m_shutdown; });
         }
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)

@@ -25,14 +25,15 @@ public:
 
     ~thread_safe_queue() { delete[] m_array; }
 
-    void push(T v) {
-            std::lock_guard lk{ m_mu };
+    void push(T v)
+    {
+        std::lock_guard lk{ m_mu };
 
-            if (m_size >= m_capacity)
-                throw std::overflow_error("queue size overfloor, max size = " + std::to_string(m_capacity));
-            m_array[m_back] = std::move(v);
-            unsafe_step_back();
-            ++m_size;
+        if (m_size >= m_capacity)
+            throw std::overflow_error("queue size overfloor, max size = " + std::to_string(m_capacity));
+        m_array[m_back] = std::move(v);
+        unsafe_step_back();
+        ++m_size;
     }
 
     template <typename Iter>
@@ -46,21 +47,21 @@ public:
         if (span_size > m_capacity)
             throw std::logic_error(
                 "logic error: `container.size() > m_capacity` is true!");
-            std::lock_guard lk{ m_mu };
+        std::lock_guard lk{ m_mu };
 
-            if (m_size + span_size > m_capacity)
-                throw std::overflow_error("queue size overfloor, max size = " + std::to_string(m_capacity));
+        if (m_size + span_size > m_capacity)
+            throw std::overflow_error("queue size overfloor, max size = " + std::to_string(m_capacity));
 
-            size_t back2cap = m_capacity - m_back;
-            if (back2cap >= span_size)
-                std::copy(begin, end, m_array + m_back);
-            else {
-                std::copy(std::next(begin, back2cap), end, m_array);
-                std::copy(begin, std::next(begin, back2cap), m_array + m_back);
-            }
+        size_t back2cap = m_capacity - m_back;
+        if (back2cap >= span_size)
+            std::copy(begin, end, m_array + m_back);
+        else {
+            std::copy(std::next(begin, back2cap), end, m_array);
+            std::copy(begin, std::next(begin, back2cap), m_array + m_back);
+        }
 
-            unsafe_step_back(span_size);
-            m_size += span_size;
+        unsafe_step_back(span_size);
+        m_size += span_size;
     }
 
     template <typename C>
@@ -125,7 +126,6 @@ public:
     {
         T ret{};
 
-
         {
             std::lock_guard lk{ m_mu };
 
@@ -140,7 +140,6 @@ public:
             if (m_wait_for_space != 0 && m_capacity - m_size >= m_wait_for_space)
                 m_cv.notify_one();
         }
-
 
         return ret;
     }
