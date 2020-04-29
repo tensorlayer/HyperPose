@@ -37,9 +37,7 @@ int main()
         sp::data_type::kFLOAT,
         1. / 255);
 
-    sp::parser::paf parser(
-        { FLAGS_input_width / 8, FLAGS_input_height / 8 },
-        { FLAGS_input_width, FLAGS_input_height });
+    sp::parser::paf parser({ FLAGS_input_width, FLAGS_input_height });
 
     using clk_t = std::chrono::high_resolution_clock;
     auto beg = clk_t::now();

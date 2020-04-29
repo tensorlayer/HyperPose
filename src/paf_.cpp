@@ -227,30 +227,13 @@ namespace parser {
         using peak_finder_t::peak_finder_t;
     };
 
-    paf::paf(cv::Size feature_size, cv::Size image_size, int n_joins,
-        int n_connections)
-        : m_feature_size(feature_size)
-        , m_image_size(image_size)
-        , m_n_joints(n_joins)
-        , m_n_connections(n_connections)
-        , m_upsample_conf(n_joins, image_size.height, image_size.width)
-        , m_upsample_paf(n_connections * 2, image_size.height, image_size.width)
-        , m_peak_finder_ptr(std::make_unique<paf::peak_finder_impl>(
-              n_joins, image_size.height, image_size.width,
-              17 /* Do not use any gauss_kernel */))
+    paf::paf(cv::Size image_size)
+        : m_image_size(image_size)
     {
     }
 
     paf::paf(const paf& p)
-        : m_feature_size(p.m_feature_size)
-        , m_image_size(p.m_image_size)
-        , m_n_joints(p.m_n_joints)
-        , m_n_connections(p.m_n_connections)
-        , m_upsample_conf(p.m_upsample_conf.shape())
-        , m_upsample_paf(p.m_upsample_paf.shape())
-        , m_peak_finder_ptr(std::make_unique<paf::peak_finder_impl>(
-              p.m_n_joints, p.m_image_size.height, p.m_image_size.width,
-              p.m_peak_finder_ptr->ksize))
+        : m_image_size(p.m_image_size)
     {
     }
 
@@ -259,28 +242,38 @@ namespace parser {
         TRACE_SCOPE("PAF");
         std::vector<human_t> humans{};
 
+        auto [n_connections_2_, fw_paf, fh_paf] = paf_map.dims();
+        auto [n_joints_, fw_conf, fh_conf] = conf_map.dims();
+
+        assert(fw_paf == fw_conf);
+        assert(fh_paf == fh_conf);
+
+        if (m_n_connections == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR &&
+            m_n_joints == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR
+        ) {
+            m_n_connections = n_connections_2_ / 2;
+            m_n_joints = n_joints_;
+            m_upsample_paf = std::make_unique<ttl::tensor<float, 3>>(n_connections_2_, m_image_size.height, m_image_size.width);
+            m_upsample_conf = std::make_unique<ttl::tensor<float, 3>>(n_joints_, m_image_size.height, m_image_size.width);
+            m_feature_size = cv::Size(fw_paf, fh_paf);
+            m_peak_finder_ptr = std::make_unique<paf::peak_finder_impl>(
+                    m_n_joints, m_image_size.height, m_image_size.width, 17);
+        }
+
         auto& m_peak_finder = *m_peak_finder_ptr;
-        auto conf_ = conf_map.data();
-        auto paf_ = paf_map.data();
 
         {
             TRACE_SCOPE("resize heatmap and PAF");
-            resize_area(ttl::tensor_view<float, 3>(conf_, m_n_joints,
-                            m_feature_size.height,
-                            m_feature_size.width),
-                ttl::ref(m_upsample_conf));
-            resize_area(ttl::tensor_view<float, 3>(paf_, m_n_connections * 2,
-                            m_feature_size.height,
-                            m_feature_size.width),
-                ttl::ref(m_upsample_paf));
+            resize_area(ttl::tensor_view<float, 3>(conf_map.data(), conf_map.dims()), ttl::ref(*m_upsample_conf));
+            resize_area(ttl::tensor_view<float, 3>(paf_map.data(), paf_map.dims()), ttl::ref(*m_upsample_paf));
         }
 
         // Get all peaks.
         const auto all_peaks = m_peak_finder.find_peak_coords(
-            ttl::view(m_upsample_conf), THRESH_HEAT, false /* use_gpu */);
+            ttl::view(*m_upsample_conf), THRESH_HEAT, false /* use_gpu */);
         const auto peak_ids_by_channel = m_peak_finder.group_by(all_peaks);
 
-        const ttl::tensor_view<float, 3>& pafmap = ttl::view(m_upsample_paf);
+        const ttl::tensor_view<float, 3>& pafmap = ttl::view(*m_upsample_paf);
 
         std::vector<std::vector<connection>> all_connections;
 
