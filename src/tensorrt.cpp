@@ -243,6 +243,8 @@ namespace dnn {
         for (auto&& mat : batch)
             cv::resize(mat, mat, m_inp_size); // This involves in copy.
 
+        std::cout << std::this_thread::get_id() << " Got batch size = " << batch.size() << std::endl;
+
         thread_local std::vector<float> cpu_image_batch_buffer;
         cpu_image_batch_buffer.clear();
 

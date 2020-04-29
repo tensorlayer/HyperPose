@@ -274,7 +274,6 @@ void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
                 [&parser_list, &internals, rb = round_robin]() -> pose_set {
                     auto blob = internals[rb];
                     auto poses = parser_list.at(rb % parser_list.size()).get().process(blob);
-                    std::cout << std::this_thread::get_id() << "Got real humans: " << poses.size() << std::endl; // FIXME: Why???
                     return poses;
                 }));
         }

@@ -21,8 +21,7 @@
 // This is the same as OpenCV's INTER_AREA.
 // input, output are in [channel, height, width] format
 template <typename T>
-void resize_area(const ttl::tensor_view<T, 3>& input,
-    const ttl::tensor_ref<T, 3>& output)
+void resize_area(const ttl::tensor_view<T, 3>& input, const ttl::tensor_ref<T, 3>& output)
 {
     TRACE_SCOPE(__func__);
 
@@ -43,11 +42,9 @@ void resize_area(const ttl::tensor_view<T, 3>& input,
     // big(38)). Back soon when I get up.
 
     for (auto k : ttl::range(channel)) {
-        const cv::Mat input_image(size, cv::DataType<T>::type,
-            (T*)input[k].data());
+        const cv::Mat input_image(size, cv::DataType<T>::type, (T*)input[k].data());
         cv::Mat output_image(target_size, cv::DataType<T>::type, output[k].data());
-        cv::resize(input_image, output_image, output_image.size(), 0, 0,
-            cv::INTER_AREA);
+        cv::resize(input_image, output_image, output_image.size(), 0, 0, cv::INTER_AREA);
     }
 }
 

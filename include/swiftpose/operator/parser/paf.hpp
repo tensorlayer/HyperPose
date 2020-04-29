@@ -17,7 +17,7 @@ namespace parser {
         std::vector<human_t> process(C&& feature_map_containers)
         {
             // 1@paf, 2@conf.
-            process(feature_map_containers[0], feature_map_containers[1]);
+            return process(feature_map_containers[0], feature_map_containers[1]);
         }
 
         paf(const paf& p);
