@@ -82,13 +82,13 @@ private:
 template <typename DNNEngine, typename Parser>
 class stream {
 public:
-    stream(DNNEngine& engine, Parser& parser, size_t parser_cnt = 0,
-        size_t queue_max_size = 64)
+    stream(DNNEngine& engine, Parser& parser, size_t parser_cnt = 0, size_t queue_max_size = 128)
         : m_stream_manager(queue_max_size)
         , m_engine_ref(engine)
         , m_main_parser_ref(parser)
         , m_parser_replicas(parser_cnt == 0 ? engine.max_batch_size() : parser_cnt, parser)
     {
+        m_parser_refs.reserve(m_parser_replicas.size() + 1);
         m_parser_refs.push_back(std::ref(parser));
         for (auto&& x : m_parser_replicas)
             m_parser_refs.push_back(std::ref(x));
@@ -97,49 +97,34 @@ public:
 
     class async_handler {
         stream& m_stream;
-
     public:
-        async_handler(stream& s)
-            : m_stream(s)
-        {
-        }
-
-        template <typename S>
-        friend async_handler& operator<<(async_handler&&, S&&);
-        template <typename S>
-        friend async_handler& operator>>(async_handler&&, S&&);
+        async_handler(stream& s) : m_stream(s) {}
+        template <typename S> friend async_handler& operator<<(async_handler&&, S&&);
+        template <typename S> friend async_handler& operator>>(async_handler&&, S&&);
     };
 
     class sync_handler {
         stream& m_stream;
-
     public:
-        sync_handler(stream& s)
-            : m_stream(s)
-        {
-        }
-        template <typename S>
-        friend sync_handler& operator<<(sync_handler&&, S&&);
-        template <typename S>
-        friend sync_handler& operator>>(sync_handler&&, S&&);
+        sync_handler(stream& s) : m_stream(s) {}
+        template <typename S> friend sync_handler& operator<<(sync_handler&&, S&&);
+        template <typename S> friend sync_handler& operator>>(sync_handler&&, S&&);
     };
 
     async_handler async() { return *this; }
-    sync_handler sync() { return *this; }
+    sync_handler  sync()  { return *this; }
 
     template <typename S>
     friend async_handler& operator<<(async_handler&& handler, S&& source)
     {
-        handler.m_stream.get_tracer().push_back(
-            handler.m_stream.add_input_stream(source));
+        handler.m_stream.get_tracer().push_back(handler.m_stream.add_input_stream(source));
         return handler;
     }
 
     template <typename S>
     friend async_handler& operator>>(async_handler&& handler, S&& source)
     {
-        handler.m_stream.get_tracer().push_back(
-            handler.m_stream.add_output_stream(source));
+        handler.m_stream.get_tracer().push_back(handler.m_stream.add_output_stream(source));
         return handler;
     }
 
@@ -230,39 +215,42 @@ template <typename Engine>
 void basic_stream_manager::dnn_inference_from_resized_images(Engine&& engine)
 {
     while (true) {
+        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
         {
             std::unique_lock lk{ m_resized_queue.m_mu };
             m_cv_resize.wait(lk, [this] { return m_resized_queue.m_size > 0 || m_shutdown; });
         }
+        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
-            return;
+            break;
 
         auto resized_inputs = m_resized_queue.dump(engine.max_batch_size());
         auto internals = engine.inference(std::move(resized_inputs));
 
-        m_after_inference_queue.push(std::move(internals));
+        m_after_inference_queue.wait_until_pushed(std::move(internals));
 
         m_cv_dnn_inf.notify_one();
     }
+    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 template <typename ParserList>
 void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
 {
     while (true) {
+        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
         {
             std::unique_lock lk{ m_after_inference_queue.m_mu };
             m_cv_dnn_inf.wait(lk,
                 [this] { return m_after_inference_queue.m_size > 0 || m_shutdown; });
         }
+        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
-            return;
+            break;
 
         auto internals = m_after_inference_queue.dump_all();
-
-        std::cout << std::this_thread::get_id() << "Got internals " << internals.size() << '\n';
 
         std::vector<std::future<pose_set>> futures;
         futures.reserve(internals.size());
@@ -273,21 +261,21 @@ void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
 
             futures.push_back(m_thread_pool.enqueue(
                 [&parser_list, &internals, rb = round_robin]() -> pose_set {
-                    auto blob = internals[rb];
-                    auto poses = parser_list.at(rb % parser_list.size()).get().process(blob);
+                    auto poses = parser_list.at(rb % parser_list.size()).get().process(std::move(internals[rb]));
                     return poses;
                 }));
         }
 
-        std::vector<pose_set> pose_sets;
-        pose_sets.reserve(internals.size());
+        std::vector<pose_set> pose_sets{};
+        pose_sets.reserve(futures.size());
 
         for (auto&& f : futures)
             pose_sets.push_back(f.get());
 
-        m_pose_sets_queue.push(std::move(pose_sets));
+        m_pose_sets_queue.wait_until_pushed(std::move(pose_sets));
         m_cv_post_processing.notify_one();
     }
+    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 template <typename NameGetter>
@@ -295,13 +283,15 @@ basic_stream_manager::enable_if_name_getter_t<NameGetter>
 basic_stream_manager::write_to(NameGetter&& name_getter)
 {
     while (true) {
+        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
         {
             std::unique_lock lk{ m_pose_sets_queue.m_mu };
             m_cv_post_processing.wait(lk, [this] { return m_pose_sets_queue.m_size > 0 || m_shutdown; });
         }
+        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
-            return;
+            break;
 
         auto pose_set = m_pose_sets_queue.dump_all();
         for (auto&& poses : pose_set) {
@@ -313,7 +303,11 @@ basic_stream_manager::write_to(NameGetter&& name_getter)
             --m_remaining_num;
         }
 
-        m_shutdown_notifier.notify_one();
+        if (m_remaining_num == 0 && m_pose_sets_queue.m_size == 0)
+            break;
     }
+    m_shutdown_notifier.notify_one();
+    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
+
 }

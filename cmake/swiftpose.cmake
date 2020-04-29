@@ -4,7 +4,7 @@
 set(POSE_LIB_NAME swiftpose)
 
 # Compiler Flags
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native") # TODO.
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native")
 
 # Dependencies(OpenCV & CUDA)
 INCLUDE(cmake/cuda.cmake)

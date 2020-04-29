@@ -21,9 +21,7 @@ int main()
         FLAGS_output_video,
         cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
         capture.get(cv::CAP_PROP_FPS),
-        cv::Size(
-            capture.get(cv::CAP_PROP_FRAME_WIDTH),
-            capture.get(cv::CAP_PROP_FRAME_HEIGHT)));
+        cv::Size(FLAGS_input_width, FLAGS_input_height));
 
     // Basic information about videos.
     swiftpose_log() << "Input video name: " << FLAGS_input_video << std::endl;
@@ -43,9 +41,7 @@ int main()
         { FLAGS_input_width, FLAGS_input_height },
         "image",
         { "outputs/conf", "outputs/paf" },
-        FLAGS_max_batch_size,
-        sp::data_type::kFLOAT,
-        1. / 255);
+        FLAGS_max_batch_size);
 
     sp::parser::paf parser({ FLAGS_input_width, FLAGS_input_height });
 
@@ -53,6 +49,16 @@ int main()
 
     stream.add_monitor(1000);
 
+    size_t total_frames = capture.get(cv::CAP_PROP_FRAME_COUNT);
+
+    using clk_t = std::chrono::high_resolution_clock;
+    auto beg = clk_t::now();
+
     stream.async() << capture;
     stream.sync() >> writer;
+
+    auto millis = std::chrono::duration<double, std::milli>(clk_t::now() - beg).count();
+
+    std::cout << total_frames << " images got processed in " << millis << " ms, FPS = "
+              << 1000. * total_frames / millis << '\n';
 }

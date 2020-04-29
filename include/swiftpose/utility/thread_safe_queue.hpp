@@ -27,6 +27,7 @@ public:
 
     void push(T v)
     {
+        std::cout << "BEGIN: " << __PRETTY_FUNCTION__  << '\n';
         std::lock_guard lk{ m_mu };
 
         if (m_size >= m_capacity)
@@ -34,6 +35,8 @@ public:
         m_array[m_back] = std::move(v);
         unsafe_step_back();
         ++m_size;
+
+        std::cout << "END: " << __PRETTY_FUNCTION__  << '\n';
     }
 
     template <typename Iter>
@@ -47,6 +50,7 @@ public:
         if (span_size > m_capacity)
             throw std::logic_error(
                 "logic error: `container.size() > m_capacity` is true!");
+
         std::lock_guard lk{ m_mu };
 
         if (m_size + span_size > m_capacity)
@@ -67,8 +71,10 @@ public:
     template <typename C>
     void push(C container)
     {
+        std::cout << "BEGIN: " << __PRETTY_FUNCTION__  << '\n';
         push(std::move_iterator{ container.begin() },
             std::move_iterator{ container.end() });
+        std::cout << "END: " << __PRETTY_FUNCTION__  << '\n';
     }
 
     void wait_until_pushed(T t)
@@ -100,6 +106,7 @@ public:
                 std::cerr << err.what() << std::endl;
                 throw;
             } catch (const std::overflow_error& err) {
+                std::cerr << err.what() << std::endl;
                 m_wait_for_space += span_size;
                 std::unique_lock lk{ m_mu };
                 m_cv.wait(
@@ -137,7 +144,7 @@ public:
             unsafe_step_head();
             --m_size;
 
-            if (m_wait_for_space != 0 && m_capacity - m_size >= m_wait_for_space)
+            if (m_wait_for_space != 0)
                 m_cv.notify_one();
         }
 
@@ -157,7 +164,7 @@ public:
                 ret.push_back(std::move(m_array[(m_head + i) % m_capacity]));
             m_size -= len;
             unsafe_step_head(len);
-            if (m_wait_for_space != 0 && m_capacity - m_size >= m_wait_for_space)
+            if (m_wait_for_space != 0)
                 m_cv.notify_one();
         }
 

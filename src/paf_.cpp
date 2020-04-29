@@ -300,8 +300,6 @@ namespace parser {
             humans.push_back(human);
         }
 
-        std::cout << std::this_thread::get_id() << "Returned " << humans.size() << '\n';
-
         return humans;
     }
 
