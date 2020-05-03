@@ -14,11 +14,15 @@ DEFINE_int32(max_batch_size, 8, "Max batch size for inference engine to execute.
 
 DEFINE_string(input_video, "../data/media/video.avi", "Video to be processed.");
 DEFINE_string(output_video, "output_video.avi", "The name of output video.");
+DEFINE_bool(logging, false, "Print the logging information or not.");
 
 int main(int argc, char** argv)
 {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     namespace pp = poseplus;
+
+    if (FLAGS_logging)
+        pp::enable_logging();
 
     auto capture = cv::VideoCapture(FLAGS_input_video);
 

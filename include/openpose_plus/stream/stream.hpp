@@ -1,5 +1,9 @@
 #pragma once
 
+/// \file stream.hpp
+/// \brief Stream processing for pose estimation.
+/// \author Jiawei Liu(github.com/ganler)
+
 #include <future>
 #include <opencv2/opencv.hpp>
 #include <string>
@@ -11,6 +15,8 @@
 #include "../utility/viz.hpp"
 
 namespace poseplus {
+
+// FIXME: DEADLOCK!
 
 class basic_stream_manager {
 private:
@@ -56,7 +62,7 @@ private:
 
     using pose_set = std::vector<human_t>;
 
-    /*
+/*
 * Connections:
 * input -> resize.
 * input -> replica.
@@ -82,7 +88,7 @@ private:
 template <typename DNNEngine, typename Parser>
 class stream {
 public:
-    stream(DNNEngine& engine, Parser& parser, size_t parser_cnt = 0, size_t queue_max_size = 64)
+    stream(DNNEngine& engine, Parser& parser, size_t parser_cnt = 0, size_t queue_max_size = 128)
         : m_stream_manager(queue_max_size)
         , m_engine_ref(engine)
         , m_main_parser_ref(parser)
@@ -168,7 +174,8 @@ private:
     template <typename S>
     auto add_input_stream(S&& s)
     {
-        return std::async([this, &s] {
+        // Only 1 input stream at the same time.
+        return m_mpsc_worker.enqueue([this, &s] {
             m_stream_manager.read_from(std::forward<S>(s));
         });
     }
@@ -203,6 +210,7 @@ private:
 
     DNNEngine& m_engine_ref;
     Parser& m_main_parser_ref;
+    thread_pool m_mpsc_worker = thread_pool(1);
 
     std::vector<Parser> m_parser_replicas;
     std::vector<std::reference_wrapper<Parser>> m_parser_refs;
