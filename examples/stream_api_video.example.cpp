@@ -1,19 +1,24 @@
 #include "utils.hpp"
 #include <gflags/gflags.h>
 #include <opencv2/opencv.hpp>
-#include <swiftpose/swiftpose.hpp>
+#include <openpose_plus/openpose_plus.hpp>
 
 DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",
     "Path to uff model.");
+DEFINE_string(input_name, "image", "The input node name of your uff model file.");
+DEFINE_string(output_name_list, "outputs/conf,outputs/paf", "The output node names(maybe more than one) of your uff model file.");
+
 DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
+DEFINE_int32(max_batch_size, 8, "Max batch size for inference engine to execute.");
+
 DEFINE_string(input_video, "../data/media/video.avi", "Video to be processed.");
-DEFINE_int32(max_batch_size, 16, "Max batch size for inference engine to execute.");
 DEFINE_string(output_video, "output_video.avi", "The name of output video.");
+
 
 int main()
 {
-    namespace sp = swiftpose;
+    namespace pp = poseplus;
 
     auto capture = cv::VideoCapture(FLAGS_input_video);
 
@@ -24,28 +29,28 @@ int main()
         cv::Size(FLAGS_input_width, FLAGS_input_height));
 
     // Basic information about videos.
-    swiftpose_log() << "Input video name: " << FLAGS_input_video << std::endl;
-    swiftpose_log() << "Output video name: " << FLAGS_output_video << std::endl;
-    swiftpose_log() << "Frame: Size@"
-                    << cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT))
-                    << " Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
+    poseplus_log() << "Input video name: " << FLAGS_input_video << std::endl;
+    poseplus_log() << "Output video name: " << FLAGS_output_video << std::endl;
+    poseplus_log() << "Frame: Size@"
+                   << cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT))
+                   << " Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
 
     // Checks.
     if (!capture.isOpened()) {
-        swiftpose_log() << "Video: " << FLAGS_input_video << " cannot be opened\n";
+        poseplus_log() << "Video: " << FLAGS_input_video << " cannot be opened\n";
         std::exit(-1);
     }
 
-    sp::dnn::tensorrt engine(
+    pp::dnn::tensorrt engine(
         FLAGS_model_file,
         { FLAGS_input_width, FLAGS_input_height },
-        "image",
-        { "outputs/conf", "outputs/paf" },
+        FLAGS_input_name,
+        split(FLAGS_output_name_list, ','),
         FLAGS_max_batch_size);
 
-    sp::parser::paf parser({ FLAGS_input_width, FLAGS_input_height });
+    pp::parser::paf parser({FLAGS_input_width, FLAGS_input_height });
 
-    auto stream = sp::make_stream(engine, parser);
+    auto stream = pp::make_stream(engine, parser);
 
     stream.add_monitor(1000);
 

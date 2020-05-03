@@ -1,100 +1,60 @@
-#include <algorithm>
-
-#include <ttl/tensor>
-
-#include <openpose-plus.h>
-
+#include "logging.hpp"
 #include "post_process.hpp"
-#include "trace.hpp"
+#include <swiftpose/operator/parser/paf.hpp>
+#include <thread>
 
-struct VectorXY {
-    float x;
-    float y;
-};
+namespace poseplus {
 
-class paf_processor_impl : public paf_processor {
-public:
-    paf_processor_impl(int input_height, int input_width,
-        /* Original Inp Size */ int height, int width,
-        int n_joins /* 1 + COCO_N_PARTS */,
-        int n_connections /* COCO_N_PAIRS */,
-        int gauss_kernel_size)
-        : height(height)
-        , width(width)
-        , input_height(input_height)
-        , // TO BE OPTIMIZED.
-        input_width(input_width)
-        , // TO BE OPTIMIZED.
-        n_joins(n_joins)
-        , n_connections(n_connections)
-        , upsample_conf_dim(n_joins, height, width)
-        , upsample_paf_dim(n_connections * 2, height, width)
-        , peak_param(n_joins, height, width, gauss_kernel_size)
+namespace parser {
+
+    constexpr float THRESH_HEAT = 0.05;
+    constexpr float THRESH_VECTOR_SCORE = 0.05;
+    constexpr int THRESH_VECTOR_CNT1 = 8;
+    constexpr int THRESH_PART_CNT = 4;
+    constexpr float THRESH_HUMAN_SCORE = 0.4;
+    constexpr int STEP_PAF = 10;
+
+    struct VectorXY {
+        float x;
+        float y;
+    };
+
+    static std::vector<VectorXY>
+    get_paf_vectors(const ttl::tensor_view<float, 3>& pafmap,
+        const int& ch_id1, //
+        const int& ch_id2, //
+        const point_2d<int>& peak1, //
+        const point_2d<int>& peak2)
     {
-    }
+        auto roundpaf = [](float v) { return static_cast<int>(v + 0.5); };
+        std::vector<VectorXY> paf_vectors;
 
-    std::vector<human_t> operator()(
-        const float* conf_, /* [n_joins, input_height, input_width] */
-        const float* paf_ /* [n_connections * 2, input_height, input_width] */,
-        bool use_gpu)
-    {
-        TRACE_SCOPE("paf_processor_impl::operator()");
-        // TODO: To be optimized here.
-        thread_local ttl::tensor<float, 3> upsample_conf_(
-            upsample_conf_dim); // 5FPS
-        thread_local ttl::tensor<float, 3> upsample_paf_(upsample_paf_dim); // 5FPS
-        thread_local peak_finder_t<float> peak_finder_(
-            peak_param.dims()[0], peak_param.dims()[1], peak_param.dims()[2],
-            peak_param.dims()[3]);
-        {
-            TRACE_SCOPE("resize heatmap and PAF");
-            resize_area(
-                ttl::tensor_view<float, 3>(conf_, n_joins, input_height, input_width),
-                ttl::ref(upsample_conf_));
-            resize_area(ttl::tensor_view<float, 3>(paf_, n_connections * 2,
-                            input_height, input_width),
-                ttl::ref(upsample_paf_));
+        const float STEP_X = (peak2.x - peak1.x) / float(STEP_PAF);
+        const float STEP_Y = (peak2.y - peak1.y) / float(STEP_PAF);
+
+        for (int i : ttl::range(STEP_PAF)) {
+            int location_x = roundpaf(peak1.x + i * STEP_X);
+            int location_y = roundpaf(peak1.y + i * STEP_Y);
+
+            VectorXY v;
+            v.x = pafmap.at(ch_id1, location_y, location_x);
+            v.y = pafmap.at(ch_id2, location_y, location_x);
+            paf_vectors.push_back(v);
         }
-        const auto all_peaks = peak_finder_.find_peak_coords(
-            ttl::view(upsample_conf_), THRESH_HEAT, use_gpu);
-        const auto peak_ids_by_channel = peak_finder_.group_by(all_peaks);
-        return process(all_peaks, peak_ids_by_channel, ttl::view(upsample_paf_));
+
+        return paf_vectors;
     }
 
-private:
-    const float THRESH_HEAT = 0.05;
-    const float THRESH_VECTOR_SCORE = 0.05;
-    const int THRESH_VECTOR_CNT1 = 8;
-    const int THRESH_PART_CNT = 4;
-    const float THRESH_HUMAN_SCORE = 0.4;
-    const int STEP_PAF = 10;
-
-    const int height;
-    const int width;
-    const int input_height;
-    const int input_width;
-    const int n_joins;
-    const int n_connections;
-
-    ttl::shape<3> upsample_conf_dim;
-    ttl::shape<3> upsample_paf_dim;
-
-    //    ttl::tensor<float, 3> upsample_conf;  // [J, H, W]
-    //    ttl::tensor<float, 3> upsample_paf;   // [2C, H, W]
-
-    ttl::shape<4> peak_param;
-
-    std::vector<ConnectionCandidate>
-    getConnectionCandidates(const ttl::tensor_view<float, 3>& pafmap,
+    static std::vector<connection_candidate>
+    get_connection_candidates(const ttl::tensor_view<float, 3>& pafmap,
         const std::vector<peak_info>& all_peaks,
         const std::vector<int>& peak_index_1,
         const std::vector<int>& peak_index_2,
         const std::pair<int, int> coco_pair_net, int height)
     {
-        std::vector<ConnectionCandidate> candidates;
+        std::vector<connection_candidate> candidates{};
 
-        const auto maybe_add = [&](const peak_info& peak_a,
-                                   const peak_info& peak_b) {
+        const auto maybe_add = [&](const peak_info& peak_a, const peak_info& peak_b) {
             const auto dis = peak_b.pos - peak_a.pos;
             const float norm = std::sqrt(dis.l2());
             if (norm < 1e-12) {
@@ -123,67 +83,24 @@ private:
 
             float criterion2 = scores / STEP_PAF + std::min(0.0, 0.5 * height / norm - 1.0);
 
-            if (criterion1 > THRESH_VECTOR_CNT1 && criterion2 > 0) {
-                ConnectionCandidate candidate;
-                candidate.idx1 = peak_a.id;
-                candidate.idx2 = peak_b.id;
-                candidate.score = criterion2;
-                candidate.etc = criterion2 + peak_a.score + peak_b.score;
-                candidates.push_back(candidate);
-            }
+            if (criterion1 > THRESH_VECTOR_CNT1 && criterion2 > 0)
+                candidates.push_back(
+                    { /*candidate.idx1 =*/peak_a.id,
+                        /*candidate.idx2 =*/peak_b.id,
+                        /*candidate.score =*/criterion2,
+                        /*candidate.etc =*/criterion2 + peak_a.score + peak_b.score });
         };
 
-        for (auto id1 : peak_index_1) {
-            for (auto idx2 : peak_index_2) {
+        for (auto id1 : peak_index_1)
+            for (auto idx2 : peak_index_2)
                 maybe_add(all_peaks[id1], all_peaks[idx2]);
-            }
-        }
+
         return candidates;
     }
 
-    std::vector<Connection>
-    getConnections(const ttl::tensor_view<float, 3>& pafmap,
-        const std::vector<peak_info>& all_peaks,
-        const std::vector<std::vector<int>>& peak_ids_by_channel,
-        int pair_id, int height)
-    {
-        const auto coco_pair = COCOPAIRS[pair_id];
-        const auto coco_pair_net = COCOPAIRS_NET[pair_id];
-
-        std::vector<ConnectionCandidate> candidates = getConnectionCandidates(
-            pafmap, all_peaks, //
-            peak_ids_by_channel[coco_pair.first],
-            peak_ids_by_channel[coco_pair.second], coco_pair_net, height);
-
-        // nms
-        std::sort(candidates.begin(), candidates.end(),
-            std::greater<ConnectionCandidate>());
-
-        std::vector<Connection> conns;
-        for (const auto& candidate : candidates) {
-            bool assigned = false;
-            for (const auto& conn : conns) {
-                if (conn.peak_id1 == candidate.idx1 || conn.peak_id2 == candidate.idx2) {
-                    assigned = true;
-                    break;
-                }
-            }
-            if (!assigned) {
-                Connection conn;
-                conn.peak_id1 = candidate.idx1;
-                conn.peak_id2 = candidate.idx2;
-                conn.score = candidate.score;
-                conn.cid1 = candidate.idx1;
-                conn.cid2 = candidate.idx2;
-                conns.push_back(conn);
-            }
-        }
-        return conns;
-    }
-
-    std::vector<human_ref_t>
-    getHumans(const std::vector<peak_info>& all_peaks,
-        const std::vector<std::vector<Connection>>& all_connections)
+    static std::vector<human_ref_t>
+    get_humans(const std::vector<peak_info>& all_peaks,
+        const std::vector<std::vector<connection>>& all_connections)
     {
         TRACE_SCOPE(__func__);
 
@@ -196,7 +113,7 @@ private:
             const int part_id1 = coco_pair.first;
             const int part_id2 = coco_pair.second;
 
-            for (const auto& conn : all_connections[pair_id]) {
+            for (const connection& conn : all_connections[pair_id]) {
                 std::vector<int> hr_ids;
 
                 for (auto hr : human_refs) {
@@ -254,7 +171,7 @@ private:
             }
         }
 
-        printf("got %lu incomplete humans\n", human_refs.size());
+        info("got ", human_refs.size(), " incomplete humans\n");
 
         human_refs.erase(std::remove_if(human_refs.begin(), human_refs.end(),
                              [&](const human_ref_t& hr) {
@@ -264,86 +181,130 @@ private:
         return human_refs;
     }
 
-    std::vector<std::vector<Connection>>
-    getAllConnections(const ttl::tensor_view<float, 3>& pafmap,
+    static std::vector<connection>
+    get_connections(const ttl::tensor_view<float, 3>& pafmap,
         const std::vector<peak_info>& all_peaks,
-        const std::vector<std::vector<int>>& peak_ids_by_channel)
+        const std::vector<std::vector<int>>& peak_ids_by_channel,
+        int pair_id, int height)
     {
-        TRACE_SCOPE(__func__);
+        const auto coco_pair = COCOPAIRS[pair_id];
+        const auto coco_pair_net = COCOPAIRS_NET[pair_id];
 
-        std::vector<std::vector<Connection>> all_connections;
-        for (int pair_id = 0; pair_id < COCO_N_PAIRS; pair_id++) {
-            all_connections.push_back(getConnections(
-                pafmap, all_peaks, peak_ids_by_channel, pair_id, height));
+        std::vector<connection_candidate> candidates = get_connection_candidates(
+            pafmap, all_peaks, //
+            peak_ids_by_channel[coco_pair.first],
+            peak_ids_by_channel[coco_pair.second], coco_pair_net, height);
+
+        // nms
+        std::sort(candidates.begin(), candidates.end(),
+            std::greater<connection_candidate>());
+
+        std::vector<connection> conns;
+        for (const auto& candidate : candidates) {
+            bool assigned = false;
+            for (const auto& conn : conns) {
+                if (conn.peak_id1 == candidate.idx1 || conn.peak_id2 == candidate.idx2) {
+                    assigned = true;
+                    break;
+                }
+            }
+            if (!assigned) {
+                connection conn;
+                conn.peak_id1 = candidate.idx1;
+                conn.peak_id2 = candidate.idx2;
+                conn.score = candidate.score;
+                conn.cid1 = candidate.idx1;
+                conn.cid2 = candidate.idx2;
+                conns.push_back(conn);
+            }
         }
-        return all_connections;
+        return conns;
     }
 
-    std::vector<human_t>
-    process(const std::vector<peak_info>& all_peaks,
-        const std::vector<std::vector<int>>& peak_ids_by_channel,
-        const ttl::tensor_view<float, 3>& pafmap /* [2c, h, w] */)
+    // Class paf.
+    class paf::peak_finder_impl : public peak_finder_t<float> {
+    public:
+        using peak_finder_t::peak_finder_t;
+    };
+
+    paf::paf(cv::Size image_size)
+        : m_image_size(image_size)
     {
-        TRACE_SCOPE("paf_processor_impl::process");
+    }
 
-        const std::vector<std::vector<Connection>> all_connections = getAllConnections(pafmap, all_peaks, peak_ids_by_channel);
+    paf::paf(const paf& p)
+        : m_image_size(p.m_image_size)
+    {
+    }
 
-        const auto human_refs = getHumans(all_peaks, all_connections);
-        printf("got %lu humans\n", human_refs.size());
+    std::vector<human_t> paf::process(feature_map_t paf_map, feature_map_t conf_map)
+    {
+        TRACE_SCOPE("PAF");
+        std::vector<human_t> humans{};
+
+        auto [n_connections_2_, fw_paf, fh_paf] = paf_map.dims();
+        auto [n_joints_, fw_conf, fh_conf] = conf_map.dims();
+
+        assert(fw_paf == fw_conf);
+        assert(fh_paf == fh_conf);
+
+        if (m_n_connections == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR &&
+            m_n_joints == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR
+        ) {
+            m_n_connections = n_connections_2_ / 2;
+            m_n_joints = n_joints_;
+            m_upsample_paf = std::make_unique<ttl::tensor<float, 3>>(n_connections_2_, m_image_size.height, m_image_size.width);
+            m_upsample_conf = std::make_unique<ttl::tensor<float, 3>>(n_joints_, m_image_size.height, m_image_size.width);
+            m_feature_size = cv::Size(fw_paf, fh_paf);
+            m_peak_finder_ptr = std::make_unique<paf::peak_finder_impl>(
+                    m_n_joints, m_image_size.height, m_image_size.width, 17);
+        }
+
+        auto& m_peak_finder = *m_peak_finder_ptr;
 
         {
-            TRACE_SCOPE("generate output");
-            std::vector<human_t> humans;
-            for (const auto& hr : human_refs) {
-                human_t human;
-                human.score = hr.score;
-                for (int i = 0; i < COCO_N_PARTS; ++i) {
-                    if (hr.parts[i].id != -1) {
-                        human.parts[i].has_value = true;
-                        const auto p = all_peaks[hr.parts[i].id];
-                        human.parts[i].score = p.score;
-                        human.parts[i].x = p.pos.x;
-                        human.parts[i].y = p.pos.y;
-                    }
+            TRACE_SCOPE("resize heatmap and PAF");
+            resize_area(ttl::tensor_view<float, 3>(conf_map.data(), conf_map.dims()), ttl::ref(*m_upsample_conf));
+            resize_area(ttl::tensor_view<float, 3>(paf_map.data(), paf_map.dims()), ttl::ref(*m_upsample_paf));
+        }
+
+        // Get all peaks.
+        const auto all_peaks = m_peak_finder.find_peak_coords(
+            ttl::view(*m_upsample_conf), THRESH_HEAT, false /* use_gpu */);
+        const auto peak_ids_by_channel = m_peak_finder.group_by(all_peaks);
+
+        const ttl::tensor_view<float, 3>& pafmap = ttl::view(*m_upsample_paf);
+
+        std::vector<std::vector<connection>> all_connections;
+
+        for (int pair_id = 0; pair_id < COCO_N_PAIRS; pair_id++)
+            all_connections.push_back(get_connections(pafmap, all_peaks,
+                peak_ids_by_channel, pair_id,
+                m_feature_size.height));
+
+        const auto human_refs = get_humans(all_peaks, all_connections);
+        info("Got ", human_refs.size(), " humans\n");
+
+        for (const auto& hr : human_refs) {
+            human_t human;
+            human.score = hr.score;
+            for (int i = 0; i < COCO_N_PARTS; ++i) {
+                if (hr.parts[i].id != -1) {
+                    human.parts[i].has_value = true;
+                    const auto p = all_peaks[hr.parts[i].id];
+                    human.parts[i].score = p.score;
+                    human.parts[i].x = p.pos.x;
+                    human.parts[i].y = p.pos.y;
                 }
-                humans.push_back(human);
             }
-            return humans;
-        }
-    }
-
-    std::vector<VectorXY>
-    get_paf_vectors(const ttl::tensor_view<float, 3>& pafmap,
-        const int& ch_id1, //
-        const int& ch_id2, //
-        const point_2d<int>& peak1, //
-        const point_2d<int>& peak2)
-    {
-        std::vector<VectorXY> paf_vectors;
-
-        const float STEP_X = (peak2.x - peak1.x) / float(STEP_PAF);
-        const float STEP_Y = (peak2.y - peak1.y) / float(STEP_PAF);
-
-        for (int i = 0; i < STEP_PAF; i++) {
-            int location_x = roundpaf(peak1.x + i * STEP_X);
-            int location_y = roundpaf(peak1.y + i * STEP_Y);
-
-            VectorXY v;
-            v.x = pafmap.at(ch_id1, location_y, location_x);
-            v.y = pafmap.at(ch_id2, location_y, location_x);
-            paf_vectors.push_back(v);
+            humans.push_back(human);
         }
 
-        return paf_vectors;
+        return humans;
     }
 
-    int roundpaf(float v) { return (int)(v + 0.5); }
-};
+    paf::~paf() = default;
 
-paf_processor* create_paf_processor(int input_height, int input_width,
-    int height, int width, int n_joins,
-    int n_connections, int gauss_kernel_size)
-{
-    return new paf_processor_impl(input_height, input_width, height, width,
-        n_joins, n_connections, gauss_kernel_size);
-}
+} // namespace parser
+
+} // namespace swiftpose

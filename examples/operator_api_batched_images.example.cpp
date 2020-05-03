@@ -2,7 +2,7 @@
 #include <experimental/filesystem>
 #include <gflags/gflags.h>
 #include <regex>
-#include <swiftpose/swiftpose.hpp>
+#include <openpose_plus/openpose_plus.hpp>
 
 // Model flags
 DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",
@@ -16,18 +16,18 @@ int main()
     namespace fs = std::experimental::filesystem;
 
     // * Collect data into batch.
-    swiftpose_log() << "Your current path: " << fs::current_path() << '\n';
+    poseplus_log() << "Your current path: " << fs::current_path() << '\n';
     std::vector<cv::Mat> batch = glob_images(FLAGS_input_folder);
 
     if (batch.empty()) {
-        swiftpose_log() << "No input images got. Exiting.\n";
+        poseplus_log() << "No input images got. Exiting.\n";
         exit(-1);
     }
 
-    swiftpose_log() << "Batch shape: [" << batch.size() << ", 3, " << FLAGS_input_height << ", " << FLAGS_input_width << "]\n";
+    poseplus_log() << "Batch shape: [" << batch.size() << ", 3, " << FLAGS_input_height << ", " << FLAGS_input_width << "]\n";
 
     // * Create TensorRT engine.
-    namespace sp = swiftpose;
+    namespace sp = poseplus;
     sp::dnn::tensorrt engine(
         FLAGS_model_file,
         { FLAGS_input_width, FLAGS_input_height },
@@ -46,7 +46,7 @@ int main()
         auto feature_map_packets = engine.inference(batch);
         for (const auto& packet : feature_map_packets)
             for (const auto& feature_map : packet)
-                swiftpose_log() << feature_map << std::endl;
+                poseplus_log() << feature_map << std::endl;
 
         // * Paf.
         std::vector<std::vector<sp::human_t>> pose_vectors;

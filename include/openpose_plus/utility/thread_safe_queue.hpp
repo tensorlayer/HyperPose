@@ -27,7 +27,7 @@ public:
 
     void push(T v)
     {
-        std::cout << "BEGIN: " << __PRETTY_FUNCTION__  << '\n';
+//        std::cout << "BEGIN: " << __PRETTY_FUNCTION__  << '\n';
         std::lock_guard lk{ m_mu };
 
         if (m_size >= m_capacity)
@@ -36,7 +36,7 @@ public:
         unsafe_step_back();
         ++m_size;
 
-        std::cout << "END: " << __PRETTY_FUNCTION__  << '\n';
+//        std::cout << "END: " << __PRETTY_FUNCTION__  << '\n';
     }
 
     template <typename Iter>
@@ -71,10 +71,10 @@ public:
     template <typename C>
     void push(C container)
     {
-        std::cout << "BEGIN: " << __PRETTY_FUNCTION__  << '\n';
+//        std::cout << "BEGIN: " << __PRETTY_FUNCTION__  << '\n';
         push(std::move_iterator{ container.begin() },
             std::move_iterator{ container.end() });
-        std::cout << "END: " << __PRETTY_FUNCTION__  << '\n';
+//        std::cout << "END: " << __PRETTY_FUNCTION__  << '\n';
     }
 
     void wait_until_pushed(T t)
