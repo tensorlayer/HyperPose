@@ -7,7 +7,7 @@ std::atomic<std::ostream*> _info_ptr = nullptr;
 std::atomic<std::ostream*> _warning_ptr = nullptr;
 std::atomic<std::ostream*> _error_ptr = nullptr;
 
-std::atomic<bool> _enable_logging{false};
+std::atomic<bool> _enable_logging{ false };
 
 std::ostream& get_info_logger()
 {
@@ -30,15 +30,18 @@ void set_warning_stream(std::ostream& os) { _warning_ptr = &os; }
 
 void set_error_stream(std::ostream& os) { _error_ptr = &os; }
 
-const std::atomic<bool>& is_logging_enabled() {
+const std::atomic<bool>& is_logging_enabled()
+{
     return _enable_logging;
 }
 
-void enable_logging() {
+void enable_logging()
+{
     _enable_logging = true;
 }
 
-void disable_logging() {
+void disable_logging()
+{
     _enable_logging = false;
 }
 

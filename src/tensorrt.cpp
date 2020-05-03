@@ -8,8 +8,8 @@
 #include <ttl/range>
 
 #include "logger.h"
-#include "trace.hpp"
 #include "logging.hpp"
+#include "trace.hpp"
 
 namespace poseplus {
 namespace dnn {
@@ -229,14 +229,11 @@ namespace dnn {
     std::vector<internal_t> tensorrt::inference(std::vector<cv::Mat> batch)
     {
         TRACE_SCOPE("INFERENCE");
-        if (batch.size() > m_max_batch_size) {
-            std::string err_msg = "Input batch size overflow: Yours@"
+        if (batch.size() > m_max_batch_size)
+            throw std::logic_error("Input batch size overflow: Yours@"
                 + std::to_string(batch.size())
                 + " Max@"
-                + std::to_string(m_max_batch_size);
-            gLogger.log(nvinfer1::ILogger::Severity::kERROR, err_msg.c_str());
-            std::exit(-1);
-        }
+                + std::to_string(m_max_batch_size));
 
         // * Step1: Resize.
         for (auto&& mat : batch)

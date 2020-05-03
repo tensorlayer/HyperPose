@@ -1,8 +1,8 @@
 #include "utils.hpp"
 #include <experimental/filesystem>
 #include <gflags/gflags.h>
-#include <regex>
 #include <openpose_plus/openpose_plus.hpp>
+#include <regex>
 
 // Model flags
 DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",

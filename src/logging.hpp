@@ -1,7 +1,7 @@
 #pragma once
 
-#include <ostream>
 #include <openpose_plus/utility/logging.hpp>
+#include <ostream>
 
 namespace poseplus {
 
@@ -11,7 +11,8 @@ std::ostream& get_warning_logger();
 std::ostream& get_error_logger();
 
 template <typename... Args>
-void info(const Args&... args) {
+void info(const Args&... args)
+{
     if (is_logging_enabled() == false)
         return;
     get_info_logger() << "[OpenPose-Plus::INFO   ] ";
@@ -19,7 +20,8 @@ void info(const Args&... args) {
 }
 
 template <typename... Args>
-void warning(const Args&... args) {
+void warning(const Args&... args)
+{
     if (is_logging_enabled() == false)
         return;
     get_warning_logger() << "[OpenPose-Plus::WARNING] ";
@@ -27,7 +29,8 @@ void warning(const Args&... args) {
 }
 
 template <typename... Args>
-void error(const Args&... args) {
+void error(const Args&... args)
+{
     if (is_logging_enabled() == false)
         return;
     get_error_logger() << "[OpenPose-Plus::ERROR  ] ";

@@ -1,5 +1,5 @@
-#include <iostream>
 #include <atomic>
+#include <iostream>
 
 namespace poseplus {
 

@@ -248,16 +248,14 @@ namespace parser {
         assert(fw_paf == fw_conf);
         assert(fh_paf == fh_conf);
 
-        if (m_n_connections == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR &&
-            m_n_joints == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR
-        ) {
+        if (m_n_connections == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR && m_n_joints == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR) {
             m_n_connections = n_connections_2_ / 2;
             m_n_joints = n_joints_;
             m_upsample_paf = std::make_unique<ttl::tensor<float, 3>>(n_connections_2_, m_image_size.height, m_image_size.width);
             m_upsample_conf = std::make_unique<ttl::tensor<float, 3>>(n_joints_, m_image_size.height, m_image_size.width);
             m_feature_size = cv::Size(fw_paf, fh_paf);
             m_peak_finder_ptr = std::make_unique<paf::peak_finder_impl>(
-                    m_n_joints, m_image_size.height, m_image_size.width, 17);
+                m_n_joints, m_image_size.height, m_image_size.width, 17);
         }
 
         auto& m_peak_finder = *m_peak_finder_ptr;

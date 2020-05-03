@@ -1,5 +1,5 @@
-#include <openpose_plus/stream/stream.hpp>
 #include "logging.hpp"
+#include <openpose_plus/stream/stream.hpp>
 
 namespace poseplus {
 
@@ -23,7 +23,7 @@ void basic_stream_manager::read_from(const std::vector<cv::Mat>& inputs)
     m_input_queue.wait_until_pushed(it, inputs.end());
     m_remaining_num += inputs.size();
     m_cv_data_i.notify_one();
-//    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
+    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void basic_stream_manager::read_from(cv::VideoCapture& cap)
@@ -45,7 +45,7 @@ void basic_stream_manager::read_from(cv::VideoCapture& cap)
     size_t diff = supposed_decoded - really_decoded;
     if (diff != 0)
         m_remaining_num -= diff;
-//    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
+    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void basic_stream_manager::read_from(cv::Mat mat)
@@ -58,14 +58,14 @@ void basic_stream_manager::read_from(cv::Mat mat)
 void basic_stream_manager::resize_from_inputs(cv::Size size)
 {
     while (true) {
-//        std::cout << __FUNCTION__ << " LOCK\n";
+        //        std::cout << __FUNCTION__ << " LOCK\n";
 
         {
             std::unique_lock lk{ m_input_queue.m_mu };
             m_cv_data_i.wait(lk, [this] { return m_input_queue.m_size > 0 || m_shutdown; });
         }
 
-//        std::cout << __FUNCTION__ << " UNLOCK\n";
+        //        std::cout << __FUNCTION__ << " UNLOCK\n";
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             break;
@@ -80,19 +80,19 @@ void basic_stream_manager::resize_from_inputs(cv::Size size)
         m_resized_queue.wait_until_pushed(std::move(after_resize_mats));
         m_cv_resize.notify_one();
     }
-//    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
+    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void basic_stream_manager::write_to(cv::VideoWriter& writer)
 {
     while (true) {
-//        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
+        //        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
         {
             std::unique_lock lk{ m_pose_sets_queue.m_mu };
             m_cv_post_processing.wait(lk,
                 [this] { return m_pose_sets_queue.m_size > 0 || m_shutdown; });
         }
-//        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
+        //        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             break;
@@ -110,7 +110,7 @@ void basic_stream_manager::write_to(cv::VideoWriter& writer)
             break;
     }
     m_shutdown_notifier.notify_one();
-//    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
+    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void basic_stream_manager::add_queue_monitor(double milli)
@@ -147,5 +147,4 @@ basic_stream_manager::~basic_stream_manager()
     for (auto&& x : m_thread_tracer)
         x.get();
 }
-
 }

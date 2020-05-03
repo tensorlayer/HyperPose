@@ -97,22 +97,34 @@ public:
 
     class async_handler {
         stream& m_stream;
+
     public:
-        async_handler(stream& s) : m_stream(s) {}
-        template <typename S> friend async_handler& operator<<(async_handler&&, S&&);
-        template <typename S> friend async_handler& operator>>(async_handler&&, S&&);
+        async_handler(stream& s)
+            : m_stream(s)
+        {
+        }
+        template <typename S>
+        friend async_handler& operator<<(async_handler&&, S&&);
+        template <typename S>
+        friend async_handler& operator>>(async_handler&&, S&&);
     };
 
     class sync_handler {
         stream& m_stream;
+
     public:
-        sync_handler(stream& s) : m_stream(s) {}
-        template <typename S> friend sync_handler& operator<<(sync_handler&&, S&&);
-        template <typename S> friend sync_handler& operator>>(sync_handler&&, S&&);
+        sync_handler(stream& s)
+            : m_stream(s)
+        {
+        }
+        template <typename S>
+        friend sync_handler& operator<<(sync_handler&&, S&&);
+        template <typename S>
+        friend sync_handler& operator>>(sync_handler&&, S&&);
     };
 
     async_handler async() { return *this; }
-    sync_handler  sync()  { return *this; }
+    sync_handler sync() { return *this; }
 
     template <typename S>
     friend async_handler& operator<<(async_handler&& handler, S&& source)
@@ -215,12 +227,12 @@ template <typename Engine>
 void basic_stream_manager::dnn_inference_from_resized_images(Engine&& engine)
 {
     while (true) {
-//        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
+        //        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
         {
             std::unique_lock lk{ m_resized_queue.m_mu };
             m_cv_resize.wait(lk, [this] { return m_resized_queue.m_size > 0 || m_shutdown; });
         }
-//        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
+        //        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             break;
@@ -232,20 +244,20 @@ void basic_stream_manager::dnn_inference_from_resized_images(Engine&& engine)
 
         m_cv_dnn_inf.notify_one();
     }
-//    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
+    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 template <typename ParserList>
 void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
 {
     while (true) {
-//        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
+        //        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
         {
             std::unique_lock lk{ m_after_inference_queue.m_mu };
             m_cv_dnn_inf.wait(lk,
                 [this] { return m_after_inference_queue.m_size > 0 || m_shutdown; });
         }
-//        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
+        //        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             break;
@@ -275,7 +287,7 @@ void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
         m_pose_sets_queue.wait_until_pushed(std::move(pose_sets));
         m_cv_post_processing.notify_one();
     }
-//    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
+    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 template <typename NameGetter>
@@ -283,12 +295,12 @@ basic_stream_manager::enable_if_name_getter_t<NameGetter>
 basic_stream_manager::write_to(NameGetter&& name_getter)
 {
     while (true) {
-//        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
+        //        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
         {
             std::unique_lock lk{ m_pose_sets_queue.m_mu };
             m_cv_post_processing.wait(lk, [this] { return m_pose_sets_queue.m_size > 0 || m_shutdown; });
         }
-//        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
+        //        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             break;
@@ -307,7 +319,6 @@ basic_stream_manager::write_to(NameGetter&& name_getter)
             break;
     }
     m_shutdown_notifier.notify_one();
-//    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
+    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
-
 }

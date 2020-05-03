@@ -15,7 +15,6 @@ DEFINE_int32(max_batch_size, 8, "Max batch size for inference engine to execute.
 DEFINE_string(input_video, "../data/media/video.avi", "Video to be processed.");
 DEFINE_string(output_video, "output_video.avi", "The name of output video.");
 
-
 int main(int argc, char** argv)
 {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -49,7 +48,7 @@ int main(int argc, char** argv)
         split(FLAGS_output_name_list, ','),
         FLAGS_max_batch_size);
 
-    pp::parser::paf parser({FLAGS_input_width, FLAGS_input_height });
+    pp::parser::paf parser({ FLAGS_input_width, FLAGS_input_height });
 
     auto stream = pp::make_stream(engine, parser);
 
