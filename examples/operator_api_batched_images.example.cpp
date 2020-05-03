@@ -11,8 +11,9 @@ DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
 DEFINE_string(input_folder, "../data/media", "Folder of images to inference.");
 
-int main()
+int main(int argc, char** argv)
 {
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
     namespace fs = std::experimental::filesystem;
 
     // * Collect data into batch.
@@ -33,9 +34,7 @@ int main()
         { FLAGS_input_width, FLAGS_input_height },
         "image",
         { "outputs/conf", "outputs/paf" },
-        batch.size(),
-        sp::data_type::kFLOAT,
-        1. / 255);
+        batch.size());
 
     sp::parser::paf parser({ FLAGS_input_width, FLAGS_input_height });
 

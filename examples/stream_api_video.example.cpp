@@ -16,8 +16,9 @@ DEFINE_string(input_video, "../data/media/video.avi", "Video to be processed.");
 DEFINE_string(output_video, "output_video.avi", "The name of output video.");
 
 
-int main()
+int main(int argc, char** argv)
 {
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
     namespace pp = poseplus;
 
     auto capture = cv::VideoCapture(FLAGS_input_video);
@@ -46,7 +47,7 @@ int main()
         { FLAGS_input_width, FLAGS_input_height },
         FLAGS_input_name,
         split(FLAGS_output_name_list, ','),
-        FLAGS_max_batch_size, pp::data_type::kHALF);
+        FLAGS_max_batch_size);
 
     pp::parser::paf parser({FLAGS_input_width, FLAGS_input_height });
 
