@@ -1,29 +1,83 @@
 #pragma once
 
+/// \file paf.hpp
+/// \brief Post-processing using Part Affinity Field (PAF).
+/// \author Jiawei Liu(github.com/ganler)
+
+
 #include "../../utility/data.hpp"
 
 namespace poseplus {
 
+/// \note In OpenPose-Plus, the pose estimation pipeline consists of DNN inference and parsing(post-processing). The
+/// parser part implementation is under the namespace `poseplus::parser`.
 namespace parser {
 
+    /// \brief Post-processing using Part Affinity Field (PAF).
+    /// \see https://arxiv.org/abs/1812.08008
     class paf {
     public:
-        paf(cv::Size image_size);
+        /// \brief Constructor indicating the image size and thresholds.
+        ///
+        /// \param image_size The size(height, width) of expected output image.
+        /// \param paf_thresh The threshold of Part Affinity Field.
+        /// \param conf_thresh The activation threshold.
+        /// \note The parameter `image_size` is not the size of feature map, but the size of expected final images. The
+        /// feature map resolution will be expanded to `image_size` and then apply PAF.
+        paf(cv::Size image_size, float paf_thresh = 0.05, float conf_thresh = 0.05);
+
+        /// \brief Function to process one image.
+        ///
+        /// \code
+        /// // Initialization of PAF.
+        /// poseplus::parser::paf paf_processor(/* image size */);
+        ///
+        /// // ...
+        ///
+        /// // Do inference.
+        /// // Note that, tensor_pairs.size is equal to the batch_size process. Each of them represents one image.
+        /// auto tensor_pairs = engine.inference(...);
+        ///
+        /// for(auto&& tensor_pair/* PAF, CONF */ : tensor_pairs)
+        ///    human_topology = paf_processor.process(tensor_pair[0], tensor_pair[1]);
+        /// \endcode
+        ///
+        /// \param paf The paf tensor.
+        /// \param conf The conf tensor.
+        /// \return All human topologies found in "this" image.
         std::vector<human_t> process(feature_map_t paf, feature_map_t conf);
 
+        /// \brief Function to process one image.
+        ///
+        /// \see `poseplus::paf::process(feature_map_t paf, feature_map_t conf)`.
+        /// \tparam C Container<feature_map_t>
+        /// \param feature_map_containers {PAF, CONF} tensors.
+        /// \return All human topologies found in "this" image.
+        /// \note Template parameter `C` must support `operator[]` as indexing.
         template <typename C>
-        std::vector<human_t> process(C&& feature_map_containers)
-        {
+        std::vector<human_t> process(C&& feature_map_containers) {
             // 1@paf, 2@conf.
             return process(feature_map_containers[0], feature_map_containers[1]);
         }
 
+        ///
+        /// \param thresh The PAF threshold.
+        void set_paf_thresh(float thresh);
+
+        ///
+        /// \param thresh The CONF threshold.
+        void set_conf_thresh(float thresh);
+
+        /// \note This copy constructor will only copy the parameters introduces in constructor(`poseplus::paf`).
+        /// \param p Object to be "copied".
         paf(const paf& p);
 
+        /// Deconstructor.
         ~paf();
 
     private:
         cv::Size m_image_size;
+        float m_paf_thresh, m_conf_thresh;
 
         static constexpr nullptr_t UNINITIALIZED_PTR = nullptr;
         static constexpr int UNINITIALIZED_VAL = -1;

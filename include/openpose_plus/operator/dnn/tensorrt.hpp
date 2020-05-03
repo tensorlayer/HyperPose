@@ -17,15 +17,18 @@ namespace poseplus {
 /// Element data type.
 using data_type = nvinfer1::DataType;
 
+/// \note In OpenPose-Plus, the pose estimation pipeline consists of DNN inference and parsing(post-processing). The DNN
+/// part implementation is under the namespace `poseplus::dnn`.
 namespace dnn {
-    /// `tensorrt` is a class using TensorRT DNN engine to perform neural network inference.
+    /// \brief `tensorrt` is a class using TensorRT DNN engine to perform neural network inference.
     class tensorrt {
     public:
         /// \brief The constructor of TensorRT engine.
         ///
-        /// \note Currently, we support the [`.uff`](https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/python_api/uff/uff.html) files which users should
-        /// specify the input and output nodes by indicating their names(the names can be inferred when
-        /// converting models to `.uff` format).
+        /// \note Currently, we support the
+        /// [`.uff`](https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/python_api/uff/uff.html) files which users
+        /// should specify the input and output nodes by indicating their names(the names can be inferred when converting
+        /// models to `.uff` format).
         ///
         /// \param model_path Path to the model file. (currently, only `.uff` is supported)
         /// \param input_size The input size(width first, and then height) of the model.
@@ -76,7 +79,8 @@ namespace dnn {
         std::vector<internal_t> inference(std::vector<cv::Mat> inputs);
 
         /// \brief Do inference using plain float buffers(NCHW format required).
-        /// \details This step will not involve in any scalar multiplication or channel swapping(related to the `factor` and `flip_rgb` parameter in the constructor).
+        /// \details This step will not involve in any scalar multiplication or channel swapping(related to the `factor`
+        /// and `flip_rgb` parameter in the constructor).
         ///
         /// \see poseplus::nhwc_images_append_nchw_batch
         /// \see poseplus::tensorrt::tensorrt

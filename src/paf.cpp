@@ -7,8 +7,6 @@ namespace poseplus {
 
 namespace parser {
 
-    constexpr float THRESH_HEAT = 0.05;
-    constexpr float THRESH_VECTOR_SCORE = 0.05;
     constexpr int THRESH_VECTOR_CNT1 = 8;
     constexpr int THRESH_PART_CNT = 4;
     constexpr float THRESH_HUMAN_SCORE = 0.4;
@@ -50,7 +48,7 @@ namespace parser {
         const std::vector<peak_info>& all_peaks,
         const std::vector<int>& peak_index_1,
         const std::vector<int>& peak_index_2,
-        const std::pair<int, int> coco_pair_net, int height)
+        const std::pair<int, int> coco_pair_net, int height, float paf_thresh)
     {
         std::vector<connection_candidate> candidates{};
 
@@ -77,7 +75,7 @@ namespace parser {
                 const float score = vec.x * paf_vecs[i].x + vec.y * paf_vecs[i].y;
                 scores += score;
 
-                if (score > THRESH_VECTOR_SCORE)
+                if (score > paf_thresh)
                     criterion1 += 1;
             }
 
@@ -185,7 +183,7 @@ namespace parser {
     get_connections(const ttl::tensor_view<float, 3>& pafmap,
         const std::vector<peak_info>& all_peaks,
         const std::vector<std::vector<int>>& peak_ids_by_channel,
-        int pair_id, int height)
+        int pair_id, int height, float paf_thresh)
     {
         const auto coco_pair = COCOPAIRS[pair_id];
         const auto coco_pair_net = COCOPAIRS_NET[pair_id];
@@ -193,7 +191,7 @@ namespace parser {
         std::vector<connection_candidate> candidates = get_connection_candidates(
             pafmap, all_peaks, //
             peak_ids_by_channel[coco_pair.first],
-            peak_ids_by_channel[coco_pair.second], coco_pair_net, height);
+            peak_ids_by_channel[coco_pair.second], coco_pair_net, height, paf_thresh);
 
         // nms
         std::sort(candidates.begin(), candidates.end(),
@@ -227,13 +225,17 @@ namespace parser {
         using peak_finder_t::peak_finder_t;
     };
 
-    paf::paf(cv::Size image_size)
-        : m_image_size(image_size)
+    paf::paf(cv::Size image_size, float paf_thresh, float conf_thresh)
+        : m_image_size(image_size),
+          m_paf_thresh(paf_thresh),
+          m_conf_thresh(conf_thresh)
     {
     }
 
     paf::paf(const paf& p)
-        : m_image_size(p.m_image_size)
+        : m_image_size(p.m_image_size),
+          m_paf_thresh(p.m_paf_thresh),
+          m_conf_thresh(p.m_conf_thresh)
     {
     }
 
@@ -268,7 +270,7 @@ namespace parser {
 
         // Get all peaks.
         const auto all_peaks = m_peak_finder.find_peak_coords(
-            ttl::view(*m_upsample_conf), THRESH_HEAT, false /* use_gpu */);
+                ttl::view(*m_upsample_conf), m_conf_thresh, false /* use_gpu */);
         const auto peak_ids_by_channel = m_peak_finder.group_by(all_peaks);
 
         const ttl::tensor_view<float, 3>& pafmap = ttl::view(*m_upsample_paf);
@@ -278,7 +280,7 @@ namespace parser {
         for (int pair_id = 0; pair_id < COCO_N_PAIRS; pair_id++)
             all_connections.push_back(get_connections(pafmap, all_peaks,
                 peak_ids_by_channel, pair_id,
-                m_feature_size.height));
+                m_feature_size.height, m_paf_thresh));
 
         const auto human_refs = get_humans(all_peaks, all_connections);
         info("Got ", human_refs.size(), " humans\n");
@@ -301,7 +303,15 @@ namespace parser {
         return humans;
     }
 
-    paf::~paf() = default;
+    void paf::set_paf_thresh(float thresh) {
+        m_paf_thresh = thresh;
+    }
+
+    void paf::set_conf_thresh(float thresh) {
+        m_conf_thresh = thresh;
+    }
+
+paf::~paf() = default;
 
 } // namespace parser
 
