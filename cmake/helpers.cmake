@@ -15,11 +15,7 @@ else()
 endif()
 
 # Helper Lib.
-ADD_LIBRARY(helpers
-        examples/input.cpp
-        examples/vis.cpp
-        examples/utils.cpp
-        examples/thread_pool.cpp)
+ADD_LIBRARY(helpers examples/utils.cpp)
 TARGET_LINK_LIBRARIES(helpers
         opencv_core
         opencv_imgproc

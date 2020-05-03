@@ -1,6 +1,6 @@
 #include "logging.hpp"
 #include "post_process.hpp"
-#include <swiftpose/operator/parser/paf.hpp>
+#include <openpose_plus/operator/parser/paf.hpp>
 #include <thread>
 
 namespace poseplus {
@@ -307,4 +307,4 @@ namespace parser {
 
 } // namespace parser
 
-} // namespace swiftpose
+} // namespace poseplus

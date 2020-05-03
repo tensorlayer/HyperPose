@@ -2,7 +2,7 @@
 
 #include "../../utility/data.hpp"
 
-namespace swiftpose {
+namespace poseplus {
 
 namespace parser {
 
@@ -37,4 +37,4 @@ namespace parser {
 
 } // namespace parser
 
-} // namespace swiftpose
+} // namespace poseplus

@@ -2,7 +2,7 @@
 
 #include <opencv2/opencv.hpp>
 
-namespace swiftpose {
+namespace poseplus {
 
 constexpr int COCO_N_PARTS = 18;
 constexpr int COCO_N_PAIRS = 19;
@@ -144,4 +144,4 @@ using human_ref_t = human_ref_t_<COCO_N_PARTS>;
 
 void draw_human(cv::Mat& img, const human_t& human); // TODO
 
-} // namespace swiftpose
+} // namespace poseplus

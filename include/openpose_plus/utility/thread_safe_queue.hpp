@@ -9,7 +9,7 @@
 #include <optional>
 #include <vector>
 
-namespace swiftpose {
+namespace poseplus {
 
 template <typename T>
 class thread_safe_queue {
@@ -194,4 +194,4 @@ private:
     const size_t m_capacity;
 };
 
-} // namespace swiftpose
+} // namespace poseplus

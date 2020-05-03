@@ -10,7 +10,7 @@
 #include "../utility/thread_safe_queue.hpp"
 #include "../utility/viz.hpp"
 
-namespace swiftpose {
+namespace poseplus {
 
 class basic_stream_manager {
 private:
@@ -206,10 +206,10 @@ auto make_stream(DNNEngine&& engine, Parser&& parser, Others&&... others)
         std::forward<Others>(others)...);
 }
 
-} // namespace swiftpose
+} // namespace poseplus
 
 // Implementation.
-namespace swiftpose {
+namespace poseplus {
 
 template <typename Engine>
 void basic_stream_manager::dnn_inference_from_resized_images(Engine&& engine)

@@ -46,7 +46,7 @@ int main()
         { FLAGS_input_width, FLAGS_input_height },
         FLAGS_input_name,
         split(FLAGS_output_name_list, ','),
-        FLAGS_max_batch_size);
+        FLAGS_max_batch_size, pp::data_type::kHALF);
 
     pp::parser::paf parser({FLAGS_input_width, FLAGS_input_height });
 

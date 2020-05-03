@@ -8,7 +8,7 @@
 
 #include "../../utility/data.hpp"
 
-namespace swiftpose {
+namespace poseplus {
 
 using data_type = nvinfer1::DataType;
 
@@ -52,4 +52,4 @@ namespace dnn {
 
 } // namespace dnn
 
-} // namespace swiftpose
+} // namespace poseplus

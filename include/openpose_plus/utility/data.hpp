@@ -6,7 +6,7 @@
 #include <ttl/tensor>
 #include <vector>
 
-namespace swiftpose {
+namespace poseplus {
 
 template <typename... MatType>
 std::vector<cv::Mat> make_batch(MatType... mats)
@@ -29,7 +29,7 @@ public:
 
     friend std::ostream& operator<<(std::ostream& out, const feature_map_t& map)
     {
-        std::cout << "value test: " << map.data()[2] << std::endl; // TODO. Debug
+//        std::cout << "value test: " << map.data()[2] << std::endl; // TODO. Debug
         out << map.m_name << ":[" << map.dims()[0] << ", " << map.dims()[1] << ", "
             << map.dims()[2] << ']';
         return out;
@@ -56,4 +56,4 @@ void nhwc_images_append_nchw_batch(
     std::vector<float>& data, std::vector<cv::Mat> images,
     cv::Size size, double factor = 1.0, bool flip_rb = true);
 
-} // namespace swiftpose
+} // namespace poseplus

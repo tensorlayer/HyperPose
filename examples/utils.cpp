@@ -10,9 +10,8 @@ std::vector<std::string> split(const std::string& text, const char sep)
     std::vector<std::string> lines;
     std::string line;
     std::istringstream ss(text);
-    while (std::getline(ss, line, sep)) {
+    while (std::getline(ss, line, sep))
         lines.push_back(line);
-    }
     return lines;
 }
 

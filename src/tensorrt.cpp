@@ -1,5 +1,5 @@
-#include <swiftpose/operator/dnn/tensorrt.hpp>
-#include <swiftpose/utility/data.hpp>
+#include <openpose_plus/operator/dnn/tensorrt.hpp>
+#include <openpose_plus/utility/data.hpp>
 
 #include <NvInfer.h>
 #include <NvUffParser.h>
@@ -9,8 +9,9 @@
 
 #include "logger.h"
 #include "trace.hpp"
+#include "logging.hpp"
 
-namespace swiftpose {
+namespace poseplus {
 namespace dnn {
 
     template <typename T>
@@ -156,8 +157,7 @@ namespace dnn {
             const nvinfer1::Dims dims = m_engine->getBindingDimensions(i);
             const nvinfer1::DataType dtype = m_engine->getBindingDataType(i);
             const std::string name(m_engine->getBindingName(i));
-            std::cout << "Binding " << i << ':' << " name: " << name << " @type "
-                      << to_string(dtype) << " @shape " << to_string(dims) << std::endl;
+            info("Binding ", i, ':', " name: ", name, " @type ", to_string(dtype), " @shape ", to_string(dims), '\n');
             m_cuda_buffers.emplace_back(max_batch_size,
                 volume(dims) * sizeof_element(dtype));
         }
@@ -179,7 +179,7 @@ namespace dnn {
             TRACE_SCOPE("INFERENCE::TensorRT::host2dev");
             for (auto i : ttl::range(m_cuda_buffers.size()))
                 if (m_engine->bindingIsInput(i)) {
-                    std::cout << "Got Input Binding! " << i << '\n';
+                    info("Got Input Binding! ", i, '\n');
                     const auto buffer = m_cuda_buffers.at(i).slice(0, batch_size);
                     ttl::tensor_view<char, 2> input(
                         reinterpret_cast<const char*>(cpu_image_batch_buffer.data()),
@@ -210,8 +210,7 @@ namespace dnn {
 
                     auto name = m_engine->getBindingName(i);
 
-                    std::cout << "Get Inference Result: " << name << ": "
-                              << to_string(out_dims) << std::endl;
+                    info("Get Inference Result: ", name, ": ", to_string(out_dims), '\n');
 
                     auto host_tensor_ptr = std::make_shared<ttl::tensor<float, 4>>(
                         batch_size, out_dims.d[0], out_dims.d[1], out_dims.d[2]);
@@ -257,4 +256,4 @@ namespace dnn {
 
 } // namespace dnn
 
-} // namespace swiftpose
+} // namespace poseplus

@@ -1,6 +1,6 @@
-#include <swiftpose/utility/viz.hpp>
+#include <openpose_plus/utility/viz.hpp>
 
-namespace swiftpose {
+namespace poseplus {
 
 template <typename T, typename S, typename F>
 std::vector<T> map(const F& f, const std::vector<S>& input)
@@ -74,4 +74,4 @@ void draw_human(cv::Mat& img, const human_t& human)
     }
 }
 
-} // namespace swiftpose
+} // namespace poseplus

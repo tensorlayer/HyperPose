@@ -1,8 +1,8 @@
 #pragma once
 
-namespace swiftpose {
+namespace poseplus {
 
 namespace parser {
 }
 
-} // namespace swiftpose
+} // namespace poseplus

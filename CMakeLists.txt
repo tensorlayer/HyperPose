@@ -16,14 +16,8 @@ IF(WITH_TRACE)
     ADD_DEFINITIONS(-DENABLE_TRACE)
 ENDIF()
 
-IF(BUILD_FAKE)
-    MESSAGE(STATUS "[OPENPOSE-PLUS] Fake Building Enabled.")
-    ADD_LIBRARY(openpose-plus src/fake_openpose_plus.cpp)
-ELSE()
-    INCLUDE(cmake/openpose-plus.cmake)
-    INCLUDE(cmake/swiftpose.cmake) # TODO.!
-    INCLUDE(cmake/package.cmake)
-ENDIF()
+INCLUDE(cmake/openpose-plus.cmake)
+INCLUDE(cmake/package.cmake)
 
 INCLUDE(cmake/helpers.cmake)
 INCLUDE(cmake/examples.cmake)

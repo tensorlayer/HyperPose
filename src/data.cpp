@@ -1,6 +1,6 @@
-#include <swiftpose/utility/data.hpp>
+#include <openpose_plus/utility/data.hpp>
 
-namespace swiftpose {
+namespace poseplus {
 
 cv::Mat& output_t::visualize()
 {
@@ -46,4 +46,4 @@ void nhwc_images_append_nchw_batch(std::vector<float>& data,
     }
 } // TODO: Parallel.
 
-} // namespace swiftpose
+} // namespace poseplus

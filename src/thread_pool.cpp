@@ -1,6 +1,6 @@
-#include <swiftpose/utility/thread_pool.hpp>
+#include <openpose_plus/utility/thread_pool.hpp>
 
-namespace swiftpose {
+namespace poseplus {
 
 // Implementation:
 simple_thread_pool::simple_thread_pool(std::size_t sz)
@@ -47,4 +47,4 @@ simple_thread_pool::~simple_thread_pool()
     m_shared_src->cv.notify_all();
 }
 
-} // namespace swiftpose
+} // namespace poseplus

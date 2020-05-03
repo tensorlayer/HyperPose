@@ -3,7 +3,7 @@
 #include <map>
 #include <vector>
 
-#include "coco.h"w
+#include "coco.hpp"
 
 namespace poseplus {
 

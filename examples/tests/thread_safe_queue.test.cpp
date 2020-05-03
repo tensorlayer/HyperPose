@@ -1,9 +1,9 @@
-#include <swiftpose/utility/thread_safe_queue.hpp>
+#include <openpose_plus/utility/thread_safe_queue.hpp>
 
 // Test codes.
 int main()
 {
-    using namespace swiftpose;
+    using namespace poseplus;
 #ifdef NDEBUG
     std::cerr << "Debug Flags not set!\n";
 #endif
