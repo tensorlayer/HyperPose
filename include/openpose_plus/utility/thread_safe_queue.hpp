@@ -56,7 +56,7 @@ public:
         if (m_size + span_size > m_capacity)
             throw std::overflow_error("queue size overfloor, max size = " + std::to_string(m_capacity));
 
-        for(auto it = begin; it != end; ++it) {
+        for (auto it = begin; it != end; ++it) {
             m_array[m_back] = *it;
             unsafe_step_back(1);
         }

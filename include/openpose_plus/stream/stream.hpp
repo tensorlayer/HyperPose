@@ -62,7 +62,7 @@ private:
 
     using pose_set = std::vector<human_t>;
 
-/*
+    /*
 * Connections:
 * input -> resize.
 * input -> replica.

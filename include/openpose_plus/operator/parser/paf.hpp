@@ -4,7 +4,6 @@
 /// \brief Post-processing using Part Affinity Field (PAF).
 /// \author Jiawei Liu(github.com/ganler)
 
-
 #include "../../utility/data.hpp"
 
 namespace poseplus {
@@ -55,7 +54,8 @@ namespace parser {
         /// \return All human topologies found in "this" image.
         /// \note Template parameter `C` must support `operator[]` as indexing.
         template <typename C>
-        std::vector<human_t> process(C&& feature_map_containers) {
+        std::vector<human_t> process(C&& feature_map_containers)
+        {
             // 1@paf, 2@conf.
             return process(feature_map_containers[0], feature_map_containers[1]);
         }

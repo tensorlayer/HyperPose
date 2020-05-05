@@ -4,10 +4,10 @@
 /// \brief The DNN engine implementation of TensorRT.
 /// \author Jiawei Liu(github.com/ganler)
 
+#include "../../utility/model.hpp"
 #include <NvInferRuntime.h>
 #include <NvInferRuntimeCommon.h>
 #include <future>
-#include "../../utility/model.hpp"
 
 #include <ttl/cuda_tensor>
 
@@ -47,8 +47,8 @@ namespace dnn {
         /// \param factor For each element in the input data, they will be multiplied by "factor".
         /// \param flip_rgb Whether to convert the color channels from "BGR" to "RGB".
         explicit tensorrt(const onnx& onnx_model, cv::Size input_size, int max_batch_size = 8,
-                          nvinfer1::DataType dtype = nvinfer1::DataType::kFLOAT,
-                          double factor = 1. / 255, bool flip_rgb = true);
+            nvinfer1::DataType dtype = nvinfer1::DataType::kFLOAT,
+            double factor = 1. / 255, bool flip_rgb = true);
 
         /// Deconstructor of class poseplus::dnn::tensorrt.
         ~tensorrt();

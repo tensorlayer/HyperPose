@@ -5,7 +5,7 @@
 
 // Model flags
 DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",
-              "Path to uff model.");
+    "Path to uff model.");
 DEFINE_string(input_name, "image", "The input node name of your uff model file.");
 DEFINE_string(output_name_list, "outputs/conf,outputs/paf", "The output node names(maybe more than one) of your uff model file.");
 
@@ -32,11 +32,11 @@ int main(int argc, char** argv)
     // * Create TensorRT engine.
     namespace pp = poseplus;
     pp::dnn::tensorrt engine(
-            pp::dnn::uff{FLAGS_model_file, FLAGS_input_name, split(FLAGS_output_name_list, ',')},
-            { FLAGS_input_width, FLAGS_input_height },
-            batch.size());
+        pp::dnn::uff{ FLAGS_model_file, FLAGS_input_name, split(FLAGS_output_name_list, ',') },
+        { FLAGS_input_width, FLAGS_input_height },
+        batch.size());
 
-    pp::parser::paf parser({FLAGS_input_width, FLAGS_input_height });
+    pp::parser::paf parser({ FLAGS_input_width, FLAGS_input_height });
 
     using clk_t = std::chrono::high_resolution_clock;
     auto beg = clk_t::now();

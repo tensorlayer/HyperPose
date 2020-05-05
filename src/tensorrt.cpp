@@ -2,8 +2,8 @@
 #include <openpose_plus/utility/data.hpp>
 
 #include <NvInfer.h>
-#include <NvUffParser.h>
 #include <NvOnnxParser.h>
+#include <NvUffParser.h>
 
 #include <ttl/experimental/copy>
 #include <ttl/range>
@@ -113,9 +113,9 @@ namespace dnn {
     // * Create TensorRT engine.
     static nvinfer1::ICudaEngine*
     create_uff_engine(const std::string& model_file, cv::Size input_size,
-                      const std::string& input_name,
-                      const std::vector<std::string>& output_names, int max_batch_size,
-                      nvinfer1::DataType dtype)
+        const std::string& input_name,
+        const std::vector<std::string>& output_names, int max_batch_size,
+        nvinfer1::DataType dtype)
     {
         TRACE_SCOPE(__func__);
         destroy_ptr<nvuffparser::IUffParser> parser(nvuffparser::createUffParser());
@@ -133,8 +133,8 @@ namespace dnn {
         destroy_ptr<nvinfer1::INetworkDefinition> network(builder->createNetwork());
         if (!parser->parse(model_file.c_str(), *network, dtype)) {
             gLogger.log(
-                    nvinfer1::ILogger::Severity::kERROR,
-                    ("Failed to parse Uff in data type: " + to_string(dtype)).c_str());
+                nvinfer1::ILogger::Severity::kERROR,
+                ("Failed to parse Uff in data type: " + to_string(dtype)).c_str());
             exit(1);
         }
 
@@ -153,18 +153,19 @@ namespace dnn {
     }
 
     static nvinfer1::ICudaEngine*
-    create_onnx_engine(const std::string& model_file, int max_batch_size, nvinfer1::DataType dtype) {
+    create_onnx_engine(const std::string& model_file, int max_batch_size, nvinfer1::DataType dtype)
+    {
         TRACE_SCOPE(__func__);
         destroy_ptr<nvinfer1::IBuilder> builder(nvinfer1::createInferBuilder(gLogger));
-        const auto explicit_batch = 1U << static_cast<uint32_t >(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
+        const auto explicit_batch = 1U << static_cast<uint32_t>(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
 
         destroy_ptr<nvinfer1::INetworkDefinition> network(builder->createNetworkV2(explicit_batch));
         destroy_ptr<nvonnxparser::IParser> parser(nvonnxparser::createParser(*network, gLogger));
 
-        if(!parser->parseFromFile(model_file.c_str(), static_cast<int>(nvinfer1::ILogger::Severity::kWARNING))) {
+        if (!parser->parseFromFile(model_file.c_str(), static_cast<int>(nvinfer1::ILogger::Severity::kWARNING))) {
             gLogger.log(
-                    nvinfer1::ILogger::Severity::kERROR,
-                    ("Failed to parse ONNX in data type: " + to_string(dtype)).c_str());
+                nvinfer1::ILogger::Severity::kERROR,
+                ("Failed to parse ONNX in data type: " + to_string(dtype)).c_str());
             exit(1);
         }
 
@@ -176,7 +177,7 @@ namespace dnn {
 
         if (nullptr == engine) {
             gLogger.log(nvinfer1::ILogger::Severity::kERROR,
-                        "Failed to created engine");
+                "Failed to created engine");
             exit(1);
         }
         return engine;
@@ -191,7 +192,7 @@ namespace dnn {
         , m_max_batch_size(max_batch_size)
         , m_factor(factor)
         , m_engine(create_uff_engine(uff_model.model_path, input_size, uff_model.input_name, uff_model.output_names,
-                                     max_batch_size, dtype))
+              max_batch_size, dtype))
     {
         // Creat buffers.
         const auto n_bind = m_engine->getNbBindings();
@@ -207,13 +208,13 @@ namespace dnn {
     }
 
     tensorrt::tensorrt(const onnx& onnx_model, cv::Size input_size,
-                       int max_batch_size, nvinfer1::DataType dtype, double factor,
-                       bool flip_rgb)
-            : m_inp_size(input_size)
-            , m_flip_rgb(flip_rgb)
-            , m_max_batch_size(max_batch_size)
-            , m_factor(factor)
-            , m_engine(create_onnx_engine(onnx_model.model_path, max_batch_size, dtype))
+        int max_batch_size, nvinfer1::DataType dtype, double factor,
+        bool flip_rgb)
+        : m_inp_size(input_size)
+        , m_flip_rgb(flip_rgb)
+        , m_max_batch_size(max_batch_size)
+        , m_factor(factor)
+        , m_engine(create_onnx_engine(onnx_model.model_path, max_batch_size, dtype))
     {
         // Creat buffers.
         const auto n_bind = m_engine->getNbBindings();
@@ -226,7 +227,6 @@ namespace dnn {
             m_cuda_buffers.emplace_back(max_batch_size, volume(dims) * sizeof_element(data_type));
         }
     }
-
 
     void tensorrt::_batching(std::vector<cv::Mat>& batch, std::vector<float>& cpu_image_batch_buffer)
     {

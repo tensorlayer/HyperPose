@@ -5,7 +5,7 @@
 
 // Model flags
 DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",
-              "Path to uff model.");
+    "Path to uff model.");
 DEFINE_string(input_name, "image", "The input node name of your uff model file.");
 DEFINE_string(output_name_list, "outputs/conf,outputs/paf", "The output node names(maybe more than one) of your uff model file.");
 
@@ -27,38 +27,37 @@ int main(int argc, char** argv)
 
     // * Output video.
     auto writer = cv::VideoWriter(
-            FLAGS_output_video,
-            cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
-            capture.get(cv::CAP_PROP_FPS),
-            cv::Size(FLAGS_input_width, FLAGS_input_height));
+        FLAGS_output_video,
+        cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
+        capture.get(cv::CAP_PROP_FPS),
+        cv::Size(FLAGS_input_width, FLAGS_input_height));
 
     // * Create TensorRT engine.
     namespace pp = poseplus;
     pp::dnn::tensorrt engine(
-            pp::dnn::uff{FLAGS_model_file, FLAGS_input_name, split(FLAGS_output_name_list, ',')},
-            { FLAGS_input_width, FLAGS_input_height },
-            FLAGS_max_batch_size);
+        pp::dnn::uff{ FLAGS_model_file, FLAGS_input_name, split(FLAGS_output_name_list, ',') },
+        { FLAGS_input_width, FLAGS_input_height },
+        FLAGS_max_batch_size);
 
     // * post-processing: Using paf. // TODO: Add proposal networks processing.
-    pp::parser::paf parser({FLAGS_input_width, FLAGS_input_height});
+    pp::parser::paf parser({ FLAGS_input_width, FLAGS_input_height });
 
     using clk_t = std::chrono::high_resolution_clock;
 
     size_t frame_count = 0;
     auto beg = clk_t::now();
     {
-        while(capture.isOpened())
-        {
+        while (capture.isOpened()) {
             std::vector<cv::Mat> batch;
-            for(int i = 0; i < FLAGS_max_batch_size; ++i) {
+            for (int i = 0; i < FLAGS_max_batch_size; ++i) {
                 cv::Mat mat;
                 capture >> mat;
-                if(mat.empty())
+                if (mat.empty())
                     break;
                 batch.push_back(mat);
             }
 
-            if(batch.empty())
+            if (batch.empty())
                 break;
 
             // * TensorRT Inference.

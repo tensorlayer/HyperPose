@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     }
 
     pp::dnn::tensorrt engine(
-        pp::dnn::uff{FLAGS_model_file, FLAGS_input_name, split(FLAGS_output_name_list, ',')},
+        pp::dnn::uff{ FLAGS_model_file, FLAGS_input_name, split(FLAGS_output_name_list, ',') },
         { FLAGS_input_width, FLAGS_input_height },
         FLAGS_max_batch_size);
 

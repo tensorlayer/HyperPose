@@ -226,16 +226,16 @@ namespace parser {
     };
 
     paf::paf(cv::Size image_size, float paf_thresh, float conf_thresh)
-        : m_image_size(image_size),
-          m_paf_thresh(paf_thresh),
-          m_conf_thresh(conf_thresh)
+        : m_image_size(image_size)
+        , m_paf_thresh(paf_thresh)
+        , m_conf_thresh(conf_thresh)
     {
     }
 
     paf::paf(const paf& p)
-        : m_image_size(p.m_image_size),
-          m_paf_thresh(p.m_paf_thresh),
-          m_conf_thresh(p.m_conf_thresh)
+        : m_image_size(p.m_image_size)
+        , m_paf_thresh(p.m_paf_thresh)
+        , m_conf_thresh(p.m_conf_thresh)
     {
     }
 
@@ -270,7 +270,7 @@ namespace parser {
 
         // Get all peaks.
         const auto all_peaks = m_peak_finder.find_peak_coords(
-                ttl::view(*m_upsample_conf), m_conf_thresh, false /* use_gpu */);
+            ttl::view(*m_upsample_conf), m_conf_thresh, false /* use_gpu */);
         const auto peak_ids_by_channel = m_peak_finder.group_by(all_peaks);
 
         const ttl::tensor_view<float, 3>& pafmap = ttl::view(*m_upsample_paf);
@@ -303,15 +303,17 @@ namespace parser {
         return humans;
     }
 
-    void paf::set_paf_thresh(float thresh) {
+    void paf::set_paf_thresh(float thresh)
+    {
         m_paf_thresh = thresh;
     }
 
-    void paf::set_conf_thresh(float thresh) {
+    void paf::set_conf_thresh(float thresh)
+    {
         m_conf_thresh = thresh;
     }
 
-paf::~paf() = default;
+    paf::~paf() = default;
 
 } // namespace parser
 
