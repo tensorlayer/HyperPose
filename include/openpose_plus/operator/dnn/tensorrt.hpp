@@ -41,7 +41,7 @@ namespace dnn {
         /// \brief The constructor of TensorRT engine using ONNX model file.
         ///
         /// \param onnx_model See `poseplus::dnn::onnx`.
-        /// \param input_size The input image size(height, width).
+        /// \param input_size The input image size(width, height).
         /// \param max_batch_size The maximum batch size of the inputs. (for input/output buffer allocation)
         /// \param dtype The data type of data element. (for some GPUs, low precision data type will be faster)
         /// \param factor For each element in the input data, they will be multiplied by "factor".
@@ -58,7 +58,7 @@ namespace dnn {
         inline int max_batch_size() noexcept { return m_max_batch_size; }
 
         ///
-        /// \return The input `(height, width)` of this engine.
+        /// \return The input `(width, height)` of this engine.
         inline cv::Size input_size() noexcept { return m_inp_size; }
 
         /// Do inference with `cv::Mat`(OpenCV image/matrix data structure).

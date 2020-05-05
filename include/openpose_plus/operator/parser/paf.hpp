@@ -18,12 +18,12 @@ namespace parser {
     public:
         /// \brief Constructor indicating the image size and thresholds.
         ///
-        /// \param image_size The size(height, width) of expected output image.
+        /// \param resolution_size The size(width, height) of expected resolution for the post-processing.
         /// \param paf_thresh The threshold of Part Affinity Field.
         /// \param conf_thresh The activation threshold.
-        /// \note The parameter `image_size` is not the size of feature map, but the size of expected final images. The
-        /// feature map resolution will be expanded to `image_size` and then apply PAF.
-        paf(cv::Size image_size, float paf_thresh = 0.05, float conf_thresh = 0.05);
+        /// \note Before doing PAF, the (width, height) of feature map will be expanded to `resolution_size` to perform
+        /// a more accurate post processing.
+        paf(cv::Size resolution_size, float paf_thresh = 0.05, float conf_thresh = 0.05);
 
         /// \brief Function to process one image.
         ///
@@ -76,7 +76,7 @@ namespace parser {
         ~paf();
 
     private:
-        cv::Size m_image_size;
+        cv::Size m_resolution_size;
         float m_paf_thresh, m_conf_thresh;
 
         static constexpr nullptr_t UNINITIALIZED_PTR = nullptr;

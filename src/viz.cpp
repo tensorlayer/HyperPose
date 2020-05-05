@@ -61,7 +61,7 @@ void draw_human(cv::Mat& img, const human_t& human)
         const auto color = coco_colors[pair_id];
 
         if (p1.has_value && p2.has_value)
-            cv::line(img, cv::Point(p1.x, p1.y), cv::Point(p2.x, p2.y), color, thickness);
+            cv::line(img, cv::Point(p1.x * img.cols, p1.y * img.rows), cv::Point(p2.x * img.cols, p2.y * img.rows), color, thickness);
     }
 
     // draw points
@@ -69,7 +69,7 @@ void draw_human(cv::Mat& img, const human_t& human)
         const auto color = coco_colors[part_idx];
         const auto p = human.parts[part_idx];
         if (p.has_value) {
-            cv::circle(img, cv::Point(p.x, p.y), thickness, color, thickness);
+            cv::circle(img, cv::Point(p.x * img.cols, p.y * img.rows), thickness, color, thickness);
         }
     }
 }

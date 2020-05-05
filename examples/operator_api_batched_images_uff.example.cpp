@@ -11,6 +11,7 @@ DEFINE_string(output_name_list, "outputs/conf,outputs/paf", "The output node nam
 
 DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
+
 DEFINE_string(input_folder, "../data/media", "Folder of images to inference.");
 
 int main(int argc, char** argv)

@@ -225,15 +225,15 @@ namespace parser {
         using peak_finder_t::peak_finder_t;
     };
 
-    paf::paf(cv::Size image_size, float paf_thresh, float conf_thresh)
-        : m_image_size(image_size)
+    paf::paf(cv::Size resolution_size, float paf_thresh, float conf_thresh)
+        : m_resolution_size(resolution_size)
         , m_paf_thresh(paf_thresh)
         , m_conf_thresh(conf_thresh)
     {
     }
 
     paf::paf(const paf& p)
-        : m_image_size(p.m_image_size)
+        : m_resolution_size(p.m_resolution_size)
         , m_paf_thresh(p.m_paf_thresh)
         , m_conf_thresh(p.m_conf_thresh)
     {
@@ -253,11 +253,11 @@ namespace parser {
         if (m_n_connections == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR && m_n_joints == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR) {
             m_n_connections = n_connections_2_ / 2;
             m_n_joints = n_joints_;
-            m_upsample_paf = std::make_unique<ttl::tensor<float, 3>>(n_connections_2_, m_image_size.height, m_image_size.width);
-            m_upsample_conf = std::make_unique<ttl::tensor<float, 3>>(n_joints_, m_image_size.height, m_image_size.width);
+            m_upsample_paf = std::make_unique<ttl::tensor<float, 3>>(n_connections_2_, m_resolution_size.height, m_resolution_size.width);
+            m_upsample_conf = std::make_unique<ttl::tensor<float, 3>>(n_joints_, m_resolution_size.height, m_resolution_size.width);
             m_feature_size = cv::Size(fw_paf, fh_paf);
             m_peak_finder_ptr = std::make_unique<paf::peak_finder_impl>(
-                m_n_joints, m_image_size.height, m_image_size.width, 17);
+                m_n_joints, m_resolution_size.height, m_resolution_size.width, 17);
         }
 
         auto& m_peak_finder = *m_peak_finder_ptr;
@@ -293,8 +293,8 @@ namespace parser {
                     human.parts[i].has_value = true;
                     const auto p = all_peaks[hr.parts[i].id];
                     human.parts[i].score = p.score;
-                    human.parts[i].x = p.pos.x;
-                    human.parts[i].y = p.pos.y;
+                    human.parts[i].x = static_cast<float>(p.pos.x) / m_resolution_size.width;
+                    human.parts[i].y = static_cast<float>(p.pos.y) / m_resolution_size.height;
                 }
             }
             humans.push_back(human);

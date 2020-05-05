@@ -89,27 +89,6 @@ namespace dnn {
         return ret;
     }
 
-    // * Initialize the TensorRT engine using the .uff file.
-    static nvinfer1::ICudaEngine*
-    load_model_and_create_engine(const char* uffFile, int max_batch_size,
-        nvuffparser::IUffParser* parser,
-        nvinfer1::DataType dtype)
-    {
-        destroy_ptr<nvinfer1::IBuilder> builder(
-            nvinfer1::createInferBuilder(gLogger));
-        destroy_ptr<nvinfer1::INetworkDefinition> network(builder->createNetwork());
-
-        if (!parser->parse(uffFile, *network, dtype)) {
-            gLogger.log(
-                nvinfer1::ILogger::Severity::kERROR,
-                ("Failed to parse Uff in data type: " + to_string(dtype)).c_str());
-            return nullptr;
-        }
-
-        builder->setMaxBatchSize(max_batch_size);
-        return builder->buildCudaEngine(*network);
-    }
-
     // * Create TensorRT engine.
     static nvinfer1::ICudaEngine*
     create_uff_engine(const std::string& model_file, cv::Size input_size,
@@ -139,9 +118,9 @@ namespace dnn {
         }
 
         builder->setMaxBatchSize(max_batch_size);
+
         destroy_ptr<nvinfer1::IBuilderConfig> config(builder->createBuilderConfig());
         config->setMaxWorkspaceSize((1 << 20) * 256);
-
         auto engine = builder->buildEngineWithConfig(*network, *config);
 
         if (nullptr == engine) {
