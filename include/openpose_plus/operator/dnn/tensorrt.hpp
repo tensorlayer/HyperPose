@@ -7,6 +7,7 @@
 #include <NvInferRuntime.h>
 #include <NvInferRuntimeCommon.h>
 #include <future>
+#include "../../utility/model.hpp"
 
 #include <ttl/cuda_tensor>
 
@@ -23,27 +24,31 @@ namespace dnn {
     /// \brief `tensorrt` is a class using TensorRT DNN engine to perform neural network inference.
     class tensorrt {
     public:
-        /// \brief The constructor of TensorRT engine.
+        /// \brief The constructor of TensorRT engine using UFF model file.
         ///
-        /// \note Currently, we support the
-        /// [`.uff`](https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/python_api/uff/uff.html) files which users
-        /// should specify the input and output nodes by indicating their names(the names can be inferred when converting
-        /// models to `.uff` format).
-        ///
-        /// \param model_path Path to the model file. (currently, only `.uff` is supported)
-        /// \param input_size The input size(width first, and then height) of the model.
-        /// \param input_name The name of input node. (for simplicity, we only consider 1 input node model)
-        /// \param output_names The names of output nodes. (e.g., openpose model will generate "paf" and "conf")
+        /// \param uff_model See `poseplus::dnn::uff`.
+        /// \param input_size The input image size(height, width).
         /// \param max_batch_size The maximum batch size of the inputs. (for input/output buffer allocation)
         /// \param dtype The data type of data element. (for some GPUs, low precision data type will be faster)
         /// \param factor For each element in the input data, they will be multiplied by "factor".
         /// \param flip_rgb Whether to convert the color channels from "BGR" to "RGB".
-        explicit tensorrt(const std::string& model_path, cv::Size input_size,
-            const std::string& input_name,
-            const std::vector<std::string>& output_names,
+        explicit tensorrt(const uff& uff_model,
+            cv::Size input_size,
             int max_batch_size = 8,
             nvinfer1::DataType dtype = nvinfer1::DataType::kFLOAT,
             double factor = 1. / 255, bool flip_rgb = true);
+
+        /// \brief The constructor of TensorRT engine using ONNX model file.
+        ///
+        /// \param onnx_model See `poseplus::dnn::onnx`.
+        /// \param input_size The input image size(height, width).
+        /// \param max_batch_size The maximum batch size of the inputs. (for input/output buffer allocation)
+        /// \param dtype The data type of data element. (for some GPUs, low precision data type will be faster)
+        /// \param factor For each element in the input data, they will be multiplied by "factor".
+        /// \param flip_rgb Whether to convert the color channels from "BGR" to "RGB".
+        explicit tensorrt(const onnx& onnx_model, cv::Size input_size, int max_batch_size = 8,
+                          nvinfer1::DataType dtype = nvinfer1::DataType::kFLOAT,
+                          double factor = 1. / 255, bool flip_rgb = true);
 
         /// Deconstructor of class poseplus::dnn::tensorrt.
         ~tensorrt();

@@ -38,19 +38,18 @@ void basic_stream_manager::read_from(cv::VideoCapture& cap)
         cap >> mat;
         if (mat.empty())
             break;
-        ++really_decoded;
-        m_input_queue.wait_until_pushed(std::move(mat));
+        m_input_queue.wait_until_pushed(mat);
         m_cv_data_i.notify_one();
+        ++really_decoded;
     }
     size_t diff = supposed_decoded - really_decoded;
     if (diff != 0)
         m_remaining_num -= diff;
-    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void basic_stream_manager::read_from(cv::Mat mat)
 {
-    m_input_queue.wait_until_pushed(std::move(mat));
+    m_input_queue.wait_until_pushed(mat);
     ++m_remaining_num;
     m_cv_data_i.notify_one();
 }
@@ -58,29 +57,40 @@ void basic_stream_manager::read_from(cv::Mat mat)
 void basic_stream_manager::resize_from_inputs(cv::Size size)
 {
     while (true) {
-        //        std::cout << __FUNCTION__ << " LOCK\n";
+//        std::cout << __FUNCTION__ << " LOCK" << std::endl;
 
         {
             std::unique_lock lk{ m_input_queue.m_mu };
             m_cv_data_i.wait(lk, [this] { return m_input_queue.m_size > 0 || m_shutdown; });
         }
 
-        //        std::cout << __FUNCTION__ << " UNLOCK\n";
+//        std::cout << __FUNCTION__ << " UNLOCK" << std::endl;
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             break;
 
         auto inputs = m_input_queue.dump_all();
 
-        std::vector<cv::Mat> after_resize_mats(inputs.size());
-        for (size_t i = 0; i < after_resize_mats.size(); ++i)
-            cv::resize(inputs[i], after_resize_mats[i], size);
+        std::vector<cv::Mat> after_resize_mats;
+        after_resize_mats.reserve(inputs.size());
+
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            if (inputs[i].empty()) {
+                warning("Got an empty image, skipped");
+                --m_remaining_num;
+            } else {
+                cv::Mat mat;
+                cv::resize(inputs[i], mat, size);
+                after_resize_mats.push_back(mat);
+            }
+        }
 
         m_input_queue_replica.wait_until_pushed(after_resize_mats);
         m_resized_queue.wait_until_pushed(std::move(after_resize_mats));
         m_cv_resize.notify_one();
+//        std::cout << __FUNCTION__ << " Notified!" << std::endl;
     }
-    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
+//        std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void basic_stream_manager::write_to(cv::VideoWriter& writer)
@@ -121,11 +131,11 @@ void basic_stream_manager::add_queue_monitor(double milli)
             info("Reporting Stream Status:\n");
             info("Remaining frames: ", m_remaining_num, '\n');
             info("Shutdown or not: ", (m_shutdown ? "SHUTDOWN" : "ALIVE"), '\n');
-            info("thread_safe_queue<cv::Mat> m_input_queue -> Size = ", m_input_queue.unsafe_size(), '\n');
-            info("thread_safe_queue<cv::Mat> m_input_queue_replica -> Size = ", m_input_queue_replica.unsafe_size(), '\n');
-            info("thread_safe_queue<cv::Mat> m_resized_queue -> Size = ", m_resized_queue.unsafe_size(), '\n');
-            info("thread_safe_queue<internal_t> m_after_inference_queue -> Size = ", m_after_inference_queue.unsafe_size(), '\n');
-            info("thread_safe_queue<pose_set> m_pose_sets_queue -> Size = ", m_pose_sets_queue.unsafe_size(), '\n');
+            info("thread_safe_queue<cv::Mat> m_input_queue -> Size = ", m_input_queue.unsafe_size(), '/', m_input_queue.capacity(), '\n');
+            info("thread_safe_queue<cv::Mat> m_input_queue_replica -> Size = ", m_input_queue_replica.unsafe_size(), '/', m_input_queue_replica.capacity(), '\n');
+            info("thread_safe_queue<cv::Mat> m_resized_queue -> Size = ", m_resized_queue.unsafe_size(), '/', m_resized_queue.capacity(), '\n');
+            info("thread_safe_queue<internal_t> m_after_inference_queue -> Size = ", m_after_inference_queue.unsafe_size() , '/',  m_after_inference_queue.capacity(), '\n');
+            info("thread_safe_queue<pose_set> m_pose_sets_queue -> Size = ", m_pose_sets_queue.unsafe_size(), '/', m_pose_sets_queue.capacity(), '\n');
             using namespace std::chrono_literals;
             std::this_thread::sleep_for(milli * 1ms);
         }

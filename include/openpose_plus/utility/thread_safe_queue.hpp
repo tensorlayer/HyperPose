@@ -31,7 +31,7 @@ public:
         std::lock_guard lk{ m_mu };
 
         if (m_size >= m_capacity)
-            throw std::overflow_error("queue size overfloor, max size = " + std::to_string(m_capacity));
+            throw std::overflow_error("queue size overflow, max size = " + std::to_string(m_capacity));
         m_array[m_back] = std::move(v);
         unsafe_step_back();
         ++m_size;
@@ -56,15 +56,11 @@ public:
         if (m_size + span_size > m_capacity)
             throw std::overflow_error("queue size overfloor, max size = " + std::to_string(m_capacity));
 
-        size_t back2cap = m_capacity - m_back;
-        if (back2cap >= span_size)
-            std::copy(begin, end, m_array + m_back);
-        else {
-            std::copy(std::next(begin, back2cap), end, m_array);
-            std::copy(begin, std::next(begin, back2cap), m_array + m_back);
+        for(auto it = begin; it != end; ++it) {
+            m_array[m_back] = *it;
+            unsafe_step_back(1);
         }
 
-        unsafe_step_back(span_size);
         m_size += span_size;
     }
 
@@ -106,7 +102,8 @@ public:
                 std::cerr << err.what() << std::endl;
                 throw;
             } catch (const std::overflow_error& err) {
-                std::cerr << err.what() << std::endl;
+                std::cerr << err.what() << '\n';
+                std::cerr << "Currently: size/capacity: " << m_size << '/' << m_capacity << ", space needed: " << span_size << std::endl;
                 m_wait_for_space += span_size;
                 std::unique_lock lk{ m_mu };
                 m_cv.wait(

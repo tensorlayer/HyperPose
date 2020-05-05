@@ -23,6 +23,7 @@ TARGET_LINK_LIBRARIES(
         cudart
         nvinfer
         nvparsers
+        nvonnxparser
         ${OpenCV_LIBS})
 TARGET_INCLUDE_DIRECTORIES(
         ${POSE_LIB_NAME} PRIVATE

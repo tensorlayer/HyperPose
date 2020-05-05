@@ -2,11 +2,13 @@
 #include <experimental/filesystem>
 #include <gflags/gflags.h>
 #include <openpose_plus/openpose_plus.hpp>
-#include <regex>
 
 // Model flags
 DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",
-    "Path to uff model.");
+              "Path to uff model.");
+DEFINE_string(input_name, "image", "The input node name of your uff model file.");
+DEFINE_string(output_name_list, "outputs/conf,outputs/paf", "The output node names(maybe more than one) of your uff model file.");
+
 DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
 DEFINE_string(input_folder, "../data/media", "Folder of images to inference.");
@@ -28,15 +30,13 @@ int main(int argc, char** argv)
     poseplus_log() << "Batch shape: [" << batch.size() << ", 3, " << FLAGS_input_height << ", " << FLAGS_input_width << "]\n";
 
     // * Create TensorRT engine.
-    namespace sp = poseplus;
-    sp::dnn::tensorrt engine(
-        FLAGS_model_file,
-        { FLAGS_input_width, FLAGS_input_height },
-        "image",
-        { "outputs/conf", "outputs/paf" },
-        batch.size());
+    namespace pp = poseplus;
+    pp::dnn::tensorrt engine(
+            pp::dnn::uff{FLAGS_model_file, FLAGS_input_name, split(FLAGS_output_name_list, ',')},
+            { FLAGS_input_width, FLAGS_input_height },
+            batch.size());
 
-    sp::parser::paf parser({ FLAGS_input_width, FLAGS_input_height });
+    pp::parser::paf parser({FLAGS_input_width, FLAGS_input_height });
 
     using clk_t = std::chrono::high_resolution_clock;
     auto beg = clk_t::now();
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
                 poseplus_log() << feature_map << std::endl;
 
         // * Paf.
-        std::vector<std::vector<sp::human_t>> pose_vectors;
+        std::vector<std::vector<pp::human_t>> pose_vectors;
         pose_vectors.reserve(feature_map_packets.size());
         for (auto&& packet : feature_map_packets) {
             pose_vectors.push_back(parser.process(packet[0], packet[1]));
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
         for (size_t i = 0; i < batch.size(); ++i) {
             cv::resize(batch[i], batch[i], { FLAGS_input_width, FLAGS_input_height });
             for (auto&& pose : pose_vectors[i])
-                sp::draw_human(batch[i], pose);
+                pp::draw_human(batch[i], pose);
             cv::imwrite("output_" + std::to_string(i) + ".png", batch[i]);
         }
     }
