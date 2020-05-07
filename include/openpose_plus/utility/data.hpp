@@ -17,29 +17,32 @@ std::vector<cv::Mat> make_batch(MatType... mats)
     return ret;
 }
 
-struct feature_map_t : public ttl::tensor_ref<float, 3> {
+struct feature_map_t {
 public:
-    feature_map_t(std::string name_, std::shared_ptr<ttl::tensor<float, 4>> ptr,
-        ttl::tensor_ref<float, 3> ref)
-        : ttl::tensor_ref<float, 3>(ref)
-        , m_name(std::move(name_))
-        , m_tensor_ptr(std::move(ptr))
+    feature_map_t(std::string name, ttl::tensor<float, 3> tensor)
+        : m_name(std::move(name))
+        , m_tensor(std::move(tensor))
     {
     }
 
     friend std::ostream& operator<<(std::ostream& out, const feature_map_t& map)
     {
         //        std::cout << "value test: " << map.data()[2] << std::endl; // TODO. Debug
-        out << map.m_name << ":[" << map.dims()[0] << ", " << map.dims()[1] << ", "
-            << map.dims()[2] << ']';
+        const auto [a, b, c] = map.m_tensor.dims();
+        out << map.m_name << ":[" << a << ", " << b << ", " << c << ']';
         return out;
     }
 
     inline const std::string& name() { return m_name; }
 
+    ttl::tensor_view<float, 3> view() const
+    {
+        return ttl::view(m_tensor);
+    }
+
 private:
-    std::shared_ptr<ttl::tensor<float, 4>> m_tensor_ptr;
     std::string m_name;
+    ttl::tensor<float, 3> m_tensor;
 };
 
 using internal_t = std::vector<feature_map_t>;
