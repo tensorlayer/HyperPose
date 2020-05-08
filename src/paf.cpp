@@ -239,13 +239,13 @@ namespace parser {
     {
     }
 
-    std::vector<human_t> paf::process(feature_map_t paf_map, feature_map_t conf_map)
+    std::vector<human_t> paf::process(const feature_map_t& paf_map, const feature_map_t& conf_map)
     {
         TRACE_SCOPE("PAF");
         std::vector<human_t> humans{};
 
-        auto [n_connections_2_, fw_paf, fh_paf] = paf_map.dims();
-        auto [n_joints_, fw_conf, fh_conf] = conf_map.dims();
+        auto [n_connections_2_, fw_paf, fh_paf] = paf_map.view().dims();
+        auto [n_joints_, fw_conf, fh_conf] = conf_map.view().dims();
 
         assert(fw_paf == fw_conf);
         assert(fh_paf == fh_conf);
@@ -264,8 +264,8 @@ namespace parser {
 
         {
             TRACE_SCOPE("resize heatmap and PAF");
-            resize_area(ttl::tensor_view<float, 3>(conf_map.data(), conf_map.dims()), ttl::ref(*m_upsample_conf));
-            resize_area(ttl::tensor_view<float, 3>(paf_map.data(), paf_map.dims()), ttl::ref(*m_upsample_paf));
+            resize_area(conf_map.view(), ttl::ref(*m_upsample_conf));
+            resize_area(paf_map.view(), ttl::ref(*m_upsample_paf));
         }
 
         // Get all peaks.

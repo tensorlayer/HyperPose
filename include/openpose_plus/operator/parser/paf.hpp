@@ -44,7 +44,7 @@ namespace parser {
         /// \param paf The paf tensor.
         /// \param conf The conf tensor.
         /// \return All human topologies found in "this" image.
-        std::vector<human_t> process(feature_map_t paf, feature_map_t conf);
+        std::vector<human_t> process(const feature_map_t& paf, const feature_map_t& conf);
 
         /// \brief Function to process one image.
         ///

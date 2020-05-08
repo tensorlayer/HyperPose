@@ -12,6 +12,15 @@
 #include "logging.hpp"
 #include "trace.hpp"
 
+namespace ttl {
+template <typename R, rank_t r>
+tensor_ref<char, 1> ref_chars(const ttl::tensor<R, r>& t)
+{
+    // TODO: make it an offical API: https://github.com/stdml/stdtensor/issues/61
+    return tensor_ref<char, 1>(reinterpret_cast<char*>(t.data()), t.data_size());
+}
+}
+
 namespace poseplus {
 namespace dnn {
 
@@ -251,19 +260,17 @@ namespace dnn {
                     const auto buffer = m_cuda_buffers[i].slice(0, batch_size);
 
                     const nvinfer1::Dims out_dims = m_engine->getBindingDimensions(i);
+                    const ttl::shape<3> feature_shape(out_dims.d[0], out_dims.d[1], out_dims.d[2]);
 
                     auto name = m_engine->getBindingName(i);
 
                     info("Get Inference Result: ", name, ": ", to_string(out_dims), '\n');
 
-                    auto host_tensor_ptr = std::make_shared<ttl::tensor<float, 4>>(
-                        batch_size, out_dims.d[0], out_dims.d[1], out_dims.d[2]);
-
-                    ttl::tensor_ref<char, 2> output(
-                        reinterpret_cast<char*>(host_tensor_ptr->data()), buffer.shape());
-                    ttl::copy(output, ttl::view(buffer));
-                    for (int j = 0; j < batch_size; ++j)
-                        ret[j].emplace_back(name, host_tensor_ptr, (*host_tensor_ptr)[j]);
+                    for (auto j : ttl::range(batch_size)) {
+                        ttl::tensor<float, 3> host_tensor(feature_shape);
+                        ttl::copy(ttl::ref_chars(host_tensor), ttl::view(buffer[j]));
+                        ret[j].emplace_back(name, std::move(host_tensor));
+                    }
                 }
             }
         }
