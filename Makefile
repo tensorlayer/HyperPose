@@ -1,3 +1,1 @@
-default:
-	make -f Makefile.old
-
+Makefile.old
