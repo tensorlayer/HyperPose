@@ -8,6 +8,7 @@
 
 namespace poseplus {
 
+/// \brief The namespace to contain things related to post processing.
 /// \note In OpenPose-Plus, the pose estimation pipeline consists of DNN inference and parsing(post-processing). The
 /// parser part implementation is under the namespace `poseplus::parser`.
 namespace parser {
