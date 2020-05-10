@@ -1,6 +1,6 @@
 #pragma once
 
-#include "viz.hpp"
+#include "human.hpp"
 
 #include <opencv2/opencv.hpp>
 #include <ttl/tensor>

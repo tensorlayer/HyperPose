@@ -16,7 +16,7 @@ ADD_LIBRARY(
         src/data.cpp
         src/stream.cpp
         src/thread_pool.cpp
-        src/viz.cpp)
+        src/human.cpp)
 TARGET_LINK_LIBRARIES(
         ${POSE_LIB_NAME}
         cudnn

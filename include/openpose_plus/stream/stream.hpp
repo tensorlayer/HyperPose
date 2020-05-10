@@ -12,7 +12,7 @@
 #include "../utility/data.hpp"
 #include "../utility/thread_pool.hpp"
 #include "../utility/thread_safe_queue.hpp"
-#include "../utility/viz.hpp"
+#include "../utility/human.hpp"
 
 namespace poseplus {
 

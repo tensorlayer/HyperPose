@@ -1,4 +1,4 @@
-#include <openpose_plus/utility/viz.hpp>
+#include <openpose_plus/utility/human.hpp>
 
 namespace poseplus {
 

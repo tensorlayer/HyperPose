@@ -12,7 +12,7 @@
 #include <ttl/range>
 #include <ttl/tensor>
 
-#include <openpose_plus/utility/viz.hpp>
+#include <openpose_plus/utility/human.hpp>
 
 #include "cudnn.hpp"
 #include "logging.hpp"
