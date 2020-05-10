@@ -14,9 +14,10 @@ simple_thread_pool::simple_thread_pool(std::size_t sz)
                     // >>> Critical region => Begin
                     {
                         std::unique_lock<std::mutex> lock(ptr->queue_mu);
-                        ptr->cv.wait(
-                            lock, [&] { return ptr->shutdown or !ptr->queue.empty(); });
-                        if (ptr->shutdown and ptr->queue.empty())
+                        ptr->cv.wait(lock, [&] {
+                            return ptr->shutdown || !ptr->queue.empty();
+                        });
+                        if (ptr->shutdown && ptr->queue.empty())
                             return; // Conditions to let the thread go.
                         task = std::move(ptr->queue.front());
                         ptr->queue.pop();
@@ -46,5 +47,8 @@ simple_thread_pool::~simple_thread_pool()
     std::atomic_signal_fence(std::memory_order_seq_cst);
     m_shared_src->cv.notify_all();
 }
+<<<<<<< HEAD:src/thread_pool.cpp
 
 } // namespace poseplus
+=======
+>>>>>>> master:examples/thread_pool.cpp

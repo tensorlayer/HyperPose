@@ -47,6 +47,8 @@ Then you'll see the output images in the `cmake-build/Linux` folder.
 
 If you cannot execute the binary file successfully, you can refer to the `tensorrt.log` for more details.
 
+> To see the best performance, you'd better test `example-batch-detector` with big amount of data or just run it more than once to avoid cold start.
+
 ### Speed Results
 
 If you want to share your results on your machine, welcome to PR!
