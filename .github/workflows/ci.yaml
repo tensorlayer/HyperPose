@@ -17,8 +17,8 @@ jobs:
     - run: ./scripts/install-pafprocess.sh
     - run: ./scripts/download-test-data.sh
 
-    - run: docker build --rm -t openpose-plus-test:snapshot -f docker/Dockerfile.travis-ci .
-    - run: docker run --rm -it openpose-plus-test:snapshot sh -c './configure --build-fake --with-trace && make && make test'
+    # - run: docker build --rm -t openpose-plus-test:snapshot -f docker/Dockerfile.travis-ci .
+    # - run: docker run --rm -it openpose-plus-test:snapshot sh -c './configure --build-fake --with-trace && make && make test'
 
     - run: python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vgg
     - run: python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vggtiny
