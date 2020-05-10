@@ -23,6 +23,7 @@ private:
         std::is_convertible_v<
             std::result_of_t<decltype (&NameGetter::operator())()>,
             std::string>>;
+
 public:
     template <typename, typename>
     friend class stream;
