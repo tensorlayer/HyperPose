@@ -76,8 +76,7 @@ void basic_stream_manager::resize_from_inputs(cv::Size size)
                 warning("Got an empty image, skipped");
                 --m_remaining_num;
             } else {
-                if (!m_use_original_resolution)
-                {
+                if (!m_use_original_resolution) {
                     cv::resize(inputs[i], inputs[i], size);
                     after_resize_mats.push_back(inputs[i]);
                 } else {

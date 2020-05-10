@@ -10,9 +10,9 @@
 #include <vector>
 
 #include "../utility/data.hpp"
+#include "../utility/human.hpp"
 #include "../utility/thread_pool.hpp"
 #include "../utility/thread_safe_queue.hpp"
-#include "../utility/human.hpp"
 
 namespace poseplus {
 
@@ -61,7 +61,7 @@ private:
 
     using pose_set = std::vector<human_t>;
 
-/*
+    /*
 * Connections:
 * input -> resize.
 * input -> replica.
@@ -169,6 +169,7 @@ public:
     /// Synchronized version of async_handler.
     class sync_handler {
         stream& m_stream;
+
     public:
         sync_handler(stream& s)
             : m_stream(s)
