@@ -32,6 +32,7 @@ inline const coco_pair_list_t COCOPAIRS_NET = {
         { 26, 27 }, // 13
 };
 
+
 inline const coco_pair_list_t COCOPAIRS = {
         { 1, 2 }, // 6
         { 1, 5 }, // 10
@@ -133,8 +134,7 @@ struct human_ref_t_ {
     {
     }
 
-    inline bool touches(const std::pair<int, int>& p,
-                        const connection& conn) const
+    inline bool touches(const std::pair<int, int>& p, const connection& conn) const
     {
         return parts[p.first].id == conn.cid1 || parts[p.second].id == conn.cid2;
     }

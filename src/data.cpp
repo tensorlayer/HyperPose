@@ -2,29 +2,17 @@
 
 namespace poseplus {
 
-cv::Mat& output_t::visualize()
+void nhwc_images_append_nchw_batch(std::vector<float>& data, std::vector<cv::Mat> images, double factor, bool flip_rb)
 {
-    for (auto&& p : poses)
-        draw_human(mat, p);
-    return mat;
-}
+    if (images.empty())
+        return;
 
-cv::Mat output_t::visualize_copied() const
-{
-    cv::Mat mat_ = mat.clone();
-    for (auto&& p : poses)
-        draw_human(mat_, p);
-    return mat_;
-}
-
-void nhwc_images_append_nchw_batch(std::vector<float>& data,
-    std::vector<cv::Mat> images, cv::Size size,
-    double factor, bool flip_rb)
-{
+    const auto size = images.at(0).size();
     data.reserve(size.area() * 3 * images.size() + data.size());
 
     for (auto&& image : images) {
         assert(image.type() == CV_8UC3);
+        assert(size == image.size());
 
         int iter_rows = image.rows;
         int iter_cols = image.cols;

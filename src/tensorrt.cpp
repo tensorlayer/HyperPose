@@ -118,7 +118,7 @@ namespace dnn {
         }
 
         destroy_ptr<nvinfer1::IBuilder> builder(nvinfer1::createInferBuilder(gLogger));
-        destroy_ptr<nvinfer1::INetworkDefinition> network(builder->createNetwork());
+        destroy_ptr<nvinfer1::INetworkDefinition> network(builder->createNetworkV2(0U));
         if (!parser->parse(model_file.c_str(), *network, dtype)) {
             gLogger.log(
                 nvinfer1::ILogger::Severity::kERROR,
@@ -129,7 +129,7 @@ namespace dnn {
         builder->setMaxBatchSize(max_batch_size);
 
         destroy_ptr<nvinfer1::IBuilderConfig> config(builder->createBuilderConfig());
-        config->setMaxWorkspaceSize((1 << 20) * 256);
+        config->setMaxWorkspaceSize((1 << 20) * 512);
         auto engine = builder->buildEngineWithConfig(*network, *config);
 
         if (nullptr == engine) {
@@ -159,7 +159,7 @@ namespace dnn {
 
         builder->setMaxBatchSize(max_batch_size);
         destroy_ptr<nvinfer1::IBuilderConfig> config(builder->createBuilderConfig());
-        config->setMaxWorkspaceSize((1 << 20) * 256); // TODO: A better way to set the workspace.
+        config->setMaxWorkspaceSize((1 << 20) * 512); // TODO: A better way to set the workspace.
 
         auto engine = builder->buildEngineWithConfig(*network, *config);
 
@@ -219,8 +219,7 @@ namespace dnn {
     void tensorrt::_batching(std::vector<cv::Mat>& batch, std::vector<float>& cpu_image_batch_buffer)
     {
         TRACE_SCOPE("INFERENCE::Images2NCHW");
-        nhwc_images_append_nchw_batch(cpu_image_batch_buffer, batch, m_inp_size,
-            m_factor, m_flip_rgb);
+        nhwc_images_append_nchw_batch(cpu_image_batch_buffer, batch, m_factor, m_flip_rgb);
     }
 
     std::vector<internal_t>
