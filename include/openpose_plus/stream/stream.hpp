@@ -28,7 +28,7 @@ public:
     template <typename, typename>
     friend class stream;
 
-    basic_stream_manager(size_t uniform_max_size);
+    basic_stream_manager(size_t uniform_max_size, bool use_original_resolution);
 
     void read_from(const std::vector<cv::Mat>&);
     void read_from(cv::VideoCapture&);
@@ -52,6 +52,7 @@ public:
 
 private:
     std::atomic<size_t> m_remaining_num{ 0 };
+    const bool m_use_original_resolution;
 
     bool m_shutdown = false;
     std::mutex m_global_mutex;
@@ -60,7 +61,7 @@ private:
 
     using pose_set = std::vector<human_t>;
 
-    /*
+/*
 * Connections:
 * input -> resize.
 * input -> replica.
@@ -83,11 +84,51 @@ private:
     thread_pool m_thread_pool;
 };
 
+/// \brief The class to do end-to-end stream processing for pose estimation.
+/**
+ * @code
+ * namespace pp = poseplus;
+ *
+ * // Create input stream.
+ * cv::VideoCapture cap(...);
+ *
+ * // Create output stream.
+ * cv::VideoWriter writer(...);
+ *
+ * // Create engine.
+ * pp::dnn::tensorrt engine(...);
+ *
+ * // Create PAF processor.
+ * poseplus::parser::paf paf_processor{};
+ *
+ * // Create a stream.
+ * auto stream = poseplus::make_stream(engine, paf_processor);
+ *
+ * // Set input stream asynchronously.
+ * stream.async() << cap;
+ *
+ * // Set the output stream synchronously and waiting for the work done.
+ * stream.sync() >> writer.
+ *
+ * @endcode
+ */
+/// \tparam DNNEngine The DNN engine class. (e.g. poseplus::dnn::tensorrt)
+/// \tparam Parser The post-processing class. (e.g. poseplus::parser::paf)
 template <typename DNNEngine, typename Parser>
 class stream {
 public:
-    stream(DNNEngine& engine, Parser& parser, size_t parser_cnt = 0, size_t queue_max_size = 128)
-        : m_stream_manager(queue_max_size)
+    /// \brief Constructor of class stream.
+    /// \param engine The reference to the DNN engine object.
+    /// \param parser The reference to the parser object.
+    /// \param use_original_resolution If true, the output image size will be the input image size, otherwise the DNN input size.
+    /// \param parser_cnt The number of parsers to do parallel post processing. (default: the DNN engine's batch size)
+    /// \param queue_max_size The maximum value of internal packet queue sizes.
+    /// \note Using the DNN input size as the output resolution(`use_original_resolution = false`) is usually faster.
+    /// Because it reduces 1x memory copy. However, the DNN input size are usually much smaller than what you expected.
+    /// Hence, you can set it `true` for output image quality, or set it `false` for performance.
+    /// \note We highly recommend you to initialize the stream using `poseplus::make_stream`.
+    explicit stream(DNNEngine& engine, Parser& parser, bool use_original_resolution = false, size_t parser_cnt = 0, size_t queue_max_size = 128)
+        : m_stream_manager(queue_max_size, use_original_resolution)
         , m_engine_ref(engine)
         , m_main_parser_ref(parser)
         , m_parser_replicas(parser_cnt == 0 ? engine.max_batch_size() : parser_cnt, parser)
@@ -99,23 +140,35 @@ public:
         build_internal_running_graph();
     }
 
+    /// This nested class is used for convenient input/output asynchronization.
     class async_handler {
         stream& m_stream;
 
     public:
+        ///
+        /// \param s The stream class to bind.
+        /// \note We highly recommend you to initialize this class by `stream.async()`.
         async_handler(stream& s)
             : m_stream(s)
         {
         }
+
+        /// Set a input stream asynchronously.
+        /// \tparam S The input stream. (e.g., cv::vector<cv::Mat>, cv::VideoCapture, etc.)
+        /// \return The object itself.
         template <typename S>
         friend async_handler& operator<<(async_handler&&, S&&);
+
+        /// Set a output stream asynchronously.
+        /// \tparam S The output stream. (e.g., cv::VideoWriter)
+        /// \return Self.
         template <typename S>
         friend async_handler& operator>>(async_handler&&, S&&);
     };
 
+    /// Synchronized version of async_handler.
     class sync_handler {
         stream& m_stream;
-
     public:
         sync_handler(stream& s)
             : m_stream(s)
@@ -127,7 +180,13 @@ public:
         friend sync_handler& operator>>(sync_handler&&, S&&);
     };
 
+    /// \brief The asynchronized handler to do data IO.
+    /// \return The async_handler binding current stream.
     async_handler async() { return *this; }
+
+    /// \brief The synchronized handler to do data IO.
+    /// \return The sync_handler binding current stream.
+
     sync_handler sync() { return *this; }
 
     template <typename S>
@@ -158,6 +217,8 @@ public:
         return handler;
     }
 
+    /// Concurrent monitor to report the status of the queues, remaining records and so on.
+    /// \param milli_count The interval to report current stream status.
     void add_monitor(size_t milli_count)
     {
         m_stream_manager.add_queue_monitor(milli_count);
@@ -214,6 +275,29 @@ private:
     std::vector<std::reference_wrapper<Parser>> m_parser_refs;
 };
 
+/// Yet an easier way to build the stream class.
+/// \tparam DNNEngine DNN engine type.
+/// \tparam Parser Post-processing parser type.
+/// \tparam Others Other parameters.
+/// \param engine The reference to the DNN engine object.
+/// \param parser The reference to the parser object.
+/// \param others Other parameters in `poseplus::stream`'s constructor.
+/// \return The stream object.
+/**
+ * @code
+ * namespace pp = poseplus;
+ *
+ * // Create engine.
+ * pp::dnn::tensorrt engine(...);
+ *
+ * // Create PAF processor.
+ * poseplus::parser::paf paf_processor{};
+ *
+ * // Create a stream.
+ * auto stream = poseplus::make_stream(engine, paf_processor);
+ *
+ * @endcode
+ */
 template <typename DNNEngine, typename Parser, typename... Others>
 auto make_stream(DNNEngine&& engine, Parser&& parser, Others&&... others)
 {

@@ -3,8 +3,9 @@
 
 namespace poseplus {
 
-basic_stream_manager::basic_stream_manager(size_t uniform_max_size)
-    : m_input_queue(uniform_max_size)
+basic_stream_manager::basic_stream_manager(size_t uniform_max_size, bool use_original_resolution)
+    : m_use_original_resolution(use_original_resolution)
+    , m_input_queue(uniform_max_size)
     , m_input_queue_replica(uniform_max_size * 4)
     , m_resized_queue(uniform_max_size)
     , m_after_inference_queue(uniform_max_size)
@@ -75,12 +76,21 @@ void basic_stream_manager::resize_from_inputs(cv::Size size)
                 warning("Got an empty image, skipped");
                 --m_remaining_num;
             } else {
-                cv::resize(inputs[i], inputs[i], size);
-                after_resize_mats.push_back(inputs[i]);
+                if (!m_use_original_resolution)
+                {
+                    cv::resize(inputs[i], inputs[i], size);
+                    after_resize_mats.push_back(inputs[i]);
+                } else {
+                    cv::Mat resized;
+                    m_input_queue_replica.wait_until_pushed(inputs[i]);
+                    cv::resize(inputs[i], resized, size);
+                    after_resize_mats.push_back(resized);
+                }
             }
         }
 
-        m_input_queue_replica.wait_until_pushed(after_resize_mats);
+        if (!m_use_original_resolution)
+            m_input_queue_replica.wait_until_pushed(after_resize_mats);
         m_resized_queue.wait_until_pushed(std::move(after_resize_mats));
         m_cv_resize.notify_one();
     }

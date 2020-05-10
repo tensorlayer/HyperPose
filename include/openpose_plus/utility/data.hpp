@@ -27,7 +27,6 @@ public:
 
     friend std::ostream& operator<<(std::ostream& out, const feature_map_t& map)
     {
-        //        std::cout << "value test: " << map.data()[2] << std::endl; // TODO. Debug
         const auto [a, b, c] = map.m_tensor.dims();
         out << map.m_name << ":[" << a << ", " << b << ", " << c << ']';
         return out;

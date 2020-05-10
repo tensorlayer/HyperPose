@@ -8,10 +8,11 @@ DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",
 DEFINE_string(input_name, "image", "The input node name of your uff model file.");
 DEFINE_string(output_name_list, "outputs/conf,outputs/paf", "The output node names(maybe more than one) of your uff model file.");
 
-DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
+DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(max_batch_size, 8, "Max batch size for inference engine to execute.");
 
+DEFINE_bool(original_resolution, false, "Use the original image size as the output image size. (otherwise, use the network input size)");
 DEFINE_string(input_video, "../data/media/video.avi", "Video to be processed.");
 DEFINE_string(output_video, "output_video.avi", "The name of output video.");
 DEFINE_bool(logging, false, "Print the logging information or not.");
@@ -30,12 +31,12 @@ int main(int argc, char** argv)
         FLAGS_output_video,
         cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
         capture.get(cv::CAP_PROP_FPS),
-        cv::Size(FLAGS_input_width, FLAGS_input_height));
+        cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT)));
 
     // Basic information about videos.
     poseplus_log() << "Input video name: " << FLAGS_input_video << std::endl;
     poseplus_log() << "Output video name: " << FLAGS_output_video << std::endl;
-    poseplus_log() << "Frame: Size@"
+    poseplus_log() << "Input Frame: Size@"
                    << cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT))
                    << " Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
 
@@ -52,7 +53,7 @@ int main(int argc, char** argv)
 
     pp::parser::paf parser{};
 
-    auto stream = pp::make_stream(engine, parser);
+    auto stream = pp::make_stream(engine, parser, FLAGS_original_resolution);
 
     stream.add_monitor(1000);
 

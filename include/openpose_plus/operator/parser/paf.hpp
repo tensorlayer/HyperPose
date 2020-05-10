@@ -23,14 +23,14 @@ namespace parser {
         /// \param conf_thresh The activation threshold.
         /// \note Before doing PAF, the (width, height) of feature map will be expanded to `resolution_size` to perform
         /// a more accurate post processing. And `resolution_size` will be N x the size of first input tensor if it's
-        /// not set.
+        /// not set. (now, N is 4)
         paf(cv::Size resolution_size = cv::Size(UNINITIALIZED_VAL, UNINITIALIZED_VAL), float paf_thresh = 0.05, float conf_thresh = 0.05);
 
         /// \brief Function to process one image.
         ///
         /// \code
         /// // Initialization of PAF.
-        /// poseplus::parser::paf paf_processor(/* image size */);
+        /// poseplus::parser::paf paf_processor();
         ///
         /// // ...
         ///
