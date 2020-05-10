@@ -41,14 +41,10 @@ void simple_thread_pool::wait()
     });
 }
 
-simple_thread_pool::~simple_thread_pool()
-{
+simple_thread_pool::~simple_thread_pool() {
     m_shared_src->shutdown = true;
     std::atomic_signal_fence(std::memory_order_seq_cst);
     m_shared_src->cv.notify_all();
 }
-<<<<<<< HEAD:src/thread_pool.cpp
 
 } // namespace poseplus
-=======
->>>>>>> master:examples/thread_pool.cpp

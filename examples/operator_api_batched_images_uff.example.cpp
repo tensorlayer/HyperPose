@@ -37,7 +37,7 @@ int main(int argc, char** argv)
         { FLAGS_input_width, FLAGS_input_height },
         batch.size());
 
-    pp::parser::paf parser({ FLAGS_input_width, FLAGS_input_height });
+    pp::parser::paf parser{};
 
     using clk_t = std::chrono::high_resolution_clock;
     auto beg = clk_t::now();

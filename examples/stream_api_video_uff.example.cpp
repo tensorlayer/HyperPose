@@ -50,7 +50,7 @@ int main(int argc, char** argv)
         { FLAGS_input_width, FLAGS_input_height },
         FLAGS_max_batch_size);
 
-    pp::parser::paf parser({ FLAGS_input_width, FLAGS_input_height });
+    pp::parser::paf parser{};
 
     auto stream = pp::make_stream(engine, parser);
 

@@ -22,8 +22,9 @@ namespace parser {
         /// \param paf_thresh The threshold of Part Affinity Field.
         /// \param conf_thresh The activation threshold.
         /// \note Before doing PAF, the (width, height) of feature map will be expanded to `resolution_size` to perform
-        /// a more accurate post processing.
-        paf(cv::Size resolution_size, float paf_thresh = 0.05, float conf_thresh = 0.05);
+        /// a more accurate post processing. And `resolution_size` will be N x the size of first input tensor if it's
+        /// not set.
+        paf(cv::Size resolution_size = cv::Size(UNINITIALIZED_VAL, UNINITIALIZED_VAL), float paf_thresh = 0.05, float conf_thresh = 0.05);
 
         /// \brief Function to process one image.
         ///

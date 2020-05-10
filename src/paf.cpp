@@ -247,6 +247,10 @@ namespace parser {
         auto [n_connections_2_, fw_paf, fh_paf] = paf_map.view().dims();
         auto [n_joints_, fw_conf, fh_conf] = conf_map.view().dims();
 
+        if (m_resolution_size.width == UNINITIALIZED_VAL || m_resolution_size.height == UNINITIALIZED_VAL)
+            m_resolution_size = cv::Size(fw_paf * 4, fh_paf * 4);
+        // According to OpenPose-Lightweight. It's better to be 4x feature map size.
+
         assert(fw_paf == fw_conf);
         assert(fh_paf == fh_conf);
 

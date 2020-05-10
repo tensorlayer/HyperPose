@@ -215,9 +215,5 @@ private:
     ttl::tensor<T, 3> pooled_cpu;
 
     Pool_NCHW_PaddingSame_Max<T> same_max_pool_3x3_gpu;
-<<<<<<< HEAD
 };
 }
-=======
-};
->>>>>>> master
