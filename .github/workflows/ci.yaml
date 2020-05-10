@@ -1,0 +1,28 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+
+    # https://help.github.com/en/articles/virtual-environments-for-github-actions#supported-virtual-environments
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - run: sudo apt install -y swig
+    - run: pip install -r requirements.txt
+    - run: pip install pycocotools  # must be installed after cython is installed
+    - run: ./scripts/install-pafprocess.sh
+    - run: ./scripts/download-test-data.sh
+
+    - run: docker build --rm -t openpose-plus-test:snapshot -f docker/Dockerfile.travis-ci .
+    - run: docker run --rm -it openpose-plus-test:snapshot sh -c './configure --build-fake --with-trace && make && make test'
+
+    - run: python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vgg
+    - run: python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vggtiny
+    - run: python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=mobilenet
+
+    - run: wget https://media.githubusercontent.com/media/tensorlayer/pretrained-models/master/models/openpose-plus/hao28-pose345000.npz
+    - run: python ./examples/example-inference-1.py --path-to-npz='hao28-pose345000.npz' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=hao28_experimental
