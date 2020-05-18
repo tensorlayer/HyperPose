@@ -46,10 +46,23 @@ int main(int argc, char** argv)
         std::exit(-1);
     }
 
-    pp::dnn::tensorrt engine(
-        pp::dnn::uff{ FLAGS_model_file, FLAGS_input_name, split(FLAGS_output_name_list, ',') },
-        { FLAGS_input_width, FLAGS_input_height },
-        FLAGS_max_batch_size);
+    auto engine = [&] {
+        using namespace pp::dnn;
+        constexpr std::string_view onnx_suffix = ".onnx";
+        constexpr std::string_view uff_suffix = ".uff";
+
+        if (std::equal(onnx_suffix.crbegin(), onnx_suffix.crend(), FLAGS_model_file.crbegin()))
+            return tensorrt(onnx{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, FLAGS_max_batch_size);
+
+        if (std::equal(uff_suffix.crbegin(), uff_suffix.crend(), FLAGS_model_file.crbegin()))
+            return tensorrt(
+                uff{ FLAGS_model_file, FLAGS_input_name, split(FLAGS_output_name_list, ',') },
+                { FLAGS_input_width, FLAGS_input_height },
+                FLAGS_max_batch_size);
+
+        poseplus_log() << "Your model file's suffix is not [.onnx | .uff]. Your model file path: " << FLAGS_model_file;
+        std::exit(1);
+    }();
 
     pp::parser::paf parser{};
 
