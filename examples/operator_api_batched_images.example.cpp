@@ -7,6 +7,7 @@
 // Model flags
 DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff", "Path to uff model.");
 
+DEFINE_bool(logging, false, "Print the logging information or not.");
 DEFINE_string(input_name, "image", "The input node name of your model file. (for Uff model, input/output name tags required)");
 DEFINE_string(output_name_list, "outputs/conf,outputs/paf", "The output node names(maybe more than one) of your uff model file.");
 
@@ -17,7 +18,6 @@ DEFINE_string(input_folder, "../data/media", "Folder of images to inference.");
 
 int main(int argc, char** argv)
 {
-
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     namespace fs = std::experimental::filesystem;
 
@@ -34,6 +34,9 @@ int main(int argc, char** argv)
 
     // * Create TensorRT engine.
     namespace pp = poseplus;
+    if (FLAGS_logging)
+        pp::enable_logging();
+
     auto engine = [&] {
         using namespace pp::dnn;
         constexpr std::string_view onnx_suffix = ".onnx";

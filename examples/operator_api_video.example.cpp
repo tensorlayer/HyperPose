@@ -13,6 +13,7 @@ DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
 
 DEFINE_int32(max_batch_size, 8, "Max batch size for inference engine to execute.");
+DEFINE_bool(logging, false, "Print the logging information or not.");
 
 DEFINE_string(input_video, "../data/media/video.avi", "Video to be processed.");
 DEFINE_string(output_video, "output_video.avi", "The name of output video.");
@@ -34,6 +35,9 @@ int main(int argc, char** argv)
 
     // * Create TensorRT engine.
     namespace pp = poseplus;
+    if (FLAGS_logging)
+        pp::enable_logging();
+
     auto engine = [&] {
         using namespace pp::dnn;
         constexpr std::string_view onnx_suffix = ".onnx";

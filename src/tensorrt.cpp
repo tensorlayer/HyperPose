@@ -11,6 +11,7 @@
 #include "logger.h"
 #include "logging.hpp"
 #include "trace.hpp"
+#include <algorithm>
 
 namespace ttl {
 template <typename R, rank_t r>
@@ -34,15 +35,6 @@ namespace dnn {
 
     Logger gLogger;
 
-    inline int64_t volume(const nvinfer1::Dims& d)
-    {
-        int64_t v = 1;
-        for (int i = 0; i < d.nbDims; i++) {
-            v *= d.d[i];
-        }
-        return v;
-    }
-
     inline size_t sizeof_element(nvinfer1::DataType t)
     {
         size_t ret = 0;
@@ -61,6 +53,15 @@ namespace dnn {
         }
         assert(ret != 0);
         return ret;
+    }
+
+    inline int64_t volume(const nvinfer1::Dims& d)
+    {
+        int64_t v = 1;
+        for (int i = 0; i < d.nbDims; i++) {
+            v *= d.d[i];
+        }
+        return v;
     }
 
     std::string to_string(const nvinfer1::Dims& d)
@@ -141,13 +142,13 @@ namespace dnn {
     }
 
     static nvinfer1::ICudaEngine*
-    create_onnx_engine(const std::string& model_file, int max_batch_size, nvinfer1::DataType dtype)
+    create_onnx_engine(const std::string& model_file, int max_batch_size, nvinfer1::DataType dtype, cv::Size size)
     {
         TRACE_SCOPE(__func__);
         destroy_ptr<nvinfer1::IBuilder> builder(nvinfer1::createInferBuilder(gLogger));
-        const auto explicit_batch = 1U << static_cast<uint32_t>(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
 
-        destroy_ptr<nvinfer1::INetworkDefinition> network(builder->createNetworkV2(explicit_batch));
+        const auto build_flag = 1U << static_cast<uint32_t>(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
+        destroy_ptr<nvinfer1::INetworkDefinition> network(builder->createNetworkV2(build_flag));
         destroy_ptr<nvonnxparser::IParser> parser(nvonnxparser::createParser(*network, gLogger));
 
         if (!parser->parseFromFile(model_file.c_str(), static_cast<int>(nvinfer1::ILogger::Severity::kWARNING))) {
@@ -157,17 +158,49 @@ namespace dnn {
             exit(1);
         }
 
-        builder->setMaxBatchSize(max_batch_size);
         destroy_ptr<nvinfer1::IBuilderConfig> config(builder->createBuilderConfig());
-        config->setMaxWorkspaceSize((1 << 20) * 512); // TODO: A better way to set the workspace.
+        config->setMaxWorkspaceSize(1ull << 30); // TODO: A better way to set the workspace.
+
+        builder->setMaxBatchSize(max_batch_size);
+
+        auto dims = network->getInput(0)->getDimensions();
+
+        if (dims.nbDims < 3 || dims.nbDims > 4) {
+            error("Dimension error: Expected: ", to_string(dims), ", accepted: ", to_string(nvinfer1::Dims4(-1, 3, size.height, size.width)));
+        }
+
+        if ((dims.nbDims == 3 && dims.d[0] != 3) || (dims.nbDims == 4 && dims.d[1] != 3)) {
+            error("Dimension error(Channel dimension must be 3): Expected: ", to_string(dims), ", accepted: ", to_string(nvinfer1::Dims4(-1, 3, size.height, size.width)));
+        }
+
+        info("Network Dimensions: ", to_string(network->getInput(0)->getDimensions()), '\n');
+
+        nvinfer1::IOptimizationProfile* profile = builder->createOptimizationProfile();
+        profile->setDimensions(
+                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kMIN, nvinfer1::Dims4(1, 3, size.height, size.width));
+        profile->setDimensions(
+                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kOPT, nvinfer1::Dims4(max_batch_size, 3, size.height, size.width));
+        profile->setDimensions(
+                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kMAX, nvinfer1::Dims4(max_batch_size, 3, size.height, size.width));
+//        profile->setDimensions(
+//                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kMIN, nvinfer1::Dims4(1, size.height, size.width, 3));
+//        profile->setDimensions(
+//                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kOPT, nvinfer1::Dims4(1, size.height, size.width,  3));
+//        profile->setDimensions(
+//                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kMAX, nvinfer1::Dims4(max_batch_size, size.height, size.width, 3));
+        config->addOptimizationProfile(profile);
 
         auto engine = builder->buildEngineWithConfig(*network, *config);
+        info("Profile Info: Minimum input shape: ", to_string(engine->getProfileDimensions(0, 0, nvinfer1::OptProfileSelector::kMIN)), '\n');
+        info("Profile Info: Optimum input shape: ", to_string(engine->getProfileDimensions(0, 0, nvinfer1::OptProfileSelector::kOPT)), '\n');
+        info("Profile Info: Maximum input shape: ", to_string(engine->getProfileDimensions(0, 0, nvinfer1::OptProfileSelector::kMAX)), '\n');
 
         if (nullptr == engine) {
-            gLogger.log(nvinfer1::ILogger::Severity::kERROR,
-                "Failed to created engine");
+            gLogger.log(nvinfer1::ILogger::Severity::kERROR, "Failed to created engine");
             exit(1);
         }
+
+        info("Succeed in engine building.\n");
         return engine;
     }
 
@@ -186,12 +219,27 @@ namespace dnn {
         const auto n_bind = m_engine->getNbBindings();
         m_cuda_buffers.reserve(n_bind);
         for (auto i : ttl::range(n_bind)) {
+            std::array<int, 3> size_vector;
             const nvinfer1::Dims dims = m_engine->getBindingDimensions(i);
+
+            if (dims.nbDims < 3 || dims.nbDims > 4)
+                error("The input/output dimension size only allows 3(CHW) or 4(NCHW)\n");
+
             const nvinfer1::DataType data_type = m_engine->getBindingDataType(i);
             const std::string name(m_engine->getBindingName(i));
-            info("Binding ", i, ':', " name: ", name, " @type ", to_string(data_type), " @shape ", to_string(dims), '\n');
-            m_cuda_buffers.emplace_back(max_batch_size,
-                volume(dims) * sizeof_element(data_type));
+
+            if (m_engine->bindingIsInput(i))
+                size_vector = {3, m_inp_size.height, m_inp_size.width};
+            else {
+                const int offset = dims.nbDims - 3;
+                for (int j = 0; j < 3; ++j)
+                    size_vector[j] = dims.d[j + offset] == -1 ? 128 : dims.d[j + offset];
+            }
+
+            info("Binding from TensorRT: Name@", name, ", Type@", to_string(data_type), ", Shape@", to_string(dims), '\n');
+            info("Preallocate memory shape:(CHW) = [", size_vector[0], ", ", size_vector[1], ", ", size_vector[2], "]\n");
+
+            m_cuda_buffers.emplace_back(max_batch_size, std::accumulate(size_vector.begin(), size_vector.end(), 1, std::multiplies<int>{}) * sizeof_element(data_type));
         }
     }
 
@@ -202,17 +250,33 @@ namespace dnn {
         , m_flip_rgb(flip_rgb)
         , m_max_batch_size(max_batch_size)
         , m_factor(factor)
-        , m_engine(create_onnx_engine(onnx_model.model_path, max_batch_size, dtype))
+        , m_engine(create_onnx_engine(onnx_model.model_path, max_batch_size, dtype, input_size))
     {
         // Creat buffers.
         const auto n_bind = m_engine->getNbBindings();
         m_cuda_buffers.reserve(n_bind);
         for (auto i : ttl::range(n_bind)) {
+            std::array<int, 3> size_vector;
             const nvinfer1::Dims dims = m_engine->getBindingDimensions(i);
+
+            if (dims.nbDims < 3 || dims.nbDims > 4)
+                error("The input/output dimension size only allows 3(CHW) or 4(NCHW)\n");
+
             const nvinfer1::DataType data_type = m_engine->getBindingDataType(i);
             const std::string name(m_engine->getBindingName(i));
-            info("Binding ", i, ':', " name: ", name, " @type ", to_string(data_type), " @shape ", to_string(dims), '\n');
-            m_cuda_buffers.emplace_back(max_batch_size, volume(dims) * sizeof_element(data_type));
+
+            if (m_engine->bindingIsInput(i))
+                size_vector = {3, m_inp_size.height, m_inp_size.width};
+            else {
+                const int offset = dims.nbDims - 3;
+                for (int j = 0; j < 3; ++j)
+                    size_vector[j] = dims.d[j + offset] == -1 ? 128 : dims.d[j + offset];
+            }
+
+            info("Binding from TensorRT: Name@", name, ", Type@", to_string(data_type), ", Shape@", to_string(dims), '\n');
+            info("Preallocate memory shape:(CHW) = [", size_vector[0], ", ", size_vector[1], ", ", size_vector[2], "]\n");
+
+            m_cuda_buffers.emplace_back(max_batch_size, std::accumulate(size_vector.begin(), size_vector.end(), 1, std::multiplies<int>{}) * sizeof_element(data_type));
         }
     }
 
@@ -245,9 +309,9 @@ namespace dnn {
             TRACE_SCOPE("INFERENCE::TensorRT::context->execute");
             auto context = m_engine->createExecutionContext();
             std::vector<void*> buffer_ptrs_(m_cuda_buffers.size());
-            std::transform(m_cuda_buffers.begin(), m_cuda_buffers.end(),
-                buffer_ptrs_.begin(),
-                [](const auto& b) { return b.data(); });
+            std::transform(
+                    m_cuda_buffers.begin(), m_cuda_buffers.end(),
+                    buffer_ptrs_.begin(), [](const auto& b) { return b.data(); });
             context->execute(batch_size, buffer_ptrs_.data());
             context->destroy();
         }
