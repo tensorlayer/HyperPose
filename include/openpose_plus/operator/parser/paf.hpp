@@ -2,7 +2,6 @@
 
 /// \file paf.hpp
 /// \brief Post-processing using Part Affinity Field (PAF).
-/// \author Jiawei Liu(github.com/ganler)
 
 #include "../../utility/data.hpp"
 

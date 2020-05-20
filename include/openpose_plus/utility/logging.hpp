@@ -2,7 +2,6 @@
 
 /// \file logging.hpp
 /// \brief About logging configuration.
-/// \author Jiawei Liu(github.com/ganler)
 
 #include <atomic>
 #include <iostream>

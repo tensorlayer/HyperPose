@@ -33,6 +33,13 @@ int main(int argc, char** argv)
         capture.get(cv::CAP_PROP_FPS),
         cv::Size(FLAGS_input_width, FLAGS_input_height));
 
+    // Basic Information.
+    poseplus_log() << "Input video name: " << FLAGS_input_video << std::endl;
+    poseplus_log() << "Output video name: " << FLAGS_output_video << std::endl;
+    poseplus_log() << "Input Frame: Size@" << cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT)) << std::endl;
+    poseplus_log() << "Output Frame: Size@" << cv::Size(writer.get(cv::CAP_PROP_FRAME_WIDTH), writer.get(cv::CAP_PROP_FRAME_HEIGHT)) << std::endl;
+    poseplus_log() << "Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
+
     // * Create TensorRT engine.
     namespace pp = poseplus;
     if (FLAGS_logging)

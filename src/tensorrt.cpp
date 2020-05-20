@@ -177,17 +177,17 @@ namespace dnn {
 
         nvinfer1::IOptimizationProfile* profile = builder->createOptimizationProfile();
         profile->setDimensions(
-                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kMIN, nvinfer1::Dims4(1, 3, size.height, size.width));
+            network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kMIN, nvinfer1::Dims4(1, 3, size.height, size.width));
         profile->setDimensions(
-                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kOPT, nvinfer1::Dims4(max_batch_size, 3, size.height, size.width));
+            network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kOPT, nvinfer1::Dims4(max_batch_size, 3, size.height, size.width));
         profile->setDimensions(
-                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kMAX, nvinfer1::Dims4(max_batch_size, 3, size.height, size.width));
-//        profile->setDimensions(
-//                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kMIN, nvinfer1::Dims4(1, size.height, size.width, 3));
-//        profile->setDimensions(
-//                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kOPT, nvinfer1::Dims4(1, size.height, size.width,  3));
-//        profile->setDimensions(
-//                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kMAX, nvinfer1::Dims4(max_batch_size, size.height, size.width, 3));
+            network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kMAX, nvinfer1::Dims4(max_batch_size, 3, size.height, size.width));
+        //        profile->setDimensions(
+        //                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kMIN, nvinfer1::Dims4(1, size.height, size.width, 3));
+        //        profile->setDimensions(
+        //                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kOPT, nvinfer1::Dims4(1, size.height, size.width,  3));
+        //        profile->setDimensions(
+        //                network->getInput(0)->getName(), nvinfer1::OptProfileSelector::kMAX, nvinfer1::Dims4(max_batch_size, size.height, size.width, 3));
         config->addOptimizationProfile(profile);
 
         auto engine = builder->buildEngineWithConfig(*network, *config);
@@ -229,7 +229,7 @@ namespace dnn {
             const std::string name(m_engine->getBindingName(i));
 
             if (m_engine->bindingIsInput(i))
-                size_vector = {3, m_inp_size.height, m_inp_size.width};
+                size_vector = { 3, m_inp_size.height, m_inp_size.width };
             else {
                 const int offset = dims.nbDims - 3;
                 for (int j = 0; j < 3; ++j)
@@ -266,7 +266,7 @@ namespace dnn {
             const std::string name(m_engine->getBindingName(i));
 
             if (m_engine->bindingIsInput(i))
-                size_vector = {3, m_inp_size.height, m_inp_size.width};
+                size_vector = { 3, m_inp_size.height, m_inp_size.width };
             else {
                 const int offset = dims.nbDims - 3;
                 for (int j = 0; j < 3; ++j)
@@ -310,8 +310,8 @@ namespace dnn {
             auto context = m_engine->createExecutionContext();
             std::vector<void*> buffer_ptrs_(m_cuda_buffers.size());
             std::transform(
-                    m_cuda_buffers.begin(), m_cuda_buffers.end(),
-                    buffer_ptrs_.begin(), [](const auto& b) { return b.data(); });
+                m_cuda_buffers.begin(), m_cuda_buffers.end(),
+                buffer_ptrs_.begin(), [](const auto& b) { return b.data(); });
             context->execute(batch_size, buffer_ptrs_.data());
             context->destroy();
         }

@@ -2,7 +2,6 @@
 
 /// \file data.hpp
 /// \brief Data types in OpenPose-Plus.
-/// \author Jiawei Liu(github.com/ganler)
 
 #include "human.hpp"
 

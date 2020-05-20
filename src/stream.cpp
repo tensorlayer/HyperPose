@@ -97,6 +97,8 @@ void basic_stream_manager::resize_from_inputs(cv::Size size)
 
 void basic_stream_manager::write_to(cv::VideoWriter& writer)
 {
+    if (writer.get(cv::CAP_PROP_FRAME_WIDTH) <= 0 || writer.get(cv::CAP_PROP_FRAME_HEIGHT) <= 0)
+        error("Got invalid video writer shape: ", cv::Size(writer.get(cv::CAP_PROP_FRAME_WIDTH), writer.get(cv::CAP_PROP_FRAME_HEIGHT)), '\n');
     try {
         while (true) {
             {

@@ -2,7 +2,6 @@
 
 /// \file stream.hpp
 /// \brief Stream processing for pose estimation.
-/// \author Jiawei Liu(github.com/ganler)
 
 #include <future>
 #include <opencv2/opencv.hpp>
@@ -363,8 +362,8 @@ void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
                 futures[round_robin - parser_list.size()].wait();
 
             futures.push_back(m_thread_pool.enqueue(
-                [&parser_list, &internals, rb = round_robin]() -> pose_set {
-                    auto poses = parser_list.at(rb % parser_list.size()).get().process(std::move(internals[rb]));
+                [&parser_list, &internals, round_robin]() -> pose_set {
+                    auto poses = parser_list.at(round_robin % parser_list.size()).get().process(std::move(internals[round_robin]));
                     return poses;
                 }));
         }
@@ -398,7 +397,7 @@ basic_stream_manager::write_to(NameGetter&& name_getter)
 
         auto pose_set = m_pose_sets_queue.dump_all();
         for (auto&& poses : pose_set) {
-            auto&& raw_image = m_input_queue_replica.dump().value();
+            auto raw_image = m_input_queue_replica.dump().value();
             std::cout << poses.size() << std::endl;
             for (auto&& pose : poses)
                 draw_human(raw_image, pose);

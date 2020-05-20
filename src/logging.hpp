@@ -29,10 +29,8 @@ void warning(const Args&... args)
 }
 
 template <typename... Args>
-void error(const Args&... args)
+void error(const Args&... args) // ! Must log!
 {
-    if (is_logging_enabled() == false)
-        return;
     get_error_logger() << "[OpenPose-Plus::ERROR  ] ";
     ((get_error_logger() << args), ...);
     std::exit(-1);

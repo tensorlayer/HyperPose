@@ -2,7 +2,6 @@
 
 /// \file tensorrt.hpp
 /// \brief The DNN engine implementation of TensorRT.
-/// \author Jiawei Liu(github.com/ganler)
 
 #include "../../utility/model.hpp"
 #include <NvInferRuntime.h>

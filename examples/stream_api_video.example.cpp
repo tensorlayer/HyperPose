@@ -36,9 +36,9 @@ int main(int argc, char** argv)
     // Basic information about videos.
     poseplus_log() << "Input video name: " << FLAGS_input_video << std::endl;
     poseplus_log() << "Output video name: " << FLAGS_output_video << std::endl;
-    poseplus_log() << "Input Frame: Size@"
-                   << cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT))
-                   << " Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
+    poseplus_log() << "Input Frame: Size@" << cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT)) << std::endl;
+    poseplus_log() << "Output Frame: Size@" << cv::Size(writer.get(cv::CAP_PROP_FRAME_WIDTH), writer.get(cv::CAP_PROP_FRAME_HEIGHT)) << std::endl;
+    poseplus_log() << "Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
 
     // Checks.
     if (!capture.isOpened()) {

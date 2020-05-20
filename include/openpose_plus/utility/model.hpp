@@ -2,7 +2,6 @@
 
 /// \file model.hpp
 /// \brief The configurations of model files.
-/// \author Jiawei Liu(github.com/ganler)
 
 #include <string>
 #include <vector>
