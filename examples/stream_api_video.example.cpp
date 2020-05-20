@@ -25,24 +25,28 @@ int main(int argc, char** argv)
     if (FLAGS_logging)
         pp::enable_logging();
 
-    auto capture = cv::VideoCapture(FLAGS_input_video);
+    cv::VideoCapture capture(FLAGS_input_video);
 
-    auto writer = cv::VideoWriter(
+    cv::VideoWriter writer(
         FLAGS_output_video,
-        cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
+        capture.get(cv::CAP_PROP_FOURCC),
         capture.get(cv::CAP_PROP_FPS),
-        cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT)));
+        cv::Size(FLAGS_input_width, FLAGS_input_height));
 
     // Basic information about videos.
     poseplus_log() << "Input video name: " << FLAGS_input_video << std::endl;
     poseplus_log() << "Output video name: " << FLAGS_output_video << std::endl;
-    poseplus_log() << "Input Frame: Size@" << cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT)) << std::endl;
-    poseplus_log() << "Output Frame: Size@" << cv::Size(writer.get(cv::CAP_PROP_FRAME_WIDTH), writer.get(cv::CAP_PROP_FRAME_HEIGHT)) << std::endl;
-    poseplus_log() << "Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
+    poseplus_log() << "Input Frame: Size@" << cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT))
+                   << "Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
 
     // Checks.
     if (!capture.isOpened()) {
-        poseplus_log() << "Video: " << FLAGS_input_video << " cannot be opened\n";
+        poseplus_log() << "Input Video: " << FLAGS_input_video << " cannot be opened\n";
+        std::exit(-1);
+    }
+
+    if (!writer.isOpened()) {
+        poseplus_log() << "Output Video: " << FLAGS_output_video << " cannot be opened\n";
         std::exit(-1);
     }
 
