@@ -130,7 +130,7 @@ namespace dnn {
         builder->setMaxBatchSize(max_batch_size);
 
         destroy_ptr<nvinfer1::IBuilderConfig> config(builder->createBuilderConfig());
-        config->setMaxWorkspaceSize((1 << 20) * 512);
+        config->setMaxWorkspaceSize(1ull << 30);
         auto engine = builder->buildEngineWithConfig(*network, *config);
 
         if (nullptr == engine) {
@@ -199,6 +199,35 @@ namespace dnn {
         }
 
         info("Succeed in engine building.\n");
+        return engine;
+    }
+
+    static nvinfer1::ICudaEngine* create_serialized_engine(const std::string& model_file)
+    {
+        std::ifstream in_file(model_file);
+
+        std::streampos begin, end;
+        begin = in_file.tellg();
+        in_file.seekg(0, std::ios::end);
+        end = in_file.tellg();
+
+        const std::size_t size = end - begin;
+        info("engine file size: ", size, " bytes\n");
+
+        in_file.seekg(0, std::ios::beg);
+        std::unique_ptr<char[]> engine_data(new char[size]);
+        in_file.read((char*)engine_data.get(), size);
+        in_file.close();
+
+        // deserialize the engine
+        nvinfer1::IRuntime* runtime = nvinfer1::createInferRuntime(gLogger);
+        nvinfer1::ICudaEngine* engine = runtime->deserializeCudaEngine((const void*)engine_data.get(), size, nullptr);
+
+        if (nullptr == engine) {
+            gLogger.log(nvinfer1::ILogger::Severity::kERROR, "Failed to created engine");
+            exit(1);
+        }
+
         return engine;
     }
 
@@ -276,6 +305,18 @@ namespace dnn {
         , m_factor(factor)
         , m_engine(create_uff_engine(uff_model.model_path, input_size, uff_model.input_name, uff_model.output_names,
               max_batch_size, dtype))
+    {
+        _create_binding_buffers();
+    }
+
+    tensorrt::tensorrt(const tensorrt_serialized& serialized_model, cv::Size input_size,
+        int max_batch_size, double factor,
+        bool flip_rgb)
+        : m_inp_size(input_size)
+        , m_flip_rgb(flip_rgb)
+        , m_max_batch_size(max_batch_size)
+        , m_factor(factor)
+        , m_engine(create_serialized_engine(serialized_model.model_path))
     {
         _create_binding_buffers();
     }
@@ -382,7 +423,17 @@ namespace dnn {
         return this->inference(cpu_image_batch_buffer, batch.size());
     }
 
-    tensorrt::~tensorrt() { nvuffparser::shutdownProtobufLibrary(); }
+    void tensorrt::save(const std::string path)
+    {
+        destroy_ptr<nvinfer1::IHostMemory> serializedModel(m_engine->serialize());
+        std::ofstream ofs(path, std::ios::out | std::ios::binary);
+        info("Writing ", serializedModel->size(), " bytes to model path: ", path, '\n');
+        ofs.write(static_cast<char*>(serializedModel->data()), serializedModel->size());
+        info("Serialized engine built successfully!\n");
+        ofs.close();
+    }
+
+    tensorrt::~tensorrt() = default;
 
 } // namespace dnn
 

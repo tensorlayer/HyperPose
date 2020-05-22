@@ -1,5 +1,4 @@
 #include "utils.hpp"
-#include <experimental/filesystem>
 #include <gflags/gflags.h>
 #include <openpose_plus/openpose_plus.hpp>
 
@@ -20,7 +19,6 @@ DEFINE_string(output_video, "output_video.avi", "The name of output video.");
 int main(int argc, char** argv)
 {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    namespace fs = std::experimental::filesystem;
 
     // * Input video.
     auto capture = cv::VideoCapture(FLAGS_input_video);
@@ -58,7 +56,9 @@ int main(int argc, char** argv)
                 FLAGS_max_batch_size);
 
         poseplus_log() << "Your model file's suffix is not [.onnx | .uff]. Your model file path: " << FLAGS_model_file;
-        std::exit(1);
+        poseplus_log() << "Trying to be viewed as a serialized TensorRT model.";
+
+        return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, FLAGS_max_batch_size);
     }();
 
     // * post-processing: Using paf. // TODO: Add proposal networks processing.

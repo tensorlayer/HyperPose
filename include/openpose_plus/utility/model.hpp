@@ -23,5 +23,12 @@ namespace dnn {
     struct onnx {
         std::string model_path; ///< Path to the [ONNX model](https://onnx.ai/) file.
     };
+
+    /// \brief The configuration struct for the serialized TensorRT(ICudaEngine) model file.
+    /// \note By compiling your model into serialized format, it can reduce the initializing time of loading and compiling models
+    /// from other format(e.g., Uff, ONNX). And this is the recommended way to execute a model.
+    struct tensorrt_serialized {
+        std::string model_path; ///< Path to the serialized TensorRT(ICudaEngine) file.
+    };
 }
 }

@@ -50,6 +50,16 @@ namespace dnn {
             nvinfer1::DataType dtype = nvinfer1::DataType::kFLOAT,
             double factor = 1. / 255, bool flip_rgb = true);
 
+        /// \brief The constructor of TensorRT engine using TensorRT serialized model file.
+        ///
+        /// \param serialized_model See `poseplus::dnn::tensorrt_serialized`.
+        /// \param input_size The input image size(width, height).
+        /// \param max_batch_size The maximum batch size of the inputs. (for input/output buffer allocation)
+        /// \param factor For each element in the input data, they will be multiplied by "factor".
+        /// \param flip_rgb Whether to convert the color channels from "BGR" to "RGB".
+        explicit tensorrt(const tensorrt_serialized& serialized_model, cv::Size input_size, int max_batch_size = 8,
+            double factor = 1. / 255, bool flip_rgb = true);
+
         /// Deconstructor of class poseplus::dnn::tensorrt.
         ~tensorrt();
 
@@ -94,6 +104,10 @@ namespace dnn {
         /// \param batch_size The batch size of inputs to do inference.
         /// \return  vector of output feature maps(tensors).
         std::vector<internal_t> inference(const std::vector<float>& float_buffer, size_t batch_size);
+
+        /// Save the TensorRT engine to serialized protobuf format.
+        /// \param path Path to serialized engine model file.
+        void save(const std::string path);
 
     private:
         const cv::Size m_inp_size; // w, h

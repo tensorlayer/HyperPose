@@ -1,5 +1,4 @@
 #include "utils.hpp"
-#include <experimental/filesystem>
 #include <gflags/gflags.h>
 #include <openpose_plus/openpose_plus.hpp>
 #include <string_view>
@@ -8,6 +7,7 @@
 DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff", "Path to uff model.");
 
 DEFINE_bool(logging, false, "Print the logging information or not.");
+
 DEFINE_string(input_name, "image", "The input node name of your model file. (for Uff model, input/output name tags required)");
 DEFINE_string(output_name_list, "outputs/conf,outputs/paf", "The output node names(maybe more than one) of your uff model file.");
 
@@ -19,10 +19,8 @@ DEFINE_string(input_folder, "../data/media", "Folder of images to inference.");
 int main(int argc, char** argv)
 {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    namespace fs = std::experimental::filesystem;
 
     // * Collect data into batch.
-    poseplus_log() << "Your current path: " << fs::current_path() << '\n';
     std::vector<cv::Mat> batch = glob_images(FLAGS_input_folder);
 
     if (batch.empty()) {
@@ -52,7 +50,9 @@ int main(int argc, char** argv)
                 batch.size());
 
         poseplus_log() << "Your model file's suffix is not [.onnx | .uff]. Your model file path: " << FLAGS_model_file;
-        std::exit(1);
+        poseplus_log() << "Trying to be viewed as a serialized TensorRT model.";
+
+        return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, batch.size());
     }();
 
     pp::parser::paf parser{};

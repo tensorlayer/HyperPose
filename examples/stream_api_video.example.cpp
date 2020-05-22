@@ -65,7 +65,9 @@ int main(int argc, char** argv)
                 FLAGS_max_batch_size);
 
         poseplus_log() << "Your model file's suffix is not [.onnx | .uff]. Your model file path: " << FLAGS_model_file;
-        std::exit(1);
+        poseplus_log() << "Trying to be viewed as a serialized TensorRT model.";
+
+        return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, FLAGS_max_batch_size);
     }();
 
     pp::parser::paf parser{};
