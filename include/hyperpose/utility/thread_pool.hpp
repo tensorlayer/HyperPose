@@ -51,7 +51,7 @@ private:
 
 template <typename Func, typename... Args>
 std::future<typename std::result_of<Func(Args...)>::type>
-    simple_thread_pool::enqueue(Func&& f, Args&&... args)
+simple_thread_pool::enqueue(Func&& f, Args&&... args)
 {
     using return_type = typename std::result_of<Func(Args...)>::type;
     using package_t = std::packaged_task<return_type()>;
