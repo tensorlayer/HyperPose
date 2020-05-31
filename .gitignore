@@ -32,7 +32,6 @@ compile_commands.json
 CPackConfig.cmake
 CPackSourceConfig.cmake
 CTestTestfile.cmake
-docs/build
 inference/*png
 install_manifest.txt
 libstdtensor-prefix
@@ -42,3 +41,6 @@ test.py
 Testing
 third_party
 venv
+/doc
+_build
+docs/make.bat

@@ -39,7 +39,7 @@ public:
     /// \return Name of this feature map.
     inline const std::string& name() { return m_name; }
 
-    ///
+    /// \see https://github.com/stdml/stdtensor
     /// \return Tensor view of internal `ttl::tensor`.
     inline ttl::tensor_view<float, 3> view() const
     {

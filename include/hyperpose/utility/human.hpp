@@ -1,5 +1,8 @@
 #pragma once
 
+/// \file human.hpp
+/// \brief About human topology and visualization.
+
 #include <opencv2/opencv.hpp>
 
 namespace hyperpose {
@@ -56,24 +59,19 @@ inline const coco_pair_list_t COCOPAIRS = {
 
 inline bool is_virtual_pair(int pair_id) { return pair_id > 16; }
 
+/// \brief Class to describe a key point.
 struct body_part_t {
-    bool has_value;
-    float x;
-    float y;
-    float score;
-
-    body_part_t()
-        : has_value(false)
-        , x(0)
-        , y(0)
-        , score(0)
-    {
-    }
+    bool has_value = false; ///< Whether this key point is valid.
+    float x = 0; ///< X coordinate of the key point.
+    float y = 0; ///< Y coordinate of the key point.
+    float score = 0; ///< The inferred score(higher means more key-point-like) of the key point.
 };
 
+/// Template class to describe a human.
+/// \tparam J The maximum key point of a human.
 template <size_t J>
 struct human_t_ {
-    std::array<body_part_t, J> parts;
+    std::array<body_part_t, J> parts; ///< An array to tell all key point information. The index means the position.
     float score;
 
     inline void print() const
@@ -88,17 +86,17 @@ struct human_t_ {
     }
 };
 
+/// \brief Class to describe a COCO human type(18 parts and 19 pairs).
+/// \see　
 using human_t = human_t_<COCO_N_PARTS>;
 
 struct connection_candidate {
     int idx1;
     int idx2;
     float score;
-    float etc;
 };
 
-inline bool operator>(const connection_candidate& a,
-    const connection_candidate& b)
+inline bool operator>(const connection_candidate& a, const connection_candidate& b)
 {
     return a.score > b.score;
 }
@@ -112,11 +110,7 @@ struct connection {
 };
 
 struct body_part_ret_t {
-    int id; // id of peak in the list of all peaks
-    body_part_ret_t()
-        : id(-1)
-    {
-    }
+    int id = -1; ///< id of peak in the list of all peaks
 };
 
 template <int J>
@@ -141,6 +135,9 @@ struct human_ref_t_ {
 
 using human_ref_t = human_ref_t_<COCO_N_PARTS>;
 
-void draw_human(cv::Mat& img, const human_t& human); // TODO
+/// Function to visualize the human topology on an image.
+/// \param img Image to be visualized.
+/// \param human Human topology.
+void draw_human(cv::Mat& img, const human_t& human);
 
 } // namespace hyperpose
