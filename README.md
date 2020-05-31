@@ -21,7 +21,9 @@ Markdown documents are available in `docs/markdown`.
 
 > For more detailed guidance of installation/examples(more examples), please refer to [QuickStart | Prediction](docs/markdown/quick_start/prediction.md) and [Installation | Prediction](docs/markdown/install/prediction.md).
 
-Install CUDA Toolkit, TensorRT, OpenCV and gFlags(cmake version), and make sure a C++17 compiler is available on your system.
+Install CUDA Toolkit 10+, TensorRT7+, OpenCV3.2+ and gFlags(cmake version), and make sure a C++17 compiler is available on your system.
+
+> Old versions of the packages may also work, but not tested. 
 
 ```bash
 sudo apt -y install subversion curl
