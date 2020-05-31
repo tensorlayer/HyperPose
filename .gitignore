@@ -44,3 +44,4 @@ venv
 /doc
 _build
 docs/make.bat
+!docs/Makefile
