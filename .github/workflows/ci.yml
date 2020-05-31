@@ -1,0 +1,19 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+
+    # https://help.github.com/en/articles/virtual-environments-for-github-actions#supported-virtual-environments
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - run: cmake . -DBUILD_TESTS=1 -DBUILD_LIB=0 -DBUILD_EXAMPLES=0 -DEXECUTABLE_OUTPUT_PATH=./bin
+    - run: cmake --build . --config Release
+
+    # - run: ctest -C Release
+    # - run: ./bin/test.thread_pool
+    # - run: ./bin/test.thread_safe_queue
