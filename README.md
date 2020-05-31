@@ -49,6 +49,24 @@ HyperPose provides:
 
 For more details, please refer to the documentation.
 
+## License
+
+HyperPose is under an [Apache 2.0 license](https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst) and mainly developed by members from TensorLayer Community.
+
+- Please cite our papers in your publications if it helps your research:
+
+```latex
+@article{tensorlayer2017,
+    author  = {Dong, Hao and Supratak, Akara and Mai, Luo and Liu, Fangde and Oehmichen, Axel and Yu, Simiao and Guo, Yike},
+    journal = {ACM Multimedia},
+    title   = {{TensorLayer: A Versatile Library for Efficient Deep Learning Development}},
+    url     = {http://tensorlayer.org},
+    year    = {2017}
+}
+```
+
+- Please acknowledge TensorLayer and this project in your project websites/articles if you are a **commercial user**.
+
 ## Related Discussion
 
 - [TensorLayer Slack](https://join.slack.com/t/tensorlayer/shared_invite/enQtMjUyMjczMzU2Njg4LWI0MWU0MDFkOWY2YjQ4YjVhMzI5M2VlZmE4YTNhNGY1NjZhMzUwMmQ2MTc0YWRjMjQzMjdjMTg2MWQ2ZWJhYzc)
