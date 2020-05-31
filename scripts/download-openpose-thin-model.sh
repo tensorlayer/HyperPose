@@ -2,7 +2,7 @@
 
 set -e
 
-model_name="openpose_coco.onnx"
+model_name="openpose_thin.onnx"
 
 cd $(dirname $0)
 if [ ! -d ../data/models ]; then

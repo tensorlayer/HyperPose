@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-HyperPose's Documentation!
+Welcome to HyperPose's Documentation!
 =====================================
 
 Get Started
@@ -27,10 +27,11 @@ Tutorials
 
 API Reference
 -------------
-* `C++ Prediction API(Doxygen) <../../doxygen/build/html/index.html>`_
+.. toctree::
+    C++ Prediction API(Doxygen) <../../doxygen/build/html/index.html#http://>
 
 Performance and Supports
--------------
+------------------------
 .. toctree::
     :maxdepth: 1
 

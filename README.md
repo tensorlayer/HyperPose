@@ -1,11 +1,60 @@
-# OpenPose-Plus: Pose Estimation in the Wild
+# HyperPose: A Fast & Flexible Library for Human Pose Estimation
 
-</a>
 <p align="center">
     <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
 </p>
-
 [![Documentation Status](https://readthedocs.org/projects/openpose-plus/badge/?version=latest)](https://openpose-plus.readthedocs.io/en/latest/?badge=latest)
+
+[Documentation(Coming Soon)](TODO) 
+
+> **Currently, we are moving from OpenPose-Plus(version 1) to HyperPose(version 2) as we provide more APIs/Models/Operators not only limited to OpenPose. The old versions of codes are available in release page.**
+
+## Why HyperPose
+
+HyperPose provides:
+
+- **Flexible training**
+- Well abstracted APIs(Python) to help you manage the pose estimation pipeline quickly and directly.
+  
+  - Dataset(COCO, MPII)
+  
+  - Pose Estimation Methods
+  
+    - Backbones: ResNet, VGG(Tiny/Normal/Thin), Pose Proposal Network.
+  - Post-Processing:  Part Association Field(PAF), Pose Proposal Networks.
+
+- **Fast Prediction**
+
+  - Rich operator APIs for you to do fast DNN inference and post-processing.
+  - 2 API styles:
+    - Operator API(Imperative): HyperPose provides basic operators to do DNN inference and post processing.
+    - Stream API(Declarative): HyperPose provides a streaming processing runtime scheduler where users only need to specify the engine, post-processing methods and input/output streams.
+  - Model format supports:
+    - Uff.
+    - ONNX.
+    - Cuda Engine Protobuf.
+  - Good performance
+
+| Method          | Backbone Size | Network Resolution | Operator API / FPS | Stream API / FPS | Other Framework / FPS |
+| --------------- | ------------- | ------------------ | ------------------ | ---------------- | --------------------- |
+| OpenPose COCO   | 209.3MB       | 656 x 368          | 19.78              | 27.32            | 8 (OpenPose)          |
+| Tiny VGG + PAF  | 34.7 MB       | 384 x 256          | 66.62              | 124.925          | /                     |
+| MobileNet + PAF | 17.9 MB       | 432 x 368          | 50.89              | 84.32            | /                     |
+
+> **Environment**: System@Ubuntu18.04, GPU@1070Ti, CPU@i7(12 logic cores). 
+>
+> **Availability**: All model above are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose).
+
+For more details, please refer to the documentation.
+
+## Related Discussion
+
+- [TensorLayer Slack](https://join.slack.com/t/tensorlayer/shared_invite/enQtMjUyMjczMzU2Njg4LWI0MWU0MDFkOWY2YjQ4YjVhMzI5M2VlZmE4YTNhNGY1NjZhMzUwMmQ2MTc0YWRjMjQzMjdjMTg2MWQ2ZWJhYzc)
+- [TensorLayer WeChat](https://github.com/tensorlayer/tensorlayer-chinese/blob/master/docs/wechat_group.md)
+- [TensorLayer Issues 434](https://github.com/tensorlayer/tensorlayer/issues/434)
+- [TensorLayer Issues 416](https://github.com/tensorlayer/tensorlayer/issues/416)
+
+<!--
 
 [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) is the state-of-the-art hyperpose estimation algorithm.
 In its Caffe [codebase](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation),
@@ -14,6 +63,7 @@ to be customized. In addition,
 key performance features such as embedded platform supports and parallel GPU training are missing.
 All these limitations makes OpenPose, in these days, hard to
 be deployed in the wild. To resolve this, we develop **OpenPose-Plus**, a high-performance yet flexible hyperpose estimation framework that offers many powerful features:
+
 - Flexible combination of standard training dataset with your own custom labelled data.
 - Customizable data augmentation pipeline without compromising performance
 - Deployment on embedded platforms using TensorRT
@@ -124,48 +174,6 @@ See [tf-hyperpose](https://github.com/ildoonet/tf-hyperpose-estimation/tree/mast
 You can look at the examples in the `examples` folder to see how to use the inference C++ APIs.
 Running `./scripts/live-camera.sh` will give you a quick review of how it works.
 
-<!---
-## 5. Inference
-
-In this project, input images are RGB with 0~1.
-Runs `train.py`, it will automatically download the default VGG19-based model from [here](https://github.com/tensorlayer/pretrained-models), and use it for inferencing.
-The performance of pre-trained model is as follow:
-
-
-|                  | Speed | AP | xxx |
-|------------------|-------|----|-----|
-| VGG19            | xx    | xx | xx  |
-| Residual Squeeze | xx    | xx | xx  |
-
-- Speed is tested on XXX
-
-- We follow the [data format of official OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/output.md)
-
-To use the pre-trained models
-
--->
-
-
-<!--
-## 6. Evaluate a model
-
-Runs `eval.py` for inference.
-
-
-## . Speed up and deployment
-
-For TensorRT float16 (half-float) inferencing, xxx
-
-
-## 6. Customization
-
-- Model : change `models.py`.
-- Data augmentation : change `train.py`
-- Train with your own data: ....
-    1. prepare your data following MSCOCO format, you need to .
-    2. concatenate the list of your own data JSON into ...
--->
-
 ## License
 
 You can use the project code under a free [Apache 2.0 license](https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst) ONLY IF you:
@@ -179,7 +187,10 @@ You can use the project code under a free [Apache 2.0 license](https://github.co
 - [TensorLayer Issues 434](https://github.com/tensorlayer/tensorlayer/issues/434)
 - [TensorLayer Issues 416](https://github.com/tensorlayer/tensorlayer/issues/416)
 
+-->
+
 <!--
+
 ## Paper's Model
 
 - [Default MPII](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/model/_trained_MPI/pose_deploy.prototxt)
