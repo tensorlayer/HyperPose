@@ -1,15 +1,15 @@
 # HyperPose: A Fast & Flexible Library for Human Pose Estimation
 
 </a>
-
 <p align="center">
     <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
 </p>
+
 [![Documentation Status](https://readthedocs.org/projects/openpose-plus/badge/?version=latest)](https://openpose-plus.readthedocs.io/en/latest/?badge=latest)
 
-[Documentation(Coming Soon)](TODO) 
+> **Currently, we are moving from OpenPose-Plus(version 1) to HyperPose(version 2) as we provide more APIs/Models/Operators not only limited to OpenPose. The old versions of codes are available in release page.** 
 
-> **Currently, we are moving from OpenPose-Plus(version 1) to HyperPose(version 2) as we provide more APIs/Models/Operators not only limited to OpenPose. The old versions of codes are available in release page.**
+[Documentation(Coming Soon)](TODO) 
 
 ## Why HyperPose
 
