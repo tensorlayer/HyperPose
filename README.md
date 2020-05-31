@@ -1,5 +1,7 @@
 # HyperPose: A Fast & Flexible Library for Human Pose Estimation
 
+</a>
+
 <p align="center">
     <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
 </p>
