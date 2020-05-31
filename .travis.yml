@@ -29,5 +29,5 @@ script:
 - python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=vggtiny
 - python ./examples/example-inference-1.py --path-to-npz='' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=mobilenet
 
-- wget https://media.githubusercontent.com/media/tensorlayer/pretrained-models/master/models/openpose-plus/hao28-pose345000.npz
+- wget https://media.githubusercontent.com/media/tensorlayer/pretrained-models/master/models/hyperpose/hao28-pose345000.npz
 - python ./examples/example-inference-1.py --path-to-npz='hao28-pose345000.npz' --images=$(ls data/media/*.jpg | sort | head -n 3 | tr '\n' ',') --base-model=hao28_experimental
