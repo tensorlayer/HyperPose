@@ -4,7 +4,7 @@
 version: 2
 
 sphinx:
-  configuration: doc/conf.py
+  configuration: docs/conf.py
   fail_on_warning: true
 
 formats:
@@ -13,4 +13,4 @@ formats:
 python:
   version: 3.6
   install:
-  - requirements: doc/requirements.txt
+  - requirements: docs/requirements.txt

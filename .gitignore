@@ -22,6 +22,7 @@ __pycache__
 /lib
 /tensorlayer
 /vis
+build
 cmake_install.cmake
 CMakeCache.txt
 CMakeFiles
@@ -32,6 +33,7 @@ CPackConfig.cmake
 CPackSourceConfig.cmake
 CTestTestfile.cmake
 inference/*png
+install_manifest.txt
 libstdtensor-prefix
 libstdtracer-prefix
 Makefile
@@ -39,3 +41,6 @@ test.py
 Testing
 third_party
 venv
+/doc
+_build
+docs/make.bat
