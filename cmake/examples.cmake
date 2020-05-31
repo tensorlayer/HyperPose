@@ -8,6 +8,6 @@ foreach(EXAMPLE_FULL_PATH ${POSE_TESTS})
 
     SET(EXAMPLE_TAR example.${EXAMPLE_NAME})
     ADD_EXECUTABLE(${EXAMPLE_TAR} ${EXAMPLE_FULL_PATH})
-    TARGET_LINK_LIBRARIES(${EXAMPLE_TAR} helpers openpose_plus gflags)
+    TARGET_LINK_LIBRARIES(${EXAMPLE_TAR} helpers hyperpose gflags)
     ADD_GLOBAL_DEPS(${EXAMPLE_TAR})
 endforeach()

@@ -1,9 +1,9 @@
-#include <openpose_plus/utility/thread_safe_queue.hpp>
+#include <hyperpose/utility/thread_safe_queue.hpp>
 
 // Test codes.
 int main()
 {
-    using namespace poseplus;
+    using namespace hyperpose;
 #ifdef NDEBUG
     std::cerr << "Debug Flags not set!\n";
 #endif

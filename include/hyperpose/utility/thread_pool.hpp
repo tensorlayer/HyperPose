@@ -13,7 +13,7 @@
 #include <thread>
 #include <vector>
 
-namespace poseplus {
+namespace hyperpose {
 
 class simple_thread_pool
     final { // Simple thread-safe & container-free thread pool.
@@ -82,4 +82,4 @@ auto simple_thread_pool::enqueue(Func&& f, Args&&... args)
 
 using thread_pool = simple_thread_pool;
 
-} // namespace poseplus
+} // namespace hyperpose

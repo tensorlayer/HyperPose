@@ -1,5 +1,5 @@
-#include <openpose_plus/operator/dnn/tensorrt.hpp>
-#include <openpose_plus/utility/data.hpp>
+#include <hyperpose/operator/dnn/tensorrt.hpp>
+#include <hyperpose/utility/data.hpp>
 
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
@@ -22,7 +22,7 @@ tensor_ref<char, 1> ref_chars(const ttl::tensor<R, r>& t)
 }
 }
 
-namespace poseplus {
+namespace hyperpose {
 namespace dnn {
 
     template <typename T>
@@ -437,4 +437,4 @@ namespace dnn {
 
 } // namespace dnn
 
-} // namespace poseplus
+} // namespace hyperpose

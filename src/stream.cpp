@@ -1,7 +1,7 @@
 #include "logging.hpp"
-#include <openpose_plus/stream/stream.hpp>
+#include <hyperpose/stream/stream.hpp>
 
-namespace poseplus {
+namespace hyperpose {
 
 basic_stream_manager::basic_stream_manager(size_t uniform_max_size, bool use_original_resolution)
     : m_use_original_resolution(use_original_resolution)

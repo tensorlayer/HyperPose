@@ -1,5 +1,5 @@
 # Library Name
-set(POSE_LIB_NAME openpose_plus)
+set(POSE_LIB_NAME hyperpose)
 
 # Compiler Flags
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native")

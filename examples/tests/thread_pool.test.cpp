@@ -1,9 +1,9 @@
-#include <openpose_plus/utility/thread_pool.hpp>
+#include <hyperpose/utility/thread_pool.hpp>
 
 #include <iostream>
 #include <numeric>
 
-using namespace poseplus;
+using namespace hyperpose;
 
 // TODO: Change a test case. My recursive parallel qsort seems to be slower than
 // single-thread version in "release" mode.

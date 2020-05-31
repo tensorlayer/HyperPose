@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace poseplus {
+namespace hyperpose {
 
 namespace dnn {
 

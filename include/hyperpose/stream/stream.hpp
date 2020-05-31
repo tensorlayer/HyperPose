@@ -13,7 +13,7 @@
 #include "../utility/thread_pool.hpp"
 #include "../utility/thread_safe_queue.hpp"
 
-namespace poseplus {
+namespace hyperpose {
 
 class basic_stream_manager {
 private:
@@ -86,7 +86,7 @@ private:
 /// \brief The class to do end-to-end stream processing for pose estimation.
 /**
  * @code
- * namespace pp = poseplus;
+ * namespace pp = hyperpose;
  *
  * // Create input stream.
  * cv::VideoCapture cap(...);
@@ -98,10 +98,10 @@ private:
  * pp::dnn::tensorrt engine(...);
  *
  * // Create PAF processor.
- * poseplus::parser::paf paf_processor{};
+ * hyperpose::parser::paf paf_processor{};
  *
  * // Create a stream.
- * auto stream = poseplus::make_stream(engine, paf_processor);
+ * auto stream = hyperpose::make_stream(engine, paf_processor);
  *
  * // Set input stream asynchronously.
  * stream.async() << cap;
@@ -111,8 +111,8 @@ private:
  *
  * @endcode
  */
-/// \tparam DNNEngine The DNN engine class. (e.g. poseplus::dnn::tensorrt)
-/// \tparam Parser The post-processing class. (e.g. poseplus::parser::paf)
+/// \tparam DNNEngine The DNN engine class. (e.g. hyperpose::dnn::tensorrt)
+/// \tparam Parser The post-processing class. (e.g. hyperpose::parser::paf)
 template <typename DNNEngine, typename Parser>
 class stream {
 public:
@@ -125,7 +125,7 @@ public:
     /// \note Using the DNN input size as the output resolution(`use_original_resolution = false`) is usually faster.
     /// Because it reduces 1x memory copy. However, the DNN input size are usually much smaller than what you expected.
     /// Hence, you can set it `true` for output image quality, or set it `false` for performance.
-    /// \note We highly recommend you to initialize the stream using `poseplus::make_stream`.
+    /// \note We highly recommend you to initialize the stream using `hyperpose::make_stream`.
     explicit stream(DNNEngine& engine, Parser& parser, bool use_original_resolution = false, size_t parser_cnt = 0, size_t queue_max_size = 128)
         : m_stream_manager(queue_max_size, use_original_resolution)
         , m_engine_ref(engine)
@@ -281,20 +281,20 @@ private:
 /// \tparam Others Other parameters.
 /// \param engine The reference to the DNN engine object.
 /// \param parser The reference to the parser object.
-/// \param others Other parameters in `poseplus::stream`'s constructor.
+/// \param others Other parameters in `hyperpose::stream`'s constructor.
 /// \return The stream object.
 /**
  * @code
- * namespace pp = poseplus;
+ * namespace pp = hyperpose;
  *
  * // Create engine.
  * pp::dnn::tensorrt engine(...);
  *
  * // Create PAF processor.
- * poseplus::parser::paf paf_processor{};
+ * hyperpose::parser::paf paf_processor{};
  *
  * // Create a stream.
- * auto stream = poseplus::make_stream(engine, paf_processor);
+ * auto stream = hyperpose::make_stream(engine, paf_processor);
  *
  * @endcode
  */
@@ -308,10 +308,10 @@ auto make_stream(DNNEngine&& engine, Parser&& parser, Others&&... others)
         std::forward<Others>(others)...);
 }
 
-} // namespace poseplus
+} // namespace hyperpose
 
 // Implementation.
-namespace poseplus {
+namespace hyperpose {
 
 template <typename Engine>
 void basic_stream_manager::dnn_inference_from_resized_images(Engine&& engine)

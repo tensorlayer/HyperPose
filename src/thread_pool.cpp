@@ -1,6 +1,6 @@
-#include <openpose_plus/utility/thread_pool.hpp>
+#include <hyperpose/utility/thread_pool.hpp>
 
-namespace poseplus {
+namespace hyperpose {
 
 // Implementation:
 simple_thread_pool::simple_thread_pool(std::size_t sz)
@@ -48,4 +48,4 @@ simple_thread_pool::~simple_thread_pool()
     m_shared_src->cv.notify_all();
 }
 
-} // namespace poseplus
+} // namespace hyperpose

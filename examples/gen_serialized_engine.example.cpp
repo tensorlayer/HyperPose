@@ -1,6 +1,6 @@
 #include "utils.hpp"
 #include <gflags/gflags.h>
-#include <openpose_plus/openpose_plus.hpp>
+#include <hyperpose/hyperpose.hpp>
 #include <string_view>
 
 // Model flags
@@ -21,12 +21,12 @@ int main(int argc, char** argv)
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     // * Create TensorRT engine.
-    namespace pp = poseplus;
+    namespace hp = hyperpose;
     if (FLAGS_logging)
-        pp::enable_logging();
+        hp::enable_logging();
 
-    pp::dnn::tensorrt engine = [&] {
-        using namespace pp::dnn;
+    hp::dnn::tensorrt engine = [&] {
+        using namespace hp::dnn;
         constexpr std::string_view onnx_suffix = ".onnx";
         constexpr std::string_view uff_suffix = ".uff";
 

@@ -1,9 +1,9 @@
 #include "logging.hpp"
 #include "post_process.hpp"
-#include <openpose_plus/operator/parser/paf.hpp>
+#include <hyperpose/operator/parser/paf.hpp>
 #include <thread>
 
-namespace poseplus {
+namespace hyperpose {
 
 namespace parser {
 
@@ -321,4 +321,4 @@ namespace parser {
 
 } // namespace parser
 
-} // namespace poseplus
+} // namespace hyperpose

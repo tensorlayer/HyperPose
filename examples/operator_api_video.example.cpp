@@ -1,6 +1,6 @@
 #include "utils.hpp"
 #include <gflags/gflags.h>
-#include <openpose_plus/openpose_plus.hpp>
+#include <hyperpose/hyperpose.hpp>
 
 // Model flags
 DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff", "Path to uff model.");
@@ -37,12 +37,12 @@ int main(int argc, char** argv)
                    << "Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
 
     // * Create TensorRT engine.
-    namespace pp = poseplus;
+    namespace hp = hyperpose;
     if (FLAGS_logging)
-        pp::enable_logging();
+        hp::enable_logging();
 
     auto engine = [&] {
-        using namespace pp::dnn;
+        using namespace hp::dnn;
         constexpr std::string_view onnx_suffix = ".onnx";
         constexpr std::string_view uff_suffix = ".uff";
 
@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     }();
 
     // * post-processing: Using paf. // TODO: Add proposal networks processing.
-    pp::parser::paf parser{};
+    hp::parser::paf parser{};
 
     using clk_t = std::chrono::high_resolution_clock;
 
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
             auto feature_map_packets = engine.inference(batch);
 
             // * Paf.
-            std::vector<std::vector<pp::human_t>> pose_vectors;
+            std::vector<std::vector<hp::human_t>> pose_vectors;
             pose_vectors.reserve(feature_map_packets.size());
             for (auto&& packet : feature_map_packets) {
                 pose_vectors.push_back(parser.process(packet[0], packet[1]));
@@ -95,7 +95,7 @@ int main(int argc, char** argv)
             for (size_t i = 0; i < batch.size(); ++i) {
                 cv::resize(batch[i], batch[i], { FLAGS_input_width, FLAGS_input_height });
                 for (auto&& pose : pose_vectors[i])
-                    pp::draw_human(batch[i], pose);
+                    hp::draw_human(batch[i], pose);
                 writer << batch[i];
                 ++frame_count;
             }

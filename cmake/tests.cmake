@@ -14,6 +14,6 @@ foreach(TEST_FULL_PATH ${POSE_TESTS})
     add_executable(${TEST_TAR} ${TEST_FULL_PATH})
     set_property(
             TARGET ${TEST_TAR} PROPERTY COMPILE_FLAGS "")
-    target_link_libraries(${TEST_TAR} PRIVATE helpers openpose_plus)
+    target_link_libraries(${TEST_TAR} PRIVATE helpers hyperpose)
     add_test(NAME ${TEST_TAR} COMMAND ${TEST_TAR})
 endforeach()

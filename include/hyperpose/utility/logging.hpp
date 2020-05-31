@@ -6,7 +6,7 @@
 #include <atomic>
 #include <iostream>
 
-namespace poseplus {
+namespace hyperpose {
 
 /// \brief Function to enable internal logging information.
 /// \note By enabling logging, you can see messages about detailed detected human numbers
@@ -31,4 +31,4 @@ void set_warning_stream(std::ostream& s);
 /// \param s User-defined stream.
 void set_error_stream(std::ostream& s);
 
-} // namespace poseplus
+} // namespace hyperpose

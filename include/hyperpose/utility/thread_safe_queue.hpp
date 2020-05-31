@@ -9,7 +9,7 @@
 #include <optional>
 #include <vector>
 
-namespace poseplus {
+namespace hyperpose {
 
 template <typename T>
 class thread_safe_queue {
@@ -191,4 +191,4 @@ private:
     const size_t m_capacity;
 };
 
-} // namespace poseplus
+} // namespace hyperpose

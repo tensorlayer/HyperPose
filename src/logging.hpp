@@ -1,9 +1,9 @@
 #pragma once
 
-#include <openpose_plus/utility/logging.hpp>
+#include <hyperpose/utility/logging.hpp>
 #include <ostream>
 
-namespace poseplus {
+namespace hyperpose {
 
 const std::atomic<bool>& is_logging_enabled();
 std::ostream& get_info_logger();
@@ -36,4 +36,4 @@ void error(const Args&... args) // ! Must log!
     std::exit(-1);
 }
 
-} // namespace poseplus
+} // namespace hyperpose

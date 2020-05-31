@@ -1,6 +1,6 @@
-#include <openpose_plus/utility/human.hpp>
+#include <hyperpose/utility/human.hpp>
 
-namespace poseplus {
+namespace hyperpose {
 
 template <typename T, typename S, typename F>
 std::vector<T> map(const F& f, const std::vector<S>& input)
@@ -74,4 +74,4 @@ void draw_human(cv::Mat& img, const human_t& human)
     }
 }
 
-} // namespace poseplus
+} // namespace hyperpose

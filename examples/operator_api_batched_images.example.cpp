@@ -1,6 +1,6 @@
 #include "utils.hpp"
 #include <gflags/gflags.h>
-#include <openpose_plus/openpose_plus.hpp>
+#include <hyperpose/hyperpose.hpp>
 #include <string_view>
 
 // Model flags
@@ -31,12 +31,12 @@ int main(int argc, char** argv)
     poseplus_log() << "Batch shape: [" << batch.size() << ", 3, " << FLAGS_input_height << ", " << FLAGS_input_width << "]\n";
 
     // * Create TensorRT engine.
-    namespace pp = poseplus;
+    namespace hp = hyperpose;
     if (FLAGS_logging)
-        pp::enable_logging();
+        hp::enable_logging();
 
     auto engine = [&] {
-        using namespace pp::dnn;
+        using namespace hp::dnn;
         constexpr std::string_view onnx_suffix = ".onnx";
         constexpr std::string_view uff_suffix = ".uff";
 
@@ -55,7 +55,7 @@ int main(int argc, char** argv)
         return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, batch.size());
     }();
 
-    pp::parser::paf parser{};
+    hp::parser::paf parser{};
 
     using clk_t = std::chrono::high_resolution_clock;
     auto beg = clk_t::now();
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
                 poseplus_log() << feature_map << std::endl;
 
         // * Paf.
-        std::vector<std::vector<pp::human_t>> pose_vectors;
+        std::vector<std::vector<hp::human_t>> pose_vectors;
         pose_vectors.reserve(feature_map_packets.size());
         for (auto&& packet : feature_map_packets) {
             pose_vectors.push_back(parser.process(packet[0], packet[1]));
@@ -80,7 +80,7 @@ int main(int argc, char** argv)
         for (size_t i = 0; i < batch.size(); ++i) {
             cv::resize(batch[i], batch[i], { FLAGS_input_width, FLAGS_input_height });
             for (auto&& pose : pose_vectors[i])
-                pp::draw_human(batch[i], pose);
+                hp::draw_human(batch[i], pose);
             cv::imwrite("output_" + std::to_string(i) + ".png", batch[i]);
         }
     }

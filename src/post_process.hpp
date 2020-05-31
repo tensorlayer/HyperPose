@@ -12,13 +12,13 @@
 #include <ttl/range>
 #include <ttl/tensor>
 
-#include <openpose_plus/utility/human.hpp>
+#include <hyperpose/utility/human.hpp>
 
 #include "cudnn.hpp"
 #include "logging.hpp"
 #include "trace.hpp"
 
-namespace poseplus {
+namespace hyperpose {
 
 // tf.image.resize_area
 // This is the same as OpenCV's INTER_AREA.

@@ -1,6 +1,6 @@
-#include <openpose_plus/utility/data.hpp>
+#include <hyperpose/utility/data.hpp>
 
-namespace poseplus {
+namespace hyperpose {
 
 void nhwc_images_append_nchw_batch(std::vector<float>& data, std::vector<cv::Mat> images, double factor, bool flip_rb)
 {
@@ -34,4 +34,4 @@ void nhwc_images_append_nchw_batch(std::vector<float>& data, std::vector<cv::Mat
     }
 } // TODO: Parallel.
 
-} // namespace poseplus
+} // namespace hyperpose

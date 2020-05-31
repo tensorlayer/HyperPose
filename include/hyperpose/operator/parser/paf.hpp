@@ -5,11 +5,11 @@
 
 #include "../../utility/data.hpp"
 
-namespace poseplus {
+namespace hyperpose {
 
 /// \brief The namespace to contain things related to post processing.
 /// \note In OpenPose-Plus, the pose estimation pipeline consists of DNN inference and parsing(post-processing). The
-/// parser part implementation is under the namespace `poseplus::parser`.
+/// parser part implementation is under the namespace `hyperpose::parser`.
 namespace parser {
 
     /// \brief Post-processing using Part Affinity Field (PAF).
@@ -30,7 +30,7 @@ namespace parser {
         ///
         /// \code
         /// // Initialization of PAF.
-        /// poseplus::parser::paf paf_processor();
+        /// hyperpose::parser::paf paf_processor();
         ///
         /// // ...
         ///
@@ -49,7 +49,7 @@ namespace parser {
 
         /// \brief Function to process one image.
         ///
-        /// \see `poseplus::paf::process(feature_map_t paf, feature_map_t conf)`.
+        /// \see `hyperpose::paf::process(feature_map_t paf, feature_map_t conf)`.
         /// \tparam C Container<feature_map_t>
         /// \param feature_map_containers {PAF, CONF} tensors.
         /// \return All human topologies found in "this" image.
@@ -69,7 +69,7 @@ namespace parser {
         /// \param thresh The CONF threshold.
         void set_conf_thresh(float thresh);
 
-        /// \note This copy constructor will only copy the parameters introduces in constructor(`poseplus::paf`).
+        /// \note This copy constructor will only copy the parameters introduces in constructor(`hyperpose::paf`).
         /// \param p Object to be "copied".
         paf(const paf& p);
 
@@ -92,4 +92,4 @@ namespace parser {
 
 } // namespace parser
 
-} // namespace poseplus
+} // namespace hyperpose

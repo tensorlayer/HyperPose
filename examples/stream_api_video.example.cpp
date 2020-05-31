@@ -1,7 +1,7 @@
 #include "utils.hpp"
 #include <gflags/gflags.h>
+#include <hyperpose/hyperpose.hpp>
 #include <opencv2/opencv.hpp>
-#include <openpose_plus/openpose_plus.hpp>
 
 DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff",
     "Path to uff model.");
@@ -20,10 +20,10 @@ DEFINE_bool(logging, false, "Print the logging information or not.");
 int main(int argc, char** argv)
 {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    namespace pp = poseplus;
+    namespace hp = hyperpose;
 
     if (FLAGS_logging)
-        pp::enable_logging();
+        hp::enable_logging();
 
     cv::VideoCapture capture(FLAGS_input_video);
 
@@ -51,7 +51,7 @@ int main(int argc, char** argv)
     }
 
     auto engine = [&] {
-        using namespace pp::dnn;
+        using namespace hp::dnn;
         constexpr std::string_view onnx_suffix = ".onnx";
         constexpr std::string_view uff_suffix = ".uff";
 
@@ -70,9 +70,9 @@ int main(int argc, char** argv)
         return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, FLAGS_max_batch_size);
     }();
 
-    pp::parser::paf parser{};
+    hp::parser::paf parser{};
 
-    auto stream = pp::make_stream(engine, parser, FLAGS_original_resolution);
+    auto stream = hp::make_stream(engine, parser, FLAGS_original_resolution);
 
     stream.add_monitor(1000);
 

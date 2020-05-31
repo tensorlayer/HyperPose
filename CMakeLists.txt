@@ -1,5 +1,5 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
-PROJECT(openpose-plus)
+PROJECT(hyperpose)
 
 SET(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,11 +12,11 @@ OPTION(BUILD_FAKE "Build fake target without CUDA libraries." OFF)
 OPTION(ENABLE_CUDA "Build with CUDA support." ON)
 
 IF(WITH_TRACE)
-    MESSAGE(STATUS "[OPENPOSE-PLUS] Trace Enabled.")
+    MESSAGE(STATUS "[HyperPose] Trace Enabled.")
     ADD_DEFINITIONS(-DENABLE_TRACE)
 ENDIF()
 
-INCLUDE(cmake/openpose-plus.cmake)
+INCLUDE(cmake/hyperpose.cmake)
 INCLUDE(cmake/package.cmake)
 
 INCLUDE(cmake/helpers.cmake)

@@ -12,21 +12,21 @@
 
 #include "../../utility/data.hpp"
 
-namespace poseplus {
+namespace hyperpose {
 
 /// Element data type.
 using data_type = nvinfer1::DataType;
 
 /// \brief The namespace to contain things related to DNN. (e.g., DNN engines and model configurations.)
 /// \note In OpenPose-Plus, the pose estimation pipeline consists of DNN inference and parsing(post-processing). The DNN
-/// part implementation is under the namespace `poseplus::dnn`.
+/// part implementation is under the namespace `hyperpose::dnn`.
 namespace dnn {
     /// \brief `tensorrt` is a class using TensorRT DNN engine to perform neural network inference.
     class tensorrt {
     public:
         /// \brief The constructor of TensorRT engine using UFF model file.
         ///
-        /// \param uff_model See `poseplus::dnn::uff`.
+        /// \param uff_model See `hyperpose::dnn::uff`.
         /// \param input_size The input image size(height, width).
         /// \param max_batch_size The maximum batch size of the inputs. (for input/output buffer allocation)
         /// \param dtype The data type of data element. (for some GPUs, low precision data type will be faster)
@@ -40,7 +40,7 @@ namespace dnn {
 
         /// \brief The constructor of TensorRT engine using ONNX model file.
         ///
-        /// \param onnx_model See `poseplus::dnn::onnx`.
+        /// \param onnx_model See `hyperpose::dnn::onnx`.
         /// \param input_size The input image size(width, height).
         /// \param max_batch_size The maximum batch size of the inputs. (for input/output buffer allocation)
         /// \param dtype The data type of data element. (for some GPUs, low precision data type will be faster)
@@ -52,7 +52,7 @@ namespace dnn {
 
         /// \brief The constructor of TensorRT engine using TensorRT serialized model file.
         ///
-        /// \param serialized_model See `poseplus::dnn::tensorrt_serialized`.
+        /// \param serialized_model See `hyperpose::dnn::tensorrt_serialized`.
         /// \param input_size The input image size(width, height).
         /// \param max_batch_size The maximum batch size of the inputs. (for input/output buffer allocation)
         /// \param factor For each element in the input data, they will be multiplied by "factor".
@@ -60,7 +60,7 @@ namespace dnn {
         explicit tensorrt(const tensorrt_serialized& serialized_model, cv::Size input_size, int max_batch_size = 8,
             double factor = 1. / 255, bool flip_rgb = true);
 
-        /// Deconstructor of class poseplus::dnn::tensorrt.
+        /// Deconstructor of class hyperpose::dnn::tensorrt.
         ~tensorrt();
 
         ///
@@ -74,7 +74,7 @@ namespace dnn {
         /// Do inference with `cv::Mat`(OpenCV image/matrix data structure).
         /**
          * @code
-         * namespace pp = poseplus;
+         * namespace pp = hyperpose;
          *
          * // Create engine.
          * pp::dnn::tensorrt engine(...);
@@ -97,8 +97,8 @@ namespace dnn {
         /// \details This step will not involve in any scalar multiplication or channel swapping(related to the `factor`
         /// and `flip_rgb` parameter in the constructor).
         ///
-        /// \see poseplus::nhwc_images_append_nchw_batch
-        /// \see poseplus::tensorrt::tensorrt
+        /// \see hyperpose::nhwc_images_append_nchw_batch
+        /// \see hyperpose::tensorrt::tensorrt
         ///
         /// \param float_buffer The input float buffers.
         /// \param batch_size The batch size of inputs to do inference.
@@ -131,4 +131,4 @@ namespace dnn {
 
 } // namespace dnn
 
-} // namespace poseplus
+} // namespace hyperpose

@@ -1,7 +1,7 @@
 #include "logging.hpp"
 #include <atomic>
 
-namespace poseplus {
+namespace hyperpose {
 
 std::atomic<std::ostream*> _info_ptr = nullptr;
 std::atomic<std::ostream*> _warning_ptr = nullptr;
@@ -45,4 +45,4 @@ void disable_logging()
     _enable_logging = false;
 }
 
-} // namespace poseplus
+} // namespace hyperpose
