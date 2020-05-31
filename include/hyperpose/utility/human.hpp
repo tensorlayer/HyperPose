@@ -94,6 +94,7 @@ struct connection_candidate {
     int idx1;
     int idx2;
     float score;
+    float etc;
 };
 
 inline bool operator>(const connection_candidate& a, const connection_candidate& b)

@@ -162,7 +162,7 @@ namespace dnn {
             error("Detected multiple inputs. (Only support one-input mode currently)\n");
 
         destroy_ptr<nvinfer1::IBuilderConfig> config(builder->createBuilderConfig());
-        config->setMaxWorkspaceSize(1ull << 30); // TODO: A better way to set the workspace.
+        config->setMaxWorkspaceSize(1ull << 20); // TODO: A better way to set the workspace.
 
         builder->setMaxBatchSize(max_batch_size);
 
@@ -188,7 +188,9 @@ namespace dnn {
 
         config->addOptimizationProfile(profile);
 
+        info("Started profiling and engine building.\n");
         auto engine = builder->buildEngineWithConfig(*network, *config);
+
         info("Profile Info: Minimum input shape: ", to_string(engine->getProfileDimensions(0, 0, nvinfer1::OptProfileSelector::kMIN)), '\n');
         info("Profile Info: Optimum input shape: ", to_string(engine->getProfileDimensions(0, 0, nvinfer1::OptProfileSelector::kOPT)), '\n');
         info("Profile Info: Maximum input shape: ", to_string(engine->getProfileDimensions(0, 0, nvinfer1::OptProfileSelector::kMAX)), '\n');
