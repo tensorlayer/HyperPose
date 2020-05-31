@@ -11,38 +11,28 @@
 
 ## Documentation
 
-[Documentation(Coming Soon)](TODO)
+[Documentation](Coming Soon)
 
-- [Installation | Prediction](docs/markdown/install/prediction.md)
-- [QuickStart | Prediction](docs/markdown/quick_start/prediction.md)
-- [Supports](docs/markdown/performance/supports.md)
-- [FAQ](docs/markdown/tutorial/faq.md)
+Markdown documents are available in `docs/markdown`.
 
-## Why HyperPose
+## Getting Started
 
-HyperPose provides:
+### Prediction
 
-- **Flexible training**
-- Well abstracted APIs(Python) to help you manage the pose estimation pipeline quickly and directly.
-  
-  - Dataset(COCO, MPII)
-  
-  - Pose Estimation Methods
-  
-    - Backbones: ResNet, VGG(Tiny/Normal/Thin), Pose Proposal Network.
-  - Post-Processing:  Part Association Field(PAF), Pose Proposal Networks.
+> For more detailed guidance of installation/examples(more examples), please refer to [QuickStart | Prediction](docs/markdown/quick_start/prediction.md) and [Installation | Prediction](docs/markdown/install/prediction.md).
 
-- **Fast Prediction**
+Install CUDA Toolkit, TensorRT, OpenCV and gFlags(cmake version), and make sure a C++17 compiler is available on your system.
 
-  - Rich operator APIs for you to do fast DNN inference and post-processing.
-  - 2 API styles:
-    - Operator API(Imperative): HyperPose provides basic operators to do DNN inference and post processing.
-    - Stream API(Declarative): HyperPose provides a streaming processing runtime scheduler where users only need to specify the engine, post-processing methods and input/output streams.
-  - Model format supports:
-    - Uff.
-    - ONNX.
-    - Cuda Engine Protobuf.
-  - Good performance
+```bash
+sudo apt -y install subversion curl
+sh scripts/download-test-data.sh         # Install data for examples.
+sh scripts/download-tinyvgg-model.sh     # Install tiny-vgg model.
+mkdir build && cd build
+cmake .. && make -j$(nproc)              # Build library && examples.
+./example.operator_api_batched_images    # The ouput images will be in the build folder.
+```
+
+## Prediction Performance
 
 | Method          | Backbone Size | Network Resolution | Operator API / FPS | Stream API / FPS | Other Framework / FPS |
 | --------------- | ------------- | ------------------ | ------------------ | ---------------- | --------------------- |
@@ -52,7 +42,9 @@ HyperPose provides:
 
 > **Environment**: System@Ubuntu18.04, GPU@1070Ti, CPU@i7(12 logic cores). 
 >
-> **Availability**: All model above are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose).
+> **Tested Video Source**: Crazy Updown Funk(resolution@640x360, frame_count@7458, source@[YouTube](https://www.youtube.com/watch?v=2DiQUX11YaY))
+>
+> **Availability**: All model above are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose). 
 
 For more details, please refer to the documentation.
 
