@@ -28,7 +28,9 @@ Tutorials
 API Reference
 -------------
 .. toctree::
-    C++ Prediction API(Doxygen) <../../doxygen/build/html/index.html#http://>
+    :maxdepth: 1
+
+    markdown/apis/prediction
 
 Performance and Supports
 ------------------------
