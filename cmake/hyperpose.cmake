@@ -31,8 +31,6 @@ TARGET_INCLUDE_DIRECTORIES(${POSE_LIB_NAME}
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
-        PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CUDA_RT}/include
         ${CUDA_RT}/include/crt)
 
