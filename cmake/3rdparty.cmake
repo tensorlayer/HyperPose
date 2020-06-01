@@ -1,6 +1,7 @@
 INCLUDE(ExternalProject)
 
-SET(THIRDPARTY_PREFIX ${CMAKE_SOURCE_DIR}/3rdparty)
+SET(THIRDPARTY_PREFIX ${CMAKE_SOURCE_DIR}/3rdparty
+        CACHE STRING "Where to place the 3rdparty libraries")
 
 SET(STDTRACER_GIT_URL
     https://github.com/stdml/stdtracer.git
