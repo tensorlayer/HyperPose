@@ -14,23 +14,23 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-
 # -- Project information -----------------------------------------------------
 
 project = 'HyperPose'
 copyright = '2020, Jiawei Liu, Yixiao Guo, Luo Mai, Guo Li, Hao Dong'
 author = 'Jiawei Liu, Yixiao Guo, Luo Mai, Guo Li, Hao Dong'
 
-
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
-              'sphinx.ext.todo',
-              'sphinx.ext.githubpages',
-              'recommonmark']
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.todo',
+    'sphinx.ext.githubpages',
+    'recommonmark',
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -57,8 +57,12 @@ html_theme = 'sphinx_rtd_theme'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+master_doc = 'index'
+
+import os
 # Do doxygen
-import subprocess, os
+import subprocess
+
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
 if read_the_docs_build:
