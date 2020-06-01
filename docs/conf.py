@@ -60,11 +60,7 @@ html_static_path = ['_static']
 
 master_doc = 'index'
 
-import os
 # Do doxygen
 import subprocess
 
-read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
-
-if read_the_docs_build:
-    subprocess.call('cd doxygen; doxygen Doxyfile', shell=True)
+subprocess.call('cd doxygen; doxygen Doxyfile', shell=True)
