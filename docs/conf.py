@@ -64,5 +64,5 @@ master_doc = 'index'
 import subprocess
 
 subprocess.call('cd doxygen; doxygen Doxyfile', shell=True)
-subprocess.call('mkdir -p _build', shell=True)
-subprocess.call('cp -r doxygen/build/html _build/cpp', shell=True)
+subprocess.call('mkdir -p _build/html', shell=True)
+subprocess.call('cp -r doxygen/build/html _build//html/cpp', shell=True)
