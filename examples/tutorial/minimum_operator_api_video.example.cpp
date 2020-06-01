@@ -7,11 +7,11 @@ int main() {
     const dnn::uff uff_model{ "../data/models/hao28-600000-256x384.uff", "image", {"outputs/conf", "outputs/paf"} };
 
     // * Input video.
-    auto capture = cv::VideoCapture("../data/media/output_video.avi");
+    auto capture = cv::VideoCapture("../data/media/video.avi");
 
     // * Output video.
     auto writer = cv::VideoWriter(
-        "output.avi", capture.get(cv::CAP_PROP_FOURCC), capture.get(cv::CAP_PROP_FPS), network_resolution);
+        "output_video.avi", capture.get(cv::CAP_PROP_FOURCC), capture.get(cv::CAP_PROP_FPS), network_resolution);
 
     // * Create TensorRT engine.
     dnn::tensorrt engine(uff_model, network_resolution);
