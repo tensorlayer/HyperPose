@@ -29,4 +29,8 @@ TARGET_INCLUDE_DIRECTORIES(
         ${POSE_LIB_NAME} PRIVATE
         ${CUDA_RT}/include
         ${CUDA_RT}/include/crt)
+
+CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/cmake/configuration.h.in ${CMAKE_BINARY_DIR}/configuration.h)
+INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
+
 ADD_GLOBAL_DEPS(${POSE_LIB_NAME})
