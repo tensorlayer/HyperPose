@@ -29,6 +29,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.githubpages',
+    'sphinx_markdown_tables',
     'recommonmark',
 ]
 
