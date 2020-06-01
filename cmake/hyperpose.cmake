@@ -9,7 +9,7 @@ INCLUDE(cmake/cuda.cmake)
 FIND_PACKAGE(OpenCV)
 
 ADD_LIBRARY(
-        ${POSE_LIB_NAME} SHARED
+        ${POSE_LIB_NAME} # SHARED
         src/logging.cpp
         src/tensorrt.cpp
         src/paf.cpp
@@ -17,6 +17,7 @@ ADD_LIBRARY(
         src/stream.cpp
         src/thread_pool.cpp
         src/human.cpp)
+
 TARGET_LINK_LIBRARIES(
         ${POSE_LIB_NAME}
         cudnn
@@ -37,8 +38,7 @@ TARGET_INCLUDE_DIRECTORIES(${POSE_LIB_NAME}
 
 SET_TARGET_PROPERTIES(${POSE_LIB_NAME} PROPERTIES
         VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_VERSION}
-        PUBLIC_HEADER include/hyperpose/hyperpose.hpp)
+        SOVERSION ${PROJECT_VERSION})
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/cmake/configuration.h.in ${CMAKE_BINARY_DIR}/configuration.h)
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
