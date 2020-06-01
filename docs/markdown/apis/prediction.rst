@@ -1,4 +1,4 @@
 C++ Prediction API
 ===================
 
-* `C++ Prediction API(Doxygen) <../../../../doxygen/build/html/index.html>`_
+* `C++ Prediction API(Doxygen) <../../cpp/>`_
