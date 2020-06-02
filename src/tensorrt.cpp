@@ -1,7 +1,6 @@
 #include <hyperpose/operator/dnn/tensorrt.hpp>
 #include <hyperpose/utility/data.hpp>
 
-
 #include <NvInferRuntime.h>
 #include <NvInferRuntimeCommon.h>
 #include <ttl/cuda_tensor>
@@ -115,7 +114,10 @@ namespace dnn {
         engine_ptr m_engine;
         std::unordered_map<std::string, cuda_buffer_t> m_cuda_buffers;
 
-        cuda_dep(nvinfer1::ICudaEngine* ptr) : m_engine(ptr) {}
+        cuda_dep(nvinfer1::ICudaEngine* ptr)
+            : m_engine(ptr)
+        {
+        }
     };
 
     // * Create TensorRT engine.
@@ -326,7 +328,7 @@ namespace dnn {
         , m_max_batch_size(max_batch_size)
         , m_factor(factor)
         , m_cuda_dep(std::make_unique<cuda_dep>(create_uff_engine(uff_model.model_path, input_size, uff_model.input_name, uff_model.output_names,
-                                                                  max_batch_size, static_cast<nvinfer1::DataType>(dtype.val))))
+              max_batch_size, static_cast<nvinfer1::DataType>(dtype.val))))
     {
         _create_binding_buffers();
     }
@@ -416,14 +418,14 @@ namespace dnn {
                 const size_t start_index = m_binding_has_batch_dim ? 1 : 0;
                 std::vector<int> non_batch_shape;
                 non_batch_shape.reserve(out_dims.nbDims - start_index);
-                for (size_t k=start_index; k < out_dims.nbDims; ++k)
+                for (size_t k = start_index; k < out_dims.nbDims; ++k)
                     non_batch_shape.push_back(out_dims.d[k]);
 
                 info("Get Inference Result: ", name, ": ", to_string(out_dims), '\n');
 
                 for (auto j : ttl::range(batch_size)) {
                     auto [slice_size] = buffer[j].dims();
-                    std::unique_ptr<char[]> data{new char[slice_size]};
+                    std::unique_ptr<char[]> data{ new char[slice_size] };
 
                     ttl::copy(ttl::vector_ref<char>(data.get(), ttl::shape<1>(slice_size)), ttl::view(buffer[j]));
                     ret[j].emplace_back(name, std::move(data), non_batch_shape);

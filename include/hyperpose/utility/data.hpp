@@ -46,15 +46,17 @@ public:
 
     ///
     /// \return Shape of feature map. (No batch dimension).
-    inline const std::vector<int>& shape() const {return m_shape;}
+    inline const std::vector<int>& shape() const { return m_shape; }
 
     ///
     /// \tparam T View type.
     /// \return Viewed data pointer.
     template <typename T>
-    inline const T* view() const {
+    inline const T* view() const
+    {
         return reinterpret_cast<T*>(m_data.get());
     }
+
 private:
     std::string m_name;
     std::unique_ptr<char[]> m_data;

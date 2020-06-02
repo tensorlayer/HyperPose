@@ -13,13 +13,16 @@ namespace hyperpose {
 /// Data type related to TensorRT data type.
 struct data_type {
     static constexpr int kFLOAT = 0; //!< FP32 format.
-    static constexpr int kHALF = 1;  //!< FP16 format.
-    static constexpr int kINT8 = 2;  //!< quantized INT8 format.
+    static constexpr int kHALF = 1; //!< FP16 format.
+    static constexpr int kINT8 = 2; //!< quantized INT8 format.
     static constexpr int kINT32 = 3; //!< INT32 format.
-    static constexpr int kBOOL = 4;  //!< BOOL format.
+    static constexpr int kBOOL = 4; //!< BOOL format.
 
     int val = kFLOAT;
-    inline data_type(int v) : val(v) {}
+    inline data_type(int v)
+        : val(v)
+    {
+    }
 };
 
 /// \brief The namespace to contain things related to DNN. (e.g., DNN engines and model configurations.)
@@ -113,6 +116,7 @@ namespace dnn {
         /// Save the TensorRT engine to serialized protobuf format.
         /// \param path Path to serialized engine model file.
         void save(const std::string path);
+
     private:
         const cv::Size m_inp_size; // w, h
         const int m_max_batch_size;

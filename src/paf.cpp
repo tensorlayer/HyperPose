@@ -271,7 +271,7 @@ namespace parser {
             m_n_joints = n_joints_;
 
             m_ttl = std::make_unique<ttl_impl>();
-            m_ttl->m_upsample_conf = std::make_unique<ttl::tensor<float, 3>>(n_joints_, m_resolution_size.height, m_resolution_size.width);       // conf
+            m_ttl->m_upsample_conf = std::make_unique<ttl::tensor<float, 3>>(n_joints_, m_resolution_size.height, m_resolution_size.width); // conf
             m_ttl->m_upsample_paf = std::make_unique<ttl::tensor<float, 3>>(n_connections_2_, m_resolution_size.height, m_resolution_size.width); // paf
 
             m_feature_size = cv::Size(fw_paf, fh_paf);
