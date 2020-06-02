@@ -1,3 +1,5 @@
+
+
 #pragma once
 
 /// \file data.hpp
@@ -6,7 +8,6 @@
 #include "human.hpp"
 
 #include <opencv2/opencv.hpp>
-#include <ttl/tensor>
 #include <vector>
 
 namespace hyperpose {
@@ -18,9 +19,11 @@ public:
     /// Constructor.
     /// \param name Tensor name. (Often from DNN engine graphs)
     /// \param tensor Tensor data.
-    inline feature_map_t(std::string name, ttl::tensor<float, 3> tensor)
+    /// \param shape Shape of tensor. (no batch dimension)
+    inline feature_map_t(std::string name, std::unique_ptr<char[]>&& tensor, std::vector<int> shape)
         : m_name(std::move(name))
-        , m_tensor(std::move(tensor))
+        , m_data(std::move(tensor))
+        , m_shape(std::move(shape))
     {
     }
 
@@ -30,25 +33,32 @@ public:
     /// \return The output stream.
     inline friend std::ostream& operator<<(std::ostream& out, const feature_map_t& map)
     {
-        const auto [a, b, c] = map.m_tensor.dims();
-        out << map.m_name << ":[" << a << ", " << b << ", " << c << ']';
+        out << map.m_name << ":[";
+        for (auto& s : map.m_shape)
+            out << s << ", ";
+        out << ']';
         return out;
     }
 
     ///
     /// \return Name of this feature map.
-    inline const std::string& name() { return m_name; }
+    inline const std::string& name() const { return m_name; }
 
-    /// \see https://github.com/stdml/stdtensor
-    /// \return Tensor view of internal `ttl::tensor`.
-    inline ttl::tensor_view<float, 3> view() const
-    {
-        return ttl::view(m_tensor);
+    ///
+    /// \return Shape of feature map. (No batch dimension).
+    inline const std::vector<int>& shape() const {return m_shape;}
+
+    ///
+    /// \tparam T View type.
+    /// \return Viewed data pointer.
+    template <typename T>
+    inline const T* view() const {
+        return reinterpret_cast<T*>(m_data.get());
     }
-
 private:
     std::string m_name;
-    ttl::tensor<float, 3> m_tensor;
+    std::unique_ptr<char[]> m_data;
+    std::vector<int> m_shape;
 };
 
 /// \brief A vector of feature maps.

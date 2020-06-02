@@ -244,8 +244,14 @@ namespace parser {
         TRACE_SCOPE("PAF");
         std::vector<human_t> humans{};
 
-        auto [n_connections_2_, fw_paf, fh_paf] = paf_map.view().dims();
-        auto [n_joints_, fw_conf, fh_conf] = conf_map.view().dims();
+        if (conf_map.shape().size() != 3 || paf_map.shape().size() != 3)
+            error("Input of PAF::PROCESS didn't meet requirements: [conf, paf], tensor.dims() == 3\n");
+
+        auto conf_tensor_ref = ttl::tensor_view<float, 3>(conf_map.view<float>(), conf_map.shape()[0], conf_map.shape()[1], conf_map.shape()[2]);
+        auto paf_tensor_ref = ttl::tensor_view<float, 3>(paf_map.view<float>(), paf_map.shape()[0], paf_map.shape()[1], paf_map.shape()[2]);
+
+        auto [n_connections_2_, fw_paf, fh_paf] = paf_tensor_ref.dims();
+        auto [n_joints_, fw_conf, fh_conf] = conf_tensor_ref.dims();
 
         if (m_resolution_size.width == UNINITIALIZED_VAL || m_resolution_size.height == UNINITIALIZED_VAL)
             m_resolution_size = cv::Size(fw_paf * 4, fh_paf * 4);
@@ -268,8 +274,8 @@ namespace parser {
 
         {
             TRACE_SCOPE("resize heatmap and PAF");
-            resize_area(conf_map.view(), ttl::ref(*m_upsample_conf));
-            resize_area(paf_map.view(), ttl::ref(*m_upsample_paf));
+            resize_area(conf_tensor_ref, ttl::ref(*m_upsample_conf));
+            resize_area(paf_tensor_ref, ttl::ref(*m_upsample_paf));
         }
 
         // Get all peaks.

@@ -394,15 +394,20 @@ namespace dnn {
 
                 const nvinfer1::Dims out_dims = m_engine->getBindingDimensions(i);
 
-                const size_t start_index = out_dims.nbDims == 3 ? 0 : 1;
-                const ttl::shape<3> feature_shape(out_dims.d[start_index], out_dims.d[start_index + 1], out_dims.d[start_index + 2]);
+                const size_t start_index = m_binding_has_batch_dim ? 1 : 0;
+                std::vector<int> non_batch_shape;
+                non_batch_shape.reserve(out_dims.nbDims - start_index);
+                for (size_t k=start_index; k < out_dims.nbDims; ++k)
+                    non_batch_shape.push_back(out_dims.d[k]);
 
                 info("Get Inference Result: ", name, ": ", to_string(out_dims), '\n');
 
                 for (auto j : ttl::range(batch_size)) {
-                    ttl::tensor<float, 3> host_tensor(feature_shape);
-                    ttl::copy(ttl::ref_chars(host_tensor), ttl::view(buffer[j]));
-                    ret[j].emplace_back(name, std::move(host_tensor));
+                    auto [slice_size] = buffer[j].dims();
+                    std::unique_ptr<char[]> data{new char[slice_size]};
+
+                    ttl::copy(ttl::vector_ref<char>(data.get(), ttl::shape<1>(slice_size)), ttl::view(buffer[j]));
+                    ret[j].emplace_back(name, std::move(data), non_batch_shape);
                 }
             }
         }
