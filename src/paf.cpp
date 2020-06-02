@@ -220,15 +220,20 @@ namespace parser {
     }
 
     // Class paf.
-    class paf::peak_finder_impl : public peak_finder_t<float> {
+    struct paf::peak_finder_impl : public peak_finder_t<float> {
     public:
         using peak_finder_t::peak_finder_t;
+    };
+
+    struct paf::ttl_impl {
+        std::unique_ptr<ttl::tensor<float, 3>> m_upsample_paf, m_upsample_conf;
     };
 
     paf::paf(cv::Size resolution_size, float conf_thresh, float paf_thresh)
         : m_resolution_size(resolution_size)
         , m_conf_thresh(conf_thresh)
         , m_paf_thresh(paf_thresh)
+        , m_ttl(UNINITIALIZED_PTR)
     {
     }
 
@@ -236,6 +241,7 @@ namespace parser {
         : m_resolution_size(p.m_resolution_size)
         , m_conf_thresh(p.m_conf_thresh)
         , m_paf_thresh(p.m_paf_thresh)
+        , m_ttl(UNINITIALIZED_PTR)
     {
     }
 
@@ -260,11 +266,14 @@ namespace parser {
         assert(fw_paf == fw_conf);
         assert(fh_paf == fh_conf);
 
-        if (m_n_connections == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR && m_n_joints == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR) {
+        if (m_n_connections == UNINITIALIZED_VAL && m_ttl == UNINITIALIZED_PTR && m_n_joints == UNINITIALIZED_VAL) {
             m_n_connections = n_connections_2_ / 2;
             m_n_joints = n_joints_;
-            m_upsample_paf = std::make_unique<ttl::tensor<float, 3>>(n_connections_2_, m_resolution_size.height, m_resolution_size.width);
-            m_upsample_conf = std::make_unique<ttl::tensor<float, 3>>(n_joints_, m_resolution_size.height, m_resolution_size.width);
+
+            m_ttl = std::make_unique<ttl_impl>();
+            m_ttl->m_upsample_conf = std::make_unique<ttl::tensor<float, 3>>(n_joints_, m_resolution_size.height, m_resolution_size.width);       // conf
+            m_ttl->m_upsample_paf = std::make_unique<ttl::tensor<float, 3>>(n_connections_2_, m_resolution_size.height, m_resolution_size.width); // paf
+
             m_feature_size = cv::Size(fw_paf, fh_paf);
             m_peak_finder_ptr = std::make_unique<paf::peak_finder_impl>(
                 m_n_joints, m_resolution_size.height, m_resolution_size.width, 17);
@@ -274,16 +283,16 @@ namespace parser {
 
         {
             TRACE_SCOPE("resize heatmap and PAF");
-            resize_area(conf_tensor_ref, ttl::ref(*m_upsample_conf));
-            resize_area(paf_tensor_ref, ttl::ref(*m_upsample_paf));
+            resize_area(conf_tensor_ref, ttl::ref(*(m_ttl->m_upsample_conf)));
+            resize_area(paf_tensor_ref, ttl::ref(*(m_ttl->m_upsample_paf)));
         }
 
         // Get all peaks.
         const auto all_peaks = m_peak_finder.find_peak_coords(
-            ttl::view(*m_upsample_conf), m_conf_thresh, false /* use_gpu */);
+            ttl::view(*(m_ttl->m_upsample_conf)), m_conf_thresh, false /* use_gpu */);
         const auto peak_ids_by_channel = m_peak_finder.group_by(all_peaks);
 
-        const ttl::tensor_view<float, 3>& pafmap = ttl::view(*m_upsample_paf);
+        const ttl::tensor_view<float, 3>& pafmap = ttl::view(*(m_ttl->m_upsample_paf));
 
         std::vector<std::vector<connection>> all_connections;
 

@@ -4,18 +4,23 @@
 /// \brief The DNN engine implementation of TensorRT.
 
 #include "../../utility/model.hpp"
-#include <NvInferRuntime.h>
-#include <NvInferRuntimeCommon.h>
 #include <future>
-
-#include <ttl/cuda_tensor>
 
 #include "../../utility/data.hpp"
 
 namespace hyperpose {
 
-/// Element data type.
-using data_type = nvinfer1::DataType;
+/// Data type related to TensorRT data type.
+struct data_type {
+    static constexpr int kFLOAT = 0; //!< FP32 format.
+    static constexpr int kHALF = 1;  //!< FP16 format.
+    static constexpr int kINT8 = 2;  //!< quantized INT8 format.
+    static constexpr int kINT32 = 3; //!< INT32 format.
+    static constexpr int kBOOL = 4;  //!< BOOL format.
+
+    int val = kFLOAT;
+    inline data_type(int v) : val(v) {}
+};
 
 /// \brief The namespace to contain things related to DNN. (e.g., DNN engines and model configurations.)
 /// \note In OpenPose-Plus, the pose estimation pipeline consists of DNN inference and parsing(post-processing). The DNN
@@ -35,7 +40,7 @@ namespace dnn {
         explicit tensorrt(const uff& uff_model,
             cv::Size input_size,
             int max_batch_size = 8,
-            nvinfer1::DataType dtype = nvinfer1::DataType::kFLOAT,
+            data_type dtype = data_type::kFLOAT,
             double factor = 1. / 255, bool flip_rgb = true);
 
         /// \brief The constructor of TensorRT engine using ONNX model file.
@@ -47,7 +52,7 @@ namespace dnn {
         /// \param factor For each element in the input data, they will be multiplied by "factor".
         /// \param flip_rgb Whether to convert the color channels from "BGR" to "RGB".
         explicit tensorrt(const onnx& onnx_model, cv::Size input_size, int max_batch_size = 8,
-            nvinfer1::DataType dtype = nvinfer1::DataType::kFLOAT,
+            data_type dtype = data_type::kFLOAT,
             double factor = 1. / 255, bool flip_rgb = true);
 
         /// \brief The constructor of TensorRT engine using TensorRT serialized model file.
@@ -108,7 +113,6 @@ namespace dnn {
         /// Save the TensorRT engine to serialized protobuf format.
         /// \param path Path to serialized engine model file.
         void save(const std::string path);
-
     private:
         const cv::Size m_inp_size; // w, h
         const int m_max_batch_size;
@@ -116,12 +120,9 @@ namespace dnn {
         const bool m_flip_rgb;
 
         // Cuda related.
-        struct tensorrt_deleter {
-            void operator()(nvinfer1::ICudaEngine* ptr) { ptr->destroy(); }
-        };
-        std::unique_ptr<nvinfer1::ICudaEngine, tensorrt_deleter> m_engine;
-        using cuda_buffer_t = ttl::cuda_tensor<char, 2>; // [batch_size, data_size]
-        std::unordered_map<std::string, cuda_buffer_t> m_cuda_buffers;
+        struct cuda_dep;
+        std::unique_ptr<cuda_dep> m_cuda_dep;
+
         bool m_binding_has_batch_dim = true;
 
     private:
