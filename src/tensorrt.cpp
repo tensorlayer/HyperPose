@@ -407,8 +407,6 @@ namespace dnn {
             }
         }
 
-        std::cout << ret.front()[0].name() << ' ' << ret.front()[1].name() << '\n';
-
         return ret;
     }
 
