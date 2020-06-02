@@ -122,7 +122,7 @@ namespace dnn {
         std::unique_ptr<nvinfer1::ICudaEngine, tensorrt_deleter> m_engine;
         using cuda_buffer_t = ttl::cuda_tensor<char, 2>; // [batch_size, data_size]
         std::unordered_map<std::string, cuda_buffer_t> m_cuda_buffers;
-        bool m_channel3_infer_mode = false;
+        bool m_binding_has_batch_dim = true;
 
     private:
         void _batching(std::vector<cv::Mat>&, std::vector<float>&);

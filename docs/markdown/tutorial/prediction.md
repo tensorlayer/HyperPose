@@ -174,7 +174,7 @@ One image may contain many humans. So the return type is `std::vector<human_t>`.
 // * Paf.
 std::vector<std::vector<human_t>> pose_vectors; // image_count * humans
 for (auto& packet : feature_map_packets)
-    pose_vectors.push_back(parser.process(packet[0]/* paf */, packet[1] /* conf */));
+    pose_vectors.push_back(parser.process(packet[0]/* conf */, packet[1] /* paf */));
 ```
 
 #### Visualization

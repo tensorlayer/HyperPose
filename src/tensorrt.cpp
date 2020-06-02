@@ -251,13 +251,14 @@ namespace dnn {
                     error("The input/output dimension size only allows 3(CHW) or 4(NCHW)\n");
 
                 if (dims.nbDims == 3)
-                    m_channel3_infer_mode = true;
+                    m_binding_has_batch_dim = false;
 
                 std::vector<int> compare_vec;
                 compare_vec.reserve(dims.nbDims);
                 for (auto j : ttl::range(dims.nbDims))
                     compare_vec.push_back(dims.d[j]);
 
+                // Binding CHW must be equal to [3, h, w]
                 if (!std::equal(size_vector.rbegin(), size_vector.rend(), compare_vec.rbegin()))
                     error("Input shape mismatch: Network Input Shape: ", nn_dims_string, ", Input shape: ", input_dims_string, '\n');
 
@@ -270,16 +271,16 @@ namespace dnn {
                 m_cuda_buffers.emplace(name, cuda_buffer_t(m_max_batch_size, std::accumulate(size_vector.begin(), size_vector.end(), 1, std::multiplies<int>{}) * sizeof_element(data_type)));
             }
 
+        destroy_ptr<nvinfer1::IExecutionContext> context(m_engine->createExecutionContext());
+        for (auto i : ttl::range(m_engine->getNbBindings()))
+            if (m_engine->bindingIsInput(i)) {
+                constexpr int batch_one = 1; // Will be used to calculate the volume.
+                if (m_binding_has_batch_dim)
+                    context->setBindingDimensions(0, nvinfer1::Dims4(batch_one, 3, m_inp_size.height, m_inp_size.width));
+                break;
+            }
+
         { // Hook for output shape.
-            destroy_ptr<nvinfer1::IExecutionContext> context(m_engine->createExecutionContext());
-            for (auto i : ttl::range(m_engine->getNbBindings()))
-                if (m_engine->bindingIsInput(i)) {
-                    constexpr int batch_one = 1; // Will be used to calculate the volume.
-                    const auto engine_dims = m_engine->getBindingDimensions(i).nbDims;
-                    if (!m_channel3_infer_mode)
-                        context->setBindingDimensions(0, nvinfer1::Dims4(batch_one, 3, m_inp_size.height, m_inp_size.width));
-                    break;
-                }
 
             for (auto i : ttl::range(m_engine->getNbBindings()))
                 if (!m_engine->bindingIsInput(i)) {
@@ -354,7 +355,7 @@ namespace dnn {
                     auto name = m_engine->getBindingName(i);
                     const auto buffer = m_cuda_buffers.at(name).slice(0, batch_size);
 
-                    if (!m_channel3_infer_mode)
+                    if (!m_binding_has_batch_dim)
                         context->setBindingDimensions(0, nvinfer1::Dims4(batch_size, 3, m_inp_size.height, m_inp_size.width));
 
                     info("Got Input Binding! ", 0, '\n');
@@ -370,7 +371,7 @@ namespace dnn {
             std::vector<void*> buffer_ptrs;
             for (auto i : ttl::range(m_engine->getNbBindings()))
                 buffer_ptrs.push_back(m_cuda_buffers.at(m_engine->getBindingName(i)).data());
-            if (!m_channel3_infer_mode)
+            if (m_binding_has_batch_dim)
                 context->executeV2(buffer_ptrs.data());
             else
                 context->execute(m_max_batch_size, buffer_ptrs.data());

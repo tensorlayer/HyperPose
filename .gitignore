@@ -44,4 +44,7 @@ venv
 /doc
 _build
 docs/make.bat
+examples/experimental
+
 !docs/Makefile
+!docs/markdown/images/*
