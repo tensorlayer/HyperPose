@@ -225,21 +225,21 @@ namespace parser {
         using peak_finder_t::peak_finder_t;
     };
 
-    paf::paf(cv::Size resolution_size, float paf_thresh, float conf_thresh)
+    paf::paf(cv::Size resolution_size, float conf_thresh, float paf_thresh)
         : m_resolution_size(resolution_size)
-        , m_paf_thresh(paf_thresh)
         , m_conf_thresh(conf_thresh)
+        , m_paf_thresh(paf_thresh)
     {
     }
 
     paf::paf(const paf& p)
         : m_resolution_size(p.m_resolution_size)
-        , m_paf_thresh(p.m_paf_thresh)
         , m_conf_thresh(p.m_conf_thresh)
+        , m_paf_thresh(p.m_paf_thresh)
     {
     }
 
-    std::vector<human_t> paf::process(const feature_map_t& paf_map, const feature_map_t& conf_map)
+    std::vector<human_t> paf::process(const feature_map_t& conf_map, const feature_map_t& paf_map)
     {
         TRACE_SCOPE("PAF");
         std::vector<human_t> humans{};

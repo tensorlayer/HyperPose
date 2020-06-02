@@ -90,7 +90,7 @@ namespace dnn {
         /// \param inputs A vector of inputs.
         /// \pre `inputs.size() <= max_batch_size()`(or `std::logic_error` will be thrown).
         /// \throw std::logic_error
-        /// \return A vector of output feature maps(tensors).
+        /// \return A vector of output feature maps(tensors), ordered by tensor name.
         std::vector<internal_t> inference(std::vector<cv::Mat> inputs);
 
         /// \brief Do inference using plain float buffers(NCHW format required).
@@ -102,7 +102,7 @@ namespace dnn {
         ///
         /// \param float_buffer The input float buffers.
         /// \param batch_size The batch size of inputs to do inference.
-        /// \return  vector of output feature maps(tensors).
+        /// \return  vector of output feature maps(tensors), ordered by tensor name.
         std::vector<internal_t> inference(const std::vector<float>& float_buffer, size_t batch_size);
 
         /// Save the TensorRT engine to serialized protobuf format.

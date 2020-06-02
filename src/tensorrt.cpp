@@ -378,27 +378,36 @@ namespace dnn {
 
         {
             TRACE_SCOPE("INFERENCE::TensorRT::dev2host");
-            for (auto i : ttl::range(m_cuda_buffers.size())) {
-                if (!m_engine->bindingIsInput(i)) {
-                    auto name = m_engine->getBindingName(i);
 
-                    const auto buffer = m_cuda_buffers.at(name).slice(0, batch_size);
+            std::vector<std::pair<int, std::string>> output_names;
+            for (auto i : ttl::range(m_cuda_buffers.size()))
+                if (!m_engine->bindingIsInput(i))
+                    output_names.emplace_back(i, m_engine->getBindingName(i));
+            std::sort(output_names.begin(), output_names.end(), [](auto& l, auto& r) { return l.second < r.second; });
 
-                    const nvinfer1::Dims out_dims = m_engine->getBindingDimensions(i);
+            for (auto&& p : output_names) {
+                int i = p.first;
+                auto& name = p.second;
 
-                    const size_t start_index = out_dims.nbDims == 3 ? 0 : 1;
-                    const ttl::shape<3> feature_shape(out_dims.d[start_index], out_dims.d[start_index + 1], out_dims.d[start_index + 2]);
+                const auto buffer = m_cuda_buffers.at(name).slice(0, batch_size);
 
-                    info("Get Inference Result: ", name, ": ", to_string(out_dims), '\n');
+                const nvinfer1::Dims out_dims = m_engine->getBindingDimensions(i);
 
-                    for (auto j : ttl::range(batch_size)) {
-                        ttl::tensor<float, 3> host_tensor(feature_shape);
-                        ttl::copy(ttl::ref_chars(host_tensor), ttl::view(buffer[j]));
-                        ret[j].emplace_back(name, std::move(host_tensor));
-                    }
+                const size_t start_index = out_dims.nbDims == 3 ? 0 : 1;
+                const ttl::shape<3> feature_shape(out_dims.d[start_index], out_dims.d[start_index + 1], out_dims.d[start_index + 2]);
+
+                info("Get Inference Result: ", name, ": ", to_string(out_dims), '\n');
+
+                for (auto j : ttl::range(batch_size)) {
+                    ttl::tensor<float, 3> host_tensor(feature_shape);
+                    ttl::copy(ttl::ref_chars(host_tensor), ttl::view(buffer[j]));
+                    ret[j].emplace_back(name, std::move(host_tensor));
                 }
             }
         }
+
+        std::cout << ret.front()[0].name() << ' ' << ret.front()[1].name() << '\n';
+
         return ret;
     }
 
