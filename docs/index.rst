@@ -11,11 +11,11 @@ Get Started
 .. toctree::
    :maxdepth: 1
 
+   markdown/design/design
    markdown/install/prediction
    markdown/install/training
    markdown/quick_start/prediction
    markdown/quick_start/training
-   markdown/design/design
 
 Tutorials
 -------------
@@ -28,7 +28,9 @@ Tutorials
 API Reference
 -------------
 .. toctree::
-    C++ Prediction API(Doxygen) <../../doxygen/build/html/index.html#http://>
+    :maxdepth: 1
+
+    markdown/apis/prediction
 
 Performance and Supports
 ------------------------

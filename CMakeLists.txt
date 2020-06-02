@@ -1,5 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
-PROJECT(hyperpose)
+
+PROJECT(HyperPose VERSION 2.0)
 
 SET(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,6 +14,7 @@ OPTION(ENABLE_CUDA "Build with CUDA support." ON)
 OPTION(BUILD_EXAMPLES "Build examples." ON)
 OPTION(BUILD_TESTS "Build tests." ON)
 OPTION(BUILD_LIB "Build library." ON)
+OPTION(BUILD_PACKAGE "Build package." OFF)
 
 IF(WITH_TRACE)
     MESSAGE(STATUS "[HyperPose] Trace Enabled.")
@@ -22,7 +24,9 @@ ENDIF()
 IF(BUILD_LIB)
     MESSAGE("BUILD_LIB ${BUILD_LIB}")
     INCLUDE(cmake/hyperpose.cmake)
-    INCLUDE(cmake/package.cmake)
+    IF(BUILD_PACKAGE)
+        INCLUDE(cmake/package.cmake)
+    ENDIF()
 ENDIF()
 
 IF(BUILD_EXAMPLES)

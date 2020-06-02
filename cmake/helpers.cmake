@@ -17,10 +17,7 @@ endif()
 # Helper Lib.
 ADD_LIBRARY(helpers examples/utils.cpp)
 TARGET_LINK_LIBRARIES(helpers
-        opencv_core
-        opencv_imgproc
-        opencv_highgui
-        opencv_imgcodecs
         Threads::Threads
+        ${OpenCV_LIBS}
         ${CXX_FILESYSTEM_LIBRARIES})
 ADD_GLOBAL_DEPS(helpers)

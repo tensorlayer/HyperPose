@@ -9,7 +9,7 @@ INCLUDE(cmake/cuda.cmake)
 FIND_PACKAGE(OpenCV)
 
 ADD_LIBRARY(
-        ${POSE_LIB_NAME}
+        ${POSE_LIB_NAME} # SHARED
         src/logging.cpp
         src/tensorrt.cpp
         src/paf.cpp
@@ -17,6 +17,7 @@ ADD_LIBRARY(
         src/stream.cpp
         src/thread_pool.cpp
         src/human.cpp)
+
 TARGET_LINK_LIBRARIES(
         ${POSE_LIB_NAME}
         cudnn
@@ -25,8 +26,19 @@ TARGET_LINK_LIBRARIES(
         nvparsers
         nvonnxparser
         ${OpenCV_LIBS})
-TARGET_INCLUDE_DIRECTORIES(
-        ${POSE_LIB_NAME} PRIVATE
+
+TARGET_INCLUDE_DIRECTORIES(${POSE_LIB_NAME}
+        PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
         ${CUDA_RT}/include
         ${CUDA_RT}/include/crt)
+
+SET_TARGET_PROPERTIES(${POSE_LIB_NAME} PROPERTIES
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION})
+
+CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/cmake/configuration.h.in ${CMAKE_BINARY_DIR}/configuration.h)
+INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
+
 ADD_GLOBAL_DEPS(${POSE_LIB_NAME})
