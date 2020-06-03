@@ -1,9 +1,38 @@
 #include <hyperpose/operator/parser/proposal_network.hpp>
 #include "logging.hpp"
+#include <deque>
 
 namespace hyperpose {
 
 namespace parser {
+
+// The pose_proposal supports the feature map list using the following order:
+
+// 0: conf_point         N x 18 x 12 x 12
+// 1: conf_iou           N x 18 x 12 x 12 :: Let's ignore this.
+// 2: x                  N x 18 x 12 x 12
+// 3: y                  N x 18 x 12 x 12
+// 4: w                  N x 18 x 12 x 12
+// 5: h                  N x 18 x 12 x 12
+// 6: edge_confidence    N x 17 x 9 x 9 x 12 x 12
+
+// -> Return human_t {x, y} \in [0, 1]
+
+void pose_proposal::set_point_thresh(float thresh) {
+    m_point_thresh = thresh;
+}
+
+void pose_proposal::set_limb_thresh(float thresh) {
+    m_limb_thresh = thresh;
+}
+
+void pose_proposal::set_nms_thresh(float thresh) {
+    m_nms_thresh = thresh;
+}
+
+void pose_proposal::set_max_person(int n_person) {
+    m_max_person = n_person;
+}
 
 std::vector<human_t> pose_proposal::process(
     const feature_map_t& conf_point, const feature_map_t& conf_iou,
@@ -54,7 +83,7 @@ std::vector<human_t> pose_proposal::process(
                 float union_area = box.second.area() + box_.second.area() - int_area;
                 float overlap = int_area / union_area;
 
-                if (overlap > m_mns_thresh)
+                if (overlap > m_nms_thresh)
                     pos = idxs.erase(pos);
                 else
                     ++ pos;
@@ -100,7 +129,10 @@ std::vector<human_t> pose_proposal::process(
 
         info("Key Point @ ", i, " got ", key_points.back().size(), " proposals after nms & thresh.\n");
     }
-    return {};
+
+    std::vector<human_t> pose_topologies;
+
+    // TODO.
 }
 
 }
