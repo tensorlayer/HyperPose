@@ -1,4 +1,5 @@
 #include <hyperpose/utility/human.hpp>
+#include "coco.hpp"
 
 namespace hyperpose {
 

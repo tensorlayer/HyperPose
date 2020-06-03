@@ -2,6 +2,53 @@
 #include "post_process.hpp"
 #include <hyperpose/operator/parser/paf.hpp>
 #include <thread>
+#include "coco.hpp"
+
+struct connection {
+    int cid1;
+    int cid2;
+    float score;
+    int peak_id1;
+    int peak_id2;
+};
+
+struct body_part_ret_t {
+    int id = -1; ///< id of peak in the list of all peaks
+};
+
+template <int J>
+struct human_ref_t_ {
+    int id;
+    body_part_ret_t parts[J];
+    float score;
+    int n_parts;
+
+    human_ref_t_()
+        : id(-1)
+        , score(0)
+        , n_parts(0)
+    {
+    }
+
+    inline bool touches(const std::pair<int, int>& p, const connection& conn) const
+    {
+        return parts[p.first].id == conn.cid1 || parts[p.second].id == conn.cid2;
+    }
+};
+
+using human_ref_t = human_ref_t_<hyperpose::COCO_N_PARTS>;
+
+struct connection_candidate {
+    int idx1;
+    int idx2;
+    float score;
+    float etc;
+};
+
+inline bool operator>(const connection_candidate& a, const connection_candidate& b)
+{
+    return a.score > b.score;
+}
 
 namespace hyperpose {
 
