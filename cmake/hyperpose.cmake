@@ -16,6 +16,7 @@ ADD_LIBRARY(
         src/data.cpp
         src/stream.cpp
         src/thread_pool.cpp
+        src/pose_proposal.cpp
         src/human.cpp)
 
 TARGET_LINK_LIBRARIES(
