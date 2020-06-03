@@ -80,7 +80,7 @@ namespace parser {
         cv::Size m_resolution_size;
         float m_paf_thresh, m_conf_thresh;
 
-        static constexpr nullptr_t UNINITIALIZED_PTR = nullptr;
+        static constexpr std::nullptr_t UNINITIALIZED_PTR = nullptr;
         static constexpr int UNINITIALIZED_VAL = -1;
 
         int m_n_joints = UNINITIALIZED_VAL, m_n_connections = UNINITIALIZED_VAL;
