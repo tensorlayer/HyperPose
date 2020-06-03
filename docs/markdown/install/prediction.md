@@ -32,7 +32,22 @@ sudo make install
 git clone https://github.com/tensorlayer/hyperpose.git
 cd hyperpose
 mkdir build && cd build
-cmake .. && make -j$(nproc)
+cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j$(nproc)
 ```
+
+## Build with User Codes
+
+You can directly write codes and execute it under the hyperpose repository.
+
+- **Step 1**: Write your own codes in `hyperpose/examples/user_codes` with suffix `.cpp`.
+- **Step 2**:
+
+```bash
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DBUILD_USER_CODES=ON # BUILD_USER_CODES is by default on
+make -j$(nproc)
+```
+
+- **Step 3**: Execute your codes!
 
 Just go to [Quick Start](../quick_start/prediction.md) to test your installation.
