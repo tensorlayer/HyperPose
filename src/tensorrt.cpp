@@ -376,7 +376,7 @@ namespace dnn {
                     auto name = m_cuda_dep->m_engine->getBindingName(i);
                     const auto buffer = m_cuda_dep->m_cuda_buffers.at(name).slice(0, batch_size);
 
-                    if (!m_binding_has_batch_dim)
+                    if (m_binding_has_batch_dim)
                         context->setBindingDimensions(0, nvinfer1::Dims4(batch_size, 3, m_inp_size.height, m_inp_size.width));
 
                     info("Got Input Binding! ", 0, '\n');
