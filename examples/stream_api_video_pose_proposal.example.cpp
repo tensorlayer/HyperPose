@@ -3,7 +3,7 @@
 #include <hyperpose/hyperpose.hpp>
 #include <opencv2/opencv.hpp>
 
-DEFINE_string(model_file, "../data/models/ppn.onnx","Path to uff model.");
+DEFINE_string(model_file, "../data/models/ppn.onnx", "Path to uff model.");
 DEFINE_int32(input_width, 384, "Width of input image.");
 DEFINE_int32(input_height, 384, "Height of input image.");
 DEFINE_int32(max_batch_size, 8, "Max batch size for inference engine to execute.");
@@ -59,7 +59,7 @@ int main(int argc, char** argv)
         return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, FLAGS_max_batch_size);
     }();
 
-    hp::parser::pose_proposal parser{engine.input_size()};
+    hp::parser::pose_proposal parser{ engine.input_size() };
 
     auto stream = hp::make_stream(engine, parser, FLAGS_original_resolution);
 

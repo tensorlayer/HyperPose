@@ -4,7 +4,7 @@
 #include <string_view>
 
 // Model flags
-DEFINE_string(model_file, "../data/models/ppn.onnx","Path to uff model.");
+DEFINE_string(model_file, "../data/models/ppn.onnx", "Path to uff model.");
 DEFINE_int32(input_width, 384, "Width of input image.");
 DEFINE_int32(input_height, 384, "Height of input image.");
 
@@ -43,7 +43,7 @@ int main(int argc, char** argv)
         return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, batch.size());
     }();
 
-    hp::parser::pose_proposal parser{engine.input_size()};
+    hp::parser::pose_proposal parser{ engine.input_size() };
 
     using clk_t = std::chrono::high_resolution_clock;
     auto beg = clk_t::now();

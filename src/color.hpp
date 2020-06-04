@@ -2,7 +2,6 @@
 
 namespace hyperpose {
 
-
 using color_t = std::tuple<uint8_t, uint8_t, uint8_t>;
 
 inline cv::Scalar to_cv_scalar(const color_t& color)

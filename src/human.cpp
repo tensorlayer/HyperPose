@@ -1,5 +1,5 @@
-#include <hyperpose/utility/human.hpp>
 #include "color.hpp"
+#include <hyperpose/utility/human.hpp>
 
 namespace hyperpose {
 
