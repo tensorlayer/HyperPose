@@ -3,7 +3,7 @@
 #pragma once
 
 /// \file data.hpp
-/// \brief Data types in OpenPose-Plus.
+/// \brief Data types in HyperPose.
 
 #include "human.hpp"
 

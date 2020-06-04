@@ -8,7 +8,7 @@
 namespace hyperpose {
 
 /// \brief The namespace to contain things related to post processing.
-/// \note In OpenPose-Plus, the pose estimation pipeline consists of DNN inference and parsing(post-processing). The
+/// \note In HyperPose, the pose estimation pipeline consists of DNN inference and parsing(post-processing). The
 /// parser part implementation is under the namespace `hyperpose::parser`.
 namespace parser {
 

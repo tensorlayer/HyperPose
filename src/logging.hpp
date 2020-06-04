@@ -15,7 +15,7 @@ void info(const Args&... args)
 {
     if (is_logging_enabled() == false)
         return;
-    get_info_logger() << "[OpenPose-Plus::INFO   ] ";
+    get_info_logger() << "[HyperPose::INFO   ] ";
     ((get_info_logger() << args), ...);
 }
 
@@ -24,14 +24,14 @@ void warning(const Args&... args)
 {
     if (is_logging_enabled() == false)
         return;
-    get_warning_logger() << "[OpenPose-Plus::WARNING] ";
+    get_warning_logger() << "[HyperPose::WARNING] ";
     ((get_warning_logger() << args), ...);
 }
 
 template <typename... Args>
 void error(const Args&... args) // ! Must log!
 {
-    get_error_logger() << "[OpenPose-Plus::ERROR  ] ";
+    get_error_logger() << "[HyperPose::ERROR  ] ";
     ((get_error_logger() << args), ...);
     std::exit(-1);
 }
