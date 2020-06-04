@@ -256,32 +256,38 @@ std::vector<human_t> pose_proposal::process(
 
     constexpr size_t hash_grid = 64;
     constexpr size_t nan = std::numeric_limits<uint16_t >::max();
-    std::array<std::array<uint16_t, hash_grid>, hash_grid> hash_table;
+    std::array<std::array<uint16_t, hash_grid>, hash_grid> hash_table{}; // Avoid Stack OverFlow!
     for(auto&& row : hash_table)
         row.fill(nan);
 
     const auto query_table = [hash_grid, &hash_table](const body_part_t& part) -> uint16_t& {
-        return hash_table[static_cast<uint16_t>(part.x * hash_grid)][static_cast<uint16_t>(part.y * hash_grid)];
+        assert(part.x >= 0);
+        assert(part.y >= 0);
+        size_t x_ind = part.x * hash_grid;
+        size_t y_ind = part.y * hash_grid;
+        x_ind = (x_ind == hash_grid) ? hash_grid - 1 : x_ind;
+        y_ind = (y_ind == hash_grid) ? hash_grid - 1 : y_ind;
+        return hash_table[x_ind][y_ind];
     };
 
     for (size_t i=0; i<ret_poses.size(); ++i) {
-        auto& this_human = ret_poses[i];
+        auto& this_human = ret_poses[i]; // We are trying to find other parts for current human.
         for (size_t j=0; j < this_human.parts.size(); ++j) {
-            auto&& this_part = this_human.parts[j];
+            const auto& this_part = this_human.parts[j]; // Current part: Unique Or Belong to Others.
             if (this_part.has_value) {
-                auto& human_index = query_table(this_part);
-                if (human_index == nan) {
-                    human_index = i;
+                const size_t root_index = query_table(this_part);
+                if (root_index >= ret_poses.size()) { // Unique.
+                    query_table(this_part) = i;
                 } else {
-                    if(human_index == i)
+                    if(root_index == i) // My root is the current person? Skip.
                         continue;
 
-                    auto&& aim = ret_poses[human_index];
+                    auto& aim = ret_poses[root_index]; // Get root person.
 
                     for (size_t u=0; u<this_human.parts.size(); ++u) {
                         const auto& part = ret_poses[i].parts[u];
-                        if (part.has_value && !aim.parts[u].has_value) {
-                            query_table(part) = human_index;
+                        if (part.has_value && !aim.parts.at(u).has_value) {
+                            query_table(part) = root_index;
                             aim.parts[u] = part;
                             aim.score += 1.0;
                         }

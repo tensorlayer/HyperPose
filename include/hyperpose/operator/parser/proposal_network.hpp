@@ -24,7 +24,14 @@ public:
 
     inline std::vector<human_t> process(const std::vector<feature_map_t>& feature_map_list) {
         assert(feature_map_list.size() == 7);
-        return this->process(feature_map_list[0], feature_map_list[1], feature_map_list[2], feature_map_list[3], feature_map_list[4], feature_map_list[5], feature_map_list[6]);
+        return this->process(
+            feature_map_list.at(0),
+            feature_map_list.at(1),
+            feature_map_list.at(2),
+            feature_map_list.at(3),
+            feature_map_list.at(4),
+            feature_map_list.at(5),
+            feature_map_list.at(6));
     }
 
     void set_point_thresh(float thresh);
