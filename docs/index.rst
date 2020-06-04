@@ -31,6 +31,7 @@ API Reference
     :maxdepth: 1
 
     markdown/apis/prediction
+    apirst/apis/modules
 
 Performance and Supports
 ------------------------
