@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     }();
 
     // * post-processing: Using paf. // TODO: Add proposal networks processing.
-    hp::parser::pose_proposal parser{ engine.input_size() };
+    hp::parser::pose_proposal parser{ engine.input_size(), 0.05};
 
     using clk_t = std::chrono::high_resolution_clock;
 

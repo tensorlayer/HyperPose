@@ -59,7 +59,7 @@ int main(int argc, char** argv)
         return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, FLAGS_max_batch_size);
     }();
 
-    hp::parser::pose_proposal parser{ engine.input_size() };
+    hp::parser::pose_proposal parser{ engine.input_size(), 0.05 };
 
     auto stream = hp::make_stream(engine, parser, FLAGS_original_resolution);
 
