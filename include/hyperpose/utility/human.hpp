@@ -55,7 +55,7 @@ inline const coco_pair_list_t COCOPAIRS = {
     { 15, 17 }, // 18
     { 2, 16 }, // * 9
     { 5, 17 }, // * 13
-};
+}; // See https://www.cnblogs.com/caffeaoto/p/7793994.html.
 
 inline bool is_virtual_pair(int pair_id) { return pair_id > 16; }
 

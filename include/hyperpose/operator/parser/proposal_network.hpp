@@ -10,7 +10,7 @@ namespace parser {
 
 class pose_proposal {
 public:
-    pose_proposal(cv::Size net_resolution, float point_thresh = 0.05, float limb_thresh = 0.05, float mns_thresh = 0.3, int max_person = 32)
+    pose_proposal(cv::Size net_resolution, float point_thresh = 0.15, float limb_thresh = 0.02, float mns_thresh = 0.3, int max_person = 32)
         :
         m_net_resolution(net_resolution),
         m_point_thresh(point_thresh),
