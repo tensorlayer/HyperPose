@@ -2,6 +2,53 @@
 #include "post_process.hpp"
 #include <hyperpose/operator/parser/paf.hpp>
 #include <thread>
+#include "coco.hpp"
+
+struct connection {
+    int cid1;
+    int cid2;
+    float score;
+    int peak_id1;
+    int peak_id2;
+};
+
+struct body_part_ret_t {
+    int id = -1; ///< id of peak in the list of all peaks
+};
+
+template <int J>
+struct human_ref_t_ {
+    int id;
+    body_part_ret_t parts[J];
+    float score;
+    int n_parts;
+
+    human_ref_t_()
+        : id(-1)
+        , score(0)
+        , n_parts(0)
+    {
+    }
+
+    inline bool touches(const std::pair<int, int>& p, const connection& conn) const
+    {
+        return parts[p.first].id == conn.cid1 || parts[p.second].id == conn.cid2;
+    }
+};
+
+using human_ref_t = human_ref_t_<hyperpose::COCO_N_PARTS>;
+
+struct connection_candidate {
+    int idx1;
+    int idx2;
+    float score;
+    float etc;
+};
+
+inline bool operator>(const connection_candidate& a, const connection_candidate& b)
+{
+    return a.score > b.score;
+}
 
 namespace hyperpose {
 
@@ -220,32 +267,44 @@ namespace parser {
     }
 
     // Class paf.
-    class paf::peak_finder_impl : public peak_finder_t<float> {
+    struct paf::peak_finder_impl : public peak_finder_t<float> {
     public:
         using peak_finder_t::peak_finder_t;
     };
 
-    paf::paf(cv::Size resolution_size, float paf_thresh, float conf_thresh)
+    struct paf::ttl_impl {
+        std::unique_ptr<ttl::tensor<float, 3>> m_upsample_paf, m_upsample_conf;
+    };
+
+    paf::paf(cv::Size resolution_size, float conf_thresh, float paf_thresh)
         : m_resolution_size(resolution_size)
-        , m_paf_thresh(paf_thresh)
         , m_conf_thresh(conf_thresh)
+        , m_paf_thresh(paf_thresh)
+        , m_ttl(UNINITIALIZED_PTR)
     {
     }
 
     paf::paf(const paf& p)
         : m_resolution_size(p.m_resolution_size)
-        , m_paf_thresh(p.m_paf_thresh)
         , m_conf_thresh(p.m_conf_thresh)
+        , m_paf_thresh(p.m_paf_thresh)
+        , m_ttl(UNINITIALIZED_PTR)
     {
     }
 
-    std::vector<human_t> paf::process(const feature_map_t& paf_map, const feature_map_t& conf_map)
+    std::vector<human_t> paf::process(const feature_map_t& conf_map, const feature_map_t& paf_map)
     {
         TRACE_SCOPE("PAF");
         std::vector<human_t> humans{};
 
-        auto [n_connections_2_, fw_paf, fh_paf] = paf_map.view().dims();
-        auto [n_joints_, fw_conf, fh_conf] = conf_map.view().dims();
+        if (conf_map.shape().size() != 3 || paf_map.shape().size() != 3)
+            error("Input of PAF::PROCESS didn't meet requirements: [conf, paf], tensor.dims() == 3\n");
+
+        auto conf_tensor_ref = ttl::tensor_view<float, 3>(conf_map.view<float>(), conf_map.shape()[0], conf_map.shape()[1], conf_map.shape()[2]);
+        auto paf_tensor_ref = ttl::tensor_view<float, 3>(paf_map.view<float>(), paf_map.shape()[0], paf_map.shape()[1], paf_map.shape()[2]);
+
+        auto [n_connections_2_, fw_paf, fh_paf] = paf_tensor_ref.dims();
+        auto [n_joints_, fw_conf, fh_conf] = conf_tensor_ref.dims();
 
         if (m_resolution_size.width == UNINITIALIZED_VAL || m_resolution_size.height == UNINITIALIZED_VAL)
             m_resolution_size = cv::Size(fw_paf * 4, fh_paf * 4);
@@ -254,11 +313,14 @@ namespace parser {
         assert(fw_paf == fw_conf);
         assert(fh_paf == fh_conf);
 
-        if (m_n_connections == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR && m_n_joints == UNINITIALIZED_VAL && m_upsample_paf == UNINITIALIZED_PTR) {
+        if (m_n_connections == UNINITIALIZED_VAL && m_ttl == UNINITIALIZED_PTR && m_n_joints == UNINITIALIZED_VAL) {
             m_n_connections = n_connections_2_ / 2;
             m_n_joints = n_joints_;
-            m_upsample_paf = std::make_unique<ttl::tensor<float, 3>>(n_connections_2_, m_resolution_size.height, m_resolution_size.width);
-            m_upsample_conf = std::make_unique<ttl::tensor<float, 3>>(n_joints_, m_resolution_size.height, m_resolution_size.width);
+
+            m_ttl = std::make_unique<ttl_impl>();
+            m_ttl->m_upsample_conf = std::make_unique<ttl::tensor<float, 3>>(n_joints_, m_resolution_size.height, m_resolution_size.width); // conf
+            m_ttl->m_upsample_paf = std::make_unique<ttl::tensor<float, 3>>(n_connections_2_, m_resolution_size.height, m_resolution_size.width); // paf
+
             m_feature_size = cv::Size(fw_paf, fh_paf);
             m_peak_finder_ptr = std::make_unique<paf::peak_finder_impl>(
                 m_n_joints, m_resolution_size.height, m_resolution_size.width, 17);
@@ -268,16 +330,16 @@ namespace parser {
 
         {
             TRACE_SCOPE("resize heatmap and PAF");
-            resize_area(conf_map.view(), ttl::ref(*m_upsample_conf));
-            resize_area(paf_map.view(), ttl::ref(*m_upsample_paf));
+            resize_area(conf_tensor_ref, ttl::ref(*(m_ttl->m_upsample_conf)));
+            resize_area(paf_tensor_ref, ttl::ref(*(m_ttl->m_upsample_paf)));
         }
 
         // Get all peaks.
         const auto all_peaks = m_peak_finder.find_peak_coords(
-            ttl::view(*m_upsample_conf), m_conf_thresh, false /* use_gpu */);
+            ttl::view(*(m_ttl->m_upsample_conf)), m_conf_thresh, false /* use_gpu */);
         const auto peak_ids_by_channel = m_peak_finder.group_by(all_peaks);
 
-        const ttl::tensor_view<float, 3>& pafmap = ttl::view(*m_upsample_paf);
+        const ttl::tensor_view<float, 3>& pafmap = ttl::view(*(m_ttl->m_upsample_paf));
 
         std::vector<std::vector<connection>> all_connections;
 

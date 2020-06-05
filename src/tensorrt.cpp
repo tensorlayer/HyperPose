@@ -1,6 +1,10 @@
 #include <hyperpose/operator/dnn/tensorrt.hpp>
 #include <hyperpose/utility/data.hpp>
 
+#include <NvInferRuntime.h>
+#include <NvInferRuntimeCommon.h>
+#include <ttl/cuda_tensor>
+
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
 #include <NvUffParser.h>
@@ -98,6 +102,23 @@ namespace dnn {
         }
         return ret;
     }
+
+    struct tensorrt::cuda_dep {
+        using cuda_buffer_t = ttl::cuda_tensor<char, 2>; // [batch_size, data_size]
+
+        struct tensorrt_deleter {
+            void operator()(nvinfer1::ICudaEngine* ptr) { ptr->destroy(); }
+        };
+        using engine_ptr = std::unique_ptr<nvinfer1::ICudaEngine, tensorrt_deleter>;
+
+        engine_ptr m_engine;
+        std::unordered_map<std::string, cuda_buffer_t> m_cuda_buffers;
+
+        cuda_dep(nvinfer1::ICudaEngine* ptr)
+            : m_engine(ptr)
+        {
+        }
+    };
 
     // * Create TensorRT engine.
     static nvinfer1::ICudaEngine*
@@ -237,11 +258,11 @@ namespace dnn {
     void tensorrt::_create_binding_buffers()
     {
         // Creat buffers.
-        const auto n_bind = m_engine->getNbBindings();
-        m_cuda_buffers.reserve(n_bind);
+        const auto n_bind = m_cuda_dep->m_engine->getNbBindings();
+        m_cuda_dep->m_cuda_buffers.reserve(n_bind);
         for (auto i : ttl::range(n_bind))
-            if (m_engine->bindingIsInput(i)) {
-                const nvinfer1::Dims dims = m_engine->getBindingDimensions(i);
+            if (m_cuda_dep->m_engine->bindingIsInput(i)) {
+                const nvinfer1::Dims dims = m_cuda_dep->m_engine->getBindingDimensions(i);
                 const std::array<int, 3> size_vector = { 3, m_inp_size.height, m_inp_size.width };
 
                 auto nn_dims_string = to_string(dims);
@@ -251,62 +272,63 @@ namespace dnn {
                     error("The input/output dimension size only allows 3(CHW) or 4(NCHW)\n");
 
                 if (dims.nbDims == 3)
-                    m_channel3_infer_mode = true;
+                    m_binding_has_batch_dim = false;
 
                 std::vector<int> compare_vec;
                 compare_vec.reserve(dims.nbDims);
                 for (auto j : ttl::range(dims.nbDims))
                     compare_vec.push_back(dims.d[j]);
 
+                // Binding CHW must be equal to [3, h, w]
                 if (!std::equal(size_vector.rbegin(), size_vector.rend(), compare_vec.rbegin()))
                     error("Input shape mismatch: Network Input Shape: ", nn_dims_string, ", Input shape: ", input_dims_string, '\n');
 
-                const auto data_type = m_engine->getBindingDataType(i);
-                const std::string name(m_engine->getBindingName(i));
+                const auto data_type = m_cuda_dep->m_engine->getBindingDataType(i);
+                const std::string name(m_cuda_dep->m_engine->getBindingName(i));
 
                 info("Binding from TensorRT: Name@", name, ", Type@", to_string(data_type), ", Shape@", nn_dims_string, '\n');
                 info("Preallocate memory shape:(CHW) = ", input_dims_string, '\n');
 
-                m_cuda_buffers.emplace(name, cuda_buffer_t(m_max_batch_size, std::accumulate(size_vector.begin(), size_vector.end(), 1, std::multiplies<int>{}) * sizeof_element(data_type)));
+                m_cuda_dep->m_cuda_buffers.emplace(name, cuda_dep::cuda_buffer_t(m_max_batch_size, std::accumulate(size_vector.begin(), size_vector.end(), 1, std::multiplies<int>{}) * sizeof_element(data_type)));
+            }
+
+        destroy_ptr<nvinfer1::IExecutionContext> context(m_cuda_dep->m_engine->createExecutionContext());
+        for (auto i : ttl::range(m_cuda_dep->m_engine->getNbBindings()))
+            if (m_cuda_dep->m_engine->bindingIsInput(i)) {
+                constexpr int batch_one = 1; // Will be used to calculate the volume.
+                if (m_binding_has_batch_dim)
+                    context->setBindingDimensions(0, nvinfer1::Dims4(batch_one, 3, m_inp_size.height, m_inp_size.width));
+                break;
             }
 
         { // Hook for output shape.
-            destroy_ptr<nvinfer1::IExecutionContext> context(m_engine->createExecutionContext());
-            for (auto i : ttl::range(m_engine->getNbBindings()))
-                if (m_engine->bindingIsInput(i)) {
-                    constexpr int batch_one = 1; // Will be used to calculate the volume.
-                    const auto engine_dims = m_engine->getBindingDimensions(i).nbDims;
-                    if (!m_channel3_infer_mode)
-                        context->setBindingDimensions(0, nvinfer1::Dims4(batch_one, 3, m_inp_size.height, m_inp_size.width));
-                    break;
-                }
 
-            for (auto i : ttl::range(m_engine->getNbBindings()))
-                if (!m_engine->bindingIsInput(i)) {
+            for (auto i : ttl::range(m_cuda_dep->m_engine->getNbBindings()))
+                if (!m_cuda_dep->m_engine->bindingIsInput(i)) {
                     auto dims = context->getBindingDimensions(i);
 
-                    auto name = m_engine->getBindingName(i);
-                    auto data_type = m_engine->getBindingDataType(i);
+                    auto name = m_cuda_dep->m_engine->getBindingName(i);
+                    auto data_type = m_cuda_dep->m_engine->getBindingDataType(i);
 
                     auto batch_slice_alloc_size = volume(dims) * sizeof_element(data_type);
 
                     info("Binding from TensorRT: Name@", name, ", Type@", to_string(data_type), ", Shape@", to_string(dims), '\n');
                     info("Preallocate memory size:(Batch x BatchSliceSize) = [", m_max_batch_size, 'x', batch_slice_alloc_size, "] bytes\n");
 
-                    m_cuda_buffers.emplace(name, cuda_buffer_t(m_max_batch_size, batch_slice_alloc_size));
+                    m_cuda_dep->m_cuda_buffers.emplace(name, cuda_dep::cuda_buffer_t(m_max_batch_size, batch_slice_alloc_size));
                 }
         }
     }
 
     tensorrt::tensorrt(const uff& uff_model, cv::Size input_size,
-        int max_batch_size, nvinfer1::DataType dtype, double factor,
+        int max_batch_size, data_type dtype, double factor,
         bool flip_rgb)
         : m_inp_size(input_size)
         , m_flip_rgb(flip_rgb)
         , m_max_batch_size(max_batch_size)
         , m_factor(factor)
-        , m_engine(create_uff_engine(uff_model.model_path, input_size, uff_model.input_name, uff_model.output_names,
-              max_batch_size, dtype))
+        , m_cuda_dep(std::make_unique<cuda_dep>(create_uff_engine(uff_model.model_path, input_size, uff_model.input_name, uff_model.output_names,
+              max_batch_size, static_cast<nvinfer1::DataType>(dtype.val))))
     {
         _create_binding_buffers();
     }
@@ -318,19 +340,19 @@ namespace dnn {
         , m_flip_rgb(flip_rgb)
         , m_max_batch_size(max_batch_size)
         , m_factor(factor)
-        , m_engine(create_serialized_engine(serialized_model.model_path))
+        , m_cuda_dep(std::make_unique<cuda_dep>(create_serialized_engine(serialized_model.model_path)))
     {
         _create_binding_buffers();
     }
 
     tensorrt::tensorrt(const onnx& onnx_model, cv::Size input_size,
-        int max_batch_size, nvinfer1::DataType dtype, double factor,
+        int max_batch_size, data_type dtype, double factor,
         bool flip_rgb)
         : m_inp_size(input_size)
         , m_flip_rgb(flip_rgb)
         , m_max_batch_size(max_batch_size)
         , m_factor(factor)
-        , m_engine(create_onnx_engine(onnx_model.model_path, max_batch_size, dtype, input_size))
+        , m_cuda_dep(std::make_unique<cuda_dep>(create_onnx_engine(onnx_model.model_path, max_batch_size, static_cast<nvinfer1::DataType>(dtype.val), input_size)))
     {
         _create_binding_buffers();
     }
@@ -344,17 +366,17 @@ namespace dnn {
     std::vector<internal_t>
     tensorrt::inference(const std::vector<float>& cpu_image_batch_buffer, size_t batch_size)
     {
-        destroy_ptr<nvinfer1::IExecutionContext> context(m_engine->createExecutionContext());
+        destroy_ptr<nvinfer1::IExecutionContext> context(m_cuda_dep->m_engine->createExecutionContext());
         std::vector<internal_t> ret(batch_size);
         TRACE_SCOPE("INFERENCE::TensorRT");
         {
             TRACE_SCOPE("INFERENCE::TensorRT::host2dev");
-            for (auto i : ttl::range(m_engine->getNbBindings()))
-                if (m_engine->bindingIsInput(i)) {
-                    auto name = m_engine->getBindingName(i);
-                    const auto buffer = m_cuda_buffers.at(name).slice(0, batch_size);
+            for (auto i : ttl::range(m_cuda_dep->m_engine->getNbBindings()))
+                if (m_cuda_dep->m_engine->bindingIsInput(i)) {
+                    auto name = m_cuda_dep->m_engine->getBindingName(i);
+                    const auto buffer = m_cuda_dep->m_cuda_buffers.at(name).slice(0, batch_size);
 
-                    if (!m_channel3_infer_mode)
+                    if (m_binding_has_batch_dim)
                         context->setBindingDimensions(0, nvinfer1::Dims4(batch_size, 3, m_inp_size.height, m_inp_size.width));
 
                     info("Got Input Binding! ", 0, '\n');
@@ -368,9 +390,9 @@ namespace dnn {
         {
             TRACE_SCOPE("INFERENCE::TensorRT::context->execute");
             std::vector<void*> buffer_ptrs;
-            for (auto i : ttl::range(m_engine->getNbBindings()))
-                buffer_ptrs.push_back(m_cuda_buffers.at(m_engine->getBindingName(i)).data());
-            if (!m_channel3_infer_mode)
+            for (auto i : ttl::range(m_cuda_dep->m_engine->getNbBindings()))
+                buffer_ptrs.push_back(m_cuda_dep->m_cuda_buffers.at(m_cuda_dep->m_engine->getBindingName(i)).data());
+            if (m_binding_has_batch_dim)
                 context->executeV2(buffer_ptrs.data());
             else
                 context->execute(m_max_batch_size, buffer_ptrs.data());
@@ -378,27 +400,39 @@ namespace dnn {
 
         {
             TRACE_SCOPE("INFERENCE::TensorRT::dev2host");
-            for (auto i : ttl::range(m_cuda_buffers.size())) {
-                if (!m_engine->bindingIsInput(i)) {
-                    auto name = m_engine->getBindingName(i);
 
-                    const auto buffer = m_cuda_buffers.at(name).slice(0, batch_size);
+            std::vector<std::pair<int, std::string>> output_names;
+            for (auto i : ttl::range(m_cuda_dep->m_cuda_buffers.size()))
+                if (!m_cuda_dep->m_engine->bindingIsInput(i))
+                    output_names.emplace_back(i, m_cuda_dep->m_engine->getBindingName(i));
+            std::sort(output_names.begin(), output_names.end(), [](auto& l, auto& r) { return l.second < r.second; });
 
-                    const nvinfer1::Dims out_dims = m_engine->getBindingDimensions(i);
+            for (auto&& p : output_names) {
+                int i = p.first;
+                auto& name = p.second;
 
-                    const size_t start_index = out_dims.nbDims == 3 ? 0 : 1;
-                    const ttl::shape<3> feature_shape(out_dims.d[start_index], out_dims.d[start_index + 1], out_dims.d[start_index + 2]);
+                const auto buffer = m_cuda_dep->m_cuda_buffers.at(name).slice(0, batch_size);
 
-                    info("Get Inference Result: ", name, ": ", to_string(out_dims), '\n');
+                const nvinfer1::Dims out_dims = m_cuda_dep->m_engine->getBindingDimensions(i);
 
-                    for (auto j : ttl::range(batch_size)) {
-                        ttl::tensor<float, 3> host_tensor(feature_shape);
-                        ttl::copy(ttl::ref_chars(host_tensor), ttl::view(buffer[j]));
-                        ret[j].emplace_back(name, std::move(host_tensor));
-                    }
+                const size_t start_index = m_binding_has_batch_dim ? 1 : 0;
+                std::vector<int> non_batch_shape;
+                non_batch_shape.reserve(out_dims.nbDims - start_index);
+                for (size_t k = start_index; k < out_dims.nbDims; ++k)
+                    non_batch_shape.push_back(out_dims.d[k]);
+
+                info("Get Inference Result: ", name, ": ", to_string(out_dims), '\n');
+
+                for (auto j : ttl::range(batch_size)) {
+                    auto [slice_size] = buffer[j].dims();
+                    std::unique_ptr<char[]> data{ new char[slice_size] };
+
+                    ttl::copy(ttl::vector_ref<char>(data.get(), ttl::shape<1>(slice_size)), ttl::view(buffer[j]));
+                    ret[j].emplace_back(name, std::move(data), non_batch_shape);
                 }
             }
         }
+
         return ret;
     }
 
@@ -427,7 +461,7 @@ namespace dnn {
 
     void tensorrt::save(const std::string path)
     {
-        destroy_ptr<nvinfer1::IHostMemory> serializedModel(m_engine->serialize());
+        destroy_ptr<nvinfer1::IHostMemory> serializedModel(m_cuda_dep->m_engine->serialize());
         std::ofstream ofs(path, std::ios::out | std::ios::binary);
         info("Writing ", serializedModel->size(), " bytes to model path: ", path, '\n');
         ofs.write(static_cast<char*>(serializedModel->data()), serializedModel->size());

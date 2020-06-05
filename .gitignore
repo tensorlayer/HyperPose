@@ -16,7 +16,7 @@ __pycache__
 /bin
 /checkpoints
 /cmake-build
-/cmake-build-debug
+/cmake-build*
 /coco
 /data
 /lib
@@ -44,4 +44,7 @@ venv
 /doc
 _build
 docs/make.bat
+examples/user_codes/*.cpp
+
 !docs/Makefile
+!docs/markdown/images/*

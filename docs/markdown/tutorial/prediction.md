@@ -11,6 +11,23 @@ This tutorial will show you how to use them in C++ step by step. For more detail
 
 In this section, we'll try to process a video via Stream API.
 
+> Before all, please make sure you have the library successfully built(See [installation](../install/prediction.md)). 
+> And we encourage you to build the tutorial examples under the folder `hyperpose/examples/user_codes`.
+
+```bash
+cd examples/user_codes
+touch main.cpp
+
+# Open your editor and do coding.
+
+cd ../..
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DBUILD_USER_CODES=ON # BUILD_USER_CODES is by default on
+make -j$(nproc)
+
+# Execute your codes.
+```
+
 ### Include the header
 
 ```c++
@@ -174,7 +191,7 @@ One image may contain many humans. So the return type is `std::vector<human_t>`.
 // * Paf.
 std::vector<std::vector<human_t>> pose_vectors; // image_count * humans
 for (auto& packet : feature_map_packets)
-    pose_vectors.push_back(parser.process(packet[0]/* paf */, packet[1] /* conf */));
+    pose_vectors.push_back(parser.process(packet[0]/* conf */, packet[1] /* paf */));
 ```
 
 #### Visualization

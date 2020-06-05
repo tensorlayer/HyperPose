@@ -10,6 +10,6 @@ std::vector<std::string> split(const std::string& text, const char sep);
 std::vector<cv::Mat> glob_images(const std::string& path);
 
 inline constexpr auto poseplus_log = []() -> std::ostream& {
-    std::cout << "[OpenPose-Plus::EXAMPLE] ";
+    std::cout << "[HyperPose::EXAMPLE] ";
     return std::cout;
 };

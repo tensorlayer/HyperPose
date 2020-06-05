@@ -30,7 +30,7 @@ sudo apt -y install subversion curl
 sh scripts/download-test-data.sh         # Install data for examples.
 sh scripts/download-tinyvgg-model.sh     # Install tiny-vgg model.
 mkdir build && cd build
-cmake .. && make -j$(nproc)              # Build library && examples.
+cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j$(nproc)              # Build library && examples.
 ./example.operator_api_batched_images    # The ouput images will be in the build folder.
 ```
 

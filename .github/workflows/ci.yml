@@ -11,7 +11,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - run: cmake . -DBUILD_TESTS=1 -DBUILD_LIB=0 -DBUILD_EXAMPLES=0 -DEXECUTABLE_OUTPUT_PATH=./bin
+    - run: cmake . -DBUILD_TESTS=1 -DBUILD_LIB=0 -DBUILD_EXAMPLES=0 -DBUILD_USER_CODES=0 -DEXECUTABLE_OUTPUT_PATH=./bin
     - run: cmake --build . --config Release
 
     # - run: ctest -C Release

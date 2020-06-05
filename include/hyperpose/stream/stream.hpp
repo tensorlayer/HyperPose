@@ -398,7 +398,6 @@ basic_stream_manager::write_to(NameGetter&& name_getter)
         auto pose_set = m_pose_sets_queue.dump_all();
         for (auto&& poses : pose_set) {
             auto raw_image = m_input_queue_replica.dump().value();
-            std::cout << poses.size() << std::endl;
             for (auto&& pose : poses)
                 draw_human(raw_image, pose);
             cv::imwrite(name_getter(), raw_image);
