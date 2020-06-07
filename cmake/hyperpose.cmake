@@ -1,9 +1,6 @@
 # Library Name
 set(POSE_LIB_NAME hyperpose)
 
-# Compiler Flags
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native")
-
 # Dependencies(OpenCV & CUDA)
 INCLUDE(cmake/cuda.cmake)
 FIND_PACKAGE(OpenCV)
@@ -16,6 +13,7 @@ ADD_LIBRARY(
         src/data.cpp
         src/stream.cpp
         src/thread_pool.cpp
+        src/pose_proposal.cpp
         src/human.cpp)
 
 TARGET_LINK_LIBRARIES(

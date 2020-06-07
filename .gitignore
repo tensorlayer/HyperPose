@@ -15,7 +15,6 @@ __pycache__
 /bazel-*
 /bin
 /checkpoints
-/cmake-build
 /cmake-build*
 /coco
 /data
