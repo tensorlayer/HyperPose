@@ -3,6 +3,7 @@
 #include <hyperpose/operator/parser/proposal_network.hpp>
 
 #include "color.hpp"
+#include "coco.hpp"
 
 namespace hyperpose {
 

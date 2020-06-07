@@ -26,7 +26,7 @@ struct data_type {
 };
 
 /// \brief The namespace to contain things related to DNN. (e.g., DNN engines and model configurations.)
-/// \note In OpenPose-Plus, the pose estimation pipeline consists of DNN inference and parsing(post-processing). The DNN
+/// \note In HyperPose, the pose estimation pipeline consists of DNN inference and parsing(post-processing). The DNN
 /// part implementation is under the namespace `hyperpose::dnn`.
 namespace dnn {
     /// \brief `tensorrt` is a class using TensorRT DNN engine to perform neural network inference.
