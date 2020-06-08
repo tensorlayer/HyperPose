@@ -10,6 +10,6 @@ pymongo
 cython
 easydict
 hyperdash
-tensorflow-gpu==2.0.0
+tensorflow-gpu
 tensorlayer
 opencv-python
