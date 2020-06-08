@@ -16,7 +16,7 @@ basic_stream_manager::basic_stream_manager(size_t uniform_max_size, bool use_ori
 void basic_stream_manager::read_from(const std::vector<cv::Mat>& inputs)
 {
     auto it = inputs.begin();
-    size_t step_size = std::max(m_input_queue.capacity() / 2, 1ul);
+    size_t step_size = std::max(m_input_queue.capacity() / 2, size_t(1ul));
     while (std::distance(it, inputs.end()) <= step_size) {
         m_input_queue.wait_until_pushed(it, std::next(it, step_size));
         std::advance(it, step_size);

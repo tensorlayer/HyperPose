@@ -1,6 +1,15 @@
 #include "utils.hpp"
 
+#if !((defined(__cplusplus) && (__cplusplus >= 201703L)) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 201703L)))
+#define HYPERPOSE_USE_STD_EXP_NAMESPACE
+#endif
+
+#ifdef HYPERPOSE_USE_STD_EXP_NAMESPACE
 #include <experimental/filesystem>
+#else
+#include <filesystem>
+#endif
+
 #include <iostream>
 #include <opencv2/imgcodecs.hpp>
 #include <regex>
@@ -17,7 +26,11 @@ std::vector<std::string> split(const std::string& text, const char sep)
 
 std::vector<cv::Mat> glob_images(const std::string& path)
 {
-    namespace fs = std::experimental::filesystem;
+#ifdef HYPERPOSE_USE_STD_EXP_NAMESPACE
+    namespace fs = std::experimental::filesystem; 
+#else
+    namespace fs = std::filesystem;
+#endif
     std::regex image_regex{ R"((.*)\.(jpeg|jpg|png))" };
     std::vector<cv::Mat> batch;
     for (auto&& file : fs::directory_iterator(path)) {
@@ -29,3 +42,5 @@ std::vector<cv::Mat> glob_images(const std::string& path)
     }
     return batch;
 }
+
+#undef HYPERPOSE_USE_STD_EXP_NAMESPACE

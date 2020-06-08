@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <numeric>
+#include <string>
 
 using namespace hyperpose;
 
