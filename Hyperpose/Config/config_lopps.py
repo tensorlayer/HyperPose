@@ -23,7 +23,7 @@ model.model_dir = f"./save_dir/{model.model_name}/model_dir"
 #train configuration
 train=edict()
 train.batch_size = 8
-train.save_interval = 20
+train.save_interval = 5000
 # total number of step
 train.n_step = 1000000
 # initial learning rate  

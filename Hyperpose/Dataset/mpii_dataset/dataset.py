@@ -164,16 +164,27 @@ class MPII_dataset:
         '''
         #format result
         pd_anns=pd_json["annotations"]
-        metas=PoseInfo(self.images_path,self.val_annos_path,dataset_filter=self.dataset_filter).metas
         pd_dict={}
         for pd_ann in pd_anns:
             image_id=pd_ann["image_id"]
+            kpt_list=np.array(pd_ann["keypoints"])
+            x=kpt_list[0::3][np.newaxis,...]
+            y=kpt_list[1::3][np.newaxis,...]
+            pd_ann["keypoints"]=np.concatenate([x,y],axis=0)
             if(image_id not in pd_dict):
                 pd_dict[image_id]=[]
             pd_dict[image_id].append(pd_ann)
+        #format ground truth
+        metas=PoseInfo(self.images_path,self.val_annos_path,dataset_filter=self.dataset_filter).metas
         gt_dict={}
         for meta in metas:
-            gt_dict[meta.image_id]=meta.to_ann_dict()
+            gt_ann_list=meta.to_anns_list()
+            for gt_ann in gt_ann_list:
+                kpt_list=np.array(gt_ann["keypoints"])
+                x=kpt_list[0::3][np.newaxis,...]
+                y=kpt_list[1::3][np.newaxis,...]
+                gt_ann["keypoints"]=np.concatenate([x,y],axis=0)
+            gt_dict[meta.image_id]=gt_ann_list
 
         all_pd_kpts=[]
         all_gt_kpts=[]
@@ -181,7 +192,7 @@ class MPII_dataset:
         #match kpt into order for PCK calculation
         for image_id in pd_dict.keys():
             #sort pd_anns by score
-            pd_img_anns=pd_dict[image_id]
+            pd_img_anns=np.array(pd_dict[image_id])
             sort_idx=np.argsort([-pd_img_ann["score"] for pd_img_ann in pd_img_anns])
             pd_img_anns=pd_img_anns[sort_idx]
             gt_img_anns=gt_dict[image_id]
@@ -192,7 +203,7 @@ class MPII_dataset:
                 match_id=-1
                 match_dist=np.inf
                 for gt_id,gt_img_ann in enumerate(gt_img_anns):
-                    #person already matched
+                    #gt person already matched
                     if(match_pd_ids[gt_id]!=-1):
                         continue
                     gt_kpts=gt_img_ann["keypoints"]
