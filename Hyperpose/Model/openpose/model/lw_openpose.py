@@ -36,7 +36,6 @@ class LightWeightOpenPose(Model):
         #one refinemnet stage
         self.refine_stage1=self.Refinement_stage(n_filter=self.num_channels,n_confmaps=self.n_confmaps,n_pafmaps=self.n_pafmaps,\
             in_channels=self.num_channels+self.n_confmaps+self.n_pafmaps,data_format=self.data_format)
-    
     @tf.function
     def forward(self,x,is_train=False):
         conf_list=[]
@@ -53,17 +52,14 @@ class LightWeightOpenPose(Model):
         ref_conf1,ref_paf1=self.refine_stage1(x)
         conf_list.append(ref_conf1)
         paf_list.append(ref_paf1)
-
         if(is_train):
             return conf_list[-1],paf_list[-1],conf_list,paf_list
         else:
             return conf_list[-1],paf_list[-1]
-    
     @tf.function
     def infer(self,x):
         conf_map,paf_map=self.forward(x,is_train=False)
         return conf_map,paf_map
-
     def cal_loss(self,gt_conf,gt_paf,mask,stage_confs,stage_pafs):
         stage_losses=[]
         batch_size=gt_conf.shape[0]
@@ -83,7 +79,6 @@ class LightWeightOpenPose(Model):
             loss_pafs.append(loss_paf)
         pd_loss=tf.reduce_mean(stage_losses)/batch_size
         return pd_loss,loss_confs,loss_pafs
-    
     class Dilated_mobilenet(Model):
         def __init__(self,data_format="channels_first"):
             super().__init__()
@@ -103,10 +98,8 @@ class LightWeightOpenPose(Model):
             dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format),
             dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format)
             ])
-
         def forward(self,x):
             return self.main_block.forward(x)
-
     class Cpm_stage(Model):
         def __init__(self,n_filter=128,in_channels=512,data_format="channels_first"):
             super().__init__()
@@ -145,13 +138,11 @@ class LightWeightOpenPose(Model):
             Conv2d(n_filter=n_pafmaps,in_channels=512,filter_size=(1,1),strides=(1,1),W_init=initializer,\
                 b_init=initializer,data_format=self.data_format)
             ])
-
         def forward(self,x):
             x=self.main_block.forward(x)
             conf_map=self.conf_block.forward(x)
             paf_map=self.paf_block.forward(x)
             return conf_map,paf_map
-   
     class Refinement_stage(Model):
         def __init__(self,n_filter=128,in_channels=185,n_confmaps=19,n_pafmaps=38,data_format="channels_first"):
             super().__init__()
@@ -161,7 +152,6 @@ class LightWeightOpenPose(Model):
             self.block_3=self.Refinement_block(n_filter=n_filter,in_channels=n_filter,data_format=self.data_format)
             self.block_4=self.Refinement_block(n_filter=n_filter,in_channels=n_filter,data_format=self.data_format)
             self.block_5=self.Refinement_block(n_filter=n_filter,in_channels=n_filter,data_format=self.data_format)
-
             self.conf_block=layers.LayerList([
             Conv2d(n_filter=512,in_channels=n_filter,filter_size=(1,1),strides=(1,1),act=tf.nn.relu,W_init=initializer,b_init=initializer,\
                 data_format=self.data_format),
@@ -174,7 +164,6 @@ class LightWeightOpenPose(Model):
             Conv2d(n_filter=n_pafmaps,in_channels=512,filter_size=(1,1),strides=(1,1),W_init=initializer,b_init=initializer,\
                 data_format=self.data_format)
             ])
-        
         def forward(self,x):
             x=self.block_1(x)
             x=self.block_2(x)
@@ -184,7 +173,6 @@ class LightWeightOpenPose(Model):
             conf_map=self.conf_block.forward(x)
             paf_map=self.paf_block.forward(x)
             return conf_map,paf_map        
-        
         class Refinement_block(Model):
             def __init__(self,n_filter,in_channels,data_format="channels_first"):
                 super().__init__()
@@ -194,7 +182,6 @@ class LightWeightOpenPose(Model):
                 conv_block(n_filter=n_filter,in_channels=n_filter,data_format=self.data_format),
                 conv_block(n_filter=n_filter,in_channels=n_filter,dilation_rate=(1,1),data_format=self.data_format)
                 ])
-                
             def forward(self,x):
                 x=self.init_layer.forward(x)
                 return x+self.main_block.forward(x)

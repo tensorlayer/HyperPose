@@ -142,12 +142,12 @@ to_mpii_converter={0:9, 1:8, 2:12, 3:11, 4:10, 5:13, 6:14, 7:15, 8:2, 9:1, 10:0,
 
 from_mpii_converter={0:10, 1:9, 2:8, 3:11, 4:12, 5:13, 8:1, 9:0, 10:4, 11:3, 12:2, 13:5, 14:6, 15:7}
 
-def mpii_input_converter(coco_kpts):
+def mpii_input_converter(mpii_kpts):
     cvt_kpts=np.zeros(shape=[len(MpiiPart),2])
     transform = np.array([9,8,12,11,10,13,14,15,2,1,0,3,4,5])
-    xs = coco_kpts[0::3]
-    ys = coco_kpts[1::3]
-    vs = coco_kpts[2::3]
+    xs = mpii_kpts[0::3]
+    ys = mpii_kpts[1::3]
+    vs = mpii_kpts[2::3]
     lost_idx=np.where(vs<=0)[0]
     xs[lost_idx]=-1000
     ys[lost_idx]=-1000
