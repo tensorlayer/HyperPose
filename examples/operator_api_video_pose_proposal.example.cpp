@@ -28,9 +28,9 @@ int main(int argc, char** argv)
         cv::Size(FLAGS_input_width, FLAGS_input_height));
 
     // Basic Information.
-    poseplus_log() << "Input video name: " << FLAGS_input_video << std::endl;
-    poseplus_log() << "Output video name: " << FLAGS_output_video << std::endl;
-    poseplus_log() << "Input Frame: Size@" << cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT))
+    example_log() << "Input video name: " << FLAGS_input_video << std::endl;
+    example_log() << "Output video name: " << FLAGS_output_video << std::endl;
+    example_log() << "Input Frame: Size@" << cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT))
                    << "Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
 
     // * Create TensorRT engine.
@@ -45,8 +45,8 @@ int main(int argc, char** argv)
         if (std::equal(onnx_suffix.crbegin(), onnx_suffix.crend(), FLAGS_model_file.crbegin()))
             return tensorrt(onnx{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, FLAGS_max_batch_size);
 
-        poseplus_log() << "Your model file's suffix is not [.onnx]. Your model file path: " << FLAGS_model_file;
-        poseplus_log() << "Trying to be viewed as a serialized TensorRT model.";
+        example_log() << "Your model file's suffix is not [.onnx]. Your model file path: " << FLAGS_model_file;
+        example_log() << "Trying to be viewed as a serialized TensorRT model.";
 
         return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, FLAGS_max_batch_size);
     }();

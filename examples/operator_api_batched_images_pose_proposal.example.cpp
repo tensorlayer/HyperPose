@@ -19,11 +19,11 @@ int main(int argc, char** argv)
     std::vector<cv::Mat> batch = glob_images(FLAGS_input_folder);
 
     if (batch.empty()) {
-        poseplus_log() << "No input images got. Exiting.\n";
+        example_log() << "No input images got. Exiting.\n";
         exit(-1);
     }
 
-    poseplus_log() << "Batch shape: [" << batch.size() << ", 3, " << FLAGS_input_height << ", " << FLAGS_input_width << "]\n";
+    example_log() << "Batch shape: [" << batch.size() << ", 3, " << FLAGS_input_height << ", " << FLAGS_input_width << "]\n";
 
     // * Create TensorRT engine.
     namespace hp = hyperpose;
@@ -37,8 +37,8 @@ int main(int argc, char** argv)
         if (std::equal(onnx_suffix.crbegin(), onnx_suffix.crend(), FLAGS_model_file.crbegin()))
             return tensorrt(onnx{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, batch.size());
 
-        poseplus_log() << "Your model file's suffix is not [.onnx]. Your model file path: " << FLAGS_model_file;
-        poseplus_log() << "Trying to be viewed as a serialized TensorRT model.";
+        example_log() << "Your model file's suffix is not [.onnx]. Your model file path: " << FLAGS_model_file;
+        example_log() << "Trying to be viewed as a serialized TensorRT model.";
 
         return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, batch.size());
     }();
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
         auto feature_map_packets = engine.inference(batch);
         for (const auto& packet : feature_map_packets)
             for (const auto& feature_map : packet)
-                poseplus_log() << feature_map << std::endl;
+                example_log() << feature_map << std::endl;
 
         // * Post Processing.
         std::vector<std::vector<hp::human_t>> pose_vectors;
