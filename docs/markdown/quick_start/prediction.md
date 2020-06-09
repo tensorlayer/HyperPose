@@ -87,5 +87,8 @@ The output video will be in the building folder.
 ./example.stream_api_video_paf    # Using the fast model by default.
 ```
 
+## Play with camera
 
-
+```camera
+./example.operator_api_imshow_paf --camera
+```
