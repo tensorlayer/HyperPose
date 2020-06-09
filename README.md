@@ -31,7 +31,7 @@ sh scripts/download-test-data.sh         # Install data for examples.
 sh scripts/download-tinyvgg-model.sh     # Install tiny-vgg model.
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j$(nproc) # Build library && examples.
-./example.operator_api_batched_images    # The ouput images will be in the build folder.
+./example.operator_api_batched_images_paf    # The ouput images will be in the build folder.
 ```
 
 ## Prediction Performance
