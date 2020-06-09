@@ -220,6 +220,35 @@ def set_train_type(train_type):
     '''
     update_train.train_type=train_type
 
+def set_learning_rate(learning_rate):
+    '''set the learning rate in training
+
+    Parameters
+    ----------
+    arg1 : float
+        learning rate
+    
+    Returns
+    -------
+    None
+    '''
+    update_train.lr_init=learning_rate
+
+def set_batch_size(batch_size):
+    '''set the batch size in training
+
+    Parameters
+    ----------
+    arg1 : int
+        batch_size
+    
+    Returns
+    -------
+    None
+    '''
+    update_train.batch_size=batch_size
+
+
 def set_kungfu_option(kungfu_option):
     '''set the optimizor of parallel training
 
@@ -248,21 +277,33 @@ def set_dataset_type(dataset_type):
     set which dataset to use, the process of downlaoding, decoding, reformatting of different type
     of dataset is automatic.
     the evaluation metric of different dataset follows their official metric,
-    for COCO is MAP, for MPII is MPCH
+    for COCO is MAP, for MPII is MPCH.
+    
+    This API also receive user-defined dataset class, which should implement the following functions
+|       __init__: take the config object with all configuration to init the dataset
+|       get_parts: return a enum class which defines the key point definition of the dataset
+|       get_limbs: return a [2*num_limbs] array which defines the limb definition of the dataset
+|       get_colors: return a list which defines the visualization color of the limbs
+|       get_train_dataset: return a tensorflow dataset which contains elements for training. each element should contains an image path and a target dict decoded in bytes by _pickle
+|       get_eval_dataset: return a tensorflow dataset which contains elements for evaluating. each element should contains an image path and an image id
+|       official_eval: if want to evaluate on this user-defined dataset, evalutation function should be implemented.
+    one can refer the Dataset.mpii_dataset and Dataset.mscoco_dataset for detailed information.
 
     Parameters
     ----------
     arg1 : Config.DATA
-        a enum value of enum class Config.DATA
+        a enum value of enum class Config.DATA or user-defined dataset
         available options:
 |           Config.DATA.MSCOCO
 |           Config.DATA.MPII
+|           user-defined dataset
     
     Returns
     -------
     None
     '''
     update_data.dataset_type=dataset_type
+
 
 def set_dataset_path(dataset_path):
     '''set the path of the dataset

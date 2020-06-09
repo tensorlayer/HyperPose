@@ -51,7 +51,7 @@ int main(int argc, char** argv)
         return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, FLAGS_max_batch_size);
     }();
 
-    // * post-processing: Using paf. // TODO: Add proposal networks processing.
+    // * post-processing: Using Pose Proposal
     hp::parser::pose_proposal parser{ engine.input_size(), 0.05};
 
     using clk_t = std::chrono::high_resolution_clock;

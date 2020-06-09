@@ -16,7 +16,7 @@ from pycocotools.coco import maskUtils
 import _pickle as cPickle
 from .utils import  tf_repeat, draw_results, get_pose_proposals
 from .utils import get_parts,get_limbs,get_input_kptcvter
-from ..common import init_log,log,get_kungfu_opt
+from ..common import init_log,log,KUNGFU
 
 def regulize_loss(target_model,weight_decay_factor):
     re_loss=0
@@ -137,6 +137,8 @@ def single_train(train_model,dataset,config):
     wnei = train_model.wnei
     model_dir = config.model.model_dir
 
+    
+    print(f"single training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
     dataset_type=dataset.get_dataset_type()
@@ -226,7 +228,7 @@ def single_train(train_model,dataset,config):
         if(step==n_step):
             break
 
-def parallel_train(train_model,dataset,config,kungfu_option):
+def parallel_train(train_model,dataset,config):
     '''Parallel train pipeline of PoseProposal class models
 
     input model and dataset, the train pipeline will start automaticly
@@ -261,7 +263,7 @@ def parallel_train(train_model,dataset,config,kungfu_option):
     #log and checkpoint params
     log_interval=config.log.log_interval
     save_interval=config.train.save_interval
-    vis_dir=config.single_train.vis_dir
+    vis_dir=config.train.vis_dir
     
     #model hyper params
     hin = train_model.hin
@@ -277,6 +279,8 @@ def parallel_train(train_model,dataset,config,kungfu_option):
     from kungfu.tensorflow.initializer import broadcast_variables
     from kungfu.tensorflow.optimizers import SynchronousSGDOptimizer, SynchronousAveragingOptimizer, PairAveragingOptimizer
 
+    
+    print(f"parallel training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
     dataset_type=dataset.get_dataset_type()
@@ -309,7 +313,17 @@ def parallel_train(train_model,dataset,config,kungfu_option):
         log("model_path doesn't exist, model parameters are initialized")
     
     #Kungfu configure
-    opt=get_kungfu_opt(config.train.kungfu_option,opt)
+    kungfu_option=config.train.kungfu_option
+    if kungfu_option == KUNGFU.Sync_sgd:
+        print("using Kungfu.SynchronousSGDOptimizer!")
+        opt = SynchronousSGDOptimizer(opt)
+    elif kungfu_option == KUNGFU.Sync_avg:
+        print("using Kungfu.SynchronousAveragingOptimize!")
+        opt = SynchronousAveragingOptimizer(opt)
+    elif kungfu_option == KUNGFU.Pair_avg:
+        print("using Kungfu.PairAveragingOptimizer!")
+        opt=PairAveragingOptimizer(opt)
+
     n_step = n_step // current_cluster_size() + 1  # KungFu
 
     #optimize one step

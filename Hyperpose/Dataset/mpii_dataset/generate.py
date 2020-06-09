@@ -41,7 +41,7 @@ def get_eval_dataset(eval_images_path,eval_annos_path,dataset_filter=None):
         """TF Dataset generator."""
         assert len(test_img_file_list)==len(test_img_id_list)
         for img_file,img_id in zip(test_img_file_list,test_img_id_list):
-            yield img_file.encode("utf-8"),img_id.encode("utf-8")
+            yield img_file.encode("utf-8"),img_id
 
-    test_dataset = tf.data.Dataset.from_generator(generator,output_types=(tf.string,tf.string))
+    test_dataset = tf.data.Dataset.from_generator(generator,output_types=(tf.string,tf.int32))
     return test_dataset

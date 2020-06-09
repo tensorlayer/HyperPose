@@ -5,13 +5,13 @@
     <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
 </p>
 
-[![Documentation Status](https://readthedocs.org/projects/openpose-plus/badge/?version=latest)](https://openpose-plus.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/hyperpose/badge/?version=latest)](https://hyperpose.readthedocs.io/en/latest/?badge=latest)
 
 > **Currently, we are moving from OpenPose-Plus(version 1) to HyperPose(version 2) as we provide more APIs/Models/Operators not only limited to OpenPose. The old versions of codes are available in release page.** 
 
 ## Documentation
 
-[Documentation](https://openpose-plus.readthedocs.io/en/latest/)
+[Read The Docs](https://hyperpose.readthedocs.io/en/latest/)
 
 Markdown documents are available in `docs/markdown`.
 
@@ -30,8 +30,8 @@ sudo apt -y install subversion curl
 sh scripts/download-test-data.sh         # Install data for examples.
 sh scripts/download-tinyvgg-model.sh     # Install tiny-vgg model.
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j$(nproc)              # Build library && examples.
-./example.operator_api_batched_images    # The ouput images will be in the build folder.
+cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j$(nproc) # Build library && examples.
+./example.operator_api_batched_images_paf    # The ouput images will be in the build folder.
 ```
 
 ## Prediction Performance
@@ -40,13 +40,14 @@ cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j$(nproc)              # Build libr
 | --------------- | ------------- | ------------------ | ------------------ | ---------------- | --------------------- |
 | OpenPose COCO   | 209.3MB       | 656 x 368          | 19.78              | 27.32            | 8 (OpenPose)          |
 | Tiny VGG + PAF  | 34.7 MB       | 384 x 256          | 66.62              | 124.925          | /                     |
-| MobileNet + PAF | 17.9 MB       | 432 x 368          | 50.89              | 84.32            | /                     |
+| MobileNet + PAF | 17.9 MB       | 432 x 368          | 50.89              | 84.32            | 8.5 (TF-Pose)         |
+| ResNet50 + PAF  | 45.0 MB       | 432 x 368          | 38.09              | 62.52            | /                     |
 
 > **Environment**: System@Ubuntu18.04, GPU@1070Ti, CPU@i7(12 logic cores). 
 >
 > **Tested Video Source**: Crazy Updown Funk(resolution@640x360, frame_count@7458, source@[YouTube](https://www.youtube.com/watch?v=2DiQUX11YaY))
 >
-> **Availability**: All model above are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose). 
+> **Availability**: All model(in ONNX or Uff format) above are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose). 
 
 For more details, please refer to the documentation.
 

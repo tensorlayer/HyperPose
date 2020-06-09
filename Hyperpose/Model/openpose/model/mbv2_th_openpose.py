@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorlayer as tl
 from tensorlayer import layers
 from tensorlayer.models import Model
-from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d ,SeparableConv2d, UpSampling2d
+from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d
 from ..utils import tf_repeat
 
 initial_w=tl.initializers.random_normal(stddev=0.01)

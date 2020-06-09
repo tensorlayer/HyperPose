@@ -8,7 +8,7 @@ class MPIIMeta:
     def __init__(self,image_path,annos_list):
         #print(f"test get meta with img_path:{image_path} annos_list:{annos_list}\n\n")
         image_name=os.path.basename(image_path)
-        self.image_id=image_name[:image_name.index(".")]
+        self.image_id=int(image_name[:image_name.index(".")])
         self.image_path=image_path
         self.n_pos=16
         self.annos_list=annos_list
@@ -38,23 +38,18 @@ class MPIIMeta:
                 kpts+=[x,y,v]
             self.joint_list.append(np.array(kpts))
     
-    def to_ann_dict(self):
-        ann_dict={}
-        ann_dict["headbbxs"]=self.headbbx_list
-        ann_dict["scales"]=self.scale_list
-        ann_dict["centers"]=self.center_list
-        kpts_list=[]
-        vis_list=[]
-        for joints in self.joint_list:
-            x=joints[0::3][np.newaxis,:]
-            y=joints[1::3][np.newaxis,:]
-            kpts=np.concatenate([x,y],axis=0)
+    def to_anns_list(self):
+        anns_list=[]
+        for headbbx,scale,center,joints in zip(self.headbbx_list,self.scale_list,self.center_list,self.joint_list):
+            ann_dict={}
+            ann_dict["headbbxs"]=headbbx
+            ann_dict["scales"]=scale
+            ann_dict["centers"]=center
             vis=joints[2::3]
-            kpts_list.append(kpts)
-            vis_list.append(vis)
-        ann_dict["keypoints"]=kpts_list
-        ann_dict["vis"]=vis_list
-        return ann_dict
+            ann_dict["keypoints"]=joints
+            ann_dict["vis"]=vis
+            anns_list.append(ann_dict)
+        return anns_list
 
 class PoseInfo:
     def __init__(self,image_dir,annos_path,dataset_filter=None):

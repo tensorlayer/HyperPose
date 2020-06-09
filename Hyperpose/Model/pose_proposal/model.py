@@ -18,6 +18,7 @@ class PoseProposal(Model):
         self.hout=hout
         self.hnei=hnei
         self.wnei=wnei
+        self.n_pos=K_size
         self.lmd_rsp=lmd_rsp
         self.lmd_iou=lmd_iou
         self.lmd_coor=lmd_coor
@@ -93,8 +94,8 @@ class PoseProposal(Model):
         area2=w2*h2
         inter_x=tf.nn.relu(tf.minimum(x1+w1/2,x2+w2/2)-tf.maximum(x1-w1/2,x2-w2/2))
         inter_y=tf.nn.relu(tf.minimum(y1+h1/2,y2+h2/2)-tf.maximum(y1-h1/2,y2-h2/2))
-        inter_area=inter_x*inter_y+1e-8
-        union_area=area1+area2-inter_area+1e-8
+        inter_area=inter_x*inter_y
+        union_area=area1+area2-inter_area+1e-6
         return inter_area/union_area
 
     def cal_loss(self,delta,tx,ty,tw,th,te,te_mask,pc,pi,px,py,pw,ph,pe):

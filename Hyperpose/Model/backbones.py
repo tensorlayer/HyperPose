@@ -50,7 +50,7 @@ class MobilenetV1_backbone(Model):
         return LayerList(layer_list)
 
 class MobilenetV2_backbone(Model):
-    def __init__(self,scale_size=8,data_format="channel_last"):
+    def __init__(self,scale_size=8,data_format="channels_last"):
         super().__init__()
         self.data_format=data_format
         self.scale_size=scale_size
@@ -60,11 +60,10 @@ class MobilenetV2_backbone(Model):
         else:
             strides=(2,2)
         #block_1 n=1
-        self.block_1=LayerList([
-            Conv2d(n_filter=32,in_channels=3,filter_size=(3,3),strides=(2,2),data_format=self.data_format),
-            BatchNorm2d(num_features=32,is_train=True,act=tf.nn.relu6,data_format=self.data_format)])
+        self.block_1_1=Conv2d(n_filter=32,in_channels=3,filter_size=(3,3),strides=(2,2),data_format=self.data_format)
+        self.block_1_2=BatchNorm2d(num_features=32,is_train=True,act=tf.nn.relu6,data_format=self.data_format)
         #block_2 n=1
-        self.block_2=self.InvertedResidual(n_filter=16,in_channels=32,strides=(1,1),exp_ratio=1,data_format=self.data_format)
+        self.block_2_1=self.InvertedResidual(n_filter=16,in_channels=32,strides=(1,1),exp_ratio=1,data_format=self.data_format)
         #block_3 n=2
         self.block_3_1=self.InvertedResidual(n_filter=24,in_channels=16,strides=(2,2),exp_ratio=6,data_format=self.data_format)
         self.block_3_2=self.InvertedResidual(n_filter=24,in_channels=24,strides=(1,1),exp_ratio=6,data_format=self.data_format)
@@ -87,10 +86,11 @@ class MobilenetV2_backbone(Model):
         self.block_7_3=self.InvertedResidual(n_filter=160,in_channels=160,strides=(1,1),exp_ratio=6,data_format=self.data_format)
         #block_8 n=1
         self.block_8=self.InvertedResidual(n_filter=320,in_channels=160,strides=(1,1),exp_ratio=6,data_format=self.data_format)
-    
+        
     def forward(self,x):
-        x=self.block_1.forward(x)
-        x=self.block_2.forward(x)
+        x=self.block_1_1.forward(x)
+        x=self.block_1_2.forward(x)
+        x=self.block_2_1.forward(x)
         x=self.block_3_1.forward(x)
         x=self.block_3_2.forward(x)
         x=self.block_4_1.forward(x)
@@ -138,7 +138,7 @@ class MobilenetV2_backbone(Model):
                     BatchNorm2d(num_features=self.hidden_dim,is_train=True,act=tf.nn.relu6,data_format=self.data_format),
                     Conv2d(n_filter=self.n_filter,in_channels=self.hidden_dim,filter_size=(1,1),strides=(1,1),b_init=None,data_format=self.data_format)
                 ])
-        
+
         def forward(self,x):
             if(self.identity):
                 return x+self.main_block.forward(x)
