@@ -140,6 +140,7 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=30):
                     kpt_list.append([body_part.get_x(),body_part.get_y()])
             ann["keypoints"]=kpt_converter(kpt_list)
             pd_anns.append(ann)   
+        #debug
         if(eval_num%10==0):
             print(f"evaluaing {eval_num}/{len(list(eval_dataset))}...")
     result_dic={"annotations":pd_anns}

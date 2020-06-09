@@ -55,6 +55,10 @@ to use parallel training, one should set train type at first, and then choose ku
 Config.set_train_type(Config.TRAIN.Parallel_train)
 Config.set_kungfu_option(Config.KUNGFU.Sync_sgd)
 ```
+And when run your program, using the following command(assuming we have 4 GPUs)
+```bash
+CUDA_VISIBLE_DEVICES=0,1,2,3 kungfu-run -np 4 python train.py
+```
 
 * getting parts mainly concern: pass the configuration to *Model* module and *Dataset* module to assemble the system
     * *Config.get_config* will return a config object which contains all the configuration and is the core of the getting functions 

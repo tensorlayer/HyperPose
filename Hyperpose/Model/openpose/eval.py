@@ -133,18 +133,6 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=30):
                     kpt_list.append([body_part.get_x(),body_part.get_y()])
             ann["keypoints"]=kpt_converter(kpt_list)
             pd_anns.append(ann)   
-        #debug
-        ann={}
-        ann["category_id"]=1
-        ann["image_id"]=int(img_id.numpy())
-        ann["id"]=1
-        ann["area"]=500
-        ann["score"]=1.0
-        kpt_list=[]
-        for part_idx in range(0,model.n_pos):
-            kpt_list.append([5,5])
-        ann["keypoints"]=kpt_converter(kpt_list)
-        pd_anns.append(ann)
         if(eval_num%100==0):
             print(f"evaluating {eval_num}/{len(list(eval_dataset))}")
             
