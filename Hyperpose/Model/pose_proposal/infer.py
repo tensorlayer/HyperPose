@@ -56,10 +56,6 @@ class Post_Processor:
             filter_bbxs=bbxs[filter_ids]
             filter_scores=scores[filter_ids]
 
-            print(f"test pary before nms:{self.parts(part_idx)}!:")
-            for filter_score,filter_bbx in zip(filter_scores,filter_bbxs):
-                print(f"test part:{self.parts(part_idx)} x:{filter_bbx[0]} y:{filter_bbx[1]} score:{filter_score}")
-
             #non-maximium supress
             left_bbxids=non_maximium_supress(filter_bbxs,filter_scores,self.thres_nms)
             #print(f"test filter_len:{len(filter_ids)} left_len:{len(left_bbxids)}")
@@ -68,12 +64,6 @@ class Post_Processor:
             scores_list.append(filter_scores[left_bbxids])
             bbxids_list.append(filter_ids[left_bbxids])
             assems_list.append(np.full_like(scores_list[-1],-1))
-
-            print(f"test part after nms:{self.parts(part_idx)}!:")
-            bbxs=bbxs_list[-1]
-            for bbx in bbxs:
-                print(f"test part:{self.parts(part_idx)} x:{bbx[0]} y:{bbx[1]}")
-            print()
 
             #print(f"test nms:\n part:{self.parts(part_idx)}\n chosen_idxs:{bbxids_list[-1]}\n")
         #new assemble
@@ -95,7 +85,6 @@ class Post_Processor:
         #assemble limbs
         for l,limb in enumerate(self.limbs):
             src_part_idx,dst_part_idx=limb
-            print(f"test selecting limbs:{self.parts(src_part_idx)}-{self.parts(dst_part_idx)}")
             src_score_list=scores_list[src_part_idx]
             src_bbxid_list=bbxids_list[src_part_idx]
             dst_score_list=scores_list[dst_part_idx]
@@ -120,8 +109,6 @@ class Post_Processor:
                 dst_score=dst_score_list[dst_id]
                 dst_bbx=bbxs_list[dst_part_idx][dst_id]
 
-                print(f"test choosing src:{src_bbx[0:2]} score:{src_score}-"+\
-                    f"{dst_bbx[0:2]} score:{dst_score}  edge_score:{max_score/(src_score*dst_score)} match_score:{max_score}")
                 match_score[src_ids[0],:]=0
                 match_score[:,dst_ids[0]]=0
             for conn in conn_list:
@@ -140,7 +127,6 @@ class Post_Processor:
                     continue
                 loc_y,loc_x=get_loc(bbx_id,hout,wout)
                 x,y,w,h=bbx
-                print(f"test assem_id:{assem_id} int_assem_id:{assem_id.astype(np.int)}")
                 humans[assem_id.astype(np.int)].body_parts[part_idx]=BodyPart(parts=self.parts,u_idx=f"{loc_y}-{loc_x}",part_idx=part_idx,\
                     x=x,y=y,score=score,w=w,h=h)
         return humans
