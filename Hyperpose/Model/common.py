@@ -13,20 +13,6 @@ regularizer_dsconv = 0.0004
 batchnorm_fused = True
 activation_fn = tf.nn.relu
 
-def get_kungfu_opt(kungfu_option,opt):
-    from kungfu.tensorflow.optimizers import SynchronousSGDOptimizer, SynchronousAveragingOptimizer, PairAveragingOptimizer
-    # KungFu configure
-    if kungfu_option == KUNGFU.Sync_sgd:
-        opt = SynchronousSGDOptimizer(opt)
-    elif kungfu_option == KUNGFU.Sync_avg:
-        opt = SynchronousAveragingOptimizer(opt)
-    elif kungfu_option == KUNGFU.Pair_avg:
-        opt=PairAveragingOptimizer(opt)
-        
-    else:
-        raise RuntimeError('Unknown distributed training optimizer.')
-    return opt
-
 class MPIIPart(Enum):
     RAnkle = 0
     RKnee = 1

@@ -1,5 +1,7 @@
 import os
 from .common import TRAIN,MODEL,DATA
+from .mpii_dataset.dataset import MPII_dataset
+from .mscoco_dataset.dataset import MSCOCO_dataset
 
 def get_dataset(config):
     '''get dataset object based on the config object
@@ -43,11 +45,15 @@ def get_dataset(config):
 
     dataset_type=config.data.dataset_type
     if(dataset_type==DATA.MSCOCO):
-        from .mscoco_dataset import init_dataset
+        print("using Mscoco dataset!")
+        dataset=MSCOCO_dataset(config)
+        dataset.prepare_dataset()
     elif(dataset_type==DATA.MPII):
-        from .mpii_dataset import init_dataset
+        print("using Mpii dataset!")
+        dataset=MPII_dataset(config)
+        dataset.prepare_dataset()
     else:
-        raise RuntimeError(f'unknown dataset_name {dataset_type}')
-    dataset=init_dataset(config)
-    dataset.prepare_dataset()
+        print("using user-defined dataset!")
+        user_dataset=dataset_type
+        dataset=user_dataset(config)
     return dataset

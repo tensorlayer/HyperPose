@@ -17,7 +17,7 @@ import _pickle as cPickle
 from functools import partial
 from .utils import tf_repeat, get_heatmap, get_vectormap, draw_results 
 from .utils import get_parts,get_limbs,get_input_kptcvter,get_flip_list
-from ..common import init_log,log,get_kungfu_opt
+from ..common import init_log,log,KUNGFU
 
 def regulize_loss(target_model,weight_decay_factor):
     re_loss=0
@@ -155,6 +155,8 @@ def single_train(train_model,dataset,config):
     data_format=train_model.data_format
     model_dir = config.model.model_dir
 
+
+    print(f"single training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
     dataset_type=dataset.get_dataset_type()
@@ -287,14 +289,16 @@ def parallel_train(train_model,dataset,config):
     #import kungfu
     from kungfu import current_cluster_size, current_rank
     from kungfu.tensorflow.initializer import broadcast_variables
+    from kungfu.tensorflow.optimizers import SynchronousSGDOptimizer, SynchronousAveragingOptimizer, PairAveragingOptimizer
     
 
+    print(f"parallel training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
     dataset_type=dataset.get_dataset_type()
     parts,limbs,kpt_cvter=get_parts(dataset_type),get_limbs(dataset_type),get_input_kptcvter(dataset_type)
     flip_list=get_flip_list(dataset_type)
-    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,parts,limbs,kpt_cvter,flip_list=flip_list,data_format=dataset_format)
+    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,parts,limbs,kpt_cvter,flip_list=flip_list,data_format=data_format)
     train_dataset = train_dataset.shuffle(buffer_size=4096)
     train_dataset = train_dataset.shard(num_shards=current_cluster_size(),index=current_rank())
     train_dataset = train_dataset.repeat()
@@ -320,7 +324,18 @@ def parallel_train(train_model,dataset,config):
         log("model_path doesn't exist, model parameters are initialized")
 
     # KungFu configure
-    opt=get_kungfu_opt(config.train.kungfu_option,opt)
+    kungfu_option=config.train.kungfu_option
+    if kungfu_option == KUNGFU.Sync_sgd:
+        print("using Kungfu.SynchronousSGDOptimizer!")
+        opt = SynchronousSGDOptimizer(opt)
+    elif kungfu_option == KUNGFU.Sync_avg:
+        print("using Kungfu.SynchronousAveragingOptimize!")
+        opt = SynchronousAveragingOptimizer(opt)
+    elif kungfu_option == KUNGFU.Pair_avg:
+        print("using Kungfu.PairAveragingOptimizer!")
+        opt=PairAveragingOptimizer(opt)
+    
+
     n_step = n_step // current_cluster_size() + 1  # KungFu
     lr_decay_every_step = lr_decay_every_step // current_cluster_size() + 1  # KungFu
     
@@ -329,11 +344,11 @@ def parallel_train(train_model,dataset,config):
     def one_step(image,gt_label,mask,train_model,is_first_batch=False):
         step.assign_add(1)
         with tf.GradientTape() as tape:
-            gt_conf=gt_label[:,:n_pos,:,:,]
+            gt_conf=gt_label[:,:n_pos,:,:]
             gt_paf=gt_label[:,n_pos:,:,:]
             pd_conf,pd_paf,stage_confs,stage_pafs=train_model.forward(image,is_train=True)
 
-            pd_loss=train_model.cal_loss(gt_conf,gt_paf,mask,stage_confs,stage_pafs)
+            pd_loss,loss_confs,loss_pafs=train_model.cal_loss(gt_conf,gt_paf,mask,stage_confs,stage_pafs)
             re_loss=regulize_loss(train_model,weight_decay_factor)
             total_loss=pd_loss+re_loss
         

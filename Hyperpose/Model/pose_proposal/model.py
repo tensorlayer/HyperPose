@@ -18,6 +18,7 @@ class PoseProposal(Model):
         self.hout=hout
         self.hnei=hnei
         self.wnei=wnei
+        self.n_pos=K_size
         self.lmd_rsp=lmd_rsp
         self.lmd_iou=lmd_iou
         self.lmd_coor=lmd_coor
