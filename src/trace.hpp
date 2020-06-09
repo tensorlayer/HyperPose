@@ -2,10 +2,11 @@
 
 #ifdef ENABLE_TRACE
 
-#include <stdtracer>
+// #include <tracer/simple>
+#include <tracer/simple_log>
 
 #else
 
-#include <stdtracer_disable>
+#include <tracer/disable>
 
 #endif
