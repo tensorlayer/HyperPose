@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     // * Input video.
     auto capture = FLAGS_camera ? cv::VideoCapture(0) : cv::VideoCapture(FLAGS_input_video);
     if (!capture.isOpened())
-        poseplus_log() << "Cannot open cv::VideoCapture.";
+        example_log() << "Cannot open cv::VideoCapture.";
 
     // * Create TensorRT engine.
     namespace hp = hyperpose;
@@ -43,8 +43,8 @@ int main(int argc, char** argv)
                 { FLAGS_input_width, FLAGS_input_height },
                 1);
 
-        poseplus_log() << "Your model file's suffix is not [.onnx | .uff]. Your model file path: " << FLAGS_model_file;
-        poseplus_log() << "Trying to be viewed as a serialized TensorRT model.";
+        example_log() << "Your model file's suffix is not [.onnx | .uff]. Your model file path: " << FLAGS_model_file;
+        example_log() << "Trying to be viewed as a serialized TensorRT model.";
 
         return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, 1);
     }();
@@ -54,14 +54,14 @@ int main(int argc, char** argv)
 
     using clk_t = std::chrono::high_resolution_clock;
 
-    poseplus_log() << "Inference Started. Use ESC to quit.";
+    example_log() << "Inference Started. Use ESC to quit.";
 
     while (capture.isOpened()) {
 
         cv::Mat mat;
         capture >> mat;
         if (mat.empty()) {
-            poseplus_log() << "Got empty cv::Mat";
+            example_log() << "Got empty cv::Mat";
             break;
         }
 
@@ -87,5 +87,5 @@ int main(int argc, char** argv)
             break;
     }
 
-    poseplus_log() << "Inference Done!";
+    example_log() << "Inference Done!";
 }

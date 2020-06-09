@@ -39,7 +39,7 @@ int main(int argc, char** argv)
                 { FLAGS_input_width, FLAGS_input_height },
                 FLAGS_max_batch_size);
 
-        poseplus_log() << "Your model file's suffix is not [.onnx | .uff]. Your model file path: " << FLAGS_model_file;
+        example_log() << "Your model file's suffix is not [.onnx | .uff]. Your model file path: " << FLAGS_model_file;
         std::exit(1);
     }();
 
