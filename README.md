@@ -1,10 +1,5 @@
 # HyperPose
 
-</a>
-<p align="center">
-    <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
-</p>
-
 [![Documentation Status](https://readthedocs.org/projects/hyperpose/badge/?version=latest)](https://hyperpose.readthedocs.io/en/latest/?badge=latest)
 
 HyperPose is a high-performance and flexible library for building real-world human pose estimation systems.
@@ -38,7 +33,7 @@ The environment for running this example can be found in [Dockerfile](https://gi
 
 ## Performance
 
-We compare the prediction performance of HyperPose with [OpenPose 1.6](https://github.com/CMU-Perceptual-Computing-Lab/openpose) and [TF-Pose](https://github.com/ildoonet/tf-pose-estimation), whenever possible. We implement the OpenPose algorithms with different configurations in this benchmark.
+We compare the prediction performance of HyperPose with [OpenPose 1.6](https://github.com/CMU-Perceptual-Computing-Lab/openpose) and [TF-Pose](https://github.com/ildoonet/tf-pose-estimation), whenever possible. We implement the OpenPose algorithms with different configurations in this benchmark. The test-bed has Ubuntu18.04, 1070Ti GPU, Intel i7 CPU (12 logic cores). The test video is Crazy Updown Funk ([YouTube](https://www.youtube.com/watch?v=2DiQUX11YaY)). The being tested HyperPose models (in ONNX or Uff format) are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose).
 
 | HyperPose Configuration  | DNN Size | DNN Input Shape | HyerPose | Baseline |
 | --------------- | ------------- | ------------------ | ------------------ | --------------------- |
@@ -47,7 +42,7 @@ We compare the prediction performance of HyperPose with [OpenPose 1.6](https://g
 | OpenPose (MobileNet) | 17.9 MB       | 432 x 368          | 84.32 FPS           | 8.5 FPS (TF-Pose)         |
 | OpenPose (ResNet18)  | 45.0 MB       | 432 x 368          | 62.52 FPS           | N/A                  |
 
-The test-bed has Ubuntu18.04, 1070Ti GPU, Intel i7 CPU (12 logic cores). The test video is Crazy Updown Funk ([YouTube](https://www.youtube.com/watch?v=2DiQUX11YaY)). The being tested HyperPose models (in ONNX or Uff format) are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose).
+As we can see from the result, HyperPose is the only library that can achieve **real-time** human pose estimation.
 
 </a>
 <p align="center">
