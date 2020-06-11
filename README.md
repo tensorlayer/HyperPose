@@ -1,9 +1,9 @@
 # HyperPose
 
-<!-- </a>
+</a>
 <p align="center">
     <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
-</p> -->
+</p>
 
 [![Documentation Status](https://readthedocs.org/projects/hyperpose/badge/?version=latest)](https://hyperpose.readthedocs.io/en/latest/?badge=latest)
 
@@ -38,7 +38,7 @@ The environment for running this example can be found in [Dockerfile](https://gi
 
 ## Performance
 
-We compare the prediction performance of HyperPose with OpenPose and TF-Pose, whenever possible. We implement the OpenPose algorithms with different configurations in this benchmark.
+We compare the prediction performance of HyperPose with [OpenPose 1.6](https://github.com/CMU-Perceptual-Computing-Lab/openpose) and [TF-Pose](https://github.com/ildoonet/tf-pose-estimation), whenever possible. We implement the OpenPose algorithms with different configurations in this benchmark.
 
 | HyperPose Configuration  | DNN Size | DNN Input Shape | HyerPose | Baseline |
 | --------------- | ------------- | ------------------ | ------------------ | --------------------- |
@@ -48,6 +48,11 @@ We compare the prediction performance of HyperPose with OpenPose and TF-Pose, wh
 | OpenPose (ResNet18)  | 45.0 MB       | 432 x 368          | 62.52 FPS           | N/A                  |
 
 The test-bed has Ubuntu18.04, 1070Ti GPU, Intel i7 CPU (12 logic cores). The test video is Crazy Updown Funk ([YouTube](https://www.youtube.com/watch?v=2DiQUX11YaY)). The being tested HyperPose models (in ONNX or Uff format) are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose).
+
+</a>
+<p align="center">
+    <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
+</p>
 
 ## License
 
