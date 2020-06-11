@@ -1,29 +1,24 @@
-# HyperPose: A Fast & Flexible Library for Human Pose Estimation
-
-</a>
-<p align="center">
-    <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
-</p>
+# HyperPose
 
 [![Documentation Status](https://readthedocs.org/projects/hyperpose/badge/?version=latest)](https://hyperpose.readthedocs.io/en/latest/?badge=latest)
 
-> **Currently, we are moving from OpenPose-Plus(version 1) to HyperPose(version 2) as we provide more APIs/Models/Operators not only limited to OpenPose. The old versions of codes are available in release page.** 
+HyperPose is a high-performance and flexible library for building real-world human pose estimation systems.
 
-## Documentation
+## Features
 
-[Read The Docs](https://hyperpose.readthedocs.io/en/latest/)
+- Flexible Python training platform: HyperPose provides a large collection of Python APIs to design human pose estimation models. This includes (adding custom dataset with your own labelled data, customizing data augmentation, using multiple GPUs for fast training, and changing backbone deep neural networks (e.g., changing from ResNet to MobileNet) and many others.
+- High-performance C++ pose estimation engine: HyperPose models real-time pose estimation as a streaming dataflow. This dataflow has operators which are implemented using TensorRT and low-level C++ libraries for best possible performance. HyperPose dynamically dispatch CPU threads and GPU streams to work on these operators to maximize hardware utilization.
 
-Markdown documents are available in `docs/markdown`.
+## Get Started
 
-## Getting Started
+You can install HyperPose and learn its APIs through [Documentation](https://hyperpose.readthedocs.io/en/latest/).
 
-### Prediction
+## Example
 
-> For more detailed guidance of installation/examples(more examples), please refer to documents.
+We provide an example to showcase the high-performance pose estimation achieved by HyperPose.
 
-Install CUDA Toolkit 10+, TensorRT7+, OpenCV3.2+ and gFlags(cmake version), and make sure a C++17 compiler is available on your system.
-
-> Old versions of the packages may also work, but not tested. 
+To run this example, you need to Install CUDA Toolkit 10+, Tensor RT7+, OpenCV 3.2+ and gFlags (cmake version), and make sure a C++ 17 compiler is available on your system.
+Once the prerequisite are ready, run the following script:
 
 ```bash
 sudo apt -y install subversion curl
@@ -34,47 +29,38 @@ cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j$(nproc) # Build library && exampl
 ./example.operator_api_batched_images_paf    # The ouput images will be in the build folder.
 ```
 
-## Prediction Performance
+The environment for running this example can be found in [Dockerfile](https://github.com/tensorlayer/pretrained-models/tree/master/models/docker)
 
-| Method          | Backbone Size | Network Resolution | Operator API / FPS | Stream API / FPS | Other Framework / FPS |
-| --------------- | ------------- | ------------------ | ------------------ | ---------------- | --------------------- |
-| OpenPose COCO   | 209.3MB       | 656 x 368          | 19.78              | 27.32            | 8 (OpenPose)          |
-| Tiny VGG + PAF  | 34.7 MB       | 384 x 256          | 66.62              | 124.925          | /                     |
-| MobileNet + PAF | 17.9 MB       | 432 x 368          | 50.89              | 84.32            | 8.5 (TF-Pose)         |
-| ResNet50 + PAF  | 45.0 MB       | 432 x 368          | 38.09              | 62.52            | /                     |
+## Performance
 
-> **Environment**: System@Ubuntu18.04, GPU@1070Ti, CPU@i7(12 logic cores). 
->
-> **Tested Video Source**: Crazy Updown Funk(resolution@640x360, frame_count@7458, source@[YouTube](https://www.youtube.com/watch?v=2DiQUX11YaY))
->
-> **Availability**: All model(in ONNX or Uff format) above are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose). 
+We compare the prediction performance of HyperPose with [OpenPose 1.6](https://github.com/CMU-Perceptual-Computing-Lab/openpose) and [TF-Pose](https://github.com/ildoonet/tf-pose-estimation), whenever possible. We implement the OpenPose algorithms with different configurations in this benchmark. The test-bed has Ubuntu18.04, 1070Ti GPU, Intel i7 CPU (12 logic cores). The test video is Crazy Updown Funk ([YouTube](https://www.youtube.com/watch?v=2DiQUX11YaY)). The being tested HyperPose models (in ONNX or Uff format) are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose).
 
-For more details, please refer to the documentation.
+| HyperPose Configuration  | DNN Size | DNN Input Shape | HyerPose | Baseline |
+| --------------- | ------------- | ------------------ | ------------------ | --------------------- |
+| OpenPose (VGG)   | 209.3MB       | 656 x 368            | 27.32 FPS           | 8 FPS (OpenPose)          |
+| OpenPose (TinyVGG)  | 34.7 MB       | 384 x 256          | 124.925 FPS         | N/A                   |
+| OpenPose (MobileNet) | 17.9 MB       | 432 x 368          | 84.32 FPS           | 8.5 FPS (TF-Pose)         |
+| OpenPose (ResNet18)  | 45.0 MB       | 432 x 368          | 62.52 FPS           | N/A                  |
+
+As we can see from the result, HyperPose is the only library that can achieve **real-time** human pose estimation.
+
+</a>
+<p align="center">
+    <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
+</p>
 
 ## License
 
-HyperPose is under an [Apache 2.0 license](https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst) and mainly developed by members from TensorLayer Community.
+HyperPose is under an [Apache 2.0 license](https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst).
 
-- Please cite our papers in your publications if it helps your research:
+<!-- - Please acknowledge TensorLayer and this project in your project websites/articles if you are a **commercial user**. -->
 
-```latex
-@article{tensorlayer2017,
-    author  = {Dong, Hao and Supratak, Akara and Mai, Luo and Liu, Fangde and Oehmichen, Axel and Yu, Simiao and Guo, Yike},
-    journal = {ACM Multimedia},
-    title   = {{TensorLayer: A Versatile Library for Efficient Deep Learning Development}},
-    url     = {http://tensorlayer.org},
-    year    = {2017}
-}
-```
-
-- Please acknowledge TensorLayer and this project in your project websites/articles if you are a **commercial user**.
-
-## Related Discussion
+<!-- ## Related Discussion
 
 - [TensorLayer Slack](https://join.slack.com/t/tensorlayer/shared_invite/enQtMjUyMjczMzU2Njg4LWI0MWU0MDFkOWY2YjQ4YjVhMzI5M2VlZmE4YTNhNGY1NjZhMzUwMmQ2MTc0YWRjMjQzMjdjMTg2MWQ2ZWJhYzc)
 - [TensorLayer WeChat](https://github.com/tensorlayer/tensorlayer-chinese/blob/master/docs/wechat_group.md)
 - [TensorLayer Issues 434](https://github.com/tensorlayer/tensorlayer/issues/434)
-- [TensorLayer Issues 416](https://github.com/tensorlayer/tensorlayer/issues/416)
+- [TensorLayer Issues 416](https://github.com/tensorlayer/tensorlayer/issues/416) -->
 
 <!--
 
@@ -176,9 +162,9 @@ For details of inference(dependencies/quick start), please refer to [**cpp-infer
 We are improving the performance of the engine.
 Initial benchmark results for running the full OpenPose model are as follows.
 On Jetson TX2, the inference speed is 13 frames / second (the mobilenet variant is even faster).
-On Jetson TX1, the speed is 10 frames / second. On Titan 1050, the speed is 38 frames / second. 
+On Jetson TX1, the speed is 10 frames / second. On Titan 1050, the speed is 38 frames / second.
 
-After our first optimization, we achieved 50FPS(float32) on 1070Ti. 
+After our first optimization, we achieved 50FPS(float32) on 1070Ti.
 
 We also have a Python binding for the engine. The current binding relies on
 the external tf-hyperpose-estimation project. We are working on providing the Python binding for our high-performance
