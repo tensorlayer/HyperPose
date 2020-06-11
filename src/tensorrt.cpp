@@ -227,7 +227,7 @@ namespace dnn {
 
     static nvinfer1::ICudaEngine* create_serialized_engine(const std::string& model_file)
     {
-        std::ifstream in_file(model_file);
+        std::ifstream in_file(model_file, std::ios::binary | std::ios::in);
 
         std::streampos begin, end;
         begin = in_file.tellg();
