@@ -1,9 +1,9 @@
 # HyperPose
 
-</a>
+<!-- </a>
 <p align="center">
     <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
-</p>
+</p> -->
 
 [![Documentation Status](https://readthedocs.org/projects/hyperpose/badge/?version=latest)](https://hyperpose.readthedocs.io/en/latest/?badge=latest)
 
@@ -40,8 +40,8 @@ The environment for running this example can be found in [Dockerfile](https://gi
 
 We compare the prediction performance of HyperPose with OpenPose and TF-Pose, whenever possible. We implement the OpenPose algorithms with different configurations in this benchmark.
 
-| HyperPose Configuration  | DNN Size | DNN Input Shape | HyerPose | Baseline Library / FPS |
-| --------------- | ------------- | ------------------ | ------------------ | ---------------- | --------------------- |
+| HyperPose Configuration  | DNN Size | DNN Input Shape | HyerPose | Baseline |
+| --------------- | ------------- | ------------------ | ------------------ | --------------------- |
 | OpenPose (VGG)   | 209.3MB       | 656 x 368            | 27.32 FPS           | 8 FPS (OpenPose)          |
 | OpenPose (TinyVGG)  | 34.7 MB       | 384 x 256          | 124.925 FPS         | N/A                   |
 | OpenPose (MobileNet) | 17.9 MB       | 432 x 368          | 84.32 FPS           | 8.5 FPS (TF-Pose)         |
