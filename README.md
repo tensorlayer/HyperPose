@@ -2,12 +2,16 @@
 
 [![Documentation Status](https://readthedocs.org/projects/hyperpose/badge/?version=latest)](https://hyperpose.readthedocs.io/en/latest/?badge=latest)
 
-HyperPose is a high-performance and flexible library for building real-world human pose estimation systems.
+HyperPose is a library for building human pose estimation systems that can efficiently operate in the wild.
+
+> **Note**: We are in the process of migrating our APIs from 1.0 to 2.0. The migration is expected to finish by July 2020.
 
 ## Features
 
-- Flexible Python training platform: HyperPose provides a large collection of Python APIs to design human pose estimation models. This includes (adding custom dataset with your own labelled data, customizing data augmentation, using multiple GPUs for fast training, and changing backbone deep neural networks (e.g., changing from ResNet to MobileNet) and many others.
-- High-performance C++ pose estimation engine: HyperPose models real-time pose estimation as a streaming dataflow. This dataflow has operators which are implemented using TensorRT and low-level C++ libraries for best possible performance. HyperPose dynamically dispatch CPU threads and GPU streams to work on these operators to maximize hardware utilization.
+HyperPose has two key features, which are not available in existing libraries:
+
+- **Flexible training platform**: HyperPose provides flexible Python APIs to build many useful pose estimation models (e.g., OpenPose and PoseProposalNetwork). HyperPose users can, for example, customize data augmentation, use parallel GPUs for training, and replace deep neural networks (e.g., changing from ResNet to MobileNet), thus building models specific to their real-world scenarios.
+- **High-performance pose estimation**: HyperPose achieves real-time pose estimation though a high-performance pose estimation engine. This engine implements numerous system optimizations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. This allows HyperPose to run 4x faster than OpenPose and 10x faster than TF-Pose.
 
 ## Get Started
 
@@ -15,10 +19,7 @@ You can install HyperPose and learn its APIs through [Documentation](https://hyp
 
 ## Example
 
-We provide an example to showcase the high-performance pose estimation achieved by HyperPose.
-
-To run this example, you need to Install CUDA Toolkit 10+, Tensor RT7+, OpenCV 3.2+ and gFlags (cmake version), and make sure a C++ 17 compiler is available on your system.
-Once the prerequisite are ready, run the following script:
+We provide an example to show human pose estimation achieved by HyperPose. You need to install CUDA Toolkit 10+, TensorRT 7+, OpenCV 3.2+ and gFlags (cmake version), and enable C++ 17 support. Once the prerequisite are ready, run the following script:
 
 ```bash
 sudo apt -y install subversion curl
@@ -29,11 +30,9 @@ cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j$(nproc) # Build library && exampl
 ./example.operator_api_batched_images_paf    # The ouput images will be in the build folder.
 ```
 
-The environment for running this example can be found in [Dockerfile](https://github.com/tensorlayer/pretrained-models/tree/master/models/docker)
-
 ## Performance
 
-We compare the prediction performance of HyperPose with [OpenPose 1.6](https://github.com/CMU-Perceptual-Computing-Lab/openpose) and [TF-Pose](https://github.com/ildoonet/tf-pose-estimation), whenever possible. We implement the OpenPose algorithms with different configurations in this benchmark. The test-bed has Ubuntu18.04, 1070Ti GPU, Intel i7 CPU (12 logic cores). The test video is Crazy Updown Funk ([YouTube](https://www.youtube.com/watch?v=2DiQUX11YaY)). The being tested HyperPose models (in ONNX or Uff format) are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose).
+We compare the prediction performance of HyperPose with [OpenPose 1.6](https://github.com/CMU-Perceptual-Computing-Lab/openpose) and [TF-Pose](https://github.com/ildoonet/tf-pose-estimation). We implement the OpenPose algorithms with different configurations in HyperPose. The test-bed has Ubuntu18.04, 1070Ti GPU, Intel i7 CPU (12 logic cores). The test video is Crazy Updown Funk ([YouTube](https://www.youtube.com/watch?v=2DiQUX11YaY)). The HyperPose models (in the ONNX or Uff formats) are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose).
 
 | HyperPose Configuration  | DNN Size | DNN Input Shape | HyerPose | Baseline |
 | --------------- | ------------- | ------------------ | ------------------ | --------------------- |
@@ -42,7 +41,7 @@ We compare the prediction performance of HyperPose with [OpenPose 1.6](https://g
 | OpenPose (MobileNet) | 17.9 MB       | 432 x 368          | 84.32 FPS           | 8.5 FPS (TF-Pose)         |
 | OpenPose (ResNet18)  | 45.0 MB       | 432 x 368          | 62.52 FPS           | N/A                  |
 
-As we can see from the result, HyperPose is the only library that can achieve **real-time** human pose estimation.
+As we can see, HyperPose is the only library that can achieve **real-time** human pose estimation.
 
 </a>
 <p align="center">
@@ -51,7 +50,7 @@ As we can see from the result, HyperPose is the only library that can achieve **
 
 ## License
 
-HyperPose is under an [Apache 2.0 license](https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst).
+HyperPose is open-sourced under the [Apache 2.0 license](https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst).
 
 <!-- - Please acknowledge TensorLayer and this project in your project websites/articles if you are a **commercial user**. -->
 
