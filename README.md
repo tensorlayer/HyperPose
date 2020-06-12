@@ -6,8 +6,10 @@ HyperPose is a high-performance and flexible library for building real-world hum
 
 ## Features
 
-- Flexible Python training platform: HyperPose provides a large collection of Python APIs to design human pose estimation models. This includes (adding custom dataset with your own labelled data, customizing data augmentation, using multiple GPUs for fast training, and changing backbone deep neural networks (e.g., changing from ResNet to MobileNet) and many others.
-- High-performance C++ pose estimation engine: HyperPose models real-time pose estimation as a streaming dataflow. This dataflow has operators which are implemented using TensorRT and low-level C++ libraries for best possible performance. HyperPose dynamically dispatch CPU threads and GPU streams to work on these operators to maximize hardware utilization.
+HyperPose has two key features:
+
+- **Flexible training platform**: HyperPose provides flexible Python APIs to design and training of human pose estimation models through rich Python APIs. These APIs include customizing data augmentation, using multiple GPUs for fast training, and changing backbone deep neural networks (e.g., changing from ResNet to MobileNet) and many others.
+- **High-performance pose estimation engine**: HyperPose can achieve real-time pose estimation though an extensively optimized model inference engine. This engine implements numerous system optimization techniques: using TensorRT for model inference, CPU/GPU hybrid scheduling, latency-bound dynamic batching, and many others.
 
 ## Get Started
 
@@ -15,10 +17,9 @@ You can install HyperPose and learn its APIs through [Documentation](https://hyp
 
 ## Example
 
-We provide an example to showcase the high-performance pose estimation achieved by HyperPose.
+We provide an example to showcase the performance of pose estimation achieved by HyperPose.
 
-To run this example, you need to Install CUDA Toolkit 10+, Tensor RT7+, OpenCV 3.2+ and gFlags (cmake version), and make sure a C++ 17 compiler is available on your system.
-Once the prerequisite are ready, run the following script:
+To run this example, you need to install CUDA Toolkit 10+, TensorRT 7+, OpenCV 3.2+ and gFlags (cmake version), and make sure a C++ 17 compiler is available on your system. Once the prerequisite are ready, run the following script:
 
 ```bash
 sudo apt -y install subversion curl
@@ -28,8 +29,6 @@ mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j$(nproc) # Build library && examples.
 ./example.operator_api_batched_images_paf    # The ouput images will be in the build folder.
 ```
-
-The environment for running this example can be found in [Dockerfile](https://github.com/tensorlayer/pretrained-models/tree/master/models/docker)
 
 ## Performance
 
