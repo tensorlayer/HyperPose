@@ -4,6 +4,8 @@
 
 HyperPose is a library for building human pose estimation systems that can efficiently operate in the wild.
 
+> **Note**: We are in the process of migrating our APIs from 1.0 to 2.0. The migration is expected to finish by July 2020.
+
 ## Features
 
 HyperPose has two key features, which are not available in existing libraries:
