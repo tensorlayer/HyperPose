@@ -2,9 +2,11 @@
 
 [![Documentation Status](https://readthedocs.org/projects/hyperpose/badge/?version=latest)](https://hyperpose.readthedocs.io/en/latest/?badge=latest)
 
-HyperPose is a high-performance and flexible library for building human pose estimation systems.
+HyperPose is a library for building human pose estimation systems that can efficiently operate in the wild.
 
 ## Features
+
+HyperPose has two key features, which are not available in existing libraries:
 
 - **Flexible training platform**: HyperPose provides flexible Python APIs to build many useful pose estimation models (e.g., OpenPose and PoseProposalNetwork). HyperPose users can, for example, customize data augmentation, use parallel GPUs for training, and replace deep neural networks (e.g., changing from ResNet to MobileNet), thus building models specific to their real-world scenarios.
 - **High-performance pose estimation**: HyperPose achieves real-time pose estimation though a high-performance pose estimation engine. This engine implements numerous system optimizations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. This allows HyperPose to run 4x faster than OpenPose and 10x faster than TF-Pose.
