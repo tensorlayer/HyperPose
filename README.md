@@ -6,10 +6,8 @@ HyperPose is a high-performance and flexible library for building real-world hum
 
 ## Features
 
-HyperPose has two key features:
-
-- **Flexible training platform**: HyperPose provides flexible Python APIs to design and training of human pose estimation models through rich Python APIs. These APIs include customizing data augmentation, using multiple GPUs for fast training, and changing backbone deep neural networks (e.g., changing from ResNet to MobileNet) and many others.
-- **High-performance pose estimation engine**: HyperPose can achieve real-time pose estimation though an extensively optimized model inference engine. This engine implements numerous system optimization techniques: using TensorRT for model inference, CPU/GPU hybrid scheduling, latency-bound dynamic batching, and many others.
+- **Flexible training platform**: HyperPose provides flexible Python APIs to design and train pose estimation models. These APIs include customizing data augmentation, using multiple GPUs for fast training, and changing backbone deep neural networks (e.g., changing from ResNet to MobileNet) and many others.
+- **High-performance pose estimation**: HyperPose achieves real-time pose estimation though a high-performance pose estimation engine. This engine implements numerous system optimizations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others.
 
 ## Get Started
 
@@ -17,9 +15,7 @@ You can install HyperPose and learn its APIs through [Documentation](https://hyp
 
 ## Example
 
-We provide an example to showcase the performance of pose estimation achieved by HyperPose.
-
-To run this example, you need to install CUDA Toolkit 10+, TensorRT 7+, OpenCV 3.2+ and gFlags (cmake version), and make sure a C++ 17 compiler is available on your system. Once the prerequisite are ready, run the following script:
+We provide an example to showcase the performance of pose estimation achieved by HyperPose. You need to install CUDA Toolkit 10+, TensorRT 7+, OpenCV 3.2+ and gFlags (cmake version), and enable C++ 17 support. Once the prerequisite are ready, run the following script:
 
 ```bash
 sudo apt -y install subversion curl
