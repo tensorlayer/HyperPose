@@ -1,17 +1,9 @@
 #include "utils.hpp"
 
-#if !((defined(__cplusplus) && (__cplusplus >= 201703L)) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 201703L)))
-#define HYPERPOSE_USE_STD_EXP_NAMESPACE
-#endif
-
-#ifdef HYPERPOSE_USE_STD_EXP_NAMESPACE
-#include <experimental/filesystem>
-#else
-#include <filesystem>
-#endif
 
 #include <iostream>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/core/utils/filesystem.hpp>
 #include <regex>
 
 std::vector<std::string> split(const std::string& text, const char sep)
@@ -24,23 +16,44 @@ std::vector<std::string> split(const std::string& text, const char sep)
     return lines;
 }
 
-std::vector<cv::Mat> glob_images(const std::string& path)
-{
-#ifdef HYPERPOSE_USE_STD_EXP_NAMESPACE
-    namespace fs = std::experimental::filesystem; 
-#else
-    namespace fs = std::filesystem;
-#endif
-    std::regex image_regex{ R"((.*)\.(jpeg|jpg|png))" };
+#include <iostream>
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/utils/filesystem.hpp>
+
+using namespace std;
+using namespace cv::utils::fs;
+
+std::vector<cv::Mat> glob_images(const std::string& path) {
     std::vector<cv::Mat> batch;
-    for (auto&& file : fs::directory_iterator(path)) {
-        auto file_name = file.path().string();
-        if (std::regex_match(file_name, image_regex)) {
-            std::cout << "Add file: " << file_name << " into batch.\n";
-            batch.push_back(cv::imread(file_name));
+
+    {
+        std::vector<cv::String> img_list;
+        cv::utils::fs::glob(path , "*.jpeg" , img_list);
+        for (auto&& file : img_list) {
+            batch.push_back(cv::imread(file));
+            std::cout << "Add file: " << file << " into batch.\n";
         }
     }
+
+    {
+        std::vector<cv::String> img_list;
+        cv::utils::fs::glob(path , "*.png" , img_list);
+        for (auto&& file : img_list) {
+            batch.push_back(cv::imread(file));
+            std::cout << "Add file: " << file << " into batch.\n";
+        }
+    }
+
+    {
+        std::vector<cv::String> img_list;
+        cv::utils::fs::glob(path , "*.jpg" , img_list);
+        for (auto&& file : img_list) {
+            batch.push_back(cv::imread(file));
+            std::cout << "Add file: " << file << " into batch.\n";
+        }
+    }
+
     return batch;
 }
 
-#undef HYPERPOSE_USE_STD_EXP_NAMESPACE
