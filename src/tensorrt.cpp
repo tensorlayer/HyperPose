@@ -111,12 +111,21 @@ namespace dnn {
         };
         using engine_ptr = std::unique_ptr<nvinfer1::ICudaEngine, tensorrt_deleter>;
 
+        destroy_ptr<nvinfer1::IExecutionContext> m_context;
         engine_ptr m_engine;
         std::unordered_map<std::string, cuda_buffer_t> m_cuda_buffers;
 
         cuda_dep(nvinfer1::ICudaEngine* ptr)
             : m_engine(ptr)
         {
+        }
+
+        void create_execution_context()
+        {
+            if (m_context)
+                return;
+            assert(m_engine != nullptr);
+            m_context.reset(m_engine->createExecutionContext());
         }
     };
 
@@ -366,7 +375,7 @@ namespace dnn {
     std::vector<internal_t>
     tensorrt::inference(const std::vector<float>& cpu_image_batch_buffer, size_t batch_size)
     {
-        destroy_ptr<nvinfer1::IExecutionContext> context(m_cuda_dep->m_engine->createExecutionContext());
+        m_cuda_dep->create_execution_context();
         std::vector<internal_t> ret(batch_size);
         TRACE_SCOPE("INFERENCE::TensorRT");
         {
@@ -377,7 +386,7 @@ namespace dnn {
                     const auto buffer = m_cuda_dep->m_cuda_buffers.at(name).slice(0, batch_size);
 
                     if (m_binding_has_batch_dim)
-                        context->setBindingDimensions(0, nvinfer1::Dims4(batch_size, 3, m_inp_size.height, m_inp_size.width));
+                        m_cuda_dep->m_context->setBindingDimensions(0, nvinfer1::Dims4(batch_size, 3, m_inp_size.height, m_inp_size.width));
 
                     info("Got Input Binding! ", 0, '\n');
                     ttl::tensor_view<char, 2> input(
@@ -393,9 +402,9 @@ namespace dnn {
             for (auto i : ttl::range(m_cuda_dep->m_engine->getNbBindings()))
                 buffer_ptrs.push_back(m_cuda_dep->m_cuda_buffers.at(m_cuda_dep->m_engine->getBindingName(i)).data());
             if (m_binding_has_batch_dim)
-                context->executeV2(buffer_ptrs.data());
+                m_cuda_dep->m_context->executeV2(buffer_ptrs.data());
             else
-                context->execute(m_max_batch_size, buffer_ptrs.data());
+                m_cuda_dep->m_context->execute(m_max_batch_size, buffer_ptrs.data());
         }
 
         {
