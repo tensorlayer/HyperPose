@@ -36,6 +36,26 @@ extensions = [
     'numpydoc'
 ]
 
+autodoc_mock_imports = [
+    'gridfs',
+    'horovod',
+    'hyperdash',
+    'imageio',
+    'lxml',
+    'matplotlib',
+    'PIL',
+    'progressbar',
+    'pymongo',
+    'scipy',
+    'skimage',
+    'sklearn',
+    'tensorflow',
+    'tqdm',
+    'h5py',
+
+    'tensorlayer.third_party.roi_pooling.roi_pooling.roi_pooling_ops',
+]
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
