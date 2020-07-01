@@ -1,4 +1,4 @@
-Hyperpose.Model.openpose package
+hyperpose.Model.openpose package
 ================================
 
 Subpackages
@@ -7,47 +7,47 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   Hyperpose.Model.openpose.model
+   hyperpose.Model.openpose.model
 
 Submodules
 ----------
 
-Hyperpose.Model.openpose.define module
+hyperpose.Model.openpose.define module
 --------------------------------------
 
-.. automodule:: Hyperpose.Model.openpose.define
+.. automodule:: hyperpose.Model.openpose.define
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hyperpose.Model.openpose.eval module
+hyperpose.Model.openpose.eval module
 ------------------------------------
 
-.. automodule:: Hyperpose.Model.openpose.eval
+.. automodule:: hyperpose.Model.openpose.eval
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hyperpose.Model.openpose.infer module
+hyperpose.Model.openpose.infer module
 -------------------------------------
 
-.. automodule:: Hyperpose.Model.openpose.infer
+.. automodule:: hyperpose.Model.openpose.infer
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hyperpose.Model.openpose.train module
+hyperpose.Model.openpose.train module
 -------------------------------------
 
-.. automodule:: Hyperpose.Model.openpose.train
+.. automodule:: hyperpose.Model.openpose.train
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hyperpose.Model.openpose.utils module
+hyperpose.Model.openpose.utils module
 -------------------------------------
 
-.. automodule:: Hyperpose.Model.openpose.utils
+.. automodule:: hyperpose.Model.openpose.utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -56,7 +56,7 @@ Hyperpose.Model.openpose.utils module
 Module contents
 ---------------
 
-.. automodule:: Hyperpose.Model.openpose
+.. automodule:: hyperpose.Model.openpose
    :members:
    :undoc-members:
    :show-inheritance:

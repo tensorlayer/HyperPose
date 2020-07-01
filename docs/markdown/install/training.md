@@ -1,4 +1,4 @@
-# Training Library Installation
+# Python Training Library Installation
 
 ## Prerequisites
 * [anaconda3](https://www.anaconda.com/products/individual)
@@ -36,8 +36,8 @@ python
 >>> import tensorflow as tf
 >>> import tensorlayer as tl
 >>> tf.test.is_gpu_available()
-# >>> if the output is true, congratulation! you can import and run Hyperpose now
->>> from Hyperpose import Config,Model,Dataset
+# >>> if the output is true, congratulation! you can import and run hyperpose now
+>>> from hyperpose import Config,Model,Dataset
 ```
 ## Extra configuration for exporting model
 For training, the above configuration is enough, but to export model into **onnx** format for inference,one should install the

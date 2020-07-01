@@ -1,4 +1,4 @@
-Hyperpose.Model package
+hyperpose.Model package
 =======================
 
 Subpackages
@@ -7,32 +7,32 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   Hyperpose.Model.openpose
-   Hyperpose.Model.pose_proposal
+   hyperpose.Model.openpose
+   hyperpose.Model.pose_proposal
 
 Submodules
 ----------
 
-Hyperpose.Model.backbones module
+hyperpose.Model.backbones module
 --------------------------------
 
-.. automodule:: Hyperpose.Model.backbones
+.. automodule:: hyperpose.Model.backbones
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hyperpose.Model.common module
+hyperpose.Model.common module
 -----------------------------
 
-.. automodule:: Hyperpose.Model.common
+.. automodule:: hyperpose.Model.common
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hyperpose.Model.human module
+hyperpose.Model.human module
 ----------------------------
 
-.. automodule:: Hyperpose.Model.human
+.. automodule:: hyperpose.Model.human
    :members:
    :undoc-members:
    :show-inheritance:
@@ -41,7 +41,7 @@ Hyperpose.Model.human module
 Module contents
 ---------------
 
-.. automodule:: Hyperpose.Model
+.. automodule:: hyperpose.Model
    :members:
    :undoc-members:
    :show-inheritance:

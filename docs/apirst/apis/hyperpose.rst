@@ -1,4 +1,4 @@
-Hyperpose package
+hyperpose package
 =================
 
 Subpackages
@@ -7,14 +7,14 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   Hyperpose.Config
-   Hyperpose.Dataset
-   Hyperpose.Model
+   hyperpose.Config
+   hyperpose.Dataset
+   hyperpose.Model
 
 Module contents
 ---------------
 
-.. automodule:: Hyperpose
+.. automodule:: hyperpose
    :members:
    :undoc-members:
    :show-inheritance:
