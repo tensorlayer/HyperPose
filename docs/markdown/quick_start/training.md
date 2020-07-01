@@ -1,4 +1,4 @@
-# Quick Start of Model Training
+# Quick Start of Training Library
 
 ## Prerequisites
 * Make sure you have configured 'hyperpose' virtual environment following the training installation guide,(if not, you can refer to [training installation](../install/training.md)).
@@ -10,8 +10,8 @@ The training procedure of Hyperpose is to set the model architecture, model back
 User specify these configuration using the seting functions of Config module with predefined enum value.
 The code for training as simple as following would work.
 ```bash
-# >>> import modules of Hyperpose
-from Hyperpose import Config,Model,Dataset
+# >>> import modules of hyperpose
+from hyperpose import Config,Model,Dataset
 # >>> set model name is necessary to distinguish models (neccesarry)
 Config.set_model_name(args.model_name)
 # >>> set model architecture(and model backbone when in need)
@@ -46,8 +46,8 @@ you can refer to [training tutorial](../tutorial/training.md)
 The evaluate procedure using Hyperpose is almost the same to the training procedure:
 the model will be loaded from the ./save_dir/model_name/model_dir/newest_model.npz
 ```bash
-# >>> import modules of Hyperpose
-from Hyperpose import Config,Model,Dataset
+# >>> import modules of hyperpose
+from hyperpose import Config,Model,Dataset
 # >>> set model name to be eval
 Config.set_model_name(args.model_name)
 # >>> the model architecture and backbone setting should be the same with the training configuration of the model to be evaluated.

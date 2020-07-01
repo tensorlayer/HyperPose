@@ -12,7 +12,7 @@ import multiprocessing
 import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
-from Hyperpose import Config,Model,Dataset
+from hyperpose import Config,Model,Dataset
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='FastPose.')

@@ -1,4 +1,4 @@
-# Tutorial for Model Training
+# Tutorial for Training Library
 Up to now, Hyperpose provides:
 * 4 types of preset model architectures:
     * Openpose 
@@ -36,8 +36,8 @@ complexity (for example,Openpose architecture with default Vgg19 backbone is 200
 
 The basic training pipeline configuration is below:
 ```bash
-# >>> import modules of Hyperpose
-from Hyperpose import Config,Model,Dataset
+# >>> import modules of hyperpose
+from hyperpose import Config,Model,Dataset
 # >>> set model name is necessary to distinguish models (neccesarry)
 Config.set_model_name(args.model_name)
 # >>> set model architecture using Config.MODEL enum class (neccesarry)
@@ -87,8 +87,8 @@ The only difference is that:
 * In getting parts, one should use *Model.get_eval* to get evaluate pipeline(rather than train pipeline) 
 Thus the evaluate code should be as follows:
 ```bash
-# >>> import modules of Hyperpose
-from Hyperpose import Config,Model,Dataset
+# >>> import modules of hyperpose
+from hyperpose import Config,Model,Dataset
 # >>> set model name to be eval
 Config.set_model_name(args.model_name)
 # >>> the model architecture and backbone setting should be the same with the training configuration of the model to be evaluated.

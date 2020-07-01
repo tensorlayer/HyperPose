@@ -1,7 +1,7 @@
-Python training API
+Python Training API
 ===================
 
 .. toctree::
    :maxdepth: 4
 
-   Hyperpose
+   hyperpose

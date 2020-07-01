@@ -6,10 +6,9 @@ sphinx-markdown-tables
 Sphinx==3.0.4
 nltk
 numpy
-pymongo
 cython
 easydict
-hyperdash
+pycocotools
 tensorflow
 tensorlayer
 opencv-python

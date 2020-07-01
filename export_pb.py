@@ -4,7 +4,7 @@ import os
 import argparse
 import tensorflow as tf
 import tensorlayer as tl
-from framework import Config,Model,Dataset
+from hyperpose import Config,Model,Dataset
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-Hyperpose.Dataset package
+hyperpose.Dataset package
 =========================
 
 Subpackages
@@ -7,16 +7,16 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   Hyperpose.Dataset.mpii_dataset
-   Hyperpose.Dataset.mscoco_dataset
+   hyperpose.Dataset.mpii_dataset
+   hyperpose.Dataset.mscoco_dataset
 
 Submodules
 ----------
 
-Hyperpose.Dataset.common module
+hyperpose.Dataset.common module
 -------------------------------
 
-.. automodule:: Hyperpose.Dataset.common
+.. automodule:: hyperpose.Dataset.common
    :members:
    :undoc-members:
    :show-inheritance:
@@ -25,7 +25,7 @@ Hyperpose.Dataset.common module
 Module contents
 ---------------
 
-.. automodule:: Hyperpose.Dataset
+.. automodule:: hyperpose.Dataset
    :members:
    :undoc-members:
    :show-inheritance:

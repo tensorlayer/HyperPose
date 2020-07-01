@@ -1,61 +1,61 @@
-Hyperpose.Dataset.mpii\_dataset package
+hyperpose.Dataset.mpii\_dataset package
 =======================================
 
 Submodules
 ----------
 
-Hyperpose.Dataset.mpii\_dataset.dataset module
+hyperpose.Dataset.mpii\_dataset.dataset module
 ----------------------------------------------
 
-.. automodule:: Hyperpose.Dataset.mpii_dataset.dataset
+.. automodule:: hyperpose.Dataset.mpii_dataset.dataset
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hyperpose.Dataset.mpii\_dataset.define module
+hyperpose.Dataset.mpii\_dataset.define module
 ---------------------------------------------
 
-.. automodule:: Hyperpose.Dataset.mpii_dataset.define
+.. automodule:: hyperpose.Dataset.mpii_dataset.define
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hyperpose.Dataset.mpii\_dataset.format module
+hyperpose.Dataset.mpii\_dataset.format module
 ---------------------------------------------
 
-.. automodule:: Hyperpose.Dataset.mpii_dataset.format
+.. automodule:: hyperpose.Dataset.mpii_dataset.format
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hyperpose.Dataset.mpii\_dataset.generate module
+hyperpose.Dataset.mpii\_dataset.generate module
 -----------------------------------------------
 
-.. automodule:: Hyperpose.Dataset.mpii_dataset.generate
+.. automodule:: hyperpose.Dataset.mpii_dataset.generate
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hyperpose.Dataset.mpii\_dataset.prepare module
+hyperpose.Dataset.mpii\_dataset.prepare module
 ----------------------------------------------
 
-.. automodule:: Hyperpose.Dataset.mpii_dataset.prepare
+.. automodule:: hyperpose.Dataset.mpii_dataset.prepare
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hyperpose.Dataset.mpii\_dataset.utils module
+hyperpose.Dataset.mpii\_dataset.utils module
 --------------------------------------------
 
-.. automodule:: Hyperpose.Dataset.mpii_dataset.utils
+.. automodule:: hyperpose.Dataset.mpii_dataset.utils
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hyperpose.Dataset.mpii\_dataset.visualize module
+hyperpose.Dataset.mpii\_dataset.visualize module
 ------------------------------------------------
 
-.. automodule:: Hyperpose.Dataset.mpii_dataset.visualize
+.. automodule:: hyperpose.Dataset.mpii_dataset.visualize
    :members:
    :undoc-members:
    :show-inheritance:
@@ -64,7 +64,7 @@ Hyperpose.Dataset.mpii\_dataset.visualize module
 Module contents
 ---------------
 
-.. automodule:: Hyperpose.Dataset.mpii_dataset
+.. automodule:: hyperpose.Dataset.mpii_dataset
    :members:
    :undoc-members:
    :show-inheritance:

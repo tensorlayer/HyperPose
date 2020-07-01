@@ -12,7 +12,7 @@ import multiprocessing
 import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
-from Hyperpose import Config,Model,Dataset
+from hyperpose import Config,Model,Dataset
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='FastPose.')
@@ -73,16 +73,3 @@ if __name__ == '__main__':
     train=Model.get_train(config)
     dataset=Dataset.get_dataset(config)
     train(model,dataset)
-
-    #eval
-    config=Config.get_config()
-    model=Model.getModel(config)
-    evaluate=Model.get_evaluate_by_config(config)
-    dataset=Dataset.get_dataset(config)
-    evaluate(model,dataset,vis_num=30,total_eval_num=10000)
-
-    #user pipeline
-    Openpose=Model.get_model(Config.MODEL.Openpose)
-    model=Openpose(n_pos=12,hin=384,win=384)
-    Cocodataset=Dataset.generateTrainDataset()
-    train_dataset.map
