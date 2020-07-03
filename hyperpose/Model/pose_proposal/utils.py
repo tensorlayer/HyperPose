@@ -261,7 +261,7 @@ def vis_annos(image, annos, save_dir ,name=''):
     plt.savefig(os.path.join(save_dir, 'keypoints%s%d.png' % (name, i)), dpi=300)
 
 
-from .define import CocoPart,CocoLimb,CocoColor,coco_input_converter,coco_output_converter,Coco_fliplist
+from .define import CocoPart,CocoLimb,CocoColor,coco_input_converter,coco_output_converter,Coco_flip_list
 from .define import MpiiPart,MpiiLimb,MpiiColor,mpii_input_converter,mpii_output_converter,Mpii_flip_list
 
 def get_parts(dataset_type):
@@ -269,34 +269,48 @@ def get_parts(dataset_type):
         return CocoPart
     elif(dataset_type==DATA.MPII):
         return MpiiPart
+    else:
+        return dataset_type.get_parts()
 
 def get_limbs(dataset_type):
     if(dataset_type==DATA.MSCOCO):
         return CocoLimb
     elif(dataset_type==DATA.MPII):
         return MpiiLimb
+    else:
+        return dataset_type.get_limbs()
 
 def get_colors(dataset_type):
     if(dataset_type==DATA.MSCOCO):
         return CocoColor
     elif(dataset_type==DATA.MPII):
         return MpiiColor
+    else:
+        return dataset_type.get_colors()
 
 def get_input_kptcvter(dataset_type):
     if(dataset_type==DATA.MSCOCO):
         return coco_input_converter
     elif(dataset_type==DATA.MPII):
         return mpii_input_converter
+    else:
+        def custom_input_kptcvter(kpts):
+            return kpts
+        return custom_input_kptcvter
 
 def get_output_kptcvter(dataset_type):
     if(dataset_type==DATA.MSCOCO):
         return coco_output_converter
     elif(dataset_type==DATA.MPII):
         return mpii_output_converter
+    else:
+        def custom_output_kptcvter(kpts):
+            return kpts
+        return custom_output_kptcvter
 
 def get_flip_list(dataset_type):
     if(dataset_type==DATA.MSCOCO):
-        return Coco_fliplist
+        return Coco_flip_list
     elif(dataset_type==DATA.MPII):
         return Mpii_flip_list
 

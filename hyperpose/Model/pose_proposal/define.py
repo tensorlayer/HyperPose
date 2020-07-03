@@ -107,7 +107,7 @@ def get_coco_flip_list():
             flip_list.append(part.value)
     return flip_list
 
-Coco_fliplist=get_coco_flip_list()
+Coco_flip_list=get_coco_flip_list()
 
 #specialized for mpii
 class MpiiPart(Enum):
