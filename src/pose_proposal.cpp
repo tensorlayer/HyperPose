@@ -2,8 +2,8 @@
 #include <deque>
 #include <hyperpose/operator/parser/proposal_network.hpp>
 
-#include "color.hpp"
 #include "coco.hpp"
+#include "color.hpp"
 
 namespace hyperpose {
 
