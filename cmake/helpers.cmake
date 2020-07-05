@@ -8,9 +8,16 @@ FIND_PACKAGE(OpenCV)
 FIND_PACKAGE(gflags)
 FIND_PACKAGE(Threads REQUIRED)
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL GNU)
+    set(CXX_FILESYSTEM_LIBRARIES stdc++fs)
+else()
+    set(CXX_FILESYSTEM_LIBRARIES)
+endif()
+
 # Helper Lib.
 ADD_LIBRARY(helpers examples/utils.cpp)
 TARGET_LINK_LIBRARIES(helpers
         Threads::Threads
-        ${OpenCV_LIBS})
+        ${OpenCV_LIBS}
+        ${CXX_FILESYSTEM_LIBRARIES})
 ADD_GLOBAL_DEPS(helpers)

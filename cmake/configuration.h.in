@@ -1,3 +1,0 @@
-#pragma once
-#define HyperPose_VERSION_MAJOR @HyperPose_VERSION_MAJOR@
-#define HyperPose_VERSION_MINOR @HyperPose_VERSION_MINOR@

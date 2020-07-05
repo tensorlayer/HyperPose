@@ -5,7 +5,7 @@
 * C++ 17 Compiler. (g++7, clang++4.0, MSVC19.0 or newer)
 * CMake 3.5+ 
 * Third-Party
-    * OpenCV3+.
+    * OpenCV3.2+.
     * [CUDA 10](https://developer.nvidia.com/cuda-downloads), [TensorRT 7](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt_304/tensorrt-install-guide/index.html).
     * gFlags(optional, for examples/tests)
 
@@ -14,8 +14,8 @@
 ## Build On Ubuntu 18.04
 
 ```bash
-# >>> Install OpenCV3.
-sudo apt -y install cmake libopencv-dev 
+# >>> Install OpenCV3+
+sudo apt -y install cmake libopencv-dev  
 # You may also install OpenCV from source to get best performance.
 
 # >>> Install CUDA/TensorRT

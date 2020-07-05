@@ -1,6 +1,6 @@
+#include "coco.hpp"
 #include "color.hpp"
 #include <hyperpose/utility/human.hpp>
-#include "coco.hpp"
 
 namespace hyperpose {
 

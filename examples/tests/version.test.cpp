@@ -1,7 +1,7 @@
-#include <iostream>
-#include <configuration.h>
+#include <hyperpose/hyperpose.hpp>
 
-int main() {
-    std::cout << "HyperPose Version: " << HyperPose_VERSION_MAJOR << '.' << HyperPose_VERSION_MINOR << '\n';
+int main()
+{
+    std::cout << "HyperPose Version: " << HYPERPOSE_VERSION_MAJOR << '.' << HYPERPOSE_VERSION_MINOR << '\n';
     return 0;
 }
