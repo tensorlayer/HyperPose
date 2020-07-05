@@ -10,7 +10,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-
+    - run: apt-get install libopencv-dev # dependency
+    - run: sh scripts/download-test-data.sh
+    - run: sh scripts/download-tinyvgg-model.sh
+    - run: sh scripts/download-openpose-thin-model.sh
+    - run: sh scripts/download-openpose-res50-model.sh
+    - run: sh scripts/download-openpose-coco-model.sh
     - run: cmake . -DBUILD_TESTS=1 -DBUILD_LIB=0 -DBUILD_EXAMPLES=0 -DBUILD_USER_CODES=0 -DEXECUTABLE_OUTPUT_PATH=./bin
     - run: cmake --build . --config Release
 
