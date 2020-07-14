@@ -7,8 +7,8 @@
 #include <mutex>
 #include <numeric>
 #include <optional>
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace hyperpose {
 
@@ -100,11 +100,11 @@ public:
             try {
                 push(begin, end);
             } catch (const std::logic_error& err) {
-//                std::cerr << err.what() << std::endl;
+                //                std::cerr << err.what() << std::endl;
                 throw;
             } catch (const std::overflow_error& err) {
-//                std::cerr << err.what() << '\n';
-//                std::cerr << "Currently: size/capacity: " << m_size << '/' << m_capacity << ", space needed: " << span_size << std::endl;
+                //                std::cerr << err.what() << '\n';
+                //                std::cerr << "Currently: size/capacity: " << m_size << '/' << m_capacity << ", space needed: " << span_size << std::endl;
                 m_wait_for_space += span_size;
                 std::unique_lock lk{ m_mu };
                 m_cv.wait(

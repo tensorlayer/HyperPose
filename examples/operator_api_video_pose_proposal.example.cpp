@@ -31,7 +31,7 @@ int main(int argc, char** argv)
     example_log() << "Input video name: " << FLAGS_input_video << std::endl;
     example_log() << "Output video name: " << FLAGS_output_video << std::endl;
     example_log() << "Input Frame: Size@" << cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT))
-                   << "Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
+                  << "Count@" << capture.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
 
     // * Create TensorRT engine.
     namespace hp = hyperpose;
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     }();
 
     // * post-processing: Using Pose Proposal
-    hp::parser::pose_proposal parser{ engine.input_size(), 0.05};
+    hp::parser::pose_proposal parser{ engine.input_size(), 0.05 };
 
     using clk_t = std::chrono::high_resolution_clock;
 

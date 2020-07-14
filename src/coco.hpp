@@ -1,5 +1,8 @@
 #pragma once
 
+#include <utility>
+#include <vector>
+
 inline bool is_virtual_pair(int pair_id) { return pair_id > 16; }
 using idx_pair_t = std::pair<int, int>;
 using coco_pair_list_t = std::vector<idx_pair_t>;

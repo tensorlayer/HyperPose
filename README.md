@@ -22,7 +22,7 @@ You can install HyperPose and learn its APIs through [Documentation](https://hyp
 We provide an example to show human pose estimation achieved by HyperPose. You need to install CUDA Toolkit 10+, TensorRT 7+, OpenCV 3.2+ and gFlags (cmake version), and enable C++ 17 support. Once the prerequisite are ready, run the following script:
 
 ```bash
-sudo apt -y install subversion curl
+sudo apt -y install git cmake build-essential subversion curl libgflags-dev # libopencv-dev # [optional] 
 sh scripts/download-test-data.sh         # Install data for examples.
 sh scripts/download-tinyvgg-model.sh     # Install tiny-vgg model.
 mkdir build && cd build

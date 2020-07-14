@@ -1,8 +1,8 @@
+#include "coco.hpp"
 #include "logging.hpp"
 #include "post_process.hpp"
 #include <hyperpose/operator/parser/paf.hpp>
 #include <thread>
-#include "coco.hpp"
 
 struct connection {
     int cid1;

@@ -69,7 +69,7 @@ int main(int argc, char** argv)
 
         {
             // * TensorRT Inference.
-            auto feature_maps = engine.inference({mat});
+            auto feature_maps = engine.inference({ mat });
 
             // * Paf.
             auto poses = parser.process(feature_maps.front()[0], feature_maps.front()[1]);
@@ -80,7 +80,7 @@ int main(int argc, char** argv)
 
         double fps = 1000. / std::chrono::duration<double, std::milli>(clk_t::now() - beg).count();
 
-        cv::putText(mat, "FPS: " + std::to_string(fps), {10, 10}, cv::FONT_HERSHEY_SIMPLEX, 0.5, {0, 255, 0}, 2);
+        cv::putText(mat, "FPS: " + std::to_string(fps), { 10, 10 }, cv::FONT_HERSHEY_SIMPLEX, 0.5, { 0, 255, 0 }, 2);
         cv::imshow("HyperPose Prediction", mat);
 
         if (cv::waitKey(1) == 27)
