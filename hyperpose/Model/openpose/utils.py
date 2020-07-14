@@ -21,7 +21,7 @@ from ..human import Human
 from ..common import tf_repeat,TRAIN,MODEL,DATA
 
 
-def preprocess(annos,img_height,img_width,model_hout,model_wout,dataset_type,data_format="channels_first"):
+def preprocess(annos,img_height,img_width,model_hout,model_wout,parts,limbs,data_format="channels_first"):
     '''preprocess function of openpose class models
     
     take keypoints annotations, image height and width, model input height and width, and dataset type,
@@ -64,13 +64,11 @@ def preprocess(annos,img_height,img_width,model_hout,model_wout,dataset_type,dat
         conf_map: heatmaps of keypoints, shape C*H*W(channels_first) or H*W*C(channels_last)
         paf_map: heatmaps of limbs, shape C*H*W(channels_first) or H*W*C(channels_last)
     '''
-    parts=get_parts(dataset_type)
-    limbs=get_limbs(dataset_type)
     heatmap=get_heatmap(annos,img_height,img_width,model_hout,model_wout,parts,limbs,data_format)
     vectormap=get_vectormap(annos,img_height,img_width,model_hout,model_wout,parts,limbs,data_format)
     return heatmap,vectormap
 
-def postprocess(conf_map,paf_map,dataset_type,data_format="channels_first"):
+def postprocess(conf_map,paf_map,img_h,img_w,parts,limbs,data_format="channels_first",colors=None):
     '''postprocess function of openpose class models
     
     take model predicted feature maps, output parsed human objects, each one contains all detected keypoints of the person
@@ -80,7 +78,7 @@ def postprocess(conf_map,paf_map,dataset_type,data_format="channels_first"):
     arg1 : numpy array
         model predicted conf_map, heatmaps of keypoints, shape C*H*W(channels_first) or H*W*C(channels_last)
     
-    arg1 : numpy array
+    arg2 : numpy array
         model predicted paf_map, heatmaps of limbs, shape C*H*W(channels_first) or H*W*C(channels_last)
     
     arg3 : Config.DATA
@@ -98,20 +96,18 @@ def postprocess(conf_map,paf_map,dataset_type,data_format="channels_first"):
     list
         contain object of humans,see Model.Human for detail information of Human object
     '''
-    parts=get_parts(dataset_type)
-    limbs=get_limbs(dataset_type)
-    colors=get_colors(dataset_type)
-    if(dataset_type=="channels_last"):
-        conf_map=np.transpose(conf_map,[2,0,1])
-        paf_map=np.transpose(paf_map,[2,0,1])
-    _,img_h,img_w=conf_map.shape
-    conf_map=conf_map[np.newaxis,:,:,:]
-    paf_map=paf_map[np.newaxis,:,:,:]
+    if(type(conf_map)!=np.ndarray):
+        conf_map=conf_map.numpy()
+    if(type(paf_map)!=np.ndarray):
+        paf_map=paf_map.numpy()
+
+    if(colors==None):
+        colors=[[255,0,0]]*len(parts)
     post_processor=Post_Processor(parts,limbs,colors)
-    humans=post_processor.process(conf_map,paf_map,img_h,img_w)
+    humans=post_processor.process(conf_map,paf_map,img_h,img_w,data_format=data_format)
     return humans
 
-def visualize(img,conf_map,paf_map,save_name="maps",save_dir="./save_dir/vis_dir",data_format="channels_first"):
+def visualize(img,conf_map,paf_map,save_name="maps",save_dir="./save_dir/vis_dir",data_format="channels_first",save_tofile=True):
     '''visualize function of openpose class models
     
     take model predict feature maps, output visualized image.
@@ -144,9 +140,18 @@ def visualize(img,conf_map,paf_map,save_name="maps",save_dir="./save_dir/vis_dir
     -------
     None
     '''
+    if(type(img)!=np.ndarray):
+        img=img.numpy()
+    if(type(conf_map)!=np.ndarray):
+        conf_map=conf_map.numpy()
+    if(type(paf_map)!=np.ndarray):
+        paf_map=paf_map.numpy()
+
     if(data_format=="channels_last"):
         conf_map=np.transpose(conf_map,[2,0,1])
         paf_map=np.tranpose(paf_map,[2,0,1])
+    elif(data_format=="channels_first"):
+        img=np.transpose(img,[1,2,0])
     os.makedirs(save_dir,exist_ok=True)
     ori_img=np.clip(img*255.0,0.0,255.0).astype(np.uint8)
     vis_img=ori_img.copy()
@@ -166,8 +171,10 @@ def visualize(img,conf_map,paf_map,save_name="maps",save_dir="./save_dir/vis_dir
     a.set_title("paf_map")
     plt.imshow(show_paf_map)
     #save
-    plt.savefig(f"{save_dir}/{save_name}_visualize.png")
-    plt.close('all')
+    if(save_tofile):
+        plt.savefig(f"{save_dir}/{save_name}_visualize.png")
+        plt.close('all')
+    return show_conf_map,show_paf_map
 
 def get_heatmap(annos, height, width, hout, wout, parts, limbs, data_format="channels_first"):
     """
@@ -538,8 +545,8 @@ def vis_annos(image, annos, save_dir ,name=''):
 
 
 
-from .define import CocoPart,CocoLimb,CocoColor,coco_input_converter,coco_output_converter,Coco_flip_list
-from .define import MpiiPart,MpiiLimb,MpiiColor,mpii_input_converter,mpii_output_converter,Mpii_flip_list
+from .define import CocoPart,CocoLimb,CocoColor,Coco_flip_list
+from .define import MpiiPart,MpiiLimb,MpiiColor,Mpii_flip_list
 
 def get_parts(dataset_type):
     if(dataset_type==DATA.MSCOCO):
@@ -564,26 +571,6 @@ def get_colors(dataset_type):
         return MpiiColor
     else:
         return dataset_type.get_colors()
-
-def get_input_kptcvter(dataset_type):
-    if(dataset_type==DATA.MSCOCO):
-        return coco_input_converter
-    elif(dataset_type==DATA.MPII):
-        return mpii_input_converter
-    else:
-        def custom_input_kptcvter(kpts):
-            return kpts
-        return custom_input_kptcvter
-
-def get_output_kptcvter(dataset_type):
-    if(dataset_type==DATA.MSCOCO):
-        return coco_output_converter
-    elif(dataset_type==DATA.MPII):
-        return mpii_output_converter
-    else:
-        def custom_output_kptcvter(kpts):
-            return kpts
-        return custom_output_kptcvter
 
 def get_flip_list(dataset_type):
     if(dataset_type==DATA.MSCOCO):

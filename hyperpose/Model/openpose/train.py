@@ -16,7 +16,7 @@ from pycocotools.coco import maskUtils
 import _pickle as cPickle
 from functools import partial
 from .utils import tf_repeat, get_heatmap, get_vectormap, draw_results 
-from .utils import get_parts,get_limbs,get_input_kptcvter,get_flip_list
+from .utils import get_parts,get_limbs,get_flip_list
 from ..common import init_log,log,KUNGFU
 
 def regulize_loss(target_model,weight_decay_factor):
@@ -26,18 +26,14 @@ def regulize_loss(target_model,weight_decay_factor):
         re_loss+=regularizer(trainable_weight)
     return re_loss
 
-def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs , kpt_cvter, flip_list=None, data_format="channels_first"):
+def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_list=None, data_format="channels_first"):
     """Data augmentation function."""
     #restore data
     concat_dim=0 if data_format=="channels_first" else -1
     ground_truth = cPickle.loads(ground_truth.numpy())
     image=image.numpy()
-    annos = ground_truth["obj"]
+    annos = ground_truth["kpt"]
     mask = ground_truth["mask"]
-    #convert input keypoints
-    for anno_idx in range(0,len(annos)):
-        cvt_kpts=kpt_cvter(annos[anno_idx])
-        annos[anno_idx]=cvt_kpts
 
     # decode mask
     h_mask, w_mask, _ = np.shape(image)
@@ -101,8 +97,8 @@ def _map_fn(img_list, annos ,data_aug_fn, hin, win, hout, wout, parts, limbs):
     image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
     return image, resultmap, mask
 
-def get_paramed_map_fn(hin,win,hout,wout,parts,limbs,kpt_cvter,flip_list=None,data_format="channels_first"):
-    paramed_data_aug_fn=partial(_data_aug_fn,hin=hin,win=win,hout=hout,wout=wout,parts=parts,limbs=limbs,kpt_cvter=kpt_cvter,\
+def get_paramed_map_fn(hin,win,hout,wout,parts,limbs,flip_list=None,data_format="channels_first"):
+    paramed_data_aug_fn=partial(_data_aug_fn,hin=hin,win=win,hout=hout,wout=wout,parts=parts,limbs=limbs,\
         flip_list=flip_list,data_format=data_format)
     paramed_map_fn=partial(_map_fn,data_aug_fn=paramed_data_aug_fn, hin=hin, win=win, hout=hout, wout=wout ,parts=parts, limbs=limbs)
     return paramed_map_fn
@@ -152,17 +148,15 @@ def single_train(train_model,dataset,config):
     win = train_model.win
     hout = train_model.hout
     wout = train_model.wout
-    data_format=train_model.data_format
     model_dir = config.model.model_dir
-
 
     print(f"single training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
     dataset_type=dataset.get_dataset_type()
-    parts,limbs,kpt_cvter=get_parts(dataset_type),get_limbs(dataset_type),get_input_kptcvter(dataset_type)
+    parts,limbs,data_format=train_model.parts,train_model.limbs,train_model.data_format
     flip_list=get_flip_list(dataset_type)
-    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,parts,limbs,kpt_cvter,flip_list=flip_list,data_format=data_format)
+    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,parts,limbs,flip_list=flip_list,data_format=data_format)
     train_dataset = train_dataset.shuffle(buffer_size=4096).repeat()
     train_dataset = train_dataset.map(paramed_map_fn,num_parallel_calls=max(multiprocessing.cpu_count()//2,1))
     train_dataset = train_dataset.batch(config.train.batch_size)  
@@ -283,7 +277,6 @@ def parallel_train(train_model,dataset,config):
     win = train_model.win
     hout = train_model.hout
     wout = train_model.wout
-    data_format = train_model.data_format
     model_dir = config.model.model_dir
 
     #import kungfu
@@ -296,9 +289,9 @@ def parallel_train(train_model,dataset,config):
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
     dataset_type=dataset.get_dataset_type()
-    parts,limbs,kpt_cvter=get_parts(dataset_type),get_limbs(dataset_type),get_input_kptcvter(dataset_type)
+    parts,limbs,data_format=train_model.parts,train_model.limbs,train_model.data_format
     flip_list=get_flip_list(dataset_type)
-    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,parts,limbs,kpt_cvter,flip_list=flip_list,data_format=data_format)
+    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,parts,limbs,flip_list=flip_list,data_format=data_format)
     train_dataset = train_dataset.shuffle(buffer_size=4096)
     train_dataset = train_dataset.shard(num_shards=current_cluster_size(),index=current_rank())
     train_dataset = train_dataset.repeat()

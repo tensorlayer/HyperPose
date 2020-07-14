@@ -11,6 +11,8 @@ class Post_Processor:
         self.parts=parts
         self.limbs=limbs
         self.colors=colors
+        if(self.colors==None):
+            self.colors=[[255,0,0]]*len(self.parts)
         self.n_pos=len(self.parts)
         self.n_limb=len(self.limbs)
         self.eps=eps

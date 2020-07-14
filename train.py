@@ -44,10 +44,6 @@ if __name__ == '__main__':
                         type=float,
                         default=1e-4,
                         help='learning rate')
-    parser.add_argument('--batch_size',
-                        type=int,
-                        default=8,
-                        help='batch_size')
     parser.add_argument('--kf_optimizer',
                         type=str,
                         default='Sync_avg',
@@ -61,7 +57,6 @@ if __name__ == '__main__':
     #config train
     Config.set_train_type(Config.TRAIN[args.train_type])
     Config.set_learning_rate(args.learning_rate)
-    Config.set_batch_size(args.batch_size)
     Config.set_kungfu_option(Config.KUNGFU[args.kf_optimizer])
     #config dataset
     Config.set_dataset_type(Config.DATA[args.dataset_type])

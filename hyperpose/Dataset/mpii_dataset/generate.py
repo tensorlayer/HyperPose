@@ -3,26 +3,29 @@ import tensorlayer as tl
 import _pickle as cPickle
 from .format import MPIIMeta,PoseInfo
 
-def get_train_dataset(train_images_path,train_annos_path,dataset_filter=None):
+def get_train_dataset(train_images_path,train_annos_path,dataset_filter=None,input_kpt_cvter=lambda x:x):
     #prepare data
     mpii_data=PoseInfo(train_images_path,train_annos_path,dataset_filter=dataset_filter)
-    img_file_list=mpii_data.get_image_list()
-    objs_list=mpii_data.get_joint_list()
+    img_paths_list=mpii_data.get_image_list()
+    kpts_list=mpii_data.get_kpt_list()
     bbx_list=mpii_data.get_headbbx_list()
     #assemble data
-    train_img_file_list=img_file_list
-    train_target_list=[]
-    for objs,bbx in zip(objs_list,bbx_list):
-        train_target_list.append({
-            "obj":objs,
+    target_list=[]
+    for kpts,bbx in zip(kpts_list,bbx_list):
+        for p_idx in range(0,len(kpts)):
+            kpts[p_idx]=input_kpt_cvter(kpts[p_idx])
+        target_list.append({
+            "kpt":kpts,
             "mask":None,
             "bbx":bbx
         })
+    train_img_paths_list=img_paths_list
+    train_target_list=target_list
     #tensorflow data pipeline
     def generator():
         """TF Dataset generator."""
-        assert len(train_img_file_list) == len(train_target_list)
-        for _input, _target in zip(train_img_file_list, train_target_list):
+        assert len(train_img_paths_list) == len(train_target_list)
+        for _input, _target in zip(train_img_paths_list, train_target_list):
             yield _input.encode('utf-8'), cPickle.dumps(_target)
 
     train_dataset = tf.data.Dataset.from_generator(generator, output_types=(tf.string, tf.string))

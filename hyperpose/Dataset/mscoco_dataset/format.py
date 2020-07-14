@@ -158,13 +158,13 @@ class PoseInfo:
             img_list.append(meta.img_url)
         return img_list
 
-    def get_joint_list(self):
+    def get_kpt_list(self):
         joint_list = []
         for meta in self.metas:
             joint_list.append(meta.joint_list)
         return joint_list
 
-    def get_mask(self):
+    def get_mask_list(self):
         mask_list = []
         for meta in self.metas:
             mask_list.append(meta.masks)

@@ -29,7 +29,7 @@ setting configuration using APIs of *Config* module, and getting the configured 
     * *set_dataset_type* will change the dataset in the training pipeline  
      (use enum value of enum class **Config.DATA**)
     * *set_train_type* is to choose whether use single GPU for single training or multiple GPUs for parallel training  
-     (use enum value of enum class **Config.TRAIN**)  
+     (use enum value of enum class **Config.TRAIN**)<br>
 the conbination of different model architectures and model backbones will lead to huge difference of countructed model' computation
 complexity (for example,Openpose architecture with default Vgg19 backbone is 200MB, while MobilenetThinOpenpose with mobilenet-variant backbone is only 18MB), thus it should be carefully considered.  
     for more detailed information, please refer the API documents. 
@@ -110,9 +110,9 @@ It should be noted that:
 * 2.the evaluation metrics will follow the official evaluation metrics of dataset
 
 ## User-defined model architecture
-Hyperpose leave freedom for user to define thier own model architecture but use the provided integrated model pipeline at the same time, the following points should be considered:
-* 1.the model should be an object of a tensorlayer.models.Model class (or inherite from this class)
-* 2.the model should have *foward* and *cal_loss* functions that has exactly the same input and output format with the preset model architectures. one can **refer Model.LightweightOpenpose class** for reference.
+Hyperpose leaves freedom for user to define thier own model architecture but use the provided integrated model pipeline at the same time, the following points should be considered:<br>
+* 1.the model should be an object of a tensorlayer.models.Model class (or inherite from this class)<br>
+* 2.the model should have *foward* and *cal_loss* functions that has exactly the same input and output format with the preset model architectures. one can **refer Model.LightweightOpenpose class** for reference.<br>
 to do this, user still need to set model_type to determine the training pipeline, here the model_type should be the model that has the similair data processing pipeline with the user's own model. Then he can use the *set_model_arch* function to pass
 his own model object
 ```bash
@@ -121,6 +121,21 @@ his own model object
     Config.set_model_arch(your_model_arch)
 ```
 the other configuration procedures are the same with the integrated training pipeline.
+
+## User-defined dataset
+Hyperpose allows user to use their own dataset to be integrated with the training and evaluating pipeline, as long as it has the following attribute and functions:<br>
+* 1.**get_train_dataset**: <br>
+return a tensorflow dataset object where each element should be a image path and a serialized dict(using **_pickle** library to serialize) which at least have the three key-value pairs: <br>
+1.1 "kpt"-a list contains keyspoints for each labeled human, for example:[[kpt1,kpt2,...,kptn],[kpt1,kpt2,...,kptn]] is a list with two labeld humans, where each *kpt* is a [x,y] coordinate such as [234,526],etc<br>
+1.2 "bbx"-a list contains boundingbox for each labeled human, for example:[bbx1,bbx2] is a list with two labeled humans, where each *bbx* is a [x,y,w,h] array such as [234,526,60,80], necessary for **pose proposal network**, could be set to *None* for others<br>
+1.3 "mask"-a mask (in mscoco polynomial format) used to cover unlabeled people, could be set to *None*<br>
+* 2.**get_eval_dataset**: <br>
+return a tensorflow dataset object where each element should be a image path and its image id.<br>
+* 3.**get_input_kpt_cvter**(optional): <br>
+return a function which changes the **kpt** value in your dataset dict element,used to enable your dataset keypoint annotation being in line with your model keypoint setting, or combined with other dataset with different keypoint annotation.
+* 4.**get_output_kpt_cvter**: <br>
+return a function which changes the model predict result to a format that easy to evaluate, used to enable your datatset to be evaluate at a formal COCO standard (using MAP) or MPII standard (using MPCH).  
+
 
 ## User-defined dataset filter
 Hyperpose also leave freedom for user to define thier own dataset filter to filter the dataset as they want using *set_dataset_filter* function.

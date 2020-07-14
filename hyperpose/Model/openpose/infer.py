@@ -13,6 +13,8 @@ class Post_Processor:
         self.parts=parts
         self.limbs=limbs
         self.colors=colors
+        if(self.colors==None):
+            self.colors=[[255,0,0]]*len(parts)
         self.n_pos=len(self.parts)
         self.n_limb=len(self.limbs)
         self.thres_conf=0.1
@@ -27,7 +29,7 @@ class Post_Processor:
     def get_peak_map(self,conf_map):
         def _gauss_smooth(origin):
             sigma=3.0
-            kernel_size=17
+            kernel_size=5
             smoothed=np.zeros(shape=origin.shape)
             channel_num=origin.shape[-1]
             for channel_idx in range(0,channel_num):
@@ -37,11 +39,14 @@ class Post_Processor:
 
         smoothed = _gauss_smooth(conf_map)
         max_pooled = tf.nn.pool(smoothed, window_shape=(3, 3), pooling_type='MAX', padding='SAME')
-        return tf.where(tf.equal(smoothed, max_pooled), smoothed, tf.zeros_like(conf_map)).numpy()
+        return tf.where(tf.equal(smoothed, max_pooled), conf_map, tf.zeros_like(conf_map)).numpy()
     
-    def process(self,conf_map,paf_map,img_h,img_w):
-        conf_map=cv2.resize(conf_map[0].transpose([1,2,0]),(img_w,img_h))[np.newaxis,:,:,:]
-        paf_map=cv2.resize(paf_map[0].transpose([1,2,0]),(img_w,img_h))[np.newaxis,:,:,:]
+    def process(self,conf_map,paf_map,img_h,img_w,data_format="channels_first"):
+        if(data_format=="channels_first"):
+            conf_map=np.transpose(conf_map,[1,2,0])
+            paf_map=np.transpose(paf_map,[1,2,0])
+        conf_map=cv2.resize(conf_map,(img_w,img_h))[np.newaxis,:,:,:]
+        paf_map=cv2.resize(paf_map,(img_w,img_h))[np.newaxis,:,:,:]
         peak_map=self.get_peak_map(conf_map)
         humans=self.process_paf(peak_map[0],conf_map[0],paf_map[0])
         return humans
@@ -50,6 +55,7 @@ class Post_Processor:
         #filter valid peaks
         peaks=[[] for part_idx in range(0,self.n_pos)]
         all_peaks=[]
+        #print(f"test peak_map.shape:{peak_map.shape}")
         peak_ys,peak_xs,part_idxs=np.where(peak_map>self.thres_conf)
         for peak_idx,(part_idx,peak_y,peak_x) in enumerate(zip(part_idxs,peak_ys,peak_xs)):
             peak_score=conf_map[peak_y,peak_x,part_idx]
@@ -60,6 +66,7 @@ class Post_Processor:
         for part_idx in range(0,self.n_pos):
             print(f"found peak_{part_idx}:{len(peaks[part_idx])}")
         '''
+
         candidate_limbs=[[] for limb_idx in range(0,len(self.limbs))]
         for limb_idx,limb in enumerate(self.limbs):
             src_idx,dst_idx=limb
@@ -161,7 +168,7 @@ class Post_Processor:
             for i in range(0,18):
                 if(human[i]!=-1):
                     peak=all_peaks[int(human[i])]
-                    #print(f"part:{self.parts(i)} loc_y:{peak.y} loc_x:{peak.x} socre:{peak.score}")
+                    print(f"part:{self.parts(i)} loc_y:{peak.y} loc_x:{peak.x} socre:{peak.score}")
             if((human[18]/human[19]>=self.thres_human_score) and (human[19]>=self.thres_part_cnt)):
                 ret_human=Human(self.parts,self.limbs,self.colors)
                 ret_human.local_id=human_id

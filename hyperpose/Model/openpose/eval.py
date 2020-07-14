@@ -6,10 +6,8 @@ import tensorflow as tf
 import scipy.stats as st
 from functools import partial
 import multiprocessing
-
 import matplotlib.pyplot as plt
 from .infer import Post_Processor
-from .utils import get_parts,get_limbs,get_colors,get_output_kptcvter
 from .utils import draw_results
 
 def infer_one_img(model,post_processor,img,img_id=-1,is_visual=False,save_dir="./vis_dir"):
@@ -26,7 +24,7 @@ def infer_one_img(model,post_processor,img,img_id=-1,is_visual=False,save_dir=".
         paf_map=np.transpose(paf_map,[0,3,1,2])
     conf_map=conf_map.numpy()
     paf_map=paf_map.numpy()
-    humans=post_processor.process(conf_map,paf_map,img_h,img_w)
+    humans=post_processor.process(conf_map[0],paf_map[0],img_h,img_w,data_format=data_format)
     if(is_visual): 
         draw_conf_map=cv2.resize(conf_map[0].transpose([1,2,0]),(img_w,img_h)).transpose([2,0,1])
         draw_paf_map=cv2.resize(paf_map[0].transpose([1,2,0]),(img_w,img_h)).transpose([2,0,1])
@@ -103,9 +101,8 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=30):
     model.eval()
     pd_anns=[]
     vis_dir=config.eval.vis_dir
-    dataset_type=dataset.get_dataset_type()
-    kpt_converter=get_output_kptcvter(dataset_type)
-    post_processor=Post_Processor(get_parts(dataset_type),get_limbs(dataset_type),get_colors(dataset_type))
+    kpt_converter=dataset.get_output_kpt_cvter()
+    post_processor=Post_Processor(parts=model.parts,limbs=model.limbs,colors=model.colors)
     
     eval_dataset=dataset.get_eval_dataset()
     paramed_map_fn=partial(_map_fn,hin=model.hin,win=model.win)

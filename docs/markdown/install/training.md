@@ -25,7 +25,7 @@ conda install cudnn=7.6.0
 # >>> install tensorflow of version 2.0.0
 pip install tensorflow-gpu==2.0.0
 # >>> install the newest version tensorlayer from github
-pip install git+https://github.com/tensorlayer/tensorlayer.git
+pip install tensorlayer==2.2.3
 # >>> install other requirements (numpy<=17.0.0 because it has conflicts with pycocotools)
 pip install opencv-python
 pip install numpy==1.16.4

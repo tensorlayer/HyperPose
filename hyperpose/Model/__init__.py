@@ -67,30 +67,30 @@ def get_model(config):
         if(model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose):
             from .openpose.utils import get_parts
             from .openpose.utils import get_limbs
-            model.n_pos=len(get_parts(dataset_type))
-            model.n_limbs=len(get_limbs(dataset_type))
+            model.parts=get_parts(dataset_type)
+            model.limbs=get_limbs(dataset_type)
         elif(model_type == MODEL.PoseProposal):
             from .pose_proposal.utils import get_parts
             from .pose_proposal.utils import get_limbs
-            model.K_size=len(get_parts(dataset_type))
-            model.L_size=len(get_limbs(dataset_type))
+            model.parts=get_parts(dataset_type)
+            model.limbs=get_limbs(dataset_type)
         
         #set model
         if model_type == MODEL.Openpose:
             from .openpose import OpenPose as model_arch
-            ret_model=model_arch(n_pos=model.n_pos,n_limbs=model.n_limbs,num_channels=model.num_channels,hin=model.hin,win=model.win,\
-                hout=model.hout,wout=model.wout,backbone=backbone,data_format=model.data_format)
+            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),num_channels=model.num_channels,\
+                hin=model.hin,win=model.win,hout=model.hout,wout=model.wout,backbone=backbone,data_format=model.data_format)
         elif model_type == MODEL.LightweightOpenpose:
             from .openpose import LightWeightOpenPose as model_arch
-            ret_model=model_arch(n_pos=model.n_pos,n_limbs=model.n_limbs,num_channels=model.num_channels,hin=model.hin,win=model.win,\
+            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),num_channels=model.num_channels,hin=model.hin,win=model.win,\
                 hout=model.hout,wout=model.wout,backbone=backbone,data_format=model.data_format)
         elif model_type == MODEL.MobilenetThinOpenpose:
             from .openpose import MobilenetThinOpenpose as model_arch
-            ret_model=model_arch(n_pos=model.n_pos,n_limbs=model.n_limbs,num_channels=model.num_channels,hin=model.hin,win=model.win,\
+            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),num_channels=model.num_channels,hin=model.hin,win=model.win,\
                 hout=model.hout,wout=model.wout,backbone=backbone,data_format=model.data_format)
         elif model_type == MODEL.PoseProposal:
             from .pose_proposal import PoseProposal as model_arch
-            ret_model=model_arch(K_size=model.K_size,L_size=model.L_size,hnei=model.hnei,wnei=model.wnei,lmd_rsp=model.lmd_rsp,\
+            ret_model=model_arch(parts=model.parts,K_size=len(model.parts),limbs=model.limbs,L_size=len(model.limbs),hnei=model.hnei,wnei=model.wnei,lmd_rsp=model.lmd_rsp,\
                 lmd_iou=model.lmd_iou,lmd_coor=model.lmd_coor,lmd_size=model.lmd_size,lmd_limb=model.lmd_limb,backbone=backbone,\
                 data_format=model.data_format)
         else:

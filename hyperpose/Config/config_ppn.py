@@ -1,5 +1,5 @@
 import os
-from .define import MODEL,DATA,TRAIN
+from .define import MODEL,DATA,TRAIN,BACKBONE
 from easydict import EasyDict as edict
 
 #model configuration
@@ -24,7 +24,7 @@ model.lmd_size=5.0
 model.lmd_limb=0.5
 model.model_type = MODEL.PoseProposal 
 model.model_name = "default_name"
-model.model_backbone="Default"
+model.model_backbone=BACKBONE.Default
 model.data_format = "channels_first"
 #save directory
 model.model_dir= f"./save_dir/{model.model_name}/model_dir" 

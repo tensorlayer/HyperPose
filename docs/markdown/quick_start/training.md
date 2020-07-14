@@ -80,7 +80,7 @@ To export a model trained by Hyperpose, one should follow two step:
     then the converted model will be put in the ./save_dir/model_name/forzen_model_name.pb
     one can also export himself by loading model and using get_concrete_function by himself, please refer the tutorial for details
 * (2)convert the frozen .pb format model by tensorflow-onnx
-    Make sure you have installed the extra requirements for exporting models from [training installation](../install/training.md)
+    Make sure you have installed the extra requirements for exporting models from [training installation](../install/training.md)<br>
     if you don't know the input and output name of the pb model,you should use the function *summarize_graph* function 
     of graph_transforms from tensorflow
     ```bash
@@ -88,8 +88,12 @@ To export a model trained by Hyperpose, one should follow two step:
     ```
     then, after knowing the input and output nodes of your .pb model,use tf2onnx
     ```bash
-    python -m tf2onnx.convert --graphdef your_frozen_model.pb --output output_model.onnx --inputs input0:0,input1:0 --outputs output0:0
-    args follow inputs and outputs are the names of input and output nodes in .pb graph repectly
+    python -m tf2onnx.convert --graphdef your_frozen_model.pb --output output_model.onnx --inputs input0:0,input1:0... --outputs output0:0,output1:0,output2:0...
+    ```
+    args follow inputs and outputs are the names of input and output nodes in .pb graph repectly, for example, if the input node name is **x** and output node name is **y1**,**y2**, then the convert bash should be:
+    ```
+    python -m tf2onnx.convert --graphdef your_frozen_model.pb --output output_model.onnx --inputs x:0 --outputs y1:0,y2:0
+    ```
 
 **congratulation! now you are able to use the onnx model for Hyperpose prediction library.**
 

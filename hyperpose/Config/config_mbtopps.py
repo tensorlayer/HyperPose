@@ -1,5 +1,5 @@
 import os
-from .define import MODEL,DATA,TRAIN
+from .define import MODEL,DATA,TRAIN,BACKBONE
 from easydict import EasyDict as edict
 
 #model configuration
@@ -15,7 +15,7 @@ model.hout = 46
 model.wout = 54
 model.model_type = MODEL.Openpose
 model.model_name = "default_name"
-model.model_backbone="Default"
+model.model_backbone= BACKBONE.Default
 model.data_format = "channels_first"
 # save directory
 model.model_dir = f"./save_dir/{model.model_name}/model_dir"
