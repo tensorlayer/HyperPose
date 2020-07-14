@@ -133,7 +133,7 @@ return a tensorflow dataset object where each element should be a image path and
 return a tensorflow dataset object where each element should be a image path and its image id.<br>
 * 3.**get_input_kpt_cvter**(optional): <br>
 return a function which changes the **kpt** value in your dataset dict element,used to enable your dataset keypoint annotation being in line with your model keypoint setting, or combined with other dataset with different keypoint annotation.
-* 4.**get_output_kpt_cvter**: <br>
+* 4.**get_output_kpt_cvter**(optional): <br>
 return a function which changes the model predict result to a format that easy to evaluate, used to enable your datatset to be evaluate at a formal COCO standard (using MAP) or MPII standard (using MPCH).  
 
 
