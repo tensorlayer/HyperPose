@@ -51,8 +51,8 @@ def get_pose_proposals(kpts_list,bbxs,hin,win,hout,wout,hnei,wnei,parts,limbs,im
                 size=instance_size
             else:
                 size=part_size
-            tw[k,iy,ix]=(size/win)**0.5
-            th[k,iy,ix]=(size/hin)**0.5
+            tw[k,iy,ix]=size/win
+            th[k,iy,ix]=size/hin
                 
     #generate te and mask
     np_limbs=np.array(limbs)
@@ -192,8 +192,8 @@ def restore_coor(x,y,w,h,win,hin,wout,hout,data_format="channels_first"):
             grid_y=grid_y[...,np.newaxis]
         rx=(x+grid_x)*grid_size_x
         ry=(y+grid_y)*grid_size_y
-        rw=(w**2)*win
-        rh=(h**2)*hin
+        rw=w*win
+        rh=h*hin
         return rx,ry,rw,rh
 
 def cal_iou(bbx1,bbx2):
@@ -261,8 +261,8 @@ def vis_annos(image, annos, save_dir ,name=''):
     plt.savefig(os.path.join(save_dir, 'keypoints%s%d.png' % (name, i)), dpi=300)
 
 
-from .define import CocoPart,CocoLimb,CocoColor,coco_input_converter,coco_output_converter,Coco_flip_list
-from .define import MpiiPart,MpiiLimb,MpiiColor,mpii_input_converter,mpii_output_converter,Mpii_flip_list
+from .define import CocoPart,CocoLimb,CocoColor,Coco_flip_list
+from .define import MpiiPart,MpiiLimb,MpiiColor,Mpii_flip_list
 
 def get_parts(dataset_type):
     if(dataset_type==DATA.MSCOCO):
@@ -288,26 +288,6 @@ def get_colors(dataset_type):
     else:
         return dataset_type.get_colors()
 
-def get_input_kptcvter(dataset_type):
-    if(dataset_type==DATA.MSCOCO):
-        return coco_input_converter
-    elif(dataset_type==DATA.MPII):
-        return mpii_input_converter
-    else:
-        def custom_input_kptcvter(kpts):
-            return kpts
-        return custom_input_kptcvter
-
-def get_output_kptcvter(dataset_type):
-    if(dataset_type==DATA.MSCOCO):
-        return coco_output_converter
-    elif(dataset_type==DATA.MPII):
-        return mpii_output_converter
-    else:
-        def custom_output_kptcvter(kpts):
-            return kpts
-        return custom_output_kptcvter
-
 def get_flip_list(dataset_type):
     if(dataset_type==DATA.MSCOCO):
         return Coco_flip_list
@@ -318,7 +298,7 @@ from .infer import Post_Processor
 from ..common import tf_repeat,TRAIN,MODEL,DATA
 
 
-def preprocess(annos,bbxs,model_hin,modeL_win,model_hout,model_wout,model_hnei,model_wnei,dataset_type,data_format="channels_first"):
+def preprocess(annos,bbxs,model_hin,modeL_win,model_hout,model_wout,model_hnei,model_wnei,parts,limbs,data_format="channels_first"):
     '''preprocess function of poseproposal class models
 
     take keypoints annotations, bounding boxs annotatiosn, model input height and width, model limbs neighbor area height,
@@ -379,13 +359,11 @@ def preprocess(annos,bbxs,model_hin,modeL_win,model_hout,model_wout,model_hnei,m
         te_mask: mask of edge confidence feature map, used for loss caculation,
         shape [C,H,W,Hnei,Wnei](channels_first) or [H,W,Hnei,Wnei,C](channels_last)
     '''
-    parts=get_parts(dataset_type)
-    limbs=get_limbs(dataset_type)
     delta,tx,ty,tw,th,te,te_mask=get_pose_proposals(annos,bbxs,model_hin,modeL_win,model_hout,\
         model_wout,model_hnei,model_wnei,parts,limbs,img_mask=None,data_format=data_format)
     return delta,tx,ty,tw,th,te,te_mask
 
-def postprocess(predicts,dataset_type,data_format="channels_first"):
+def postprocess(predicts,parts,limbs,data_format="channels_first",colors=None):
     '''postprocess function of poseproposal class models
 
     take model predicted feature maps of delta,tx,ty,tw,th,te,te_mask,
@@ -421,9 +399,11 @@ def postprocess(predicts,dataset_type,data_format="channels_first"):
         contain object of humans,see Model.Human for detail information of Human object
     '''
     pc,pi,px,py,pw,ph,pe=predicts
-    parts=get_parts(dataset_type)
-    limbs=get_limbs(dataset_type)
-    colors=get_colors(dataset_type)
+    for x in [pc,pc,px,py,pw,ph,pe]:
+        if(type(x)!=np.ndarray):
+            x=x.numpy()
+    if(colors==None):
+        colors=[[255,0,0]]*len(parts)
     post_processor=Post_Processor(parts,limbs,colors)
     if(data_format=="channels_last"):
         pc=np.transpose(pc,[2,0,1])
@@ -436,7 +416,7 @@ def postprocess(predicts,dataset_type,data_format="channels_first"):
     humans=post_processor.process(pc,pi,px,py,pw,ph,pe)
     return humans
 
-def visualize(img,predicts,dataset_type,save_name="bbxs",save_dir="./save_dir/vis_dir",data_format="channels_first"):
+def visualize(img,predicts,parts,limbs,save_name="bbxs",save_dir="./save_dir/vis_dir",data_format="channels_first",save_tofile=True):
     '''visualize function of poseproposal class models
 
     take model predicted feature maps of delta,tx,ty,tw,th,te,te_mask, output visualized image.
@@ -479,6 +459,9 @@ def visualize(img,predicts,dataset_type,save_name="bbxs",save_dir="./save_dir/vi
     None
     '''
     pc,pi,px,py,pw,ph,pe=predicts
+    for x in [pc,pc,px,py,pw,ph,pe]:
+        if(type(x)!=np.ndarray):
+            x=x.numpy()
     if(data_format=="channels_last"):
         pc=np.transpose(pc,[2,0,1])
         pi=np.transpose(pi,[2,0,1])
@@ -487,8 +470,9 @@ def visualize(img,predicts,dataset_type,save_name="bbxs",save_dir="./save_dir/vi
         pw=np.transpose(pw,[2,0,1])
         ph=np.transpose(ph,[2,0,1])
         pe=np.transpose(pe,[4,0,1,2,3])
+    elif(data_format=="channels_first"):
+        img=np.transpose(img,[1,2,0])
     _,model_hnei,model_wnei,model_hout,model_wout=pe.shape
-    limbs=get_limbs(dataset_type)
     os.makedirs(save_dir,exist_ok=True)
     ori_img=np.clip(img*255.0,0.0,255.0).astype(np.uint8)
     #show input image
@@ -496,13 +480,20 @@ def visualize(img,predicts,dataset_type,save_name="bbxs",save_dir="./save_dir/vi
     a=fig.add_subplot(2,2,1)
     a.set_title("input image")
     plt.imshow(ori_img)
-    #show parts and edges
+    
     vis_img=ori_img.copy()
-    vis_img=draw_bbx(vis_img,pc,px,py,pw,ph,threshold=0.7)
-    vis_img=draw_edge(vis_img,pe,px,py,pw,ph,model_hnei,model_wnei,model_hout,model_wout,limbs,threshold=0.7)
+    #show parts
+    vis_parts_img=draw_bbx(vis_img,pc,px,py,pw,ph,threshold=0.7)
     a=fig.add_subplot(2,2,2)
-    a.set_title("visualized result")
-    plt.imshow(vis_img)
+    a.set_title("visualized kpt result")
+    plt.imshow(vis_parts_img)
+    #show edges
+    vis_limbs_img=draw_edge(vis_img,pe,px,py,pw,ph,model_hnei,model_wnei,model_hout,model_wout,limbs,threshold=0.7)
+    a=fig.add_subplot(2,2,3)
+    a.set_title("visualized limb result")
+    plt.imshow(vis_limbs_img)
     #save result
-    plt.savefig(f"{save_dir}/{save_name}_visualize.png")
-    plt.close()
+    if(save_tofile):
+        plt.savefig(f"{save_dir}/{save_name}_visualize.png")
+        plt.close()
+    return vis_parts_img,vis_limbs_img

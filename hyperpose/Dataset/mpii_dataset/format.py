@@ -101,7 +101,7 @@ class PoseInfo:
             pos_list.append(meta.center_list)
         return pos_list 
 
-    def get_joint_list(self):
+    def get_kpt_list(self):
         joint_list=[]
         for meta in self.metas:
             joint_list.append(meta.joint_list)

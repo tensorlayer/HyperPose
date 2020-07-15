@@ -20,7 +20,7 @@ def init_dataset(config):
 
 class MSCOCO_dataset:
     '''a dataset class specified for coco dataset, provides uniform APIs'''
-    def __init__(self,config):
+    def __init__(self,config,input_kpt_cvter=None,output_kpt_cvter=None):
         self.dataset_type=config.data.dataset_type
         self.dataset_version=config.data.dataset_version
         self.dataset_path=config.data.dataset_path
@@ -31,6 +31,12 @@ class MSCOCO_dataset:
         self.test_imgs_path,self.test_anns_path=None,None
         self.parts=CocoPart
         self.colors=CocoColor
+        if(input_kpt_cvter==None):
+            input_kpt_cvter=lambda x:x
+        if(output_kpt_cvter==None):
+            output_kpt_cvter=lambda x:x
+        self.input_kpt_cvter=input_kpt_cvter
+        self.output_kpt_cvter=output_kpt_cvter
     
     def visualize(self,vis_num):
         '''visualize annotations of the train dataset
@@ -129,7 +135,7 @@ class MSCOCO_dataset:
         tensorflow dataset object 
             a unifrom formated tensorflow dataset object for training
         '''
-        return get_train_dataset(self.train_imgs_path,self.train_anns_path)
+        return get_train_dataset(self.train_imgs_path,self.train_anns_path,self.dataset_filter,self.input_kpt_cvter)
 
     def get_eval_dataset(self):
         '''provide uniform tensorflow dataset for evaluating
@@ -157,6 +163,18 @@ class MSCOCO_dataset:
             a unifrom formated tensorflow dataset object for evaluating
         '''
         return get_eval_dataset(self.val_imgs_path,self.val_anns_path)
+    
+    def set_input_kpt_cvter(self,input_kpt_cvter):
+        self.input_kpt_cvter=input_kpt_cvter
+    
+    def set_output_kpt_cvter(self,output_kpt_cvter):
+        self.output_kpt_cvter=output_kpt_cvter
+    
+    def get_input_kpt_cvter(self):
+        return self.input_kpt_cvter
+    
+    def get_output_kpt_cvter(self):
+        return self.output_kpt_cvter
 
     def official_eval(self,pd_json,eval_dir=f"./eval_dir"):
         '''providing official evaluation of COCO dataset

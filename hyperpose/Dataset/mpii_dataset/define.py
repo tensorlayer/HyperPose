@@ -1,4 +1,5 @@
 from enum import Enum
+import numpy as np
 
 class MpiiPart(Enum):
     RAnkle = 0
@@ -52,3 +53,83 @@ class MpiiPart(Enum):
 MpiiColor=[[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0],
               [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],
               [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
+
+from_opps_converter={0:9, 1:8, 2:12, 3:11, 4:10, 5:13, 6:14, 7:15, 8:2, 9:1, 10:0, 11:3, 12:4, 13:5}
+
+to_opps_converter={0:10, 1:9, 2:8, 3:11, 4:12, 5:13, 8:1, 9:0, 10:4, 11:3, 12:2, 13:5, 14:6, 15:7}
+
+def opps_input_converter(mpii_kpts):
+    cvt_kpts=np.zeros(shape=[16,2])
+    transform = np.array([9,8,12,11,10,13,14,15,2,1,0,3,4,5])
+    xs = mpii_kpts[0::3]
+    ys = mpii_kpts[1::3]
+    vs = mpii_kpts[2::3]
+    lost_idx=np.where(vs<=0)[0]
+    xs[lost_idx]=-1000
+    ys[lost_idx]=-1000
+    cvt_xs=xs[transform]
+    cvt_ys=ys[transform]
+    cvt_kpts[:-2,:]=np.array([cvt_xs,cvt_ys]).transpose()
+    if(xs[2]<=0 or xs[3]<=0 or xs[12]<=0 or xs[13]<=0 or ys[2]<=0 or ys[3]<=0 or ys[12]<=0 or ys[13]<=0):
+        center_x=-1000
+        center_y=-1000
+    else:
+        center_x=(xs[2]+xs[3]+xs[12]+xs[13])/4
+        center_y=(ys[2]+ys[3]+ys[12]+ys[13])/4
+    cvt_kpts[14,:]=np.array([center_x,center_y])
+    #adding background point
+    cvt_kpts[-1:,:]=-1000
+    return cvt_kpts
+
+def opps_output_converter(kpt_list):
+    kpts=[]
+    mpii_keys=to_opps_converter.keys()
+    for mpii_idx in range(0,16):
+        if(mpii_idx in mpii_keys):
+            model_idx=to_opps_converter[mpii_idx]
+            x,y=kpt_list[model_idx]
+            if(x<0 or y<0):
+                kpts+=[0.0,0.0,-1.0]
+            else:
+                kpts+=[x,y,1.0]
+        else:
+            kpts+=[0.0,0.0,-1.0]
+    return kpts
+
+from_ppn_converter={0:9, 1:8, 2:12, 3:11, 4:10, 5:13, 6:14, 7:15, 8:2, 9:1, 10:0, 11:3, 12:4, 13:5}
+
+to_ppn_converter={0:10, 1:9, 2:8, 3:11, 4:12, 5:13, 8:1, 9:0, 10:4, 11:3, 12:2, 13:5, 14:6, 15:7}
+
+def ppn_input_converter(coco_kpts):
+    cvt_kpts=np.zeros(shape=[16,2])
+    transform = np.array([9,8,12,11,10,13,14,15,2,1,0,3,4,5])
+    xs = coco_kpts[0::3]
+    ys = coco_kpts[1::3]
+    vs = coco_kpts[2::3]
+    lost_idx=np.where(vs<=0)[0]
+    xs[lost_idx]=-1000
+    ys[lost_idx]=-1000
+    cvt_xs=xs[transform]
+    cvt_ys=ys[transform]
+    cvt_kpts[:-2,:]=np.array([cvt_xs,cvt_ys]).transpose()
+    center_x=(xs[2]+xs[3]+xs[12]+xs[13])/4
+    center_y=(ys[2]+ys[3]+ys[12]+ys[13])/4
+    cvt_kpts[14,:]=np.array([center_x,center_y])
+    #adding background point
+    cvt_kpts[15,:]=(cvt_kpts[0,:]+cvt_kpts[1,:])/2
+    return cvt_kpts
+
+def ppn_output_converter(kpt_list):
+    kpts=[]
+    mpii_keys=to_ppn_converter.keys()
+    for mpii_idx in range(0,16):
+        if(mpii_idx in mpii_keys):
+            model_idx=to_ppn_converter[mpii_idx]
+            x,y=kpt_list[model_idx]
+            if(x<0 or y<0):
+                kpts+=[0.0,0.0,-1.0]
+            else:
+                kpts+=[x,y,1.0]
+        else:
+            kpts+=[0.0,0.0,-1.0]
+    return kpts

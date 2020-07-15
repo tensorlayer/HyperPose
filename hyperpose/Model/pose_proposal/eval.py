@@ -9,7 +9,6 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from functools import partial
 from .infer import Post_Processor
-from .utils import get_parts,get_limbs,get_colors,get_output_kptcvter
 from .utils import draw_bbx,draw_edge
 
 def infer_one_img(model,post_processor,img,img_id=-1,is_visual=False,save_dir="./vis_dir/pose_proposal"):
@@ -110,9 +109,8 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=30):
     model.load_weights(os.path.join(config.model.model_dir,"newest_model.npz"))
     pd_anns=[]
     vis_dir=config.eval.vis_dir
-    dataset_type=dataset.get_dataset_type()
-    kpt_converter=get_output_kptcvter(dataset_type)
-    post_processor=Post_Processor(get_parts(dataset_type),get_limbs(dataset_type),get_colors(dataset_type))
+    kpt_converter=dataset.get_output_kpt_cvter()
+    post_processor=Post_Processor(model.parts,model.limbs,model.colors)
     
     eval_dataset=dataset.get_eval_dataset()
     paramed_map_fn=partial(_map_fn)

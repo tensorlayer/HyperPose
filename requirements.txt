@@ -3,7 +3,7 @@ numpy==1.16.4
 easydict>=1.8,<=1.10
 opencv-python>=3.4,<3.5
 tensorflow==2.0.0
-tensorlayer==2.2.2
+tensorlayer==2.2.3
 cudatoolkit=10.0.130
 # pycocotools  # must be installed after cython and numpy are installed
 

@@ -4,12 +4,16 @@ from tensorlayer import layers
 from tensorlayer.models import Model
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d
 from ..utils import tf_repeat
+from ..define import CocoPart,CocoLimb
 initializer=tl.initializers.truncated_normal(stddev=0.005)
 
 class LightWeightOpenPose(Model):
-    def __init__(self,n_pos=19,n_limbs=19,num_channels=128,hin=368,win=368,hout=46,wout=46,backbone=None,data_format="channels_first"):
+    def __init__(self,parts=CocoPart,limbs=CocoLimb,colors=None,n_pos=19,n_limbs=19,num_channels=128,hin=368,win=368,hout=46,wout=46,backbone=None,data_format="channels_first"):
         super().__init__()
         self.num_channels=num_channels
+        self.parts=parts
+        self.limbs=limbs
+        self.colors=colors
         self.n_pos=n_pos
         self.n_limbs=n_limbs
         self.n_confmaps=n_pos

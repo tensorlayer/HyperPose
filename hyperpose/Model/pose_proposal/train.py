@@ -15,7 +15,7 @@ from functools import partial
 from pycocotools.coco import maskUtils
 import _pickle as cPickle
 from .utils import  tf_repeat, draw_results, get_pose_proposals
-from .utils import get_parts,get_limbs,get_input_kptcvter
+from .utils import get_parts,get_limbs
 from ..common import init_log,log,KUNGFU
 
 def regulize_loss(target_model,weight_decay_factor):
@@ -25,18 +25,16 @@ def regulize_loss(target_model,weight_decay_factor):
         re_loss+=regularizer(trainable_weight)
     return re_loss
 
-def _data_aug_fn(image, ground_truth, hin, win, hout, wout, hnei, wnei, parts, limbs, kpt_cvter, data_format="channels_first"):
+def _data_aug_fn(image, ground_truth, hin, win, hout, wout, hnei, wnei, parts, limbs, data_format="channels_first"):
     """Data augmentation function."""
     #restore data
     ground_truth = cPickle.loads(ground_truth.numpy())
     image=image.numpy()
-    annos = ground_truth["obj"]
+    annos = ground_truth["kpt"]
     mask = ground_truth["mask"]
     bbxs = ground_truth["bbx"]
     #kepoint transform
     img_h,img_w,_=image.shape
-    for anno_idx in range(0,len(annos)):
-        annos[anno_idx]=kpt_cvter(annos[anno_idx])
     annos=np.array(annos).astype(np.float32)
     bbxs=np.array(bbxs).astype(np.float32)
     scale_w=np.float32(win/img_w)
@@ -85,9 +83,9 @@ def _map_fn(img_list, annos, data_aug_fn, hin, win):
     image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
     return image,(delta,tx,ty,tw,th,te,te_mask)
 
-def get_paramed_map_fn(hin,win,hout,wout,hnei,wnei,parts,limbs,kpt_cvter,data_format="channels_first"):
+def get_paramed_map_fn(hin,win,hout,wout,hnei,wnei,parts,limbs,data_format="channels_first"):
     paramed_data_aug_fn=partial(_data_aug_fn,hin=hin,win=win,hout=hout,wout=wout,hnei=hnei,wnei=wnei,\
-        parts=parts,limbs=limbs,kpt_cvter=kpt_cvter,data_format=data_format)
+        parts=parts,limbs=limbs,data_format=data_format)
     paramed_map_fn=partial(_map_fn,data_aug_fn=paramed_data_aug_fn,hin=hin, win=win)
     return paramed_map_fn
 
@@ -141,10 +139,8 @@ def single_train(train_model,dataset,config):
     print(f"single training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
-    dataset_type=dataset.get_dataset_type()
-    parts,limbs,kpt_cvter=get_parts(dataset_type),get_limbs(dataset_type),get_input_kptcvter(dataset_type)
-    data_format=train_model.data_format
-    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,hnei,wnei,parts,limbs,kpt_cvter,data_format)
+    parts,limbs,data_format=train_model.parts,train_model.limbs,train_model.data_format
+    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,hnei,wnei,parts,limbs,data_format)
     train_dataset = train_dataset.shuffle(buffer_size=4096).repeat()
     train_dataset = train_dataset.map(paramed_map_fn, num_parallel_calls=max(multiprocessing.cpu_count()//2,1))
     train_dataset = train_dataset.batch(batch_size)  
@@ -283,10 +279,8 @@ def parallel_train(train_model,dataset,config):
     print(f"parallel training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
-    dataset_type=dataset.get_dataset_type()
-    parts,limbs,kpt_cvter=get_parts(dataset_type),get_limbs(dataset_type),get_input_kptcvter(dataset_type)
-    data_format=train_model.data_format
-    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,hnei,wnei,parts,limbs,kpt_cvter,data_format)
+    parts,limbs,data_format=train_model.parts,train_model.limbs,train_model.data_format
+    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,hnei,wnei,parts,limbs,data_format)
     train_dataset = train_dataset.shuffle(buffer_size=4096)
     train_dataset = train_dataset.shard(num_shards=current_cluster_size(),index=current_rank())
     train_dataset = train_dataset.repeat()

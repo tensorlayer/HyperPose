@@ -4,12 +4,16 @@ import tensorlayer as tl
 from tensorlayer import layers
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d
 from tensorlayer.models import Model
+from .define import CocoPart,CocoLimb
 
 class PoseProposal(Model):
-    def __init__(self,K_size=18,L_size=17,win=384,hin=384,wout=12,hout=12,wnei=9,hnei=9\
+    def __init__(self,parts=CocoPart,limbs=CocoLimb,colors=None,K_size=18,L_size=17,win=384,hin=384,wout=12,hout=12,wnei=9,hnei=9\
         ,lmd_rsp=0.25,lmd_iou=1,lmd_coor=5,lmd_size=5,lmd_limb=0.5,backbone=None,data_format="channels_first"):
         super().__init__()
         #construct params
+        self.parts=parts
+        self.limbs=limbs
+        self.colors=colors
         self.K=K_size
         self.L=L_size
         self.win=win
@@ -48,6 +52,7 @@ class PoseProposal(Model):
         x=self.add_layer_1.forward(x)
         x=self.add_layer_2.forward(x)
         x=self.add_layer_3.forward(x)
+        x=tf.nn.sigmoid(x)
         if(self.data_format=="channels_first"):
             pc=x[:,0:self.K,:,:]
             pi=x[:,self.K:2*self.K,:,:]
@@ -82,8 +87,8 @@ class PoseProposal(Model):
             grid_size_y=grid_size_y[:,:,np.newaxis]
         rx=(x+grid_x)*grid_size_x
         ry=(y+grid_y)*grid_size_y
-        rw=(w**2)*self.win
-        rh=(h**2)*self.hin
+        rw=w*self.win
+        rh=h*self.hin
         return rx,ry,rw,rh
     
     def cal_iou(self,bbx1,bbx2):
@@ -98,15 +103,18 @@ class PoseProposal(Model):
         union_area=area1+area2-inter_area+1e-6
         return inter_area/union_area
 
-    def cal_loss(self,delta,tx,ty,tw,th,te,te_mask,pc,pi,px,py,pw,ph,pe):
+    def cal_loss(self,delta,tx,ty,tw,th,te,te_mask,pc,pi,px,py,pw,ph,pe,eps=1e-6):
         rtx,rty,rtw,rth=self.restore_coor(tx,ty,tw,th)
         rx,ry,rw,rh=self.restore_coor(px,py,pw,ph)
         ti=self.cal_iou((rtx,rty,rtw,rth),(rx,ry,rw,rh))
+        mask_point=tf.minimum(delta+tf.where(delta<0.5,0.0005,0),1)
+        mask_edge=tf.minimum(te_mask+tf.where(te_mask<0.5,0.0005,0),1)
+        half=tf.where(delta<0.5,0.5,0)
         loss_rsp=self.lmd_rsp*tf.reduce_mean(tf.reduce_sum((delta-pc)**2,axis=[1,2,3]))
         loss_iou=self.lmd_iou*tf.reduce_mean(tf.reduce_sum(delta*((ti-pi)**2),axis=[1,2,3]))
-        loss_coor=self.lmd_coor*tf.reduce_mean(tf.reduce_sum(delta*((tx-px)**2+(ty-py)**2),axis=[1,2,3]))
-        loss_size=self.lmd_size*tf.reduce_mean(tf.reduce_sum(delta*((tw-pw)**2+(th-ph)**2),axis=[1,2,3]))
-        loss_limb=self.lmd_limb*tf.reduce_mean(tf.reduce_sum(te_mask*((te-pe)**2),axis=[1,2,3,4,5]))
+        loss_coor=self.lmd_coor*tf.reduce_mean(tf.reduce_sum(mask_point*((tx-px-half)**2+(ty-py-half)**2),axis=[1,2,3]))
+        loss_size=self.lmd_size*tf.reduce_mean(tf.reduce_sum(mask_point*((tf.sqrt(tw+eps)-tf.sqrt(pw+eps))**2+(tf.sqrt(th+eps)-tf.sqrt(ph+eps))**2),axis=[1,2,3]))
+        loss_limb=self.lmd_limb*tf.reduce_mean(tf.reduce_sum(mask_edge*((te-pe)**2),axis=[1,2,3,4,5]))
         return loss_rsp,loss_iou,loss_coor,loss_size,loss_limb
     
     class Resnet_18(Model):

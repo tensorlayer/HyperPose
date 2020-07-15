@@ -1,7 +1,8 @@
 import os
 from .common import TRAIN,MODEL,DATA
-from .mpii_dataset.dataset import MPII_dataset
-from .mscoco_dataset.dataset import MSCOCO_dataset
+from .mscoco_dataset import MSCOCO_dataset
+from .mpii_dataset import MPII_dataset
+from .common import imread_rgb_float,imwrite_rgb_float
 
 def get_dataset(config):
     '''get dataset object based on the config object
@@ -42,15 +43,27 @@ def get_dataset(config):
         a dataset object with unifrom APIs:
         visualize, get_dataset_type, get_train_dataset, get_val_dataset,official_eval
     '''
-
+    model_type=config.model.model_type
     dataset_type=config.data.dataset_type
     if(dataset_type==DATA.MSCOCO):
         print("using Mscoco dataset!")
-        dataset=MSCOCO_dataset(config)
+        if(model_type==MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose or model_type==MODEL.Openpose):
+            from .mscoco_dataset.define import opps_input_converter as input_kpt_cvter
+            from .mscoco_dataset.define import opps_output_converter as output_kpt_cvter
+        elif(model_type==MODEL.PoseProposal):
+            from .mscoco_dataset.define import ppn_input_converter as input_kpt_cvter
+            from .mscoco_dataset.define import ppn_output_converter as output_kpt_cvter
+        dataset=MSCOCO_dataset(config,input_kpt_cvter,output_kpt_cvter)
         dataset.prepare_dataset()
     elif(dataset_type==DATA.MPII):
         print("using Mpii dataset!")
-        dataset=MPII_dataset(config)
+        if(model_type==MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose or model_type==MODEL.Openpose):
+            from .mpii_dataset.define import opps_input_converter as input_kpt_cvter
+            from .mpii_dataset.define import opps_output_converter as output_kpt_cvter
+        elif(model_type==MODEL.PoseProposal):
+            from .mpii_dataset.define import ppn_input_converter as input_kpt_cvter
+            from .mpii_dataset.define import ppn_output_converter as output_kpt_cvter
+        dataset=MPII_dataset(config,input_kpt_cvter,output_kpt_cvter)
         dataset.prepare_dataset()
     else:
         print("using user-defined dataset!")
