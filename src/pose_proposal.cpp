@@ -272,49 +272,44 @@ std::vector<human_t> pose_proposal::process(
         }
     }
 
-    ret_poses.erase(std::remove_if(ret_poses.begin(), ret_poses.end(), [](const human_t& pose) {
-                        return pose.score <= 1;
-                    }),
-                    ret_poses.end());
-
     info("Detected ", ret_poses.size(), " human parts originally\n");
 
-    constexpr size_t hash_grid = 64;
-    constexpr size_t nan = std::numeric_limits<uint16_t>::max();
-    std::array<std::array<uint16_t, hash_grid>, hash_grid> hash_table{}; // Avoid Stack OverFlow!
-    for (auto&& row : hash_table)
-        row.fill(nan);
+    constexpr size_t grid_size = 64;
+    std::array<std::array<std::vector<uint16_t>, grid_size>, grid_size> hash_table{};
 
-    const auto query_table = [hash_grid, &hash_table](const body_part_t& part) -> uint16_t& {
+    const auto query_table = [grid_size, &hash_table](const body_part_t& part) -> std::vector<uint16_t>& {
         assert(part.x >= 0);
         assert(part.y >= 0);
-        size_t x_ind = part.x * hash_grid;
-        size_t y_ind = part.y * hash_grid;
-        x_ind = (x_ind == hash_grid) ? hash_grid - 1 : x_ind;
-        y_ind = (y_ind == hash_grid) ? hash_grid - 1 : y_ind;
+        size_t x_ind = part.x * grid_size;
+        size_t y_ind = part.y * grid_size;
+        x_ind = (x_ind == grid_size) ? grid_size - 1 : x_ind;
+        y_ind = (y_ind == grid_size) ? grid_size - 1 : y_ind;
         return hash_table[x_ind][y_ind];
     };
 
     for (size_t i = 0; i < ret_poses.size(); ++i) {
-        auto& this_human = ret_poses[i]; // We are trying to find other parts for current human.
-        for (size_t j = 0; j < this_human.parts.size(); ++j) {
-            const auto& this_part = this_human.parts[j]; // Current part: Unique Or Belong to Others.
+        auto& cur_human = ret_poses[i]; // We are trying to find other parts for current human.
+        if (cur_human.score > n_key_points - 0.1)
+            continue;
+
+        for (size_t j = 0; j < cur_human.parts.size(); ++j) {
+            const auto& this_part = cur_human.parts[j]; // Current part: Unique Or Belong to Others.
             if (this_part.has_value) {
-                const size_t root_index = query_table(this_part);
-                if (root_index >= ret_poses.size()) { // Unique.
-                    query_table(this_part) = i;
-                } else {
-                    if (root_index == i) // My root is the current person? Skip.
+                auto& maybes = query_table(this_part);
+
+                bool remove_cur = false;
+                for (auto possible_id : maybes) {
+                    auto& maybe_combine = ret_poses[possible_id];
+                    if (possible_id == i || maybe_combine.parts[j].y != this_part.y || maybe_combine.parts[j].x != this_part.x)
                         continue;
 
-                    auto& aim = ret_poses[root_index]; // Get root person.
-
-                    for (size_t u = 0; u < this_human.parts.size(); ++u) {
-                        const auto& part = ret_poses[i].parts[u];
-                        if (part.has_value && !aim.parts.at(u).has_value) {
-                            query_table(part) = root_index;
-                            aim.parts[u] = part;
-                            aim.score += 1.0;
+                    remove_cur = true;
+                    for (size_t u = 0; u < cur_human.parts.size(); ++u) {
+                        const auto& cur_part = cur_human.parts[u];
+                        if (cur_part.has_value && !maybe_combine.parts[u].has_value) {
+                            maybe_combine.parts[u] = cur_part;
+                            maybe_combine.score += 1.0;
+                            query_table(cur_part).push_back(i);
                         }
                     }
 
@@ -322,6 +317,10 @@ std::vector<human_t> pose_proposal::process(
                     --i;
                     break;
                 }
+
+                if (remove_cur) break;
+
+                maybes.push_back(i);
             }
         }
     }
