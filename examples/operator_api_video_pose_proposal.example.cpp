@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     }();
 
     // * post-processing: Using Pose Proposal
-    hp::parser::pose_proposal parser{ engine.input_size(), 0.05 };
+    hp::parser::pose_proposal parser{ engine.input_size() };
 
     using clk_t = std::chrono::high_resolution_clock;
 
