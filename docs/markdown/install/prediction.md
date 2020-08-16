@@ -6,10 +6,13 @@
 * CMake 3.5+ 
 * Third-Party
     * OpenCV3.2+.
-    * [CUDA 10](https://developer.nvidia.com/cuda-downloads), [TensorRT 7](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt_304/tensorrt-install-guide/index.html).
+    * [CUDA 10.2](https://developer.nvidia.com/cuda-downloads), [CuDNN 7.6.5](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html), [TensorRT 7.0](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html). (For Linux users, [Debian Installation](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#installing-debian) is highly recommended.)
     * gFlags(optional, for examples/tests)
 
-> Older versions of the packages may also work but not tested.
+> Other versions of the packages may also work but not tested.
+
+> Different TensorRT version requires specific CUDA and CuDNN version. For specific CUDA and CuDNN requirements of TensorRT7, please refer to [this](https://docs.nvidia.com/deeplearning/tensorrt/support-matrix/index.html#platform-matrix).
+> Also, for Ubuntu 18.04 users, this [3rd party blog](https://ddkang.github.io/2020/01/02/installing-tensorrt.html) may help you. 
 
 ## Build On Ubuntu 18.04
 
@@ -18,7 +21,7 @@
 sudo apt -y install cmake libopencv-dev  
 # You may also install OpenCV from source to get best performance.
 
-# >>> Install CUDA/TensorRT
+# >>> Install CUDA/CuDNN/TensorRT
 
 # >>> Build gFlags(Optional) from source. Install it if you want to run the examples.
 wget https://github.com/gflags/gflags/archive/v2.2.2.zip
@@ -32,7 +35,7 @@ sudo make install
 git clone https://github.com/tensorlayer/hyperpose.git
 cd hyperpose
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j$(nproc)
+cmake .. -DCMAKE_BUILD_TYPE=Release && make -j
 ```
 
 ## Build with User Codes
