@@ -106,26 +106,14 @@ namespace dnn {
     struct tensorrt::cuda_dep {
         using cuda_buffer_t = ttl::cuda_tensor<char, 2>; // [batch_size, data_size]
 
-        struct tensorrt_deleter {
-            void operator()(nvinfer1::ICudaEngine* ptr) { ptr->destroy(); }
-        };
-        using engine_ptr = std::unique_ptr<nvinfer1::ICudaEngine, tensorrt_deleter>;
 
-        destroy_ptr<nvinfer1::IExecutionContext> m_context;
-        engine_ptr m_engine;
         std::unordered_map<std::string, cuda_buffer_t> m_cuda_buffers;
+        destroy_ptr<nvinfer1::ICudaEngine> m_engine;
+        destroy_ptr<nvinfer1::IExecutionContext> m_context = nullptr;
 
-        cuda_dep(nvinfer1::ICudaEngine* ptr)
-            : m_engine(ptr)
+        explicit cuda_dep(nvinfer1::ICudaEngine* ptr)
+            : m_engine(ptr), m_context(m_engine->createExecutionContext())
         {
-        }
-
-        void create_execution_context()
-        {
-            if (m_context)
-                return;
-            assert(m_engine != nullptr);
-            m_context.reset(m_engine->createExecutionContext());
         }
     };
 
@@ -301,20 +289,18 @@ namespace dnn {
                 m_cuda_dep->m_cuda_buffers.emplace(name, cuda_dep::cuda_buffer_t(m_max_batch_size, std::accumulate(size_vector.begin(), size_vector.end(), 1, std::multiplies<int>{}) * sizeof_element(data_type)));
             }
 
-        destroy_ptr<nvinfer1::IExecutionContext> context(m_cuda_dep->m_engine->createExecutionContext());
         for (auto i : ttl::range(m_cuda_dep->m_engine->getNbBindings()))
             if (m_cuda_dep->m_engine->bindingIsInput(i)) {
                 constexpr int batch_one = 1; // Will be used to calculate the volume.
                 if (m_binding_has_batch_dim)
-                    context->setBindingDimensions(0, nvinfer1::Dims4(batch_one, 3, m_inp_size.height, m_inp_size.width));
+                    m_cuda_dep->m_context->setBindingDimensions(0, nvinfer1::Dims4(batch_one, 3, m_inp_size.height, m_inp_size.width));
                 break;
             }
 
         { // Hook for output shape.
-
             for (auto i : ttl::range(m_cuda_dep->m_engine->getNbBindings()))
                 if (!m_cuda_dep->m_engine->bindingIsInput(i)) {
-                    auto dims = context->getBindingDimensions(i);
+                    auto dims = m_cuda_dep->m_context->getBindingDimensions(i);
 
                     auto name = m_cuda_dep->m_engine->getBindingName(i);
                     auto data_type = m_cuda_dep->m_engine->getBindingDataType(i);
@@ -375,7 +361,6 @@ namespace dnn {
     std::vector<internal_t>
     tensorrt::inference(const std::vector<float>& cpu_image_batch_buffer, size_t batch_size)
     {
-        m_cuda_dep->create_execution_context();
         std::vector<internal_t> ret(batch_size);
         TRACE_SCOPE("INFERENCE::TensorRT");
         {
