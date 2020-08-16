@@ -41,12 +41,11 @@ inline const coco_pair_list_t COCOPAIR_STD = {
     { 15, 17 }, // 18
 }; // See https://www.cnblogs.com/caffeaoto/p/7793994.html.
 
-pose_proposal::pose_proposal(cv::Size net_resolution, float point_thresh, float limb_thresh, float mns_thresh, int max_person)
+pose_proposal::pose_proposal(cv::Size net_resolution, float point_thresh, float limb_thresh, float mns_thresh)
 : m_net_resolution(std::move(net_resolution))
 , m_point_thresh(point_thresh)
 , m_limb_thresh(limb_thresh)
 , m_nms_thresh(mns_thresh)
-, m_max_person(max_person)
 {
 }
 
@@ -63,11 +62,6 @@ void pose_proposal::set_limb_thresh(float thresh)
 void pose_proposal::set_nms_thresh(float thresh)
 {
     m_nms_thresh = thresh;
-}
-
-void pose_proposal::set_max_person(int n_person)
-{
-    m_max_person = n_person;
 }
 
 constexpr int MIN_REQUIRED_POINTS_FOR_A_MAN = 3; // 3 Connection to be a man;
@@ -165,9 +159,6 @@ std::vector<human_t> pose_proposal::process(
         }
 
         auto nms_kp_list = nms(std::move(kp_list));
-
-        if (nms_kp_list.size() > m_max_person)
-            nms_kp_list.erase(std::next(nms_kp_list.begin(), m_max_person), nms_kp_list.end());
 
         info("Key Point @ ", i, " got ", nms_kp_list.size(), " bounding boxes after thresh + NMS.\n");
 
