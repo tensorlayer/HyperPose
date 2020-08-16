@@ -41,6 +41,15 @@ inline const coco_pair_list_t COCOPAIR_STD = {
     { 15, 17 }, // 18
 }; // See https://www.cnblogs.com/caffeaoto/p/7793994.html.
 
+pose_proposal::pose_proposal(cv::Size net_resolution, float point_thresh, float limb_thresh, float mns_thresh, int max_person)
+: m_net_resolution(std::move(net_resolution))
+, m_point_thresh(point_thresh)
+, m_limb_thresh(limb_thresh)
+, m_nms_thresh(mns_thresh)
+, m_max_person(max_person)
+{
+}
+
 void pose_proposal::set_point_thresh(float thresh)
 {
     m_point_thresh = thresh;
