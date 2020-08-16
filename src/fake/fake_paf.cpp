@@ -13,7 +13,7 @@ namespace parser {
     struct paf::peak_finder_impl {
     };
 
-    paf::paf(cv::Size resolution_size, float conf_thresh, float paf_thresh)
+    paf::paf(float conf_thresh, float paf_thresh, cv::Size resolution_size)
         : m_resolution_size(resolution_size)
         , m_conf_thresh(conf_thresh)
         , m_paf_thresh(paf_thresh)
