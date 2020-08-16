@@ -4,7 +4,7 @@
 #include <string_view>
 
 // Model flags
-DEFINE_string(model_file, "../data/models/hao28-600000-256x384.uff", "Path to uff model.");
+DEFINE_string(model_file, "../data/models/TinyVGG-V1-HW=256x384.uff", "Path to uff model.");
 
 DEFINE_bool(logging, false, "Print the logging information or not.");
 DEFINE_string(input_name, "image", "The input node name of your model file. (for Uff model, input/output name tags required)");

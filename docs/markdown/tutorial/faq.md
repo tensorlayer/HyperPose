@@ -24,7 +24,7 @@ Refer to [here](https://www.learnopencv.com/tag/install/).
 
 Download them manually:
 
-- All prediction models are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose).
+- All prediction models are available on [Google Drive](https://drive.google.com/drive/folders/1w9EjMkrjxOmMw3Rf6fXXkiv_ge7M99jR?usp=sharing).
 - The test data are taken from the [OpenPose Project](https://github.com/CMU-Perceptual-Computing-Lab/openpose/tree/master/examples/media).
 
 ## Training 
@@ -34,7 +34,7 @@ Download them manually:
 ### TensorRT Error?
 
 - See the `tensorrt.log`. (it contains more informations about logging and is located in where you execute the binary)
-- You may meet `ERROR: Tensor image cannot be both input and output` when using the `hao28-600000-256x384.uff` model. And just ignore it.
+- You may meet `ERROR: Tensor image cannot be both input and output` when using the `TinyVGG-V1-HW=256x384.uff` model. And just ignore it.
 
 ### Performance?
 
