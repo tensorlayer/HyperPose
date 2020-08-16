@@ -2,7 +2,7 @@
 
 set -e
 
-[ $(which gdown) ] || echo "Downloading gdown via PIP" || python3 -m pip install gdown
+[ $(which gdown) ] || (echo "Downloading gdown via PIP" && python3 -m pip install gdown)
 
 model_name="TinyVGG-V1-HW=256x384.uff"
 model_md5="6551931d16e55cc9370c5c13d91383c3"
@@ -14,7 +14,7 @@ cd ../data/models
 
 if [ ! -f "$model_name" ] || [ "$(md5sum "$model_name" | cut -d ' ' -f 1)" != "$model_md5" ] ; then
     echo "Installing $model_name ..."
-    gdown "https://drive.google.com/uc?id=$gdrive_file_id"
+    python3 -c "import gdown ; gdown.download('"https://drive.google.com/uc?id=$gdrive_file_id"', quiet=False)"
 fi
 
 if [ "$(md5sum "$model_name" | cut -d ' ' -f 1)" != "$model_md5" ] ; then
