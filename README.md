@@ -4,7 +4,7 @@
 
 HyperPose is a library for building human pose estimation systems that can efficiently operate in the wild.
 
-> **Note**: We are in the process of migrating our APIs from 1.0 to 2.0. The migration is expected to finish by July 2020.
+> **News**: The PoseProposal inference model is released! See the HyperPose models on [Google Drive](https://drive.google.com/drive/folders/1w9EjMkrjxOmMw3Rf6fXXkiv_ge7M99jR?usp=sharing).
 
 ## Features
 
@@ -19,14 +19,14 @@ You can install HyperPose and learn its APIs through [Documentation](https://hyp
 
 ## Example
 
-We provide an example to show human pose estimation achieved by HyperPose. You need to install CUDA Toolkit 10+, TensorRT 7+, OpenCV 3.2+ and gFlags (cmake version), and enable C++ 17 support. Once the prerequisite are ready, run the following script:
+We provide an example to show human pose estimation achieved by HyperPose. You need to install CUDA Toolkit 10+, TensorRT 7+, OpenCV 3.2+ and gFlags (cmake version), and enable C++ 17 support. Once the prerequisite are met, run the following script:
 
 ```bash
-sudo apt -y install git cmake build-essential subversion curl libgflags-dev # libopencv-dev # [optional] 
+sudo apt -y install git cmake build-essential subversion libgflags-dev libopencv-dev
 sh scripts/download-test-data.sh         # Install data for examples.
 sh scripts/download-tinyvgg-model.sh     # Install tiny-vgg model.
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j$(nproc) # Build library && examples.
+cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j # Build library && examples.
 ./example.operator_api_batched_images_paf    # The ouput images will be in the build folder.
 ```
 

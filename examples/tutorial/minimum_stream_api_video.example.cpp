@@ -5,7 +5,7 @@ int main()
     using namespace hyperpose;
 
     const cv::Size network_resolution{ 384, 256 };
-    const dnn::uff uff_model{ "../data/models/hao28-600000-256x384.uff", "image", { "outputs/conf", "outputs/paf" } };
+    const dnn::uff uff_model{ "../data/models/TinyVGG-V1-HW=256x384.uff", "image", { "outputs/conf", "outputs/paf" } };
 
     // * Input video.
     auto capture = cv::VideoCapture("../data/media/video.avi");

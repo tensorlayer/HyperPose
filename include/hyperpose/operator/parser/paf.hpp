@@ -18,13 +18,13 @@ namespace parser {
     public:
         /// \brief Constructor indicating the image size and thresholds.
         ///
-        /// \param resolution_size The size(width, height) of expected resolution for the post-processing.
         /// \param conf_thresh The activation threshold.
         /// \param paf_thresh The threshold of Part Affinity Field.
+        /// \param resolution_size The size(width, height) of expected resolution for the post-processing.
         /// \note Before doing PAF, the (width, height) of feature map will be expanded to `resolution_size` to perform
         /// a more accurate post processing. And `resolution_size` will be N x the size of first input tensor if it's
         /// not set. (now, N is 4)
-        paf(cv::Size resolution_size = cv::Size(UNINITIALIZED_VAL, UNINITIALIZED_VAL), float conf_thresh = 0.05, float paf_thresh = 0.05);
+        explicit paf(float conf_thresh = 0.05, float paf_thresh = 0.05, cv::Size resolution_size = cv::Size(UNINITIALIZED_VAL, UNINITIALIZED_VAL));
 
         /// \brief Function to process one image.
         ///
@@ -77,12 +77,11 @@ namespace parser {
         ~paf();
 
     private:
-        cv::Size m_resolution_size;
-        float m_paf_thresh, m_conf_thresh;
-
         static constexpr std::nullptr_t UNINITIALIZED_PTR = nullptr;
         static constexpr int UNINITIALIZED_VAL = -1;
 
+        float m_conf_thresh, m_paf_thresh;
+        cv::Size m_resolution_size;
         int m_n_joints = UNINITIALIZED_VAL, m_n_connections = UNINITIALIZED_VAL;
         cv::Size m_feature_size = { UNINITIALIZED_VAL, UNINITIALIZED_VAL };
 

@@ -4,7 +4,7 @@
 #include <string_view>
 
 // Model flags
-DEFINE_string(model_file, "../data/models/ppn.onnx", "Path to uff model.");
+DEFINE_string(model_file, "../data/models/ppn-resnet50-V2-HW=384x384.onnx", "Path to uff model.");
 DEFINE_int32(input_width, 384, "Width of input image.");
 DEFINE_int32(input_height, 384, "Height of input image.");
 

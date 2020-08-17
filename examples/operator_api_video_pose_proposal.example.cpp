@@ -3,7 +3,7 @@
 #include <hyperpose/hyperpose.hpp>
 
 // Model flags
-DEFINE_string(model_file, "../data/models/ppn.onnx", "Path to uff model.");
+DEFINE_string(model_file, "../data/models/ppn-resnet50-V2-HW=384x384.onnx", "Path to uff model.");
 DEFINE_int32(input_width, 384, "Width of input image.");
 DEFINE_int32(input_height, 384, "Height of input image.");
 DEFINE_int32(max_batch_size, 8, "Max batch size for inference engine to execute.");
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     }();
 
     // * post-processing: Using Pose Proposal
-    hp::parser::pose_proposal parser{ engine.input_size(), 0.05 };
+    hp::parser::pose_proposal parser{ engine.input_size() };
 
     using clk_t = std::chrono::high_resolution_clock;
 

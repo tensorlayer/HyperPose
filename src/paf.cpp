@@ -276,18 +276,18 @@ namespace parser {
         std::unique_ptr<ttl::tensor<float, 3>> m_upsample_paf, m_upsample_conf;
     };
 
-    paf::paf(cv::Size resolution_size, float conf_thresh, float paf_thresh)
-        : m_resolution_size(resolution_size)
-        , m_conf_thresh(conf_thresh)
+    paf::paf(float conf_thresh, float paf_thresh, cv::Size resolution_size)
+        : m_conf_thresh(conf_thresh)
         , m_paf_thresh(paf_thresh)
+        , m_resolution_size(resolution_size)
         , m_ttl(UNINITIALIZED_PTR)
     {
     }
 
     paf::paf(const paf& p)
-        : m_resolution_size(p.m_resolution_size)
-        , m_conf_thresh(p.m_conf_thresh)
+        : m_conf_thresh(p.m_conf_thresh)
         , m_paf_thresh(p.m_paf_thresh)
+        , m_resolution_size(p.m_resolution_size)
         , m_ttl(UNINITIALIZED_PTR)
     {
     }

@@ -44,6 +44,7 @@ venv
 _build
 docs/make.bat
 examples/user_codes/*.cpp
+debug.*
 
 !docs/Makefile
 !docs/markdown/images/*

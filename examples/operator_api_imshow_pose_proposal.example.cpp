@@ -3,12 +3,9 @@
 #include <hyperpose/hyperpose.hpp>
 
 // Model flags
-DEFINE_string(model_file, "../data/models/TinyVGG-V1-HW=256x384.uff", "Path to uff model.");
-DEFINE_string(input_name, "image", "The input node name of your uff model file.");
-DEFINE_string(output_name_list, "outputs/conf,outputs/paf", "The output node names(maybe more than one) of your uff model file.");
-
-DEFINE_int32(input_height, 256, "Height of input image.");
+DEFINE_string(model_file, "../data/models/ppn-resnet50-V2-HW=384x384.onnx", "Path to uff model.");
 DEFINE_int32(input_width, 384, "Width of input image.");
+DEFINE_int32(input_height, 384, "Height of input image.");
 
 DEFINE_bool(logging, false, "Print the logging information or not.");
 
@@ -37,20 +34,14 @@ int main(int argc, char** argv)
         if (std::equal(onnx_suffix.crbegin(), onnx_suffix.crend(), FLAGS_model_file.crbegin()))
             return tensorrt(onnx{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, 1);
 
-        if (std::equal(uff_suffix.crbegin(), uff_suffix.crend(), FLAGS_model_file.crbegin()))
-            return tensorrt(
-                uff{ FLAGS_model_file, FLAGS_input_name, split(FLAGS_output_name_list, ',') },
-                { FLAGS_input_width, FLAGS_input_height },
-                1);
-
         example_log() << "Your model file's suffix is not [.onnx | .uff]. Your model file path: " << FLAGS_model_file;
         example_log() << "Trying to be viewed as a serialized TensorRT model.";
 
         return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, 1);
     }();
 
-    // * post-processing: Using paf.
-    hp::parser::paf parser{};
+    // * post-processing: Using Pose Proposal.
+    hp::parser::pose_proposal parser{ engine.input_size() };
 
     using clk_t = std::chrono::high_resolution_clock;
 
@@ -71,8 +62,8 @@ int main(int argc, char** argv)
             // * TensorRT Inference.
             auto feature_maps = engine.inference({ mat });
 
-            // * Paf.
-            auto poses = parser.process(feature_maps.front()[0], feature_maps.front()[1]);
+            // * Post-Processing.
+            auto poses = parser.process(feature_maps.front());
 
             for (auto&& pose : poses)
                 hp::draw_human(mat, pose);

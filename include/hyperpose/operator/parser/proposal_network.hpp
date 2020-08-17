@@ -1,29 +1,53 @@
 #pragma once
 
+/// \file proposal_network.hpp
+/// \brief The post-processing implementation of Pose Proposal Network.
+
 #include "../../utility/data.hpp"
 #include <algorithm>
 #include <numeric>
+#include <utility>
 
 namespace hyperpose {
 
 namespace parser {
 
+    /// \brief The post-processing implementation of Pose Proposal Network.
+    /// \see https://openaccess.thecvf.com/content_ECCV_2018/papers/Sekii_Pose_Proposal_Networks_ECCV_2018_paper.pdf
     class pose_proposal {
     public:
-        pose_proposal(cv::Size net_resolution, float point_thresh = 0.15, float limb_thresh = 0.02, float mns_thresh = 0.3, int max_person = 32)
-            : m_net_resolution(net_resolution)
-            , m_point_thresh(point_thresh)
-            , m_limb_thresh(limb_thresh)
-            , m_nms_thresh(mns_thresh)
-            , m_max_person(max_person)
-        {
-        }
+        /// \brief Constructor of pose_proposal.
+        ///
+        /// \param net_resolution The input resolution of the DNN model.
+        /// \param point_thresh The threshold of key points.
+        /// \param limb_thresh The threshold of limbs.
+        /// \param mns_thresh The threshold of NMS algorithm.
+        /// \note Example of `net_resolution`: If the input resolution of your DNN model is (384 x 384), then that is the parameter.
+        explicit pose_proposal(cv::Size net_resolution, float point_thresh = 0.10, float limb_thresh = 0.05, float mns_thresh = 0.3);
 
+        /// \brief Function to infer the pose topology of given tensor.
+        ///
+        /// \param conf_point
+        /// \param conf_iou
+        /// \param x
+        /// \param y
+        /// \param w
+        /// \param h
+        /// \param edge
+        ///
+        /// \note To use this function, the output of your PoseProposal model should be 6 tensors: `[key point confidence, iou conf, center_x, center_y, box_width, box_height, edge confidence]`.
+        /// This is natively supported by our training framework.
+        ///
+        /// \return A list of inferred human poses.
         std::vector<human_t> process(
             const feature_map_t& conf_point, const feature_map_t& conf_iou,
             const feature_map_t& x, const feature_map_t& y, const feature_map_t& w, const feature_map_t& h,
             const feature_map_t& edge);
 
+        /// \brief Another form of parsing function.
+        ///
+        /// \param feature_map_list A list of tensors as shown in another `process` function.
+        /// \return A list of inferred human poses.
         inline std::vector<human_t> process(const std::vector<feature_map_t>& feature_map_list)
         {
             assert(feature_map_list.size() == 7);
@@ -37,17 +61,23 @@ namespace parser {
                 feature_map_list.at(6));
         }
 
+        /// \brief Set the key point threshold.
+        /// \param thresh key point threshold.
         void set_point_thresh(float thresh);
+
+        /// \brief Set the limb threshold.
+        /// \param thresh limb threshold.
         void set_limb_thresh(float thresh);
+
+        /// \brief Set the NMS threshold.
+        /// \param thresh NMS threshold.
         void set_nms_thresh(float thresh);
-        void set_max_person(int n_person);
 
     private:
         cv::Size m_net_resolution;
         float m_point_thresh;
         float m_limb_thresh;
         float m_nms_thresh;
-        int m_max_person;
     };
 
 }
