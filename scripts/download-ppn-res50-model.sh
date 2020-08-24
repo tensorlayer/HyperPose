@@ -4,9 +4,9 @@ set -e
 
 [ $(which gdown) ] || (echo "Downloading gdown via PIP" && python3 -m pip install gdown)
 
-model_name="TinyVGG-V1-HW=256x384.uff"
-model_md5="6551931d16e55cc9370c5c13d91383c3"
-gdrive_file_id="1KlKjNMaruJnNYEXQKqzHGqECBAmwB92T"
+model_name="ppn-resnet50-V2-HW=384x384.onnx"
+model_md5="0d1df2e61c0f550185d562ec67a5f2ca"
+gdrive_file_id="1qMSipZ5_QMyRuNQ7ux5isNxwr678ctwG"
 
 cd $(dirname $0)
 mkdir -p ../data/models

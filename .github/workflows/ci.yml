@@ -7,16 +7,29 @@ jobs:
 
     # https://help.github.com/en/articles/virtual-environments-for-github-actions#supported-virtual-environments
     runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
 
     steps:
-    - uses: actions/checkout@v1
-    - run: sudo apt-get install libopencv-dev libgflags-dev # dependencies
-    - run: sh scripts/download-test-data.sh
-    - run: sh scripts/download-tinyvgg-model.sh
-    - run: sh scripts/download-openpose-thin-model.sh
-    - run: sh scripts/download-openpose-res50-model.sh
-    - run: sh scripts/download-openpose-coco-model.sh
-    - run: cmake . -DBUILD_TESTS=1 -DBUILD_FAKE=1 -DBUILD_EXAMPLES=1 -DBUILD_LIB=1 -DBUILD_USER_CODES=0 -DEXECUTABLE_OUTPUT_PATH=./bin
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Initialize Python Env
+      run: python3 -m pip install --upgrade pip
+    - name: Install System Dependencies
+      run: sudo apt-get install libopencv-dev libgflags-dev # dependencies
+    - name: Check download scripts.
+      run: |
+        sh scripts/download-test-data.sh
+        sh scripts/download-tinyvgg-model.sh
+        sh scripts/download-openpose-thin-model.sh
+        sh scripts/download-openpose-res50-model.sh
+        sh scripts/download-openpose-coco-model.sh
+    - name: Build Project(NO GPU)
+      run: cmake . -DBUILD_TESTS=1 -DBUILD_FAKE=1 -DBUILD_EXAMPLES=1 -DBUILD_LIB=1 -DBUILD_USER_CODES=0 -DEXECUTABLE_OUTPUT_PATH=./bin
     - run: cmake --build . --config Release
 
     # - run: ctest -C Release

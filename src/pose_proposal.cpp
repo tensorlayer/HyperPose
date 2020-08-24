@@ -20,7 +20,6 @@ namespace parser {
     // 6: edge_confidence    N x 17 x 9 x 9 x 12 x 12
 
     // -> Return human_t {x, y} \in [0, 1]]
-
     inline const coco_pair_list_t COCOPAIR_STD = {
         { 1, 8 }, // 0
         { 8, 9 }, // 1
@@ -41,6 +40,14 @@ namespace parser {
         { 15, 17 }, // 18
     }; // See https://www.cnblogs.com/caffeaoto/p/7793994.html.
 
+    pose_proposal::pose_proposal(cv::Size net_resolution, float point_thresh, float limb_thresh, float mns_thresh)
+        : m_net_resolution(std::move(net_resolution))
+        , m_point_thresh(point_thresh)
+        , m_limb_thresh(limb_thresh)
+        , m_nms_thresh(mns_thresh)
+    {
+    }
+
     void pose_proposal::set_point_thresh(float thresh)
     {
         m_point_thresh = thresh;
@@ -54,11 +61,6 @@ namespace parser {
     void pose_proposal::set_nms_thresh(float thresh)
     {
         m_nms_thresh = thresh;
-    }
-
-    void pose_proposal::set_max_person(int n_person)
-    {
-        m_max_person = n_person;
     }
 
     constexpr int MIN_REQUIRED_POINTS_FOR_A_MAN = 3; // 3 Connection to be a man;
@@ -107,33 +109,24 @@ namespace parser {
 
         auto nms = [this](key_point_bboxes boxes) {
             key_point_bboxes ret;
-            if (boxes.size() == 0)
-                return ret;
 
-            std::multimap<int, size_t> idxs;
-            for (size_t i = 0; i < boxes.size(); ++i)
-                idxs.emplace(boxes[i].second.br().y, i);
+            std::sort(boxes.begin(), boxes.end(), [](const std::pair<meta_info, bbox>& l, const std::pair<meta_info, bbox>& r) {
+                return l.first.conf < r.first.conf;
+            });
 
-            while (idxs.size() > 0) {
-                auto last = --std::end(idxs);
-                const auto& box = boxes[last->second];
+            const auto iou = [](const auto& l, const auto& r) {
+                float int_area = (l.second & r.second).area();
+                float union_area = l.second.area() + r.second.area() - int_area;
+                float overlap = int_area / union_area;
+                return overlap;
+            };
 
-                idxs.erase(last);
-
-                for (auto pos = idxs.begin(); pos != idxs.end();) {
-                    const auto& box_ = boxes[pos->second];
-
-                    float int_area = (box.second & box_.second).area();
-                    float union_area = box.second.area() + box_.second.area() - int_area;
-                    float overlap = int_area / union_area;
-
-                    if (overlap > m_nms_thresh)
-                        pos = idxs.erase(pos);
-                    else
-                        ++pos;
-                }
-
-                ret.push_back(box);
+            while (!boxes.empty()) {
+                ret.emplace_back(boxes.back());
+                boxes.pop_back();
+                for (size_t i = 0; i < boxes.size(); i++)
+                    if (iou(ret.back(), boxes[i]) >= m_nms_thresh)
+                        boxes.erase(boxes.begin() + i);
             }
 
             return ret;
@@ -148,20 +141,6 @@ namespace parser {
         std::vector<key_point_bboxes> key_points;
         key_points.reserve(n_key_points);
 
-        // TODO. Debug
-        cv::Mat debug = cv::Mat::zeros(m_net_resolution, CV_8UC(3));
-
-        int width = debug.size().width;
-        int height = debug.size().height;
-
-        int stepSize = width / 12;
-
-        for (int i = 0; i < height; i += stepSize)
-            cv::line(debug, cv::Point(0, i), cv::Point(width, i), cv::Scalar(0, 255, 255));
-
-        for (int i = 0; i < width; i += stepSize)
-            cv::line(debug, cv::Point(i, 0), cv::Point(i, height), cv::Scalar(255, 0, 255));
-
         for (size_t i = 0; i < n_key_points; ++i) {
             key_point_bboxes kp_list;
 
@@ -172,22 +151,15 @@ namespace parser {
                 if (m_point_thresh < conf_point.view<float>()[feature_map_index])
                     kp_list.emplace_back(
                         meta_info{ (int)j, conf_point.view<float>()[feature_map_index] },
-                        cv::Rect(std::max(std::min(m_net_resolution.width, static_cast<int>(x.view<float>()[feature_map_index])), 0),
-                            std::max(std::min(m_net_resolution.height, static_cast<int>(y.view<float>()[feature_map_index])), 0),
+                        cv::Rect(std::max(std::min(m_net_resolution.width, static_cast<int>(x.view<float>()[feature_map_index] - w.view<float>()[feature_map_index] / 2)), 0),
+                            std::max(std::min(m_net_resolution.height, static_cast<int>(y.view<float>()[feature_map_index] - h.view<float>()[feature_map_index] / 2)), 0),
                             std::max(std::min(m_net_resolution.width, static_cast<int>(w.view<float>()[feature_map_index])), 0),
                             std::max(std::min(m_net_resolution.height, static_cast<int>(h.view<float>()[feature_map_index])), 0)));
             }
 
-            auto nms_kp_list = nms(kp_list);
+            auto nms_kp_list = nms(std::move(kp_list));
 
-            std::sort(nms_kp_list.begin(), nms_kp_list.end(), [](const std::pair<meta_info, bbox>& l, const std::pair<meta_info, bbox>& r) {
-                return l.first.conf > r.first.conf;
-            });
-
-            if (nms_kp_list.size() > m_max_person)
-                nms_kp_list.erase(std::next(nms_kp_list.begin(), m_max_person), nms_kp_list.end());
-
-            info("Key Point @ ", i, " got ", nms_kp_list.size(), " proposals after nms & thresh.\n");
+            info("Key Point @ ", i, " got ", nms_kp_list.size(), " bounding boxes after thresh + NMS.\n");
 
             key_points.push_back(std::move(nms_kp_list));
         }
@@ -196,28 +168,22 @@ namespace parser {
 
         size_t n_range = std::min(n_edges, COCOPAIR_STD.size());
         const size_t n_neighbors = h_edge_neighbor * w_edge_neighbor;
+
         for (size_t i = 0; i < n_range; ++i) {
             auto& from = key_points.at(COCOPAIR_STD[i].first);
             auto& to = key_points.at(COCOPAIR_STD[i].second);
 
+            struct limb {
+                int from, to;
+                float conf;
+            };
+
+            std::vector<limb> limb_candidates{};
+
             // 17 x 9 x 9 x 12 x 12
-            float best_conf = m_limb_thresh;
-            int best_to_id = -1;
-
-            for (auto&& from_p : from) {
-                if (!from_p.first.has_root()) {
-                    from_p.first.set_root(ret_poses.size());
-                    ret_poses.push_back(human_t{});
-                    ret_poses.back().parts[COCOPAIR_STD[i].first] = {
-                        true,
-                        (float)from_p.second.x / m_net_resolution.width,
-                        (float)from_p.second.y / m_net_resolution.height,
-                        from_p.first.conf
-                    };
-                    ret_poses.back().score = 1.;
-                } // from_p must have root.
-
-                const auto& from_grid_index = from_p.first.grid_index;
+            for (size_t from_index = 0; from_index < from.size(); ++from_index) {
+                auto& from_p = from[from_index];
+                const auto& from_grid_index = from_p.first.grid_index; // Location of start point in the feature map.
                 for (size_t j = 0; j < n_neighbors; ++j) {
                     const size_t edge_conf_index = i * (n_grids * n_neighbors) + j * n_grids + from_grid_index;
 
@@ -231,76 +197,117 @@ namespace parser {
                     const size_t aim_to_x = from_grid_x + aim_neighbor_x - w_edge_neighbor / 2;
 
                     bool out_of_range = (aim_to_x < 0 || aim_to_x >= w_grid || aim_to_y < 0 || aim_to_y >= h_grid);
-
-                    if (!out_of_range && edge.view<float>()[edge_conf_index] > best_conf) {
-                        for (size_t k = 0; k < to.size(); ++k) {
-                            auto&& p_to = to[k];
+                    auto possible_connection_conf = edge.view<float>()[edge_conf_index];
+                    if (!out_of_range && possible_connection_conf > m_limb_thresh) {
+                        for (size_t to_index = 0; to_index < to.size(); ++to_index) {
+                            auto&& p_to = to[to_index];
                             size_t to_grid_y = p_to.first.grid_index / w_grid;
                             size_t to_grid_x = p_to.first.grid_index - to_grid_y * w_grid;
                             if (to_grid_x == aim_to_x && to_grid_y == aim_to_y) { // Match Point!
-                                best_conf = edge.view<float>()[edge_conf_index];
-                                best_to_id = k;
-                                break;
+                                limb_candidates.push_back({ (int)from_index, (int)to_index, possible_connection_conf });
                             }
                         }
                     }
                 }
+                //            if (best_to_id != -1) {
+                //                ret_poses[from_p.first.root()].parts[COCOPAIR_STD[i].second] = {
+                //                    true,
+                //                    (float)(to[best_to_id].second.x + to[best_to_id].second.width / 2) / m_net_resolution.width,
+                //                    (float)(to[best_to_id].second.y + to[best_to_id].second.height / 2) / m_net_resolution.height,
+                //                    to[best_to_id].first.conf
+                //                };
+                //                ret_poses[from_p.first.root()].score += 1.;
+                //            }
+            }
 
-                if (best_to_id != -1) {
-                    ret_poses[from_p.first.root()].parts[COCOPAIR_STD[i].second] = {
+            // All right. We now get all possible [from, to] pairs. Let's choose them by rank.
+            std::sort(limb_candidates.begin(), limb_candidates.end(), [](auto& l, auto& r) {
+                return l.conf < r.conf;
+            });
+
+            std::vector<bool> from_check(from.size(), false);
+            std::vector<bool> to_check(to.size(), false);
+            while (!limb_candidates.empty()) {
+                auto cur = limb_candidates.back();
+                limb_candidates.pop_back();
+
+                if (from_check[cur.from] || to_check[cur.to]) // Point already taken.
+                    continue;
+
+                auto& from_val = from[cur.from];
+                auto& to_val = to[cur.to];
+
+                size_t root_index = [&]() -> size_t {
+                    if (from_val.first.has_root() == to_val.first.has_root()) {
+                        ret_poses.emplace_back();
+                        return ret_poses.size() - 1;
+                    }
+
+                    return from_val.first.has_root() ? from_val.first.root() : to_val.first.root();
+                }();
+
+                if (!ret_poses[root_index].parts[COCOPAIR_STD[i].first].has_value) {
+                    ret_poses[root_index].parts[COCOPAIR_STD[i].first] = {
                         true,
-                        (float)to[best_to_id].second.x / m_net_resolution.width,
-                        (float)to[best_to_id].second.y / m_net_resolution.height,
-                        to[best_to_id].first.conf
+                        (float)(from_val.second.x + from_val.second.width / 2) / m_net_resolution.width,
+                        (float)(from_val.second.y + from_val.second.height / 2) / m_net_resolution.height,
+                        from_val.first.conf
                     };
-                    ret_poses[from_p.first.root()].score += 1.;
+                    from_val.first.set_root(root_index);
+                    ret_poses[root_index].score += 1.;
+                }
+
+                if (!ret_poses[root_index].parts[COCOPAIR_STD[i].second].has_value) {
+                    ret_poses[root_index].parts[COCOPAIR_STD[i].second] = {
+                        true,
+                        (float)(to_val.second.x + to_val.second.width / 2) / m_net_resolution.width,
+                        (float)(to_val.second.y + to_val.second.height / 2) / m_net_resolution.height,
+                        to_val.first.conf
+                    };
+                    to_val.first.set_root(root_index);
+                    ret_poses[root_index].score += 1.;
                 }
             }
         }
 
-        ret_poses.erase(std::remove_if(ret_poses.begin(), ret_poses.end(), [](const human_t& pose) {
-            return pose.score <= 1;
-        }),
-            ret_poses.end());
-
         info("Detected ", ret_poses.size(), " human parts originally\n");
 
-        constexpr size_t hash_grid = 64;
-        constexpr size_t nan = std::numeric_limits<uint16_t>::max();
-        std::array<std::array<uint16_t, hash_grid>, hash_grid> hash_table{}; // Avoid Stack OverFlow!
-        for (auto&& row : hash_table)
-            row.fill(nan);
+        constexpr size_t grid_size = 64;
+        std::array<std::array<std::vector<uint16_t>, grid_size>, grid_size> hash_table{};
 
-        const auto query_table = [hash_grid, &hash_table](const body_part_t& part) -> uint16_t& {
+        const auto query_table = [grid_size, &hash_table](const body_part_t& part) -> std::vector<uint16_t>& {
             assert(part.x >= 0);
             assert(part.y >= 0);
-            size_t x_ind = part.x * hash_grid;
-            size_t y_ind = part.y * hash_grid;
-            x_ind = (x_ind == hash_grid) ? hash_grid - 1 : x_ind;
-            y_ind = (y_ind == hash_grid) ? hash_grid - 1 : y_ind;
+            size_t x_ind = part.x * grid_size;
+            size_t y_ind = part.y * grid_size;
+            x_ind = (x_ind == grid_size) ? grid_size - 1 : x_ind;
+            y_ind = (y_ind == grid_size) ? grid_size - 1 : y_ind;
             return hash_table[x_ind][y_ind];
         };
 
         for (size_t i = 0; i < ret_poses.size(); ++i) {
-            auto& this_human = ret_poses[i]; // We are trying to find other parts for current human.
-            for (size_t j = 0; j < this_human.parts.size(); ++j) {
-                const auto& this_part = this_human.parts[j]; // Current part: Unique Or Belong to Others.
+            auto& cur_human = ret_poses[i]; // We are trying to find other parts for current human.
+            if (cur_human.score > n_key_points - 0.1)
+                continue;
+
+            for (size_t j = 0; j < cur_human.parts.size(); ++j) {
+                const auto& this_part = cur_human.parts[j]; // Current part: Unique Or Belong to Others.
                 if (this_part.has_value) {
-                    const size_t root_index = query_table(this_part);
-                    if (root_index >= ret_poses.size()) { // Unique.
-                        query_table(this_part) = i;
-                    } else {
-                        if (root_index == i) // My root is the current person? Skip.
+                    auto& maybes = query_table(this_part);
+
+                    bool remove_cur = false;
+                    for (auto possible_id : maybes) {
+                        auto& maybe_combine = ret_poses[possible_id];
+                        if (possible_id == i || maybe_combine.parts[j].y != this_part.y || maybe_combine.parts[j].x != this_part.x)
                             continue;
 
-                        auto& aim = ret_poses[root_index]; // Get root person.
-
-                        for (size_t u = 0; u < this_human.parts.size(); ++u) {
-                            const auto& part = ret_poses[i].parts[u];
-                            if (part.has_value && !aim.parts.at(u).has_value) {
-                                query_table(part) = root_index;
-                                aim.parts[u] = part;
-                                aim.score += 1.0;
+                        remove_cur = true;
+                        for (size_t u = 0; u < cur_human.parts.size(); ++u) {
+                            const auto& cur_part = cur_human.parts[u];
+                            if (cur_part.has_value && !maybe_combine.parts[u].has_value) {
+                                maybe_combine.parts[u] = cur_part;
+                                maybe_combine.score += 1.0;
+                                query_table(cur_part).push_back(i);
                             }
                         }
 
@@ -308,6 +315,11 @@ namespace parser {
                         --i;
                         break;
                     }
+
+                    if (remove_cur)
+                        break;
+
+                    maybes.push_back(i);
                 }
             }
         }

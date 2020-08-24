@@ -13,8 +13,6 @@
 > **Environment**: System@Ubuntu18.04, GPU@1070Ti, CPU@i7(12 logic cores). 
 >
 > **Tested Video Source**: Crazy Updown Funk(resolution@640x360, frame_count@7458, source@[YouTube](https://www.youtube.com/watch?v=2DiQUX11YaY))
->
-> **Availability**: All model above are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose). 
 
 > OpenPose performance is not tested with batch processing as it seems not to be implemented. (see [here](https://github.com/CMU-Perceptual-Computing-Lab/openpose/issues/100)) 
 

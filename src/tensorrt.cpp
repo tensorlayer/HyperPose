@@ -106,13 +106,13 @@ namespace dnn {
     struct tensorrt::cuda_dep {
         using cuda_buffer_t = ttl::cuda_tensor<char, 2>; // [batch_size, data_size]
 
-
         std::unordered_map<std::string, cuda_buffer_t> m_cuda_buffers;
         destroy_ptr<nvinfer1::ICudaEngine> m_engine;
         destroy_ptr<nvinfer1::IExecutionContext> m_context = nullptr;
 
         explicit cuda_dep(nvinfer1::ICudaEngine* ptr)
-            : m_engine(ptr), m_context(m_engine->createExecutionContext())
+            : m_engine(ptr)
+            , m_context(m_engine->createExecutionContext())
         {
         }
     };
