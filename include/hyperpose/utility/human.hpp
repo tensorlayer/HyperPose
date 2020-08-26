@@ -42,7 +42,8 @@ void draw_human(cv::Mat& img, const human_t& human);
 /// \param src Original resolution(image resolution).
 /// \param dst DNN input resolution.
 template <size_t J>
-inline void resume_ratio(human_t_<J>& human, cv::Size src, cv::Size dst) {
+inline void resume_ratio(human_t_<J>& human, cv::Size src, cv::Size dst)
+{
     // src => say imread ratio.
     // dst => say network ratio
     if (src.height * dst.width > src.width * dst.height) { // Adjust x / width

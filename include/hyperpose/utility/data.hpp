@@ -64,6 +64,6 @@ using internal_t = std::vector<feature_map_t>;
 void nhwc_images_append_nchw_batch(
     std::vector<float>& data, std::vector<cv::Mat> images, double factor = 1.0, bool flip_rb = true);
 
-cv::Mat non_scaling_resize(const cv::Mat &input, const cv::Size &dstSize, const cv::Scalar bgcolor = {0, 0, 0});
+cv::Mat non_scaling_resize(const cv::Mat& input, const cv::Size& dstSize, const cv::Scalar bgcolor = { 0, 0, 0 });
 
 } // namespace hyperpose

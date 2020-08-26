@@ -32,16 +32,20 @@ DEFINE_string(saving_prefix, "output", "The output media resource will be named 
 // System Configuration
 DEFINE_bool(logging, false, "Print the logging information or not.");
 
-
 namespace hp = hyperpose;
 
 class parser_variant {
 public:
     template <typename Container>
-    std::vector<hp::human_t> process(Container&& feature_map_containers) {
-        return std::visit([&feature_map_containers](auto& arg){ return arg.process(feature_map_containers); }, m_parser);
+    std::vector<hp::human_t> process(Container&& feature_map_containers)
+    {
+        return std::visit([&feature_map_containers](auto& arg) { return arg.process(feature_map_containers); }, m_parser);
     }
-    parser_variant(std::variant<hp::parser::pose_proposal, hp::parser::paf> v) : m_parser(std::move(v)) {}
+    parser_variant(std::variant<hp::parser::pose_proposal, hp::parser::paf> v)
+        : m_parser(std::move(v))
+    {
+    }
+
 private:
     std::variant<hp::parser::pose_proposal, hp::parser::paf> m_parser;
 };
@@ -58,8 +62,8 @@ int main(int argc, char** argv)
     }
 
     // Mat images if any.
-    auto images = [] () -> std::vector<cv::Mat> {
-        constexpr auto match_suffix = [] (std::string_view suffix) {
+    auto images = []() -> std::vector<cv::Mat> {
+        constexpr auto match_suffix = [](std::string_view suffix) {
             return std::equal(suffix.crbegin(), suffix.crend(), FLAGS_source.crbegin());
         };
 
@@ -70,34 +74,32 @@ int main(int argc, char** argv)
 
         try {
             return glob_images(FLAGS_source);
-        } catch (...) {};
+        } catch (...) {
+        };
 
         return {};
     }();
 
-    std::unique_ptr<cv::VideoCapture> cap = [&images] {
-        if (!images.empty())
-            return std::unique_ptr<cv::VideoCapture>{nullptr};
-
+    cv::VideoCapture cap;
+    if (images.empty()) {
         if (FLAGS_source == kCAMERA) {
             cli_log() << "Source: " << FLAGS_source << ". Recognized to be a webcam.\n";
-            return std::make_unique<cv::VideoCapture>(0, cv::CAP_V4L2);
-        }
-
-        return std::make_unique<cv::VideoCapture>(FLAGS_source);
-    }();
+            cap.open(0, cv::CAP_V4L2);
+        } else
+            cap.open(FLAGS_source);
+    }
 
     if (FLAGS_imshow && FLAGS_runtime == kSTREAM) {
         FLAGS_imshow = false;
         cli_log() << "Imshow functionality is enabled only when using operator runtime mode.\n";
     }
 
-    if (cap != nullptr && FLAGS_runtime == kOPERATOR) {
+    if (!cap.isOpened() && FLAGS_runtime == kOPERATOR) {
         FLAGS_max_batch_size = 1;
         cli_log() << "Batching is not enabled when [VideoCapture + OperatorRuntime]. Hence, set max_batch_size to 1 for better performance.\n";
     }
 
-    if (images.empty() && cap == nullptr) {
+    if (images.empty() && !cap.isOpened()) {
         cli_log() << "ERROR: Failed to parse source: " << FLAGS_source << std::endl;
         std::exit(-1);
     }
@@ -121,7 +123,7 @@ int main(int argc, char** argv)
             cli_log()
                 << "WARNING: For .uff model, the CLI program only takes 'image' as input node, and 'outputs/conf,outputs/paf' as output nodes\n";
             return tensorrt(
-                uff{ FLAGS_model, "image", {"outputs/conf", "outputs/paf"} },
+                uff{ FLAGS_model, "image", { "outputs/conf", "outputs/paf" } },
                 { FLAGS_w, FLAGS_h },
                 FLAGS_max_batch_size, FLAGS_keep_ratio);
         }
@@ -133,7 +135,7 @@ int main(int argc, char** argv)
     }();
     cli_log() << "DNN engine is built.\n";
 
-    auto parser = parser_variant{[&engine] () -> std::variant<hp::parser::pose_proposal, hp::parser::paf> {
+    auto parser = parser_variant{ [&engine]() -> std::variant<hp::parser::pose_proposal, hp::parser::paf> {
         if (FLAGS_post == kPAF)
             return hp::parser::paf{};
 
@@ -142,7 +144,7 @@ int main(int argc, char** argv)
 
         cli_log() << "ERROR: Unknown post-processing flag: `" << FLAGS_post << "`. Use `paf` or `ppn` please.\n";
         std::exit(-1);
-    }()};
+    }() };
 
     if (FLAGS_runtime != kOPERATOR and FLAGS_runtime != kSTREAM) {
         cli_log() << "WARNING: Unknown runtime flag: " << FLAGS_runtime << ". Changed this using `operator`.\n";
@@ -152,28 +154,28 @@ int main(int argc, char** argv)
     using clk_t = std::chrono::high_resolution_clock;
 
     const auto make_writer = [&cap] {
-        cv::Size encoding_size = cv::Size(cap->get(cv::CAP_PROP_FRAME_WIDTH), cap->get(cv::CAP_PROP_FRAME_HEIGHT));
+        cv::Size encoding_size = cv::Size(cap.get(cv::CAP_PROP_FRAME_WIDTH), cap.get(cv::CAP_PROP_FRAME_HEIGHT));
         std::string video_name = FLAGS_saving_prefix + ".avi";
         cli_log() << "Output Video Configuration:"
                   << "\n--> Filename: " << video_name
                   << "\n--> Resolution: " << encoding_size
-                  << "\n--> Frame Rate: " << cap->get(cv::CAP_PROP_FPS)
-                  << "\n--> Frame Count: " << cap->get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
+                  << "\n--> Frame Rate: " << cap.get(cv::CAP_PROP_FPS)
+                  << "\n--> Frame Count: " << cap.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
 
         return cv::VideoWriter(
-                    video_name,
-                    cap->get(cv::CAP_PROP_FOURCC),
-                    cap->get(cv::CAP_PROP_FPS),
-                    encoding_size);
+            video_name,
+            cap.get(cv::CAP_PROP_FOURCC),
+            cap.get(cv::CAP_PROP_FPS),
+            encoding_size);
     };
 
     if (FLAGS_runtime == kOPERATOR) {
         if (images.empty()) { // For CAP.
 
             auto writer = make_writer();
-            while (cap->isOpened()) {
+            while (cap.isOpened()) {
                 cv::Mat mat;
-                cap->read(mat);
+                cap.read(mat);
 
                 if (mat.empty()) {
                     cli_log() << "Got empty cv::Mat ... exit\n";
@@ -209,7 +211,7 @@ int main(int argc, char** argv)
 
                 tmp.clear();
                 for (size_t j = 0; j < stride; ++j)
-                    tmp.push_back(images[counter+j]);
+                    tmp.push_back(images[counter + j]);
 
                 auto feature_maps = engine.inference(tmp);
 
@@ -219,7 +221,7 @@ int main(int argc, char** argv)
                     pose_vectors.push_back(parser.process(packet));
 
                 for (size_t i = 0; i < tmp.size(); ++i) {
-                    for (auto&& pose : pose_vectors[i]){
+                    for (auto&& pose : pose_vectors[i]) {
                         if (FLAGS_keep_ratio)
                             hp::resume_ratio(pose, tmp[i].size(), engine.input_size());
                         hp::draw_human(tmp[i], pose);
@@ -249,7 +251,7 @@ int main(int argc, char** argv)
 
         stream.add_monitor(2000);
 
-        stream.async() << (*cap);
+        stream.async() << cap;
         stream.sync() >> writer;
 
         auto millis = std::chrono::duration<double, std::milli>(clk_t::now() - beg).count();

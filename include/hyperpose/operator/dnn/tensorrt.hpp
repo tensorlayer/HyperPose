@@ -70,7 +70,7 @@ namespace dnn {
         /// \param factor For each element in the input data, they will be multiplied by "factor".
         /// \param flip_rgb Whether to convert the color channels from "BGR" to "RGB".
         explicit tensorrt(const tensorrt_serialized& serialized_model, cv::Size input_size, int max_batch_size = 8,
-                          bool keep_ratio = false,
+            bool keep_ratio = false,
             double factor = 1. / 255, bool flip_rgb = true);
 
         /// Deconstructor of class hyperpose::dnn::tensorrt.

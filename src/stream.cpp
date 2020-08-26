@@ -29,11 +29,13 @@ void basic_stream_manager::read_from(const std::vector<cv::Mat>& inputs)
     m_cv_data_i.notify_one();
 }
 
-size_t basic_stream_manager::processed_num() const noexcept {
+size_t basic_stream_manager::processed_num() const noexcept
+{
     return m_ingest;
 }
 
-void basic_stream_manager::read_from(cv::VideoCapture& cap) {
+void basic_stream_manager::read_from(cv::VideoCapture& cap)
+{
     if (-1 == cap.get(cv::CAP_PROP_FRAME_COUNT))
         error("STREAM API is designed for offline video processing. Please use operator API for camera video processing.\n");
 
@@ -79,7 +81,7 @@ void basic_stream_manager::resize_from_inputs(cv::Size size)
         std::vector<cv::Mat> after_resize_mats;
         after_resize_mats.reserve(inputs.size());
 
-        for (auto & input : inputs) {
+        for (auto& input : inputs) {
             if (input.empty()) {
                 warning("Got an empty image, skipped");
                 --m_remaining_num;

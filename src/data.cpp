@@ -9,7 +9,8 @@ feature_map_t::feature_map_t(std::string name, std::unique_ptr<char[]>&& tensor,
 {
 }
 
-std::ostream& operator<<(std::ostream& out, const feature_map_t& map) {
+std::ostream& operator<<(std::ostream& out, const feature_map_t& map)
+{
     out << map.m_name << ":[";
     for (auto& s : map.m_shape)
         out << s << ", ";
@@ -49,16 +50,17 @@ void nhwc_images_append_nchw_batch(std::vector<float>& data, std::vector<cv::Mat
     }
 } // TODO: Parallel.
 
-cv::Mat non_scaling_resize(const cv::Mat &input, const cv::Size &dstSize, const cv::Scalar bgcolor){
+cv::Mat non_scaling_resize(const cv::Mat& input, const cv::Size& dstSize, const cv::Scalar bgcolor)
+{
     cv::Mat output;
 
-    double h1 = dstSize.width * (input.rows/(double)input.cols);
-    double w2 = dstSize.height * (input.cols/(double)input.rows);
+    double h1 = dstSize.width * (input.rows / (double)input.cols);
+    double w2 = dstSize.height * (input.cols / (double)input.rows);
 
-    if( h1 <= dstSize.height) {
-        cv::resize( input, output, cv::Size(dstSize.width, h1));
+    if (h1 <= dstSize.height) {
+        cv::resize(input, output, cv::Size(dstSize.width, h1));
     } else {
-        cv::resize( input, output, cv::Size(w2, dstSize.height));
+        cv::resize(input, output, cv::Size(w2, dstSize.height));
     }
 
     cv::copyMakeBorder(output, output, 0, dstSize.height - output.rows, 0, dstSize.width - output.cols, cv::BORDER_CONSTANT, bgcolor);

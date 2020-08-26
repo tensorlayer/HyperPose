@@ -450,7 +450,6 @@ namespace dnn {
                 cv::resize(mat, mat, m_inp_size);
         }
 
-
         thread_local std::vector<float> cpu_image_batch_buffer;
         cpu_image_batch_buffer.clear();
 

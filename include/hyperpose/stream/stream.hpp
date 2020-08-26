@@ -233,6 +233,7 @@ public:
     /// Counting ingested frames.
     /// \return The number of ingested frames.
     size_t processed_num() const noexcept { return m_stream_manager.processed_num(); }
+
 private:
     auto& get_tracer()
     {

@@ -5,7 +5,7 @@
 * C++ 17 Compiler. (g++7, clang++4.0, MSVC19.0 or newer)
 * CMake 3.5+ 
 * Third-Party
-    * OpenCV3.2+.
+    * OpenCV3.2+. (**[OpenCV 4+](https://docs.opencv.org/trunk/d7/d9f/tutorial_linux_install.html) is highly recommended**)
     * [CUDA 10.2](https://developer.nvidia.com/cuda-downloads), [CuDNN 7.6.5](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html), [TensorRT 7.0](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html).
     * gFlags(for CLI/examples/tests)
 
@@ -22,7 +22,8 @@
 ```bash
 # >>> Install OpenCV3+ and other dependencies. 
 sudo apt -y install cmake libopencv-dev libgflags-dev
-# You may also install OpenCV from source to get best performance.
+# !Note that the APT version OpenCV3.2 on Ubuntu18.04 has some trouble on Cameras Newer version is suggested.
+# You are highly recommended to install OpenCV 4+ from scratch also for better performance.
 
 # >>> Install dependencies to run the scripts in `${REPO}/scripts`
 sudo apt install python3-dev python3-pip 

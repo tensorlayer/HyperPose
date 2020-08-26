@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7]
 
     steps:
     - uses: actions/checkout@v2
@@ -19,8 +19,19 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Initialize Python Env
       run: python3 -m pip install --upgrade pip
+#    - name: Build OpenCV from scratch
+#      run: |
+#        sudo apt install software-properties-common
+#        sudo add-apt-repository "deb http://security.ubuntu.com/ubuntu xenial-security main"
+#        sudo apt update
+#        sudo apt install git cmake libgtk2.0-dev libavcodec-dev libavformat-dev libswscale-dev libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev
+#        git clone --depth 1 --branch 4.4.0 https://github.com/opencv/opencv.git
+#        cd opencv && mkdir build && cd build
+#        cmake .. -DCMAKE_BUILD_TYPE=Release
+#        cmake --build .
+#        sudo make install
     - name: Install System Dependencies
-      run: sudo apt-get install libopencv-dev libgflags-dev # dependencies
+      run: sudo apt install libgflags-dev libopencv-dev # dependencies
     - name: Check download scripts.
       run: |
         sh scripts/download-test-data.sh
