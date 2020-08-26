@@ -129,7 +129,7 @@ namespace dnn {
 
         parser->registerInput(
             input_name.c_str(),
-            nvinfer1::DimsCHW(3, input_size.height, input_size.width),
+            nvinfer1::Dims3(3, input_size.height, input_size.width),
             nvuffparser::UffInputOrder::kNCHW);
 
         for (auto& name : output_names) {
@@ -172,8 +172,8 @@ namespace dnn {
         if (!parser->parseFromFile(model_file.c_str(), static_cast<int>(nvinfer1::ILogger::Severity::kWARNING))) {
             gLogger.log(
                 nvinfer1::ILogger::Severity::kERROR,
-                ("Failed to parse ONNX in data type: " + to_string(dtype)).c_str());
-            exit(1);
+                ("Failed to parse ONNX model in data type: " + to_string(dtype)).c_str());
+            exit(-1);
         }
 
         if (network->getNbInputs() != 1)
@@ -316,11 +316,12 @@ namespace dnn {
     }
 
     tensorrt::tensorrt(const uff& uff_model, cv::Size input_size,
-        int max_batch_size, data_type dtype, double factor,
+        int max_batch_size, bool keep_ratio, data_type dtype, double factor,
         bool flip_rgb)
         : m_inp_size(input_size)
         , m_flip_rgb(flip_rgb)
         , m_max_batch_size(max_batch_size)
+        , m_keep_ratio(keep_ratio)
         , m_factor(factor)
         , m_cuda_dep(std::make_unique<cuda_dep>(create_uff_engine(uff_model.model_path, input_size, uff_model.input_name, uff_model.output_names,
               max_batch_size, static_cast<nvinfer1::DataType>(dtype.val))))
@@ -329,11 +330,12 @@ namespace dnn {
     }
 
     tensorrt::tensorrt(const tensorrt_serialized& serialized_model, cv::Size input_size,
-        int max_batch_size, double factor,
+        int max_batch_size, bool keep_ratio, double factor,
         bool flip_rgb)
         : m_inp_size(input_size)
         , m_flip_rgb(flip_rgb)
         , m_max_batch_size(max_batch_size)
+        , m_keep_ratio(keep_ratio)
         , m_factor(factor)
         , m_cuda_dep(std::make_unique<cuda_dep>(create_serialized_engine(serialized_model.model_path)))
     {
@@ -341,11 +343,12 @@ namespace dnn {
     }
 
     tensorrt::tensorrt(const onnx& onnx_model, cv::Size input_size,
-        int max_batch_size, data_type dtype, double factor,
+        int max_batch_size, bool keep_ratio, data_type dtype, double factor,
         bool flip_rgb)
         : m_inp_size(input_size)
         , m_flip_rgb(flip_rgb)
         , m_max_batch_size(max_batch_size)
+        , m_keep_ratio(keep_ratio)
         , m_factor(factor)
         , m_cuda_dep(std::make_unique<cuda_dep>(create_onnx_engine(onnx_model.model_path, max_batch_size, static_cast<nvinfer1::DataType>(dtype.val), input_size)))
     {
@@ -440,8 +443,13 @@ namespace dnn {
                 + std::to_string(m_max_batch_size));
 
         // * Step1: Resize.
-        for (auto&& mat : batch)
-            cv::resize(mat, mat, m_inp_size); // This involves in copy.
+        for (auto&& mat : batch) {
+            if (m_keep_ratio)
+                mat = non_scaling_resize(mat, m_inp_size); // This involves in copy.
+            else
+                cv::resize(mat, mat, m_inp_size);
+        }
+
 
         thread_local std::vector<float> cpu_image_batch_buffer;
         cpu_image_batch_buffer.clear();

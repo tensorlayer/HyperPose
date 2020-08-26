@@ -37,12 +37,14 @@ namespace dnn {
         /// \param uff_model See `hyperpose::dnn::uff`.
         /// \param input_size The input image size(height, width).
         /// \param max_batch_size The maximum batch size of the inputs. (for input/output buffer allocation)
+        /// \param keep_ratio Whether to keep original aspect ratio. This is good for accuracy, but requires extra steps to refine the `hyperpose::human_t`.
         /// \param dtype The data type of data element. (for some GPUs, low precision data type will be faster)
         /// \param factor For each element in the input data, they will be multiplied by "factor".
         /// \param flip_rgb Whether to convert the color channels from "BGR" to "RGB".
         explicit tensorrt(const uff& uff_model,
             cv::Size input_size,
             int max_batch_size = 8,
+            bool keep_ratio = false,
             data_type dtype = data_type::kFLOAT,
             double factor = 1. / 255, bool flip_rgb = true);
 
@@ -51,10 +53,11 @@ namespace dnn {
         /// \param onnx_model See `hyperpose::dnn::onnx`.
         /// \param input_size The input image size(width, height).
         /// \param max_batch_size The maximum batch size of the inputs. (for input/output buffer allocation)
+        /// \param keep_ratio Whether to keep original aspect ratio. This is good for accuracy, but requires extra steps to refine the `hyperpose::human_t`.
         /// \param dtype The data type of data element. (for some GPUs, low precision data type will be faster)
         /// \param factor For each element in the input data, they will be multiplied by "factor".
         /// \param flip_rgb Whether to convert the color channels from "BGR" to "RGB".
-        explicit tensorrt(const onnx& onnx_model, cv::Size input_size, int max_batch_size = 8,
+        explicit tensorrt(const onnx& onnx_model, cv::Size input_size, int max_batch_size = 8, bool keep_ratio = false,
             data_type dtype = data_type::kFLOAT,
             double factor = 1. / 255, bool flip_rgb = true);
 
@@ -63,9 +66,11 @@ namespace dnn {
         /// \param serialized_model See `hyperpose::dnn::tensorrt_serialized`.
         /// \param input_size The input image size(width, height).
         /// \param max_batch_size The maximum batch size of the inputs. (for input/output buffer allocation)
+        /// \param keep_ratio Whether to keep original aspect ratio. This is good for accuracy, but requires extra steps to refine the `hyperpose::human_t`.
         /// \param factor For each element in the input data, they will be multiplied by "factor".
         /// \param flip_rgb Whether to convert the color channels from "BGR" to "RGB".
         explicit tensorrt(const tensorrt_serialized& serialized_model, cv::Size input_size, int max_batch_size = 8,
+                          bool keep_ratio = false,
             double factor = 1. / 255, bool flip_rgb = true);
 
         /// Deconstructor of class hyperpose::dnn::tensorrt.
@@ -120,6 +125,7 @@ namespace dnn {
     private:
         const cv::Size m_inp_size; // w, h
         const int m_max_batch_size;
+        const bool m_keep_ratio;
         const double m_factor;
         const bool m_flip_rgb;
 

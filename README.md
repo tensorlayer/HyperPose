@@ -23,11 +23,12 @@ We provide an example to show human pose estimation achieved by HyperPose. You n
 
 ```bash
 sudo apt -y install git cmake build-essential subversion libgflags-dev libopencv-dev
-sh scripts/download-test-data.sh         # Install data for examples.
-sh scripts/download-tinyvgg-model.sh     # Install tiny-vgg model.
+git clone https://github.com/tensorlayer/hyperpose.git && cd hyperpose
+sh scripts/download-test-data.sh                       # Install data for examples.
+sh scripts/download-tinyvgg-model.sh                   # Install tiny-vgg model.
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=RELEASE && make -j # Build library && examples.
-./example.operator_api_batched_images_paf    # The ouput images will be in the build folder.
+cmake .. -DCMAKE_BUILD_TYPE=Release && cmake --build . # Build library && examples.
+./hyperpose-cli                                        # The ouput images will be in the build folder.
 ```
 
 ## Performance

@@ -20,7 +20,7 @@ int main(int argc, char** argv)
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     // * Input video.
-    auto capture = FLAGS_camera ? cv::VideoCapture(0) : cv::VideoCapture(FLAGS_input_video);
+    auto capture = FLAGS_camera ? cv::VideoCapture(0, cv::CAP_V4L2) : cv::VideoCapture(FLAGS_input_video);
     if (!capture.isOpened())
         example_log() << "Cannot open cv::VideoCapture.\n";
 
