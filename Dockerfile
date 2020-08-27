@@ -44,6 +44,9 @@ RUN for file in $(find /hyperpose/scripts -type f -iname 'download*.sh'); do sh 
 RUN cd hyperpose && mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && make -j
 
+# For docker visualization
+RUN apt install libcanberra-gtk-module libcanberra-gtk3-module
+
 WORKDIR /hyperpose/build
 
 ENTRYPOINT ["./hyperpose-cli"]

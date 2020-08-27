@@ -94,7 +94,7 @@ int main(int argc, char** argv)
         cli_log() << "Imshow functionality is enabled only when using operator runtime mode.\n";
     }
 
-    if (!cap.isOpened() && FLAGS_runtime == kOPERATOR) {
+    if (cap.isOpened() && FLAGS_runtime == kOPERATOR) {
         FLAGS_max_batch_size = 1;
         cli_log() << "Batching is not enabled when [VideoCapture + OperatorRuntime]. Hence, set max_batch_size to 1 for better performance.\n";
     }
