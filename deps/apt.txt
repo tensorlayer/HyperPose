@@ -1,5 +1,0 @@
-libnvinfer-dev
-libnvinfer-plugin-dev
-libnvparsers-dev
-libnvonnxparsers-dev
-libopencv-dev
