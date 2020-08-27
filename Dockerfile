@@ -18,7 +18,7 @@ RUN apt update --allow-unauthenticated && version="7.0.0-1+cuda10.2" ; \
 # Install OpenCV Dependencies
 RUN apt install -y software-properties-common || apt install -y software-properties-common && \
     add-apt-repository "deb http://security.ubuntu.com/ubuntu xenial-security main" && \
-    APT_DEPS="git cmake libgtk-3-dev libavcodec-dev libavformat-dev libswscale-dev libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev x264 v4l-utils python3-dev python3-pip" && \
+    APT_DEPS="git cmake libgtk-3-dev libavcodec-dev libavformat-dev libswscale-dev libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev x264 v4l-utils python3-dev python3-pip libcanberra-gtk-module libcanberra-gtk3-module" && \
     apt install -y $APT_DEPS || apt install -y $APT_DEPS && \
     python3 -m pip install numpy
 
@@ -27,10 +27,11 @@ RUN git clone --branch 4.4.0 https://github.com/opencv/opencv.git && \
     cd opencv && mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release \
              -DCMAKE_INSTALL_PREFIX=/usr/local \
-             -DWITH_TBB=ON -DWITH_V4L=ON \
+             -DWITH_TBB=ON \
+             -DWITH_V4L=ON \
              -DBUILD_TESTS=OFF \
              -DBUILD_OPENCV_PYTHON3=OFF && \
-             make -j8 && make install
+    make -j && make install
 
 # Install HyperPose Dependencies
 RUN apt install -y python3-dev python3-pip subversion libgflags-dev
@@ -43,9 +44,6 @@ RUN for file in $(find /hyperpose/scripts -type f -iname 'download*.sh'); do sh 
 # Build Repo
 RUN cd hyperpose && mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && make -j
-
-# For docker visualization
-RUN apt install libcanberra-gtk-module libcanberra-gtk3-module
 
 WORKDIR /hyperpose/build
 
