@@ -194,12 +194,15 @@ int main(int argc, char** argv)
                 }
                 auto prediction_time = std::chrono::duration<double, std::milli>(clk_t::now() - beg).count();
 
-                cv::putText(mat, std::to_string(prediction_time) + " ms", { 10, 10 }, cv::FONT_HERSHEY_SIMPLEX, 0.5, { 0, 255, 0 }, 2);
-                cv::imshow("HyperPose Prediction", mat);
-
                 writer << mat;
-                if (cv::waitKey(1) == 27)
-                    break;
+
+                if (FLAGS_imshow) {
+                    cv::putText(mat, std::to_string(prediction_time) + " ms", { 10, 10 }, cv::FONT_HERSHEY_SIMPLEX, 0.5, { 0, 255, 0 }, 2);
+                    cv::imshow("HyperPose Prediction", mat);
+
+                    if (cv::waitKey(1) == 27)
+                        break;
+                }
             }
         } else { // For Vec<Image>.
             auto beg = clk_t::now();
@@ -234,10 +237,11 @@ int main(int argc, char** argv)
 
             auto inference_time = std::chrono::duration<double, std::milli>(clk_t::now() - beg).count();
 
-            if (images.size() == 1) {
+            if (images.size() == 1 && FLAGS_imshow) {
                 cv::imshow("HyperPose Prediction", tmp.front());
                 cv::waitKey();
             }
+
             std::cout << counter << " images got processed. FPS = "
                       << 1000. * counter / inference_time
                       << '\n';
