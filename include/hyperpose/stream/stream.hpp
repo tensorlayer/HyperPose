@@ -27,7 +27,9 @@ public:
     template <typename, typename>
     friend class stream;
 
-    basic_stream_manager(size_t uniform_max_size, bool use_original_resolution);
+    basic_stream_manager(size_t uniform_max_size, bool use_original_resolution, bool keep_ratio, cv::Size inp_size);
+
+    size_t processed_num() const noexcept;
 
     void read_from(const std::vector<cv::Mat>&);
     void read_from(cv::VideoCapture&);
@@ -41,8 +43,8 @@ public:
     template <typename ParserList>
     void parse_from_internals(ParserList&& parser_list);
 
-    template <typename NameGetter>
-    enable_if_name_getter_t<NameGetter> write_to(NameGetter&& name_getter);
+    template <typename NameGenerator>
+    enable_if_name_getter_t<NameGenerator> write_to(NameGenerator&& name_getter);
     void write_to(cv::VideoWriter&);
 
     void add_queue_monitor(double milli = 1000);
@@ -51,7 +53,10 @@ public:
 
 private:
     std::atomic<size_t> m_remaining_num{ 0 };
+    std::atomic<size_t> m_ingest{ 0 };
     const bool m_use_original_resolution;
+    const bool m_keep_ratio;
+    cv::Size m_input_size;
 
     bool m_shutdown = false;
     std::mutex m_global_mutex;
@@ -120,14 +125,15 @@ public:
     /// \param engine The reference to the DNN engine object.
     /// \param parser The reference to the parser object.
     /// \param use_original_resolution If true, the output image size will be the input image size, otherwise the DNN input size.
+    /// \param keep_ratio Whether to keep original aspect ratio. This is good for accuracy, but requires extra steps to refine the `hyperpose::human_t`.
     /// \param parser_cnt The number of parsers to do parallel post processing. (default: the DNN engine's batch size)
     /// \param queue_max_size The maximum value of internal packet queue sizes.
     /// \note Using the DNN input size as the output resolution(`use_original_resolution = false`) is usually faster.
     /// Because it reduces 1x memory copy. However, the DNN input size are usually much smaller than what you expected.
     /// Hence, you can set it `true` for output image quality, or set it `false` for performance.
     /// \note We highly recommend you to initialize the stream using `hyperpose::make_stream`.
-    explicit stream(DNNEngine& engine, Parser& parser, bool use_original_resolution = false, size_t parser_cnt = 0, size_t queue_max_size = 128)
-        : m_stream_manager(queue_max_size, use_original_resolution)
+    explicit stream(DNNEngine& engine, Parser& parser, bool use_original_resolution = false, bool keep_ratio = false, size_t parser_cnt = 0, size_t queue_max_size = 128)
+        : m_stream_manager(queue_max_size, use_original_resolution, keep_ratio, engine.input_size())
         , m_engine_ref(engine)
         , m_main_parser_ref(parser)
         , m_parser_replicas(parser_cnt == 0 ? engine.max_batch_size() : parser_cnt, parser)
@@ -224,6 +230,10 @@ public:
         m_stream_manager.add_queue_monitor(milli_count);
     }
 
+    /// Counting ingested frames.
+    /// \return The number of ingested frames.
+    size_t processed_num() const noexcept { return m_stream_manager.processed_num(); }
+
 private:
     auto& get_tracer()
     {
@@ -317,12 +327,10 @@ template <typename Engine>
 void basic_stream_manager::dnn_inference_from_resized_images(Engine&& engine)
 {
     while (true) {
-        //        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
         {
             std::unique_lock lk{ m_resized_queue.m_mu };
             m_cv_resize.wait(lk, [this] { return m_resized_queue.m_size > 0 || m_shutdown; });
         }
-        //        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             break;
@@ -334,20 +342,17 @@ void basic_stream_manager::dnn_inference_from_resized_images(Engine&& engine)
 
         m_cv_dnn_inf.notify_one();
     }
-    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 template <typename ParserList>
 void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
 {
     while (true) {
-        //        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
         {
             std::unique_lock lk{ m_after_inference_queue.m_mu };
             m_cv_dnn_inf.wait(lk,
                 [this] { return m_after_inference_queue.m_size > 0 || m_shutdown; });
         }
-        //        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             break;
@@ -377,7 +382,6 @@ void basic_stream_manager::parse_from_internals(ParserList&& parser_list)
         m_pose_sets_queue.wait_until_pushed(std::move(pose_sets));
         m_cv_post_processing.notify_one();
     }
-    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 template <typename NameGetter>
@@ -385,12 +389,10 @@ basic_stream_manager::enable_if_name_getter_t<NameGetter>
 basic_stream_manager::write_to(NameGetter&& name_getter)
 {
     while (true) {
-        //        std::cout << __PRETTY_FUNCTION__ << " LOCK\n";
         {
             std::unique_lock lk{ m_pose_sets_queue.m_mu };
             m_cv_post_processing.wait(lk, [this] { return m_pose_sets_queue.m_size > 0 || m_shutdown; });
         }
-        //        std::cout << __PRETTY_FUNCTION__ << " UNLOCK\n";
 
         if (m_pose_sets_queue.m_size == 0 && m_shutdown)
             break;
@@ -398,8 +400,11 @@ basic_stream_manager::write_to(NameGetter&& name_getter)
         auto pose_set = m_pose_sets_queue.dump_all();
         for (auto&& poses : pose_set) {
             auto raw_image = m_input_queue_replica.dump().value();
-            for (auto&& pose : poses)
+            for (auto&& pose : poses) {
+                if (m_keep_ratio)
+                    resume_ratio(pose, raw_image.size(), m_input_size);
                 draw_human(raw_image, pose);
+            }
             cv::imwrite(name_getter(), raw_image);
             --m_remaining_num;
         }
@@ -408,6 +413,5 @@ basic_stream_manager::write_to(NameGetter&& name_getter)
             break;
     }
     m_shutdown_notifier.notify_one();
-    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
 }
 }

@@ -3,8 +3,10 @@
 
 namespace hyperpose {
 
-basic_stream_manager::basic_stream_manager(size_t uniform_max_size, bool use_original_resolution)
+basic_stream_manager::basic_stream_manager(size_t uniform_max_size, bool use_original_resolution, bool keep_ratio, cv::Size inp_size)
     : m_use_original_resolution(use_original_resolution)
+    , m_keep_ratio(keep_ratio)
+    , m_input_size(inp_size)
     , m_input_queue(uniform_max_size)
     , m_input_queue_replica(uniform_max_size * 4)
     , m_resized_queue(uniform_max_size)
@@ -23,35 +25,43 @@ void basic_stream_manager::read_from(const std::vector<cv::Mat>& inputs)
     }
     m_input_queue.wait_until_pushed(it, inputs.end());
     m_remaining_num += inputs.size();
+    m_ingest += inputs.size();
     m_cv_data_i.notify_one();
-    //    std::cout << "Exit: " << __PRETTY_FUNCTION__ << std::endl;
+}
+
+size_t basic_stream_manager::processed_num() const noexcept
+{
+    return m_ingest;
 }
 
 void basic_stream_manager::read_from(cv::VideoCapture& cap)
 {
-    // TODO: Support camera frame counting.
-    size_t supposed_decoded = cap.get(cv::CAP_PROP_FRAME_COUNT) - cap.get(cv::CAP_PROP_POS_FRAMES);
+    if (-1 == cap.get(cv::CAP_PROP_FRAME_COUNT))
+        error("STREAM API is designed for offline video processing. Please use operator API for camera video processing.\n");
+
+    const int supposed_decoded = std::round(cap.get(cv::CAP_PROP_FRAME_COUNT) - cap.get(cv::CAP_PROP_POS_FRAMES) + 0.5);
     m_remaining_num += supposed_decoded;
 
-    size_t really_decoded = 0;
+    int really_decoded = 0;
     while (cap.isOpened()) {
         cv::Mat mat;
         cap >> mat;
+        ++m_ingest;
         if (mat.empty())
             break;
         m_input_queue.wait_until_pushed(mat);
         m_cv_data_i.notify_one();
         ++really_decoded;
     }
-    size_t diff = supposed_decoded - really_decoded;
-    if (diff != 0)
-        m_remaining_num -= diff;
+    const int diff = supposed_decoded - really_decoded;
+    m_remaining_num -= diff;
 }
 
 void basic_stream_manager::read_from(cv::Mat mat)
 {
     m_input_queue.wait_until_pushed(mat);
     ++m_remaining_num;
+    ++m_ingest;
     m_cv_data_i.notify_one();
 }
 
@@ -71,18 +81,24 @@ void basic_stream_manager::resize_from_inputs(cv::Size size)
         std::vector<cv::Mat> after_resize_mats;
         after_resize_mats.reserve(inputs.size());
 
-        for (size_t i = 0; i < inputs.size(); ++i) {
-            if (inputs[i].empty()) {
+        for (auto& input : inputs) {
+            if (input.empty()) {
                 warning("Got an empty image, skipped");
                 --m_remaining_num;
             } else {
                 if (!m_use_original_resolution) {
-                    cv::resize(inputs[i], inputs[i], size);
-                    after_resize_mats.push_back(inputs[i]);
+                    if (m_keep_ratio)
+                        input = non_scaling_resize(input, size);
+                    else
+                        cv::resize(input, input, size);
+                    after_resize_mats.push_back(input);
                 } else {
+                    m_input_queue_replica.wait_until_pushed(input);
                     cv::Mat resized;
-                    m_input_queue_replica.wait_until_pushed(inputs[i]);
-                    cv::resize(inputs[i], resized, size);
+                    if (m_keep_ratio)
+                        resized = non_scaling_resize(input, size);
+                    else
+                        cv::resize(input, resized, size);
                     after_resize_mats.push_back(resized);
                 }
             }
@@ -111,8 +127,11 @@ void basic_stream_manager::write_to(cv::VideoWriter& writer)
             auto pose_set = m_pose_sets_queue.dump_all();
             for (auto&& poses : pose_set) {
                 auto raw_image = std::move(m_input_queue_replica.dump().value());
-                for (auto&& pose : poses)
+                for (auto&& pose : poses) {
+                    if (m_keep_ratio)
+                        resume_ratio(pose, raw_image.size(), m_input_size);
                     draw_human(raw_image, pose);
+                }
                 writer << raw_image;
                 --m_remaining_num;
             }
@@ -134,6 +153,7 @@ void basic_stream_manager::add_queue_monitor(double milli)
         while (!m_shutdown) {
             info("Reporting Stream Status:\n");
             info("Remaining frames: ", m_remaining_num, '\n');
+            info("Pushed frames: ", m_ingest, '\n');
             info("Shutdown or not: ", (m_shutdown ? "SHUTDOWN" : "ALIVE"), '\n');
             info("thread_safe_queue<cv::Mat> m_input_queue -> Size = ", m_input_queue.unsafe_size(), '/', m_input_queue.capacity(), '\n');
             info("thread_safe_queue<cv::Mat> m_input_queue_replica -> Size = ", m_input_queue_replica.unsafe_size(), '/', m_input_queue_replica.capacity(), '\n');

@@ -2,23 +2,13 @@
 
 set -e
 
-[ $(which gdown) ] || (echo "Downloading gdown via PIP" && python3 -m pip install gdown)
+[ $(which gdown) ] || (echo "Downloading gdown via PIP" && python3 -m pip install gdown -U)
 
 model_name="ppn-resnet50-V2-HW=384x384.onnx"
-model_md5="0d1df2e61c0f550185d562ec67a5f2ca"
-gdrive_file_id="1qMSipZ5_QMyRuNQ7ux5isNxwr678ctwG"
 
-cd $(dirname $0)
+BASEDIR=$(realpath "$(dirname $0)")
+cd $BASEDIR
 mkdir -p ../data/models
 cd ../data/models
 
-if [ ! -f "$model_name" ] || [ "$(md5sum "$model_name" | cut -d ' ' -f 1)" != "$model_md5" ] ; then
-    echo "Installing $model_name ..."
-    python3 -c "import gdown ; gdown.download('"https://drive.google.com/uc?id=$gdrive_file_id"', quiet=False)"
-fi
-
-if [ "$(md5sum "$model_name" | cut -d ' ' -f 1)" != "$model_md5" ] ; then
-    echo "Failed to install $model_name. The MD5 code doesn't match!"
-else
-    echo "$model_name installed!"
-fi
+python3 "$BASEDIR/downloader.py" --model $model_name

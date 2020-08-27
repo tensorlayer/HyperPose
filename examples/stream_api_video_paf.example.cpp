@@ -31,7 +31,10 @@ int main(int argc, char** argv)
         FLAGS_output_video,
         capture.get(cv::CAP_PROP_FOURCC),
         capture.get(cv::CAP_PROP_FPS),
-        cv::Size(FLAGS_input_width, FLAGS_input_height));
+        FLAGS_original_resolution ? cv::Size(
+            capture.get(cv::CAP_PROP_FRAME_WIDTH),
+            capture.get(cv::CAP_PROP_FRAME_HEIGHT))
+                                  : cv::Size(FLAGS_input_width, FLAGS_input_height));
 
     // Basic information about videos.
     example_log() << "Input video name: " << FLAGS_input_video << std::endl;

@@ -20,25 +20,13 @@ public:
     /// \param name Tensor name. (Often from DNN engine graphs)
     /// \param tensor Tensor data.
     /// \param shape Shape of tensor. (no batch dimension)
-    inline feature_map_t(std::string name, std::unique_ptr<char[]>&& tensor, std::vector<int> shape)
-        : m_name(std::move(name))
-        , m_data(std::move(tensor))
-        , m_shape(std::move(shape))
-    {
-    }
+    feature_map_t(std::string name, std::unique_ptr<char[]>&& tensor, std::vector<int> shape);
 
     /// \brief Output operator.
     /// \param out Output stream.
     /// \param map Feature map.
     /// \return The output stream.
-    inline friend std::ostream& operator<<(std::ostream& out, const feature_map_t& map)
-    {
-        out << map.m_name << ":[";
-        for (auto& s : map.m_shape)
-            out << s << ", ";
-        out << ']';
-        return out;
-    }
+    friend std::ostream& operator<<(std::ostream& out, const feature_map_t& map);
 
     ///
     /// \return Name of this feature map.
@@ -75,5 +63,7 @@ using internal_t = std::vector<feature_map_t>;
 /// \warning Users must ensure that the size in parameter `images` are the same.
 void nhwc_images_append_nchw_batch(
     std::vector<float>& data, std::vector<cv::Mat> images, double factor = 1.0, bool flip_rb = true);
+
+cv::Mat non_scaling_resize(const cv::Mat& input, const cv::Size& dstSize, const cv::Scalar bgcolor = { 0, 0, 0 });
 
 } // namespace hyperpose

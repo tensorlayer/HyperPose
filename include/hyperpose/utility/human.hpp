@@ -24,17 +24,6 @@ template <size_t J>
 struct human_t_ {
     std::array<body_part_t, J> parts; ///< An array to tell all key point information. The index means the position.
     float score;
-
-    inline void print() const
-    {
-        for (int i = 0; i < J; ++i) {
-            const auto p = parts[i];
-            if (p.has_value) {
-                printf("BodyPart:%d-(%.2f, %.2f) score=%.2f ", i, p.x, p.y, p.score);
-            }
-        }
-        printf("score=%.2f\n", score);
-    }
 };
 
 /// \brief Class to describe a COCO human type(18 parts and 19 pairs).
@@ -45,5 +34,27 @@ using human_t = human_t_<COCO_N_PARTS>;
 /// \param img Image to be visualized.
 /// \param human Human topology.
 void draw_human(cv::Mat& img, const human_t& human);
+
+/// Resume the original scale when keeping the input ratio.
+///
+/// \tparam J The maximum key point of a human.
+/// \param human Given unresumed human topology.
+/// \param src Original resolution(image resolution).
+/// \param dst DNN input resolution.
+template <size_t J>
+inline void resume_ratio(human_t_<J>& human, cv::Size src, cv::Size dst)
+{
+    // src => say imread ratio.
+    // dst => say network ratio
+    if (src.height * dst.width > src.width * dst.height) { // Adjust x / width
+        double xratio = (double)dst.width * src.height / (dst.height * src.width);
+        for (auto& par : human.parts)
+            par.x *= xratio;
+    } else { // Adjust y / height
+        double yratio = (double)dst.height * src.width / (dst.width * src.height);
+        for (auto& par : human.parts)
+            par.y *= yratio;
+    }
+}
 
 } // namespace hyperpose

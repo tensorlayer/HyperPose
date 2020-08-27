@@ -23,7 +23,7 @@ touch main.cpp
 cd ../..
 mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DBUILD_USER_CODES=ON # BUILD_USER_CODES is by default on
-make -j$(nproc)
+cmake --build .
 
 # Execute your codes.
 ```

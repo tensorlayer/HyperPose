@@ -13,3 +13,8 @@ inline constexpr auto example_log = []() -> std::ostream& {
     std::cout << "[HyperPose::EXAMPLE] ";
     return std::cout;
 };
+
+inline constexpr auto cli_log = []() -> std::ostream& {
+    std::cout << "[HyperPose::CLI] ";
+    return std::cout;
+};

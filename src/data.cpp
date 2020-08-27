@@ -2,6 +2,22 @@
 
 namespace hyperpose {
 
+feature_map_t::feature_map_t(std::string name, std::unique_ptr<char[]>&& tensor, std::vector<int> shape)
+    : m_name(std::move(name))
+    , m_data(std::move(tensor))
+    , m_shape(std::move(shape))
+{
+}
+
+std::ostream& operator<<(std::ostream& out, const feature_map_t& map)
+{
+    out << map.m_name << ":[";
+    for (auto& s : map.m_shape)
+        out << s << ", ";
+    out << ']';
+    return out;
+}
+
 void nhwc_images_append_nchw_batch(std::vector<float>& data, std::vector<cv::Mat> images, double factor, bool flip_rb)
 {
     if (images.empty())
@@ -33,5 +49,23 @@ void nhwc_images_append_nchw_batch(std::vector<float>& data, std::vector<cv::Mat
             }
     }
 } // TODO: Parallel.
+
+cv::Mat non_scaling_resize(const cv::Mat& input, const cv::Size& dstSize, const cv::Scalar bgcolor)
+{
+    cv::Mat output;
+
+    double h1 = dstSize.width * (input.rows / (double)input.cols);
+    double w2 = dstSize.height * (input.cols / (double)input.rows);
+
+    if (h1 <= dstSize.height) {
+        cv::resize(input, output, cv::Size(dstSize.width, h1));
+    } else {
+        cv::resize(input, output, cv::Size(w2, dstSize.height));
+    }
+
+    cv::copyMakeBorder(output, output, 0, dstSize.height - output.rows, 0, dstSize.width - output.cols, cv::BORDER_CONSTANT, bgcolor);
+
+    return output;
+}
 
 } // namespace hyperpose

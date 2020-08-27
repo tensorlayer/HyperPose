@@ -3,7 +3,7 @@ set(POSE_LIB_NAME hyperpose)
 
 # Dependencies(OpenCV & CUDA)
 INCLUDE(cmake/cuda.cmake)
-FIND_PACKAGE(OpenCV)
+FIND_PACKAGE(OpenCV REQUIRED)
 
 ADD_LIBRARY(
         ${POSE_LIB_NAME} # SHARED

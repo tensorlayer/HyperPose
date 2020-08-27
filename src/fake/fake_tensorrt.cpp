@@ -27,33 +27,36 @@ namespace dnn {
     }
 
     tensorrt::tensorrt(const uff& uff_model, cv::Size input_size,
-        int max_batch_size, data_type dtype, double factor,
+        int max_batch_size, bool keep_ratio, data_type dtype, double factor,
         bool flip_rgb)
         : m_inp_size(input_size)
         , m_flip_rgb(flip_rgb)
         , m_max_batch_size(max_batch_size)
+        , m_keep_ratio(keep_ratio)
         , m_factor(factor)
     {
         error_exit_fake();
     }
 
     tensorrt::tensorrt(const tensorrt_serialized& serialized_model, cv::Size input_size,
-        int max_batch_size, double factor,
+        int max_batch_size, bool keep_ratio, double factor,
         bool flip_rgb)
         : m_inp_size(input_size)
         , m_flip_rgb(flip_rgb)
         , m_max_batch_size(max_batch_size)
+        , m_keep_ratio(keep_ratio)
         , m_factor(factor)
     {
         error_exit_fake();
     }
 
     tensorrt::tensorrt(const onnx& onnx_model, cv::Size input_size,
-        int max_batch_size, data_type dtype, double factor,
+        int max_batch_size, bool keep_ratio, data_type dtype, double factor,
         bool flip_rgb)
         : m_inp_size(input_size)
         , m_flip_rgb(flip_rgb)
         , m_max_batch_size(max_batch_size)
+        , m_keep_ratio(keep_ratio)
         , m_factor(factor)
     {
         error_exit_fake();

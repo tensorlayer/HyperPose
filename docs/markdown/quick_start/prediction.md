@@ -3,12 +3,12 @@
 ## Prerequisites
 
 * Make sure you have HyperPose installed. (if not, you can refer to [here](../install/prediction.md)).
-* Make sure you have `svn`(subversion) and `curl` installed. (will be used in command line scripts)
+* Make sure you have `svn`(subversion) and `python3-pip` installed. (will be used in command line scripts)
 
 For Linux users, you may:
 
 ```bash
-sudo apt -y install subversion curl
+sudo apt -y install subversion python3 python3-pip
 ```
 
 ## Install Test Data
@@ -37,33 +37,50 @@ sh scripts/download-ppn-res50-model.sh          # ~50  MB (PoseProposal Algorith
 
 ## Predict a sequence of images
 
-> To see the flags of the following examples, just type `${exe} --help`
-
 ### Using a fast model
 
 ```bash
 # cd to your build directory.
 
-# Take images in ../data/media as a big batch and do prediction.
-
-./example.operator_api_batched_images_paf
-# The same as: `./example.operator_api_batched_images_paf --model_file ../data/models/TinyVGG-V1-HW=256x384.uff --input_folder ../data/media --input_width 384 --input_height 256`
+# Predict all images in `../data/media`
+./hyperpose-cli --source ../data/media --model ../data/models/TinyVGG-V1-HW=256x384.uff
+# The source flag can be ignored as the default value is `../data/media`.
 ```
 
 The output images will be in the build folder.
 
+> If you met logging message like `ERROR: Tensor image cannot be both input and output` please just ignore it. 
+
+### Table of flags for `hyperpose-cli`
+
+> Also see: `./hyperpose-cli --help`
+
+| Flag           | Meaning                                                      | Default                                  |
+| -------------- | ------------------------------------------------------------ | ---------------------------------------- |
+| model          | Path to your model.                                          | ../data/models/TinyVGG-V1-HW=256x384.uff |
+| source         | Path to your source. <br />The source can be a folder path, a video path, an image path or the key word `camera` to open your camera. | ../data/media/video.avi                  |
+| post           | Post-processing methods. This key can be `paf` or `ppn`.     | paf                                      |
+| keep_ratio     | The DNN takes a fixed input size, where the images must resize to fit that input resolution. However, not hurt the original human scale, we may want to resize by padding. And this is flag enable you to do inference without break original human ratio. (Good for accuracy) | true                                     |
+| w              | The input width of your model. Currently, the trained models we provide all have specific requirements for input resolution. | 384(for your the tiny-vgg model)         |
+| h              | The input height of your model.                              | 256(for your the tiny-vgg model)         |
+| max_batch_size | Maximum batch size for inference engine to execute.          | 8                                        |
+| runtime        | Which runtime type to use. This can be `operator` or `stream`. If you want to open your camera or producing `imshow` window, please use `operator`. For better processing throughput on videos, please use `stream`. | operator                                 |
+| imshow         | true                                                         | Whether to open an `imshow` window.      |
+| saving_prefix  | The output media resource will be named after '$(saving_prefix)_$(ID).$(format) | "output"                                 |
+| logging        | Print the internal logging information or not.               | false                                    |
+
 ### Using a precise model
 
 ```bash
-./example.operator_api_batched_images_paf --model_file ../data/models/openpose-thin-V2-HW=368x432.onnx --input_width 432 --input_height 368 
+./hyperpose-cli --model ../data/models/openpose-thin-V2-HW=368x432.onnx --w 432 --h 368 
 
-./example.operator_api_batched_images_paf --model_file ../data/models/openpose-coco-V2-HW=368x656.onnx --input_width 656 --input_height 368 
+./hyperpose-cli --model ../data/models/openpose-coco-V2-HW=368x656.onnx --w 656 --h 368 
 ```
 
 ### Use PoseProposal model
 
 ```bash
-./example.operator_api_batched_images_pose_proposal --model_file ../data/models/ppn-resnet50-V2-HW=384x384.onnx --input_width 368 --input_height 368
+./hyperpose-cli --model ../data/models/ppn-resnet50-V2-HW=384x384.onnx --w 384 --h 384 --post=ppn
 ```
 
 ### Convert models into TensorRT Engine Protobuf format
@@ -73,17 +90,18 @@ You may find that it takes one or two minutes before the real prediction starts.
 To save the model conversion time, you can convert it in advance.
 
 ```bash
-./example.gen_serialized_engine --model_file ../data/models/openpose_coco.onnx --input_width 656 --input_height 368 --max_batch_size 20
-# You'll get ../data/models/openpose_coco.onnx.trt
+./example.gen_serialized_engine --model_file ../data/models/openpose-coco-V2-HW=368x656.onnx --input_width 656 --input_height 368 --max_batch_size 20
+# You'll get ../data/models/openpose-coco-V2-HW=368x656.onnx.trt
+# If you only want to do inference on single images(batch size = 1), please use `--max_batch_size 1` and this will improve the engine's performance.
 
 # Use the converted model to do prediction
-./example.operator_api_batched_images_paf --model_file ../data/models/openpose_coco.onnx.trt --input_width 656 --input_height 368
+./hyperpose-cli --model ../data/models/openpose-coco-V2-HW=368x656.onnx.trt --w 656 --h 368
 ```
 
 ## Predict a video using Operator API
 
 ```bash
-./example.operator_api_video_paf  # Using the fast model by default.
+./hyperpose-cli --runtime=operator --source=../data/media/video.avi
 ```
 
 The output video will be in the building folder.
@@ -91,11 +109,14 @@ The output video will be in the building folder.
 ## Predict a video using Stream API(faster)
 
 ```bash
-./example.stream_api_video_paf    # Using the fast model by default.
+./hyperpose-cli --runtime=stream --source=../data/media/video.avi
+# In stream API, the imshow functionality will be closed.
 ```
 
 ## Play with camera
 
-```camera
-./example.operator_api_imshow_paf --camera
+```bash
+./hyperpose-cli --source=camera
+# Note that camera mode is not compatible with Stream API. If you want to do inference on your camera in real time, the Operator API is designed for it.
 ```
+
