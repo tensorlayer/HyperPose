@@ -193,7 +193,6 @@ int main(int argc, char** argv)
                     hp::draw_human(mat, pose);
                 }
                 auto prediction_time = std::chrono::duration<double, std::milli>(clk_t::now() - beg).count();
-
                 writer << mat;
 
                 if (FLAGS_imshow) {
