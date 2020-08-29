@@ -43,7 +43,7 @@ sh scripts/download-ppn-res50-model.sh          # ~50  MB (PoseProposal Algorith
 # cd to your build directory.
 
 # Predict all images in `../data/media`
-./hyperpose-cli --source ../data/media --model ../data/models/TinyVGG-V1-HW=256x384.uff
+./hyperpose-cli --source ../data/media --model ../data/models/lopps-resnet50-V2-HW=368x432.onnx --w 368 --h 432
 # The source flag can be ignored as the default value is `../data/media`.
 ```
 
@@ -67,6 +67,7 @@ The output images will be in the build folder.
 | runtime        | Which runtime type to use. This can be `operator` or `stream`. If you want to open your camera or producing `imshow` window, please use `operator`. For better processing throughput on videos, please use `stream`. | operator                                 |
 | imshow         | true                                                         | Whether to open an `imshow` window.      |
 | saving_prefix  | The output media resource will be named after '$(saving_prefix)_$(ID).$(format) | "output"                                 |
+| alpha          | The weight of key point visualization. (from 0 to 1)         | 0.5   
 | logging        | Print the internal logging information or not.               | false                                    |
 
 ### Using a precise model
