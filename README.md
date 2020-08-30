@@ -6,7 +6,7 @@
 <p align="center">
     <a href="https://readthedocs.org/projects/hyperpose/badge/?version=latest" title="Docs Building"><img src="https://readthedocs.org/projects/hyperpose/badge/?version=latest"></a>
     <a href="https://github.com/tensorlayer/hyperpose/actions?query=workflow%3ACI" title="Build Status"><img src="https://github.com/tensorlayer/hyperpose/workflows/CI/badge.svg"></a>
-    <a href="https://hub.docker.com/repository/docker/tensorlayer/hyperpose" title="Docker"><img src="https://img.shields.io/docker/image-size/tensorlayer/hyperpose"></a>
+    <a href="https://hub.docker.com/r/tensorlayer/hyperpose" title="Docker"><img src="https://img.shields.io/docker/image-size/tensorlayer/hyperpose"></a>
     <a href="https://drive.google.com/drive/folders/1w9EjMkrjxOmMw3Rf6fXXkiv_ge7M99jR?usp=sharing" title="PreTrainedModels"><img src="https://img.shields.io/badge/trained%20models-GoogleDrive-brightgreen.svg"></a>
     <a href="https://en.cppreference.com/w/cpp/17" title="CppStandard"><img src="https://img.shields.io/badge/C++-17-blue.svg?style=flat&logo=c%2B%2B"></a>
     <a href="https://github.com/tensorlayer/hyperpose/graphs/commit-activity" title="Maintenance"><img src="https://img.shields.io/badge/maintained%3F-YES-brightgreen.svg"></a>
