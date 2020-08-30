@@ -1,10 +1,29 @@
-# HyperPose
+</a>
+<p align="center">
+    <img src="./docs/markdown/images/logo.png", width="800">
+</p>
 
-[![Documentation Status](https://readthedocs.org/projects/hyperpose/badge/?version=latest)](https://hyperpose.readthedocs.io/en/latest/?badge=latest)
+<p align="center">
+    <a href="https://readthedocs.org/projects/hyperpose/badge/?version=latest" title="Docs Building"><img src="https://readthedocs.org/projects/hyperpose/badge/?version=latest"></a>
+    <a href="https://github.com/tensorlayer/hyperpose/actions?query=workflow%3ACI" title="Build Status"><img src="https://github.com/tensorlayer/hyperpose/workflows/CI/badge.svg"></a>
+    <a href="https://hub.docker.com/repository/docker/tensorlayer/hyperpose" title="Docker"><img src="https://img.shields.io/docker/image-size/tensorlayer/hyperpose"></a>
+    <a href="https://drive.google.com/drive/folders/1w9EjMkrjxOmMw3Rf6fXXkiv_ge7M99jR?usp=sharing" title="PreTrainedModels"><img src="https://img.shields.io/badge/trained%20models-GoogleDrive-brightgreen.svg"></a>
+    <a href="https://en.cppreference.com/w/cpp/17" title="CppStandard"><img src="https://img.shields.io/badge/C++-17-blue.svg?style=flat&logo=c%2B%2B"></a>
+    <a href="https://github.com/tensorlayer/hyperpose/graphs/commit-activity" title="Maintenance"><img src="https://img.shields.io/badge/maintained%3F-YES-brightgreen.svg"></a>
+    <a href="https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst" title="TensorLayer"><img src="https://img.shields.io/github/license/tensorlayer/tensorlayer">
+</p>
+
+---
+
+<p align="center">
+    <a href="#Features">Features</a> •
+    <a href="#Documentation">Documentation</a> •
+    <a href="#Quick-Start-with-Docker">Quick-Start with Docker</a> •
+    <a href="#Performance">Performance</a> •
+    <a href="#License">License</a>
+</p>
 
 HyperPose is a library for building human pose estimation systems that can efficiently operate in the wild.
-
-> **News**: The PoseProposal inference model is released! See the HyperPose models on [Google Drive](https://drive.google.com/drive/folders/1w9EjMkrjxOmMw3Rf6fXXkiv_ge7M99jR?usp=sharing).
 
 ## Features
 
@@ -13,42 +32,63 @@ HyperPose has two key features, which are not available in existing libraries:
 - **Flexible training platform**: HyperPose provides flexible Python APIs to build many useful pose estimation models (e.g., OpenPose and PoseProposalNetwork). HyperPose users can, for example, customize data augmentation, use parallel GPUs for training, and replace deep neural networks (e.g., changing from ResNet to MobileNet), thus building models specific to their real-world scenarios.
 - **High-performance pose estimation**: HyperPose achieves real-time pose estimation though a high-performance pose estimation engine. This engine implements numerous system optimizations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. This allows HyperPose to run 4x faster than OpenPose and 10x faster than TF-Pose.
 
-## Get Started
+## Documentation
 
-You can install HyperPose and learn its APIs through [Documentation](https://hyperpose.readthedocs.io/en/latest/).
+You can install HyperPose(Python Training Library, C++ inference Library) and learn its APIs through [HyperPose Documentation](https://hyperpose.readthedocs.io/en/latest/).
 
-## Example
+## Quick-Start with Docker
 
-We provide an example to show human pose estimation achieved by HyperPose. You need to install CUDA Toolkit 10+, TensorRT 7+, OpenCV 3.2+ and gFlags (cmake version), and enable C++ 17 support. Once the prerequisite are met, run the following script:
+The official docker image is on [DockerHub](https://hub.docker.com/r/tensorlayer/hyperpose).
+
+Make sure you have [docker](https://docs.docker.com/get-docker/) with [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) functionality installed. 
+
+> Also note that your nvidia driver should be [compatible](https://docs.nvidia.com/deploy/cuda-compatibility/index.html#support-title) with CUDA10.2.
 
 ```bash
-sudo apt -y install git cmake build-essential subversion libgflags-dev libopencv-dev
-git clone https://github.com/tensorlayer/hyperpose.git && cd hyperpose
-sh scripts/download-test-data.sh                       # Install data for examples.
-sh scripts/download-tinyvgg-model.sh                   # Install tiny-vgg model.
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release && cmake --build . # Build library && examples.
-./hyperpose-cli                                        # The ouput images will be in the build folder.
+# [Example 1]: Doing inference on given video, copy the output.avi to the local path. 
+docker run --name quick-start --gpus all tensorlayer/hyperpose --runtime=stream
+docker cp quick-start:/hyperpose/build/output.avi .
+docker rm quick-start
+
+
+# [Example 2](X11 server required to see the imshow window): Real-time inference.
+# You may need to install X11 server locally:
+# sudo apt install xorg openbox xauth
+xhost +; docker run --rm --gpus all -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix tensorlayer/hyperpose --imshow
+
+
+# [Example 3]: Camera + imshow window
+xhost +; docker run --name pose-camera --rm --gpus all -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --device=/dev/video0:/dev/video0 tensorlayer/hyperpose --source=camera --imshow
+# To quit this image, please type `docker kill pose-camera` in another terminal.
+
+
+# [Dive into the image]
+xhost +; docker run --rm --gpus all -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --device=/dev/video0:/dev/video0 --entrypoint /bin/bash tensorlayer/hyperpose
+# For users that cannot access a camera or X11 server. You may also use:
+# docker run --rm --gpus all -it --entrypoint /bin/bash tensorlayer/hyperpose
 ```
+
+> For more details, please check [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/prediction.html#table-of-flags-for-hyperpose-cli).
 
 ## Performance
 
-We compare the prediction performance of HyperPose with [OpenPose 1.6](https://github.com/CMU-Perceptual-Computing-Lab/openpose) and [TF-Pose](https://github.com/ildoonet/tf-pose-estimation). We implement the OpenPose algorithms with different configurations in HyperPose. The test-bed has Ubuntu18.04, 1070Ti GPU, Intel i7 CPU (12 logic cores). The test video is Crazy Updown Funk ([YouTube](https://www.youtube.com/watch?v=2DiQUX11YaY)). The HyperPose models (in the ONNX or Uff formats) are available [here](https://github.com/tensorlayer/pretrained-models/tree/master/models/hyperpose).
+We compare the prediction performance of HyperPose with [OpenPose 1.6](https://github.com/CMU-Perceptual-Computing-Lab/openpose) and [TF-Pose](https://github.com/ildoonet/tf-pose-estimation). We implement the OpenPose algorithms with different configurations in HyperPose. The test-bed has Ubuntu18.04, 1070Ti GPU, Intel i7 CPU (12 logic cores). 
 
-| HyperPose Configuration  | DNN Size | DNN Input Shape | HyerPose | Baseline |
+| HyperPose Configuration  | DNN Size | Input Size | HyerPose | Baseline |
 | --------------- | ------------- | ------------------ | ------------------ | --------------------- |
 | OpenPose (VGG)   | 209.3MB       | 656 x 368            | 27.32 FPS           | 8 FPS (OpenPose)          |
 | OpenPose (TinyVGG)  | 34.7 MB       | 384 x 256          | 124.925 FPS         | N/A                   |
 | OpenPose (MobileNet) | 17.9 MB       | 432 x 368          | 84.32 FPS           | 8.5 FPS (TF-Pose)         |
 | OpenPose (ResNet18)  | 45.0 MB       | 432 x 368          | 62.52 FPS           | N/A                  |
 
-As we can see, HyperPose is the only library that can achieve **real-time** human pose estimation.
-
 </a>
 <p align="center">
-    <img src="https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/dance_foot.gif?raw=true", width="360">
+    <img src="./docs/markdown/images/demo-xbd.gif", width="600">
 </p>
 
+<p align="center">
+    新宝岛 with HyperPose(Lightweight OpenPose model)
+</p>
 ## License
 
 HyperPose is open-sourced under the [Apache 2.0 license](https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst).

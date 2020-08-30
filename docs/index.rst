@@ -6,21 +6,26 @@
 Welcome to HyperPose's Documentation!
 =====================================
 
+Installation
+-----------
+.. toctree::
+   :maxdepth: 1
+
+   markdown/install/prediction
+   markdown/install/training
+
 Get Started
 -----------
 .. toctree::
    :maxdepth: 1
 
-   markdown/design/design
-   markdown/install/prediction
-   markdown/install/training
    markdown/quick_start/prediction
    markdown/quick_start/training
 
 Tutorials
 -------------
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     markdown/tutorial/prediction
     markdown/tutorial/training
@@ -40,6 +45,13 @@ Performance and Supports
 
     markdown/performance/supports
     markdown/performance/prediction
+
+Insights
+------------------------
+.. toctree::
+    :maxdepth: 1
+
+    markdown/design/design
 
 Frequently Asked Questions(FAQs)
 --------------------------------

@@ -6,7 +6,16 @@ namespace hyperpose {
 
 void draw_human(cv::Mat& img, const human_t& human)
 {
-    constexpr int thickness = 2;
+    float n = 1, s = 0, w = 1, e = 0;
+    for(const auto& p : human.parts)
+        if (p.has_value) {
+            n = std::min(n, p.y);
+            s = std::max(s, p.y);
+            w = std::min(w, p.x);
+            e = std::max(e, p.x);
+        }
+
+    const int thickness = std::max(1, static_cast<int>(std::sqrt((e - w) * (s - n) * img.size().area())) / 32);
 
     // draw lines
     for (int pair_id = 0; pair_id < COCO_N_PAIRS; ++pair_id) {
@@ -24,7 +33,7 @@ void draw_human(cv::Mat& img, const human_t& human)
         const auto color = coco_colors[part_idx];
         const auto p = human.parts[part_idx];
         if (p.has_value) {
-            cv::circle(img, cv::Point(p.x * img.cols, p.y * img.rows), thickness, color, thickness);
+            cv::circle(img, cv::Point(p.x * img.cols, p.y * img.rows), thickness, color, cv::FILLED);
         }
     }
 }

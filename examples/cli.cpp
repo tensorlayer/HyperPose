@@ -25,6 +25,7 @@ DEFINE_bool(imshow, true, "Whether to open an imshow window.");
 DEFINE_string(source, "../data/media/video.avi", "Path to your source. (the path name or `" kCAMERA "` to open your webcam)");
 DEFINE_string(runtime, kOPERATOR, "Runtime setting for hyperpose. (`" kSTREAM "` or `" kOPERATOR "`)");
 DEFINE_bool(keep_ratio, true, "Whether to keep the aspect ration when resizing for inference.");
+DEFINE_double(alpha, 0.5, "The weight of key point visualization. (from 0 to 1)");
 
 // Saving Config.
 DEFINE_string(saving_prefix, "output", "The output media resource will be named after '$(saving_prefix)_$(ID).$(format)'.");
@@ -61,6 +62,12 @@ int main(int argc, char** argv)
         hp::enable_logging();
     }
 
+    if (FLAGS_alpha < 0 || FLAGS_alpha > 1) {
+        double cl = std::clamp(FLAGS_alpha, 0., 1.);
+        cli_log() << "WARNING. The flag: alpha: " << FLAGS_alpha << " out of range. Clamped to " << cl << std::endl;
+        FLAGS_alpha = cl;
+    }
+
     // Mat images if any.
     auto images = []() -> std::vector<cv::Mat> {
         constexpr auto match_suffix = [](std::string_view suffix) {
@@ -94,7 +101,7 @@ int main(int argc, char** argv)
         cli_log() << "Imshow functionality is enabled only when using operator runtime mode.\n";
     }
 
-    if (!cap.isOpened() && FLAGS_runtime == kOPERATOR) {
+    if (cap.isOpened() && FLAGS_runtime == kOPERATOR) {
         FLAGS_max_batch_size = 1;
         cli_log() << "Batching is not enabled when [VideoCapture + OperatorRuntime]. Hence, set max_batch_size to 1 for better performance.\n";
     }
@@ -187,19 +194,33 @@ int main(int argc, char** argv)
                 auto feature_maps = engine.inference({ mat });
                 // * Post-Processing.
                 auto poses = parser.process(feature_maps.front());
+
+                cv::Mat background; // Maybe used.
+                if (FLAGS_alpha > 0) {
+                    background = mat.clone();
+                }
+
                 for (auto&& pose : poses) {
                     if (FLAGS_keep_ratio)
                         hp::resume_ratio(pose, mat.size(), engine.input_size());
                     hp::draw_human(mat, pose);
                 }
+
+                if (FLAGS_alpha > 0) {
+                    cv::addWeighted(mat, FLAGS_alpha, background, 1 - FLAGS_alpha, 0, mat);
+                }
+
                 auto prediction_time = std::chrono::duration<double, std::milli>(clk_t::now() - beg).count();
-
-                cv::putText(mat, std::to_string(prediction_time) + " ms", { 10, 10 }, cv::FONT_HERSHEY_SIMPLEX, 0.5, { 0, 255, 0 }, 2);
-                cv::imshow("HyperPose Prediction", mat);
-
                 writer << mat;
-                if (cv::waitKey(1) == 27)
-                    break;
+
+                if (FLAGS_imshow) {
+                    cv::putText(
+                        mat, std::to_string(prediction_time) + " ms", { 10, 10 }, cv::FONT_HERSHEY_SIMPLEX, 0.5, { 0, 255, 0 }, 2, cv::LineTypes::LINE_AA);
+                    cv::imshow("HyperPose Prediction", mat);
+
+                    if (cv::waitKey(1) == 27)
+                        break;
+                }
             }
         } else { // For Vec<Image>.
             auto beg = clk_t::now();
@@ -221,11 +242,21 @@ int main(int argc, char** argv)
                     pose_vectors.push_back(parser.process(packet));
 
                 for (size_t i = 0; i < tmp.size(); ++i) {
+                    cv::Mat background; // Maybe used.
+                    if (FLAGS_alpha > 0) {
+                        background = tmp[i].clone();
+                    }
+
                     for (auto&& pose : pose_vectors[i]) {
                         if (FLAGS_keep_ratio)
                             hp::resume_ratio(pose, tmp[i].size(), engine.input_size());
                         hp::draw_human(tmp[i], pose);
                     }
+
+                    if (FLAGS_alpha > 0) {
+                        cv::addWeighted(tmp[i], FLAGS_alpha, background, 1 - FLAGS_alpha, 0, tmp[i]);
+                    }
+
                     auto im_name = FLAGS_saving_prefix + '_' + std::to_string(counter++) + ".png";
                     cv::imwrite(im_name, tmp[i]);
                     cli_log() << "Wrote image to " << im_name << '\n';
@@ -234,10 +265,11 @@ int main(int argc, char** argv)
 
             auto inference_time = std::chrono::duration<double, std::milli>(clk_t::now() - beg).count();
 
-            if (images.size() == 1) {
+            if (images.size() == 1 && FLAGS_imshow) {
                 cv::imshow("HyperPose Prediction", tmp.front());
                 cv::waitKey();
             }
+
             std::cout << counter << " images got processed. FPS = "
                       << 1000. * counter / inference_time
                       << '\n';
