@@ -53,6 +53,8 @@ The output images will be in the build folder.
 
 ### Table of flags for `hyperpose-cli`
 
+Note that the entry point of our official docker image is also `hyperpose-cli` in the `/hyperpose/build` folder.
+
 > Also see: `./hyperpose-cli --help`
 
 | Flag           | Meaning                                                      | Default                                  |
@@ -98,6 +100,8 @@ To save the model conversion time, you can convert it in advance.
 # Use the converted model to do prediction
 ./hyperpose-cli --model ../data/models/openpose-coco-V2-HW=368x656.onnx.trt --w 656 --h 368
 ```
+
+> Currently, we run the models in TensorRT float32 mode. Other data type is not supported(welcome to contribute!).
 
 ## Predict a video using Operator API
 

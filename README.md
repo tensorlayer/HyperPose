@@ -1,6 +1,6 @@
 </a>
 <p align="center">
-    <img src="./logo.png", width="800">
+    <img src="./docs/markdown/images/logo.png", width="800">
 </p>
 
 <p align="center">
@@ -12,6 +12,8 @@
     <a href="https://github.com/tensorlayer/hyperpose/graphs/commit-activity" title="Maintenance"><img src="https://img.shields.io/badge/maintained%3F-YES-brightgreen.svg"></a>
     <a href="https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst" title="TensorLayer"><img src="https://img.shields.io/github/license/tensorlayer/tensorlayer">
 </p>
+
+---
 
 <p align="center">
     <a href="#Features">Features</a> •
@@ -32,7 +34,7 @@ HyperPose has two key features, which are not available in existing libraries:
 
 ## Documentation
 
-You can install HyperPose(Python Training Library, C++ inference Library) and learn its APIs through [Documentation](https://hyperpose.readthedocs.io/en/latest/).
+You can install HyperPose(Python Training Library, C++ inference Library) and learn its APIs through [HyperPose Documentation](https://hyperpose.readthedocs.io/en/latest/).
 
 ## Quick-Start with Docker
 
@@ -66,7 +68,7 @@ xhost +; docker run --rm --gpus all -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/t
 # docker run --rm --gpus all -it --entrypoint /bin/bash tensorlayer/hyperpose
 ```
 
-> For more details, please check [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/prediction.html#predict-a-sequence-of-images).
+> For more details, please check [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/prediction.html#table-of-flags-for-hyperpose-cli).
 
 ## Performance
 
@@ -81,7 +83,7 @@ We compare the prediction performance of HyperPose with [OpenPose 1.6](https://g
 
 </a>
 <p align="center">
-    <img src="./demo-xbd.gif", width="600">
+    <img src="./docs/markdown/images/demo-xbd.gif", width="600">
 </p>
 
 <p align="center">

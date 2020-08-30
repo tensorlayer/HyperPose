@@ -47,5 +47,6 @@ docs/make.bat
 examples/user_codes/*.cpp
 debug.*
 
+!logo.png
 !docs/Makefile
 !docs/markdown/images/*
