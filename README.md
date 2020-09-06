@@ -89,6 +89,7 @@ We compare the prediction performance of HyperPose with [OpenPose 1.6](https://g
 <p align="center">
     新宝岛 with HyperPose(Lightweight OpenPose model)
 </p>
+
 ## License
 
 HyperPose is open-sourced under the [Apache 2.0 license](https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst).
