@@ -30,7 +30,7 @@ HyperPose is a library for building human pose estimation systems that can effic
 HyperPose has two key features, which are not available in existing libraries:
 
 - **Flexible training platform**: HyperPose provides flexible Python APIs to build many useful pose estimation models (e.g., OpenPose and PoseProposalNetwork). HyperPose users can, for example, customize data augmentation, use parallel GPUs for training, and replace deep neural networks (e.g., changing from ResNet to MobileNet), thus building models specific to their real-world scenarios.
-- **High-performance pose estimation**: HyperPose achieves real-time pose estimation though a high-performance pose estimation engine. This engine implements numerous system optimizations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. This allows HyperPose to run 4x faster than OpenPose and 10x faster than TF-Pose.
+- **High-performance pose estimation**: HyperPose achieves real-time pose estimation though a high-performance pose estimation engine. This engine implements numerous system optimizations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. This allows HyperPose to **run 4x FASTER than OpenPose and 10x FASTER than TF-Pose**.
 
 ## Documentation
 
@@ -76,10 +76,10 @@ We compare the prediction performance of HyperPose with [OpenPose 1.6](https://g
 
 | HyperPose Configuration  | DNN Size | Input Size | HyerPose | Baseline |
 | --------------- | ------------- | ------------------ | ------------------ | --------------------- |
-| OpenPose (VGG)   | 209.3MB       | 656 x 368            | 27.32 FPS           | 8 FPS (OpenPose)          |
-| OpenPose (TinyVGG)  | 34.7 MB       | 384 x 256          | 124.925 FPS         | N/A                   |
-| OpenPose (MobileNet) | 17.9 MB       | 432 x 368          | 84.32 FPS           | 8.5 FPS (TF-Pose)         |
-| OpenPose (ResNet18)  | 45.0 MB       | 432 x 368          | 62.52 FPS           | N/A                  |
+| OpenPose (VGG)   | 209.3MB       | 656 x 368            | **27.32 FPS**           | 8 FPS (OpenPose)          |
+| OpenPose (TinyVGG)  | 34.7 MB       | 384 x 256          | **124.925 FPS**         | N/A                   |
+| OpenPose (MobileNet) | 17.9 MB       | 432 x 368          | **84.32 FPS**           | 8.5 FPS (TF-Pose)         |
+| OpenPose (ResNet18)  | 45.0 MB       | 432 x 368          | **62.52 FPS**           | N/A                  |
 
 </a>
 <p align="center">
