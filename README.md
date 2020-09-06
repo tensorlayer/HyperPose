@@ -1,6 +1,6 @@
 </a>
 <p align="center">
-    <img src="./docs/markdown/images/logo.png", width="800">
+    <img src="./docs/markdown/images/logo.png", width="600">
 </p>
 
 <p align="center">
