@@ -33,9 +33,9 @@ model.model_dir= f"./save_dir/{model.model_name}/model_dir"
 train = edict()
 train.batch_size = 22
 train.save_interval = 5000
-train.n_step = 1500000  
+train.n_step = 1040000
 train.lr_init = 1e-4  # initial learning rate
-train.lr_decay_factor=0.3
+train.lr_decay_factor=0.9
 train.weight_decay_factor = 5e-4
 train.train_type=TRAIN.Single_train
 train.vis_dir = f"./save_dir/{model.model_name}/train_vis_dir"
@@ -51,7 +51,7 @@ data.dataset_type = DATA.MSCOCO
 data.dataset_version = "2017" 
 data.dataset_path = "./data"
 data.dataset_filter=None
-data.vis_dir=f"./save_dir/{model.model_name}/data_vis_dir"
+data.vis_dir=f"./save_dir/data_vis_dir"
 
 #log configuration
 log = edict()

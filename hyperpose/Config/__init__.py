@@ -1,14 +1,39 @@
 import os
 import logging
-import tensorflow as tf
-import tensorlayer as tl
 import matplotlib
 matplotlib.use("Agg")
+from copy import deepcopy
 from easydict import EasyDict as edict
 from .define import *
-tl.layers.BatchNorm2d
+from .config_pretrain import pretrain
 update_config,update_train,update_eval,update_model,update_data,update_log=edict(),edict(),edict(),edict(),edict(),edict()
+
+#default train
+update_train.optim_type=OPTIM.Adam
+
+#defualt model config
 update_model.model_type=MODEL.Openpose
+#userdef model
+update_model.userdef_parts=None
+update_model.userdef_limbs=None
+
+#default dataset config
+#official dataset
+update_data.official_flag=True
+#userdef dataset
+update_data.userdef_dataset=None
+#useradd dataset
+update_data.useradd_flag=False
+update_data.useradd_scale_rate=1
+update_data.useradd_train_img_paths=None
+update_data.useradd_train_targets=None
+#domain adaption dataset
+update_data.domainadapt_flag=False
+update_data.domainadapt_scale_rate=1
+update_data.domainadapt_train_img_paths=None
+#default pretrain config
+update_pretrain=edict()
+
 
 #get configure api
 def get_config():
@@ -46,6 +71,7 @@ def get_config():
     eval.update(update_eval)
     data.update(update_data)
     log.update(update_log)
+    pretrain.update(update_pretrain)
     #assemble configure
     config=edict()
     config.model=model
@@ -53,22 +79,27 @@ def get_config():
     config.eval=eval
     config.data=data
     config.log=log
+    config.pretrain=pretrain
     #path configure
+    import tensorflow as tf
+    import tensorlayer as tl
     tl.files.exists_or_mkdir(config.model.model_dir, verbose=True)  # to save model files 
     tl.files.exists_or_mkdir(config.train.vis_dir, verbose=True)  # to save visualization results
     tl.files.exists_or_mkdir(config.eval.vis_dir, verbose=True)  # to save visualization results
     tl.files.exists_or_mkdir(config.data.vis_dir, verbose=True)  # to save visualization results
+    tl.files.exists_or_mkdir(config.pretrain.pretrain_model_dir,verbose=True)
     #device configure
     #FIXME: replace experimental tf functions when in tf 2.1 version
     tf.debugging.set_log_device_placement(False)
     tf.config.set_soft_device_placement(True)
     for gpu in tf.config.experimental.get_visible_devices("GPU"):
         tf.config.experimental.set_memory_growth(gpu,True)
+    #limit the cpu usage when pretrain
     #logging configure
     tl.files.exists_or_mkdir(os.path.dirname(config.log.log_path),verbose=True)
-    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
-    tl.logging.set_verbosity(tl.logging.INFO)
-    return config
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.WARN)
+    tl.logging.set_verbosity(tl.logging.WARN)
+    return deepcopy(config)
 
 #set configure api
 #model configure api
@@ -198,6 +229,12 @@ def set_model_name(model_name):
     update_data.vis_dir=f"./save_dir/{update_model.model_name}/data_vis_dir"
     update_log.log_path= f"./save_dir/{update_model.model_name}/log.txt"
 
+def set_model_parts(userdef_parts):
+    update_model.userdef_parts=userdef_parts
+
+def set_model_limbs(userdef_limbs):
+    update_model.userdef_limbs=userdef_limbs
+
 #train configure api
 def set_train_type(train_type):
     '''set single_train or parallel train
@@ -220,6 +257,9 @@ def set_train_type(train_type):
     '''
     update_train.train_type=train_type
 
+def set_optim_type(optim_type):
+    update_train.optim_type=optim_type
+
 def set_learning_rate(learning_rate):
     '''set the learning rate in training
 
@@ -233,6 +273,9 @@ def set_learning_rate(learning_rate):
     None
     '''
     update_train.lr_init=learning_rate
+
+def set_save_interval(save_interval):
+    update_train.save_interval=save_interval
 
 def set_batch_size(batch_size):
     '''set the batch size in training
@@ -304,6 +347,30 @@ def set_dataset_type(dataset_type):
     '''
     update_data.dataset_type=dataset_type
 
+def set_dataset_version(dataset_version):
+    update_data.dataset_version=dataset_version
+
+def set_useradd_data(useradd_train_img_paths,useradd_train_targets,useradd_scale_rate=1):
+    update_data.useradd_flag=True
+    update_data.useradd_train_img_paths=useradd_train_img_paths
+    update_data.useradd_train_targets=useradd_train_targets
+    update_data.useradd_scale_rate=useradd_scale_rate
+
+def set_userdef_dataset(userdef_dataset):
+    update_data.dataset_type=DATA.USERDEF
+    update_data.userdef_dataset=userdef_dataset
+
+def set_multiple_dataset(multiple_dataset_configs):
+    update_data.dataset_type=DATA.MULTIPLE
+    update_data.multiple_dataset_configs=multiple_dataset_configs
+
+def set_domainadapt_dataset(domainadapt_train_img_paths,domainadapt_scale_rate=1):
+    update_data.domainadapt_flag=True
+    update_data.domainadapt_train_img_paths=domainadapt_train_img_paths
+    update_data.domainadapt_scale_rate=domainadapt_scale_rate
+
+def set_official_dataset(official_flag):
+    update_data.official_flag=official_flag
 
 def set_dataset_path(dataset_path):
     '''set the path of the dataset
@@ -351,7 +418,7 @@ def set_dataset_filter(dataset_filter):
     update_data.dataset_filter=dataset_filter
 
 #log configure api
-def set_log_freq(log_freq):
+def set_log_interval(log_interval):
     '''set the frequency of logging
 
     set the how many iteration intervals between two log information
@@ -366,4 +433,10 @@ def set_log_freq(log_freq):
     -------
     None
     '''
-    update_log.log_freq=log_freq
+    update_log.log_interval=log_interval
+
+def set_pretrain(enable):
+    update_pretrain.enable=enable
+
+def set_pretrain_dataset_path(pretrain_dataset_path):
+    update_pretrain.pretrain_dataset_path=pretrain_dataset_path

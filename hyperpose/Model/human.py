@@ -61,12 +61,15 @@ class Human:
             body_part.h=body_part.h*scale_h
     
     def draw_human(self,img):
+        img_h,img_w,img_c=img.shape
+        radius=int(min(img_h,img_w)/80)
+        thickness=int(min(img_h,img_w)/100)
         for part_idx in self.body_parts.keys():
             body_part=self.body_parts[part_idx]
             x=body_part.x
             y=body_part.y
             color=self.colors[part_idx]
-            img=cv2.circle(img,(int(x),int(y)),radius=6,color=color,thickness=-1)
+            img=cv2.circle(img,(int(x),int(y)),radius=radius,color=color,thickness=-1)
         line_color=(255,0,0)
         for limb in self.limbs:
             src_part_idx,dst_part_idx=limb
@@ -79,7 +82,7 @@ class Human:
                 src_x,src_y=int(src_body_part.x),int(src_body_part.y)
                 dst_body_part=self.body_parts[dst_part_idx]
                 dst_x,dst_y=int(dst_body_part.x),int(dst_body_part.y)
-                img=cv2.line(img,(src_x,src_y),(dst_x,dst_y),color=line_color,thickness=3)
+                img=cv2.line(img,(src_x,src_y),(dst_x,dst_y),color=line_color,thickness=thickness)
         return img
     
     def print(self):

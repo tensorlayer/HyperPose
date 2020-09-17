@@ -42,9 +42,9 @@ class MPIIMeta:
         anns_list=[]
         for headbbx,scale,center,joints in zip(self.headbbx_list,self.scale_list,self.center_list,self.joint_list):
             ann_dict={}
-            ann_dict["headbbxs"]=headbbx
-            ann_dict["scales"]=scale
-            ann_dict["centers"]=center
+            ann_dict["headbbx"]=headbbx
+            ann_dict["scale"]=scale
+            ann_dict["center"]=center
             vis=joints[2::3]
             ann_dict["keypoints"]=joints
             ann_dict["vis"]=vis

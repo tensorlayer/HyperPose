@@ -23,8 +23,9 @@ CocoColor = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255,
               [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],
               [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
 
-
+#convert kpts from opps to mscoco
 from_opps_converter={0:0, 2:6, 3:8, 4:10, 5:5, 6:7, 7:9, 8:12, 9:14, 10:16, 11:11, 12:13, 13:15, 14:2, 15:1, 16:4, 17:3}
+#convert kpts from mscoco to opps
 to_opps_converter={0:0, 1:15, 2:14, 3:17, 4:16, 5:5, 6:2, 7:6, 8:3, 9:7, 10:4, 11:11, 12:8, 13:12, 14:9, 15:13, 16:10}
 
 def opps_input_converter(coco_kpts):
@@ -56,7 +57,9 @@ def opps_output_converter(kpt_list):
             kpts+=[x,y,2.0]
     return kpts
 
+#convert kpts from ppn to mscoco
 from_ppn_converter={0:0, 2:6, 3:8, 4:10, 5:5, 6:7, 7:9, 8:12, 9:14, 10:16, 11:11, 12:13, 13:15, 14:2, 15:1, 16:4, 17:3}
+#convert kpts from mscoco to ppn
 to_ppn_converter={0:0, 1:15, 2:14, 3:17, 4:16, 5:5, 6:2, 7:6, 8:3, 9:7, 10:4, 11:11, 12:8, 13:12, 14:9, 15:13, 16:10}
 
 def ppn_input_converter(coco_kpts):

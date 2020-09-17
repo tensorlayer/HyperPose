@@ -14,9 +14,14 @@ from .utils import draw_bbx,draw_edge
 def infer_one_img(model,post_processor,img,img_id=-1,is_visual=False,save_dir="./vis_dir/pose_proposal"):
     img=img.numpy()
     img_id=img_id.numpy()
-    img_h,img_w,_=img.shape
+    img_h,img_w,img_c=img.shape
     data_format=model.data_format
-    input_img=cv2.resize(img,(model.win,model.hin))[np.newaxis,:,:,:]
+    scale_rate=min(model.hin/img_h,model.win/img_w)
+    scale_w,scale_h=int(img_w*scale_rate),int(img_h*scale_rate)
+    resize_img=cv2.resize(img,(scale_w,scale_h))
+    input_img=np.zeros(shape=(model.win,model.hin,img_c))
+    input_img[0:scale_h,0:scale_w,:]=resize_img
+    input_img=input_img[np.newaxis,:,:,:].astype(np.float32)
     if(data_format=="channels_first"):
         input_img=np.transpose(input_img,[0,3,1,2])
     pc,pi,px,py,pw,ph,pe=model.forward(input_img,is_train=False)
@@ -29,14 +34,12 @@ def infer_one_img(model,post_processor,img,img_id=-1,is_visual=False,save_dir=".
         ph=np.transpose(ph,[0,3,1,2])
         pe=np.transpose(pe,[0,5,1,2,3,4])
     humans=post_processor.process(pc[0].numpy(),pi[0].numpy(),px[0].numpy(),py[0].numpy(),\
-        pw[0].numpy(),ph[0].numpy(),pe[0].numpy())
+        pw[0].numpy(),ph[0].numpy(),pe[0].numpy(),scale_w_rate=scale_rate,scale_h_rate=scale_rate)
     #resize output
-    scale_w=img_w/model.win
-    scale_h=img_h/model.hin
     for human in humans:
-        human.scale(scale_w=scale_w,scale_h=scale_h)
+        human.scale(scale_w=1/scale_rate,scale_h=1/scale_rate)
     if(is_visual):
-        predicts=(pc[0],px[0]*scale_w,py[0]*scale_h,pw[0]*scale_w,ph[0]*scale_h,pe[0])
+        predicts=(pc[0],px[0]/scale_rate,py[0]/scale_rate,pw[0]/scale_rate,ph[0]/scale_rate,pe[0])
         visualize(img,img_id,humans,predicts,model.hnei,model.wnei,model.hout,model.wout,post_processor.limbs,save_dir)
     return humans
 
@@ -62,8 +65,8 @@ def visualize(img,img_id,humans,predicts,hnei,wnei,hout,wout,limbs,save_dir):
     plt.imshow(vis_img)
     #show parts and edges
     vis_img=ori_img.copy()
-    vis_img=draw_bbx(vis_img,pc,px,py,pw,ph,threshold=0.7)
-    vis_img=draw_edge(vis_img,pe,px,py,pw,ph,hnei,wnei,hout,wout,limbs,threshold=0.7)
+    vis_img=draw_bbx(vis_img,pc,px,py,pw,ph,threshold=0.3)
+    vis_img=draw_edge(vis_img,pe,px,py,pw,ph,hnei,wnei,hout,wout,limbs,threshold=0.3)
     a=fig.add_subplot(2,2,3)
     a.set_title("bbxs and edges")
     plt.imshow(vis_img)
@@ -78,7 +81,7 @@ def _map_fn(image_file,image_id):
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
     return image,image_id
 
-def evaluate(model,dataset,config,vis_num=30,total_eval_num=30):
+def evaluate(model,dataset,config,vis_num=30,total_eval_num=30,enable_multiscale_search=False):
     '''evaluate pipeline of poseProposal class models
 
     input model and dataset, the evaluate pipeline will start automaticly
@@ -122,6 +125,9 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=30):
             humans=infer_one_img(model,post_processor,img,img_id,is_visual=True,save_dir=vis_dir)
         else:
             humans=infer_one_img(model,post_processor,img,img_id,is_visual=False,save_dir=vis_dir)
+        if(len(humans)==0):
+            pd_anns.append({"category_id":1,"image_id":int(img_id.numpy()),"id":-1,\
+            "area":-1,"score":-1,"keypoints":[0,0,-1]*len(dataset.get_parts())})
         for human in humans:
             ann={}
             ann["category_id"]=1

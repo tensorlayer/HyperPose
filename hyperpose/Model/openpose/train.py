@@ -17,13 +17,14 @@ import _pickle as cPickle
 from functools import partial
 from .utils import tf_repeat, get_heatmap, get_vectormap, draw_results 
 from .utils import get_parts,get_limbs,get_flip_list
-from ..common import init_log,log,KUNGFU
+from ..common import log,KUNGFU,MODEL,get_optim,init_log
+from ..domainadapt import get_discriminator
 
 def regulize_loss(target_model,weight_decay_factor):
     re_loss=0
     regularizer=tf.keras.regularizers.l2(l=weight_decay_factor)
-    for trainable_weight in target_model.trainable_weights:
-        re_loss+=regularizer(trainable_weight)
+    for weight in target_model.trainable_weights:
+        re_loss+=regularizer(weight)
     return re_loss
 
 def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_list=None, data_format="channels_first"):
@@ -33,6 +34,7 @@ def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_l
     ground_truth = cPickle.loads(ground_truth.numpy())
     image=image.numpy()
     annos = ground_truth["kpt"]
+    labeled= ground_truth["labeled"]
     mask = ground_truth["mask"]
 
     # decode mask
@@ -42,9 +44,11 @@ def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_l
         for seg in mask:
             bin_mask = maskUtils.decode(seg)
             bin_mask = np.logical_not(bin_mask)
-            mask_miss = np.bitwise_and(mask_miss, bin_mask)
+            if(bin_mask.shape!=mask_miss.shape):
+                print(f"test error mask shape mask_miss:{mask_miss.shape} bin_mask:{bin_mask.shape}")
+            else:
+                mask_miss = np.bitwise_and(mask_miss, bin_mask)
     
-    #debug no augmentation
     #get transform matrix
     M_rotate = tl.prepro.affine_rotation_matrix(angle=(-30, 30))  # original paper: -40~40
     M_zoom = tl.prepro.affine_zoom_matrix(zoom_range=(0.5, 0.8))  # original paper: 0.5~1.1
@@ -56,6 +60,7 @@ def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_l
     image = tl.prepro.affine_transform_cv2(image, transform_matrix)
     mask_miss = tl.prepro.affine_transform_cv2(mask_miss, transform_matrix, border_mode='replicate')
     annos = tl.prepro.affine_transform_keypoints(annos, transform_matrix)
+    #temply ignore flip augmentation 
     '''
     if(flip_list!=None):
         image, annos, mask_miss = tl.prepro.keypoint_random_flip(image,annos, mask_miss, prob=0.5, flip_list=flip_list)
@@ -64,8 +69,8 @@ def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_l
 
     # generate result which include keypoints heatmap and vectormap
     height, width, _ = image.shape
-    heatmap = get_heatmap(annos, height, width, hout, wout, parts, limbs)
-    vectormap = get_vectormap(annos, height, width, hout, wout, parts, limbs)
+    heatmap = get_heatmap(annos, height, width, hout, wout, parts, limbs, data_format=data_format)
+    vectormap = get_vectormap(annos, height, width, hout, wout, parts, limbs, data_format=data_format)
     resultmap = np.concatenate((heatmap, vectormap), axis=concat_dim)
 
     image=cv2.resize(image,(win,hin))
@@ -80,7 +85,8 @@ def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_l
     if(data_format=="channels_first"):
         image=np.transpose(image,[2,0,1])
         mask_miss=np.transpose(mask_miss,[2,0,1])
-    return image, resultmap, mask_miss
+    labeled=np.float32(labeled)
+    return image, resultmap, mask_miss, labeled
 
 
 def _map_fn(img_list, annos ,data_aug_fn, hin, win, hout, wout, parts, limbs):
@@ -90,12 +96,12 @@ def _map_fn(img_list, annos ,data_aug_fn, hin, win, hout, wout, parts, limbs):
     image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
     #data augmentation using affine transform and get paf maps
-    image, resultmap, mask = tf.py_function(data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32])
+    image, resultmap, mask, labeled = tf.py_function(data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32, tf.float32])
     #data augmentaion using tf
-    image = tf.image.random_brightness(image, max_delta=45./255.)   # 64./255. 32./255.)  caffe -30~50
+    image = tf.image.random_brightness(image, max_delta=35./255.)   # 64./255. 32./255.)  caffe -30~50
     image = tf.image.random_contrast(image, lower=0.5, upper=1.5)   # lower=0.2, upper=1.8)  caffe 0.3~1.5
     image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
-    return image, resultmap, mask
+    return image, resultmap, mask, labeled
 
 def get_paramed_map_fn(hin,win,hout,wout,parts,limbs,flip_list=None,data_format="channels_first"):
     paramed_data_aug_fn=partial(_data_aug_fn,hin=hin,win=win,hout=hout,wout=wout,parts=parts,limbs=limbs,\
@@ -135,7 +141,7 @@ def single_train(train_model,dataset,config):
     #learning rate params
     lr_init = config.train.lr_init
     lr_decay_factor = config.train.lr_decay_factor
-    lr_decay_every_step = config.train.lr_decay_every_step
+    lr_decay_steps= [200000,300000,360000,420000,480000,540000,600000,700000,800000,900000]
     weight_decay_factor = config.train.weight_decay_factor
     #log and checkpoint params
     log_interval=config.log.log_interval
@@ -149,6 +155,8 @@ def single_train(train_model,dataset,config):
     hout = train_model.hout
     wout = train_model.wout
     model_dir = config.model.model_dir
+    pretrain_model_dir=config.pretrain.pretrain_model_dir
+    pretrain_model_path=f"{pretrain_model_dir}/newest_{train_model.backbone.name}.npz"
 
     print(f"single training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
@@ -165,69 +173,157 @@ def single_train(train_model,dataset,config):
     #train configure
     step=tf.Variable(1, trainable=False)
     lr=tf.Variable(lr_init,trainable=False)
+    lr_init=tf.Variable(lr_init,trainable=False)
     opt=tf.keras.optimizers.Adam(learning_rate=lr)
-    ckpt=tf.train.Checkpoint(step=step,optimizer=opt,lr=lr)
+    #domain adaptation params
+    domainadapt_flag=config.data.domainadapt_flag
+    if(domainadapt_flag):
+        print("domain adaptaion enabled!")
+        discriminator=get_discriminator(train_model)
+        opt_d=tf.keras.optimizers.Adam(learning_rate=lr)
+        lambda_d=tf.Variable(1,trainable=False)
+        ckpt=tf.train.Checkpoint(step=step,optimizer=opt,lr=lr,optimizer_d=opt_d,lambda_d=lambda_d)
+    else:
+        ckpt=tf.train.Checkpoint(step=step,optimizer=opt,lr=lr)
     ckpt_manager=tf.train.CheckpointManager(ckpt,model_dir,max_to_keep=3)
     
     #load from ckpt
     try:
+        log("loading ckpt...")
         ckpt.restore(ckpt_manager.latest_checkpoint)
     except:
         log("ckpt_path doesn't exist, step and optimizer are initialized")
+    #load pretrained backbone
     try:
+        log("loading pretrained backbone...")
+        tl.files.load_and_assign_npz_dict(name=pretrain_model_path,network=train_model.backbone,skip=True)
+    except:
+        log("pretrained backbone doesn't exist, model backbone are initialized")
+    #load model weights
+    try:
+        log("loading saved training model weights...")
         train_model.load_weights(os.path.join(model_dir,"newest_model.npz"))
     except:
         log("model_path doesn't exist, model parameters are initialized")
+    if(domainadapt_flag):
+        try:
+            log("loading saved domain adaptation discriminator weight...")
+            discriminator.load_weights(os.path.join(model_dir,"newest_discriminator.npz"))
+        except:
+            log("discriminator path doesn't exist, discriminator parameters are initialized")
+    
+    for lr_decay_step in lr_decay_steps:
+        if(step>lr_decay_step):
+            lr=lr*lr_decay_factor
         
     #optimize one step
     @tf.function
-    def one_step(image,gt_label,mask,train_model):
+    def one_step(image,gt_conf,gt_paf,mask,train_model):
         step.assign_add(1)
         with tf.GradientTape() as tape:
-            gt_conf=gt_label[:,:n_pos,:,:]
-            gt_paf=gt_label[:,n_pos:,:,:]
             pd_conf,pd_paf,stage_confs,stage_pafs=train_model.forward(image,is_train=True)
-
             pd_loss,loss_confs,loss_pafs=train_model.cal_loss(gt_conf,gt_paf,mask,stage_confs,stage_pafs)
             re_loss=regulize_loss(train_model,weight_decay_factor)
             total_loss=pd_loss+re_loss
         
         gradients=tape.gradient(total_loss,train_model.trainable_weights)
         opt.apply_gradients(zip(gradients,train_model.trainable_weights))
-        return gt_conf,gt_paf,pd_conf,pd_paf,total_loss,re_loss,loss_confs,loss_pafs
+        return pd_conf,pd_paf,total_loss,re_loss,loss_confs,loss_pafs
+    
+    @tf.function
+    def one_step_domainadpat(image,gt_conf,gt_paf,mask,labeled,train_model,discriminator,lambda_d):
+        step.assign_add(1)
+        with tf.GradientTape(persistent=True) as tape:
+            #optimize train model
+            pd_conf,pd_paf,stage_confs,stage_pafs,backbone_fatures=train_model.forward(image,is_train=True,domainadapt=True)
+            d_predict=discriminator.forward(backbone_fatures)
+            pd_loss,loss_confs,loss_pafs=train_model.cal_loss(gt_conf,gt_paf,mask,stage_confs,stage_pafs)
+            re_loss=regulize_loss(train_model,weight_decay_factor)
+            gan_loss=lambda_d*tf.nn.sigmoid_cross_entropy_with_logits(logits=d_predict,labels=1-labeled)
+            total_loss=pd_loss+re_loss+gan_loss
+            d_loss=tf.nn.sigmoid_cross_entropy_with_logits(logits=d_predict,labels=labeled)
+        #optimize G
+        g_gradients=tape.gradient(total_loss,train_model.trainable_weights)
+        opt.apply_gradients(zip(g_gradients,train_model.trainable_weights))
+        #optimize D
+        d_gradients=tape.gradient(d_loss,discriminator.trainable_weights)
+        opt_d.apply_gradients(zip(d_gradients,discriminator.trainable_weights))
+        return pd_conf,pd_paf,total_loss,re_loss,loss_confs,loss_pafs,gan_loss,d_loss
 
     #train each step
     tic=time.time()
     train_model.train()
-    log('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
-            n_step, batch_size, lr_init, lr_decay_every_step))
-    for image,gt_label,mask in train_dataset:
+    conf_losses,paf_losses=np.zeros(shape=(6)),np.zeros(shape=(6))
+    avg_conf_loss,avg_paf_loss,avg_total_loss,avg_re_loss=0,0,0,0
+    avg_gan_loss,avg_d_loss=0,0
+    log('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_steps: {} lr_decay_factor: {} weight_decay_factor: {}'.format(
+            n_step, batch_size, lr_init.numpy(), lr_decay_steps, lr_decay_factor, weight_decay_factor))
+    for image,gt_label,mask,labeled in train_dataset:
+        #extract gt_label
+        if(train_model.data_format=="channels_first"):
+            gt_conf=gt_label[:,:n_pos,:,:]
+            gt_paf=gt_label[:,n_pos:,:,:]
+        else:
+            gt_conf=gt_label[:,:,:,:n_pos]
+            gt_paf=gt_label[:,:,:,n_pos:]
         #learning rate decay
-        if(step % lr_decay_every_step==0):
-            new_lr_decay = lr_decay_factor**(step / lr_decay_every_step) 
+        if(step in lr_decay_steps):
+            new_lr_decay = lr_decay_factor**(lr_decay_steps.index(step)+1) 
             lr=lr_init*new_lr_decay
+
         #optimize one step
-        gt_conf,gt_paf,pd_conf,pd_paf,total_loss,re_loss,loss_confs,loss_pafs=one_step(image.numpy(),gt_label.numpy(),mask.numpy(),train_model)
+        if(domainadapt_flag):
+            lambda_d=2/(1+tf.math.exp(-10*(step/n_step)))-1
+            pd_conf,pd_paf,total_loss,re_loss,loss_confs,loss_pafs,gan_loss,d_loss=\
+                one_step_domainadpat(image.numpy(),gt_conf.numpy(),gt_paf.numpy(),mask.numpy(),labeled.numpy(),train_model,discriminator,lambda_d)
+            avg_gan_loss+=gan_loss/log_interval
+            avg_d_loss+=d_loss/log_interval
+        else:
+            pd_conf,pd_paf,total_loss,re_loss,loss_confs,loss_pafs=\
+                one_step(image.numpy(),gt_conf.numpy(),gt_paf.numpy(),mask.numpy(),train_model)
+
+        avg_conf_loss+=tf.reduce_mean(loss_confs)/batch_size/log_interval
+        avg_paf_loss+=tf.reduce_mean(loss_pafs)/batch_size/log_interval
+        avg_total_loss+=total_loss/log_interval
+        avg_re_loss+=re_loss/log_interval
+
         #debug
-        #for stage_id,(loss_conf,loss_paf) in enumerate(zip(loss_confs,loss_pafs)):
-        #    print(f"test stage:{stage_id} loss_conf:{loss_conf} loss_paf:{loss_paf}")
+        for stage_id,(loss_conf,loss_paf) in enumerate(zip(loss_confs,loss_pafs)):
+            conf_losses[stage_id]+=loss_conf/batch_size/log_interval
+            paf_losses[stage_id]+=loss_paf/batch_size/log_interval
 
         #save log info periodly
-        if((step!=0) and (step%log_interval)==0):
+        if((step.numpy()!=0) and (step.numpy()%log_interval)==0):
             tic=time.time()
-            log('Total Loss at iteration {} / {} is: {} Learning rate {} l2_loss {} time:{}'.format(
-                step.numpy(), n_step, total_loss, lr.numpy(), re_loss,time.time()-tic))
+            log('Train iteration {} / {}: Learning rate {} total_loss:{}, conf_loss:{}, paf_loss:{}, l2_loss {} stage_num:{} time:{}'.format(
+                step.numpy(), n_step, lr.numpy(), avg_total_loss, avg_conf_loss, avg_paf_loss, avg_re_loss, len(loss_confs), time.time()-tic))
+            for stage_id in range(0,len(loss_confs)):
+                log(f"stage_{stage_id} conf_loss:{conf_losses[stage_id]} paf_loss:{paf_losses[stage_id]}")
+            if(domainadapt_flag):
+                log(f"adaptation loss: g_loss:{avg_gan_loss} d_loss:{avg_d_loss}")
+                
+            avg_total_loss,avg_conf_loss,avg_paf_loss,avg_re_loss=0,0,0,0
+            avg_gan_loss,avg_d_loss=0,0
+            conf_losses,paf_losses=np.zeros(shape=(6)),np.zeros(shape=(6))
 
         #save result and ckpt periodly
-        if((step!=0) and (step%save_interval)==0):
+        if((step.numpy()!=0) and (step.numpy()%save_interval)==0):
+            #save ckpt
             log("saving model ckpt and result...")
-            draw_results(image.numpy(), gt_conf.numpy(), pd_conf.numpy(), gt_paf.numpy(), pd_paf.numpy(), mask.numpy(),\
-                 vis_dir,'train_%d_' % step)
             ckpt_save_path=ckpt_manager.save()
             log(f"ckpt save_path:{ckpt_save_path} saved!\n")
+            #save train model
             model_save_path=os.path.join(model_dir,"newest_model.npz")
             train_model.save_weights(model_save_path)
             log(f"model save_path:{model_save_path} saved!\n")
+            #save discriminator model
+            if(domainadapt_flag):
+                dis_save_path=os.path.join(model_dir,"newest_discriminator.npz")
+                discriminator.save_weights(dis_save_path)
+                log(f"discriminator save_path:{dis_save_path} saved!\n")
+            #draw result
+            draw_results(image.numpy(), gt_conf.numpy(), pd_conf.numpy(), gt_paf.numpy(), pd_paf.numpy(), mask.numpy(),\
+                 vis_dir,'train_%d_' % step,data_format=data_format)
 
         #training finished
         if(step==n_step):
@@ -256,6 +352,7 @@ def parallel_train(train_model,dataset,config):
     -------
     None
     '''
+
     init_log(config)
     #train hyper params
     #dataset params
@@ -264,7 +361,7 @@ def parallel_train(train_model,dataset,config):
     #learning rate params
     lr_init = config.train.lr_init
     lr_decay_factor = config.train.lr_decay_factor
-    lr_decay_every_step = config.train.lr_decay_every_step
+    lr_decay_steps = [200000,300000,360000,420000,480000,540000,600000,700000,800000,900000]
     weight_decay_factor = config.train.weight_decay_factor
     #log and checkpoint params
     log_interval=config.log.log_interval
@@ -278,6 +375,8 @@ def parallel_train(train_model,dataset,config):
     hout = train_model.hout
     wout = train_model.wout
     model_dir = config.model.model_dir
+    pretrain_model_dir=config.pretrain.pretrain_model_dir
+    pretrain_model_path=f"{pretrain_model_dir}/newest_{train_model.backbone.name}.npz"
 
     #import kungfu
     from kungfu import current_cluster_size, current_rank
@@ -299,18 +398,29 @@ def parallel_train(train_model,dataset,config):
     train_dataset = train_dataset.batch(batch_size)  
     train_dataset = train_dataset.prefetch(64)
 
-    #train model configure  
+    #train model configure 
     step=tf.Variable(1, trainable=False)
     lr=tf.Variable(lr_init,trainable=False)
-    opt=tf.keras.optimizers.SGD(learning_rate=lr,momentum=0.9)
+    if(config.model.model_type==MODEL.Openpose):
+        opt=tf.keras.optimizers.RMSprop(learning_rate=lr)
+    else:
+        opt=tf.keras.optimizers.Adam(learning_rate=lr)
     ckpt=tf.train.Checkpoint(step=step,optimizer=opt,lr=lr)
     ckpt_manager=tf.train.CheckpointManager(ckpt,model_dir,max_to_keep=3)
 
     #load from ckpt
     try:
+        log("loading ckpt...")
         ckpt.restore(ckpt_manager.latest_checkpoint)
     except:
         log("ckpt_path doesn't exist, step and optimizer are initialized")
+    #load pretrained backbone
+    try:
+        log("loading pretrained backbone...")
+        tl.files.load_and_assign_npz_dict(name=pretrain_model_path,network=train_model.backbone,skip=True)
+    except:
+        log("pretrained backbone doesn't exist, model backbone are initialized")
+    #load model weights
     try:
         train_model.load_weights(os.path.join(model_dir,"newest_model.npz"))
     except:
@@ -330,7 +440,8 @@ def parallel_train(train_model,dataset,config):
     
 
     n_step = n_step // current_cluster_size() + 1  # KungFu
-    lr_decay_every_step = lr_decay_every_step // current_cluster_size() + 1  # KungFu
+    for step_idx,step in enumerate(lr_decay_steps):
+        lr_decay_steps[step_idx] = step // current_cluster_size() + 1  # KungFu
     
     #optimize one step
     @tf.function
@@ -357,18 +468,18 @@ def parallel_train(train_model,dataset,config):
     tic=time.time()
     train_model.train()
     log(f"Worker {current_rank()}: Initialized")
-    log('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_every_step: {}'.format(
-            n_step, batch_size, lr_init, lr_decay_every_step))
+    log('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_steps: {} lr_decay_factor: {}'.format(
+            n_step, batch_size, lr_init, lr_decay_steps, lr_decay_factor))
     for image,gt_label,mask in train_dataset:
         #learning rate decay
-        if(step % lr_decay_every_step==0):
-            new_lr_decay = lr_decay_factor**(step // lr_decay_every_step)
+        if(step in lr_decay_steps):
+            new_lr_decay = lr_decay_factor**(float(lr_decay_steps.index(step)+1)) 
             lr=lr_init*new_lr_decay
         #optimize one step
         gt_conf,gt_paf,pd_conf,pd_paf,total_loss,re_loss=one_step(image.numpy(),gt_label.numpy(),mask.numpy(),\
             train_model,step==0)
         #save log info periodly
-        if((step!=0) and (step%log_interval)==0):
+        if((step.numpy()!=0) and (step.numpy()%log_interval)==0):
             tic=time.time()
             log('Total Loss at iteration {} / {} is: {} Learning rate {} l2_loss {} time:{}'.format(
                 step.numpy(), n_step, total_loss, lr.numpy(), re_loss,time.time()-tic))

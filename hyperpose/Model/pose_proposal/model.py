@@ -5,10 +5,11 @@ from tensorlayer import layers
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d
 from tensorlayer.models import Model
 from .define import CocoPart,CocoLimb
+from ..backbones import Resnet18_backbone
 
 class PoseProposal(Model):
     def __init__(self,parts=CocoPart,limbs=CocoLimb,colors=None,K_size=18,L_size=17,win=384,hin=384,wout=12,hout=12,wnei=9,hnei=9\
-        ,lmd_rsp=0.25,lmd_iou=1,lmd_coor=5,lmd_size=5,lmd_limb=0.5,backbone=None,data_format="channels_first"):
+        ,lmd_rsp=0.25,lmd_iou=1,lmd_coor=5,lmd_size=5,lmd_limb=0.5,backbone=None,pretraining=False,data_format="channels_first"):
         super().__init__()
         #construct params
         self.parts=parts
@@ -33,23 +34,23 @@ class PoseProposal(Model):
         self.output_dim=6*self.K+self.hnei*self.wnei*self.L
         #construct networks
         if(backbone==None):
-            self.backbone=self.Resnet_18(n_filter=512,in_channels=3,data_format=data_format)
+            self.backbone=Resnet18_backbone(scale_size=32,pretraining=pretraining,data_format=data_format)
         else:
-            self.backbone=backbone(scale_size=32,data_format=self.data_format)
+            self.backbone=backbone(scale_size=32,pretraining=pretraining,data_format=self.data_format)
         self.add_layer_1=LayerList([
-            Conv2d(n_filter=512,in_channels=self.backbone.out_channels,filter_size=(3,3),strides=(1,1),data_format=self.data_format),
-            BatchNorm2d(decay=0.9,act=lambda x:tl.act.leaky_relu(x,alpha=0.1),is_train=True,num_features=512,data_format=self.data_format)
-        ])
+            Conv2d(n_filter=512,in_channels=self.backbone.out_channels,filter_size=(3,3),strides=(1,1),data_format=self.data_format,name="add_block_1_conv_1"),
+            BatchNorm2d(decay=0.9,act=lambda x:tl.act.leaky_relu(x,alpha=0.1),is_train=True,num_features=512,data_format=self.data_format,name="add_block_1_bn_1"),
+        ],name="add_block_1")
         self.add_layer_2=LayerList([
-            Conv2d(n_filter=512,in_channels=512,filter_size=(3,3),strides=(1,1),data_format=self.data_format),
-            BatchNorm2d(decay=0.9,act=lambda x:tl.act.leaky_relu(x,alpha=0.1),is_train=True,num_features=512,data_format=self.data_format)
-        ])
-        self.add_layer_3=Conv2d(n_filter=self.output_dim,in_channels=512,filter_size=(1,1),strides=(1,1),data_format=self.data_format)
+            Conv2d(n_filter=512,in_channels=512,filter_size=(3,3),strides=(1,1),data_format=self.data_format,name="add_block_2_conv_1"),
+            BatchNorm2d(decay=0.9,act=lambda x:tl.act.leaky_relu(x,alpha=0.1),is_train=True,num_features=512,data_format=self.data_format,name="add_block_2_bn_1")
+        ],name="add_block_2")
+        self.add_layer_3=Conv2d(n_filter=self.output_dim,in_channels=512,filter_size=(1,1),strides=(1,1),data_format=self.data_format,name="add_block_3_conv_1")
 
     @tf.function
-    def forward(self,x,is_train=False):
-        x=self.backbone.forward(x)
-        x=self.add_layer_1.forward(x)
+    def forward(self,x,is_train=False,domainadapt=False):
+        backbone_features=self.backbone.forward(x)
+        x=self.add_layer_1.forward(backbone_features)
         x=self.add_layer_2.forward(x)
         x=self.add_layer_3.forward(x)
         x=tf.nn.sigmoid(x)
@@ -71,7 +72,10 @@ class PoseProposal(Model):
             pe=tf.reshape(x[:,:,:,6*self.K:],[-1,self.wnei,self.hnei,self.wout,self.hout,self.L])
         if(is_train==False):
             px,py,pw,ph=self.restore_coor(px,py,pw,ph)
-        return pc,pi,px,py,pw,ph,pe
+        if(domainadapt):
+            return pc,pi,px,py,pw,ph,pe,backbone_features
+        else:
+            return pc,pi,px,py,pw,ph,pe
     
     @tf.function
     def infer(self,x):
@@ -83,8 +87,8 @@ class PoseProposal(Model):
         grid_size_y=self.hin/self.hout
         grid_x,grid_y=tf.meshgrid(np.arange(self.wout).astype(np.float32),np.arange(self.hout).astype(np.float32))
         if(self.data_format=="channels_last"):
-            grid_size_x=grid_size_x[:,:,np.newaxis]
-            grid_size_y=grid_size_y[:,:,np.newaxis]
+            grid_x=grid_x[:,:,np.newaxis]
+            grid_y=grid_y[:,:,np.newaxis]
         rx=(x+grid_x)*grid_size_x
         ry=(y+grid_y)*grid_size_y
         rw=w*self.win
@@ -107,8 +111,8 @@ class PoseProposal(Model):
         rtx,rty,rtw,rth=self.restore_coor(tx,ty,tw,th)
         rx,ry,rw,rh=self.restore_coor(px,py,pw,ph)
         ti=self.cal_iou((rtx,rty,rtw,rth),(rx,ry,rw,rh))
-        mask_point=tf.minimum(delta+tf.where(delta<0.5,0.0005,0),1)
-        mask_edge=tf.minimum(te_mask+tf.where(te_mask<0.5,0.0005,0),1)
+        mask_point=tf.minimum(delta+tf.where(delta<0.5,0.00001,0),1)
+        mask_edge=tf.minimum(te_mask+tf.where(te_mask<0.5,0.00001,0),1)
         half=tf.where(delta<0.5,0.5,0)
         loss_rsp=self.lmd_rsp*tf.reduce_mean(tf.reduce_sum((delta-pc)**2,axis=[1,2,3]))
         loss_iou=self.lmd_iou*tf.reduce_mean(tf.reduce_sum(delta*((ti-pi)**2),axis=[1,2,3]))
@@ -117,55 +121,4 @@ class PoseProposal(Model):
         loss_limb=self.lmd_limb*tf.reduce_mean(tf.reduce_sum(mask_edge*((te-pe)**2),axis=[1,2,3,4,5]))
         return loss_rsp,loss_iou,loss_coor,loss_size,loss_limb
     
-    class Resnet_18(Model):
-        def __init__(self,n_filter=512,in_channels=3,data_format="channels_first"):
-            super().__init__()
-            self.data_format=data_format
-            self.out_channels=n_filter
-            self.conv1=Conv2d(n_filter=64,in_channels=in_channels,filter_size=(7,7),strides=(2,2),b_init=None,data_format=self.data_format)
-            self.bn1=BatchNorm2d(decay=0.9,act=tf.nn.relu,is_train=True,num_features=64,data_format=self.data_format)
-            self.maxpool=MaxPool2d(filter_size=(3,3),strides=(2,2),data_format=self.data_format)
-            self.res_block_2_1=self.Res_block(n_filter=64,in_channels=64,strides=(1,1),is_down_sample=False,data_format=self.data_format)
-            self.res_block_2_2=self.Res_block(n_filter=64,in_channels=64,strides=(1,1),is_down_sample=False,data_format=self.data_format)
-            self.res_block_3_1=self.Res_block(n_filter=128,in_channels=64,strides=(2,2),is_down_sample=True,data_format=self.data_format)
-            self.res_block_3_2=self.Res_block(n_filter=128,in_channels=128,strides=(1,1),is_down_sample=False,data_format=self.data_format)
-            self.res_block_4_1=self.Res_block(n_filter=256,in_channels=128,strides=(2,2),is_down_sample=True,data_format=self.data_format)
-            self.res_block_4_2=self.Res_block(n_filter=256,in_channels=256,strides=(1,1),is_down_sample=False,data_format=self.data_format)
-            self.res_block_5_1=self.Res_block(n_filter=n_filter,in_channels=256,strides=(2,2),is_down_sample=True,data_format=self.data_format)
-        
-        def forward(self,x):
-            x=self.conv1.forward(x)
-            x=self.bn1.forward(x)
-            x=self.maxpool.forward(x)
-            x=self.res_block_2_1.forward(x)
-            x=self.res_block_2_2.forward(x)
-            x=self.res_block_3_1.forward(x)
-            x=self.res_block_3_2.forward(x)
-            x=self.res_block_4_1.forward(x)
-            x=self.res_block_4_2.forward(x)
-            x=self.res_block_5_1.forward(x)
-            return x
-
-        class Res_block(Model):
-            def __init__(self,n_filter,in_channels,strides=(1,1),is_down_sample=False,data_format="channels_first"):
-                super().__init__()
-                self.data_format=data_format
-                self.is_down_sample=is_down_sample
-                self.main_block=LayerList([
-                Conv2d(n_filter=n_filter,in_channels=in_channels,filter_size=(3,3),strides=strides,b_init=None,data_format=self.data_format),
-                BatchNorm2d(decay=0.9,act=tf.nn.relu,is_train=True,num_features=n_filter,data_format=self.data_format),
-                Conv2d(n_filter=n_filter,in_channels=n_filter,filter_size=(3,3),strides=(1,1),b_init=None,data_format=self.data_format),
-                BatchNorm2d(decay=0.9,is_train=True,num_features=n_filter,data_format=self.data_format),
-                ])
-                if(self.is_down_sample):
-                    self.down_sample=LayerList([
-                        Conv2d(n_filter=n_filter,in_channels=in_channels,filter_size=(3,3),strides=strides,b_init=None,data_format=self.data_format),
-                        BatchNorm2d(decay=0.9,is_train=True,num_features=n_filter,data_format=self.data_format)
-                    ])
-
-            def forward(self,x):
-                res=x
-                x=self.main_block.forward(x)
-                if(self.is_down_sample):
-                    res=self.down_sample.forward(res)
-                return tf.nn.relu(x+res)
+    

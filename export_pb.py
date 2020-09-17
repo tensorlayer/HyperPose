@@ -64,9 +64,9 @@ if __name__ == '__main__':
         export_model.load_weights(input_path)
         export_model.eval()
         if(export_model.data_format=="channels_last"):
-            input_signature=tf.TensorSpec(shape=(None,export_model.hin,export_model.win,3))
+            input_signature=tf.TensorSpec(shape=(None,None,None,3))
         else:
-            input_signature=tf.TensorSpec(shape=(None,3,export_model.hin,export_model.win))
+            input_signature=tf.TensorSpec(shape=(None,3,None,None))
         concrete_function=export_model.infer.get_concrete_function(x=input_signature)
         frozen_graph=convert_variables_to_constants_v2(concrete_function)
         frozen_graph_def=frozen_graph.graph.as_graph_def()

@@ -6,7 +6,7 @@ from distutils.dir_util import mkpath
 import numpy as np
 import tensorflow as tf
 import cv2
-from ..Config.define import MODEL,TRAIN,DATA,BACKBONE,KUNGFU
+from ..Config.define import MODEL,TRAIN,DATA,BACKBONE,KUNGFU,OPTIM
 
 regularizer_conv = 0.004
 regularizer_dsconv = 0.0004
@@ -249,9 +249,43 @@ def tf_repeat(tensor, repeats):
     repeated_tesnor = tf.reshape(tiled_tensor, tf.shape(tensor) * repeats)
     return repeated_tesnor
 
+def regulize_loss(target_model,weight_decay_factor):
+    re_loss=0
+    regularizer=tf.keras.regularizers.l2(l=weight_decay_factor)
+    for trainable_weight in target_model.trainable_weights:
+        re_loss+=regularizer(trainable_weight)
+    return re_loss
+
+def pad_image(img,stride,pad_value=0.0):
+    img_h,img_w,img_c=img.shape
+    pad_h= 0 if (img_h%stride==0) else int(stride-(img_h%stride))
+    pad_w= 0 if (img_w%stride==0) else int(stride-(img_w%stride))
+    pad=[pad_h//2,pad_h-pad_h//2,pad_w//2,pad_w-pad_w//2]
+    padded_image=np.zeros(shape=(img_h+pad_h,img_w+pad_w,img_c))+pad_value
+    padded_image[pad[0]:img_h+pad[0],pad[2]:img_w+pad[2],:]=img
+    return padded_image,pad
+
+def get_optim(optim_type):
+    if(optim_type==OPTIM.Adam):
+        print("using optimizer Adam!")
+        return tf.keras.optimizers.Adam
+    elif(optim_type==OPTIM.RMSprop):
+        print("using optimizer RMSProp!")
+        return tf.keras.optimizers.RMSprop
+    elif(optim_type==OPTIM.SGD):
+        print("using optimizer SGD!")
+        return tf.keras.optimizers.SGD
+    else:
+        raise NotImplementedError("invalid optim type")
+
+
 def init_log(config):
-    logging.basicConfig(filename=config.log.log_path,filemode="a",level=logging.INFO)
+    logger=logging.getLogger(name="hyperpose")
+    file_handler=logging.FileHandler(filename=config.log.log_path,mode="a")
+    logger.addHandler(file_handler)
+    logger.setLevel(logging.INFO)
 
 def log(msg):
-    logging.log(level=logging.INFO,msg=msg)
+    logger=logging.getLogger(name="hyperpose")
+    logger.info(msg=msg)
     print(msg)
