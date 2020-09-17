@@ -8,7 +8,8 @@ from ..define import CocoPart,CocoLimb
 initializer=tl.initializers.truncated_normal(stddev=0.005)
 
 class LightWeightOpenPose(Model):
-    def __init__(self,parts=CocoPart,limbs=CocoLimb,colors=None,n_pos=19,n_limbs=19,num_channels=128,hin=368,win=368,hout=46,wout=46,backbone=None,data_format="channels_first"):
+    def __init__(self,parts=CocoPart,limbs=CocoLimb,colors=None,n_pos=19,n_limbs=19,num_channels=128,\
+        hin=368,win=368,hout=46,wout=46,backbone=None,pretraining=False,data_format="channels_first"):
         super().__init__()
         self.num_channels=num_channels
         self.parts=parts
@@ -31,7 +32,7 @@ class LightWeightOpenPose(Model):
         if(backbone==None):
             self.backbone=self.Dilated_mobilenet(data_format=self.data_format)
         else:
-            self.backbone=backbone(scale_size=8,data_format=self.data_format)
+            self.backbone=backbone(scale_size=8,pretraining=pretraining,data_format=self.data_format)
         #cpm stage to cutdown dimension
         self.cpm_stage=self.Cpm_stage(n_filter=self.num_channels,in_channels=self.backbone.out_channels,data_format=self.data_format)
         #init stage
@@ -40,8 +41,9 @@ class LightWeightOpenPose(Model):
         #one refinemnet stage
         self.refine_stage1=self.Refinement_stage(n_filter=self.num_channels,n_confmaps=self.n_confmaps,n_pafmaps=self.n_pafmaps,\
             in_channels=self.num_channels+self.n_confmaps+self.n_pafmaps,data_format=self.data_format)
+    
     @tf.function
-    def forward(self,x,is_train=False):
+    def forward(self,x,is_train=False,stage_num=1,domainadapt=False):
         conf_list=[]
         paf_list=[]
         #backbone feature extract
@@ -56,14 +58,18 @@ class LightWeightOpenPose(Model):
         ref_conf1,ref_paf1=self.refine_stage1(x)
         conf_list.append(ref_conf1)
         paf_list.append(ref_paf1)
-        if(is_train):
+        if(domainadapt):
+            return conf_list[-1],paf_list[-1],conf_list,paf_list,backbone_features
+        elif(is_train):
             return conf_list[-1],paf_list[-1],conf_list,paf_list
         else:
             return conf_list[-1],paf_list[-1]
-    @tf.function
+
+    @tf.function(experimental_relax_shapes=True)
     def infer(self,x):
         conf_map,paf_map=self.forward(x,is_train=False)
         return conf_map,paf_map
+    
     def cal_loss(self,gt_conf,gt_paf,mask,stage_confs,stage_pafs):
         stage_losses=[]
         batch_size=gt_conf.shape[0]
@@ -83,11 +89,13 @@ class LightWeightOpenPose(Model):
             loss_pafs.append(loss_paf)
         pd_loss=tf.reduce_mean(stage_losses)/batch_size
         return pd_loss,loss_confs,loss_pafs
+
     class Dilated_mobilenet(Model):
         def __init__(self,data_format="channels_first"):
             super().__init__()
             self.data_format=data_format
             self.out_channels=512
+            self.scale_size=8
             self.main_block=layers.LayerList([
             conv_block(n_filter=32,in_channels=3,data_format=self.data_format,strides=(2,2)),
             dw_conv_block(n_filter=64,in_channels=32,data_format=self.data_format),
@@ -104,6 +112,7 @@ class LightWeightOpenPose(Model):
             ])
         def forward(self,x):
             return self.main_block.forward(x)
+
     class Cpm_stage(Model):
         def __init__(self,n_filter=128,in_channels=512,data_format="channels_first"):
             super().__init__()

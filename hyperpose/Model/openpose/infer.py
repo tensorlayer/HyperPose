@@ -8,7 +8,7 @@ import scipy.stats as st
 from ..human import Human,BodyPart
 
 class Post_Processor:
-    def __init__(self,parts,limbs,colors):
+    def __init__(self,parts,limbs,colors,debug=False):
         self.cur_id=0
         self.parts=parts
         self.limbs=limbs
@@ -17,14 +17,14 @@ class Post_Processor:
             self.colors=[[255,0,0]]*len(parts)
         self.n_pos=len(self.parts)
         self.n_limb=len(self.limbs)
-        self.thres_conf=0.1
-        self.thres_vec=0.1
+        self.thres_conf=0.05
+        self.thres_vec=0.05
         self.thres_vec_cnt=6
-        self.thres_criterion2=0.05
-        self.thres_part_cnt=8
-        self.thres_human_score=0.55
+        self.thres_criterion2=0
+        self.thres_part_cnt=4
+        self.thres_human_score=0.3
         self.step_paf=10
-        self.n_limb=len(self.limbs)
+        self.debug=debug
     
     def get_peak_map(self,conf_map):
         def _gauss_smooth(origin):
@@ -45,8 +45,14 @@ class Post_Processor:
         if(data_format=="channels_first"):
             conf_map=np.transpose(conf_map,[1,2,0])
             paf_map=np.transpose(paf_map,[1,2,0])
-        conf_map=cv2.resize(conf_map,(img_w,img_h))[np.newaxis,:,:,:]
-        paf_map=cv2.resize(paf_map,(img_w,img_h))[np.newaxis,:,:,:]
+        #conf_map
+        if(conf_map.shape[0]!=img_h or conf_map.shape[1]!=img_w):
+            conf_map=cv2.resize(conf_map,(img_w,img_h))
+        conf_map=conf_map[np.newaxis,:,:,:]
+        #paf_map
+        if(paf_map.shape[0]!=img_h or paf_map.shape[1]!=img_w):
+            paf_map=cv2.resize(paf_map,(img_w,img_h))
+        paf_map=paf_map[np.newaxis,:,:,:]
         peak_map=self.get_peak_map(conf_map)
         humans=self.process_paf(peak_map[0],conf_map[0],paf_map[0])
         return humans
@@ -62,10 +68,15 @@ class Post_Processor:
             peaks[part_idx].append(Peak(peak_idx,part_idx,peak_y,peak_x,peak_score))
             all_peaks.append(Peak(peak_idx,part_idx,peak_y,peak_x,peak_score))
         #start candidate connection
-        '''
-        for part_idx in range(0,self.n_pos):
-            print(f"found peak_{part_idx}:{len(peaks[part_idx])}")
-        '''
+        if(self.debug):
+            print("peak debug:")
+            for part_idx in range(0,self.n_pos):
+                print(f"found peak_{part_idx}:{len(peaks[part_idx])}")
+            for part_idx in range(0,self.n_pos):
+                print(f"peak {self.parts(part_idx)}:")
+                for peak in peaks[part_idx]:
+                    print(f"peak {self.parts(part_idx)} id:{peak.idx} x:{peak.x} y:{peak.y} score:{peak.score}")
+                print()
 
         candidate_limbs=[[] for limb_idx in range(0,len(self.limbs))]
         for limb_idx,limb in enumerate(self.limbs):
@@ -74,7 +85,7 @@ class Post_Processor:
             peak_dst_list=peaks[dst_idx]
             if((len(peak_src_list)==0) or(len(peak_dst_list)==0)):
                 continue
-            #print(f"candidating: src:{self.parts(src_idx)} dst:{self.parts(dst_idx)}")
+            self.debug_print(f"candidating: src:{self.parts(src_idx)} dst:{self.parts(dst_idx)}")
             for peak_src in peak_src_list:
                 for peak_dst in peak_dst_list:
                     #calculate paf vector
@@ -95,10 +106,11 @@ class Post_Processor:
                             criterion1+=1
                         scores+=score
                     criterion2=scores/self.step_paf+min(0.0,0.5*conf_map.shape[0]/lenth-1.0)
+                    criterion3=(peak_src.score+peak_dst.score)*0.1
                     #filter candidate limbs
-                    #print(f"test start:{vec_src} end:{vec_dst} c1:{criterion1} c2:{criterion2}")
+                    self.debug_print(f"test start:id-{peak_src.idx} pos-{vec_src} end:id-{peak_dst.idx} pos-{vec_dst} c1:{criterion1} c2:{criterion2} c3:{criterion3}")
                     if(criterion1>self.thres_vec_cnt and criterion2>self.thres_criterion2):
-                        candidate_limbs[limb_idx].append(Connection(peak_src.idx,peak_dst.idx,criterion2))
+                        candidate_limbs[limb_idx].append(Connection(peak_src.idx,peak_dst.idx,criterion2+criterion3))
         #filter chosen connection
         all_chosen_limbs=[[] for limb_idx in range(0,len(self.limbs))]
         for limb_idx in range(0,len(self.limbs)):
@@ -132,6 +144,7 @@ class Post_Processor:
                 if(len(touched_ids)==1):
                     human=humans[touched_ids[0]]
                     if(human[dst_part_idx]!=peak_dst_id):
+                        #TODO: check why could the followers just take the previous larger score???
                         human[dst_part_idx]=peak_dst_id
                         human[19]+=1
                         human[18]+=all_peaks[peak_dst_id].score+chosen_limb.score
@@ -163,12 +176,13 @@ class Post_Processor:
         #print(f"test candidate human:{len(humans)}")
         ret_humans=[]
         for human_id,human in enumerate(humans):
-            #print(f"test human filter score:{human[18]/human[19]}  part_num:{human[19]}")
+            if(self.debug):
+                self.debug_print(f"\ntest human filter human_id:{human_id} score:{human[18]/human[19]}  part_num:{human[19]}")
             #print(f"test candidate")
             for i in range(0,18):
                 if(human[i]!=-1):
                     peak=all_peaks[int(human[i])]
-                    print(f"part:{self.parts(i)} loc_y:{peak.y} loc_x:{peak.x} socre:{peak.score}")
+                    self.debug_print(f"part:{self.parts(i)} loc_y:{peak.y} loc_x:{peak.x} socre:{peak.score}")
             if((human[18]/human[19]>=self.thres_human_score) and (human[19]>=self.thres_part_cnt)):
                 ret_human=Human(self.parts,self.limbs,self.colors)
                 ret_human.local_id=human_id
@@ -197,6 +211,10 @@ class Post_Processor:
             paf_vectors[step][0]=vec_paf_y
             paf_vectors[step][1]=vec_paf_x
         return paf_vectors
+    
+    def debug_print(self,msg):
+        if(self.debug):
+            print(msg)
         
 class Peak:
     def __init__(self,peak_idx,part_idx,y,x,score):

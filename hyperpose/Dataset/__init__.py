@@ -1,7 +1,10 @@
 import os
 from .common import TRAIN,MODEL,DATA
-from .mscoco_dataset import MSCOCO_dataset
+from .base_dataset import Base_dataset
+from .multi_dataset import Multi_dataset
 from .mpii_dataset import MPII_dataset
+from .mscoco_dataset import MSCOCO_dataset
+from .imagenet_dataset import Imagenet_dataset
 from .common import imread_rgb_float,imwrite_rgb_float
 
 def get_dataset(config):
@@ -46,7 +49,7 @@ def get_dataset(config):
     model_type=config.model.model_type
     dataset_type=config.data.dataset_type
     if(dataset_type==DATA.MSCOCO):
-        print("using Mscoco dataset!")
+        print("using MSCOCO dataset!")
         if(model_type==MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose or model_type==MODEL.Openpose):
             from .mscoco_dataset.define import opps_input_converter as input_kpt_cvter
             from .mscoco_dataset.define import opps_output_converter as output_kpt_cvter
@@ -56,7 +59,7 @@ def get_dataset(config):
         dataset=MSCOCO_dataset(config,input_kpt_cvter,output_kpt_cvter)
         dataset.prepare_dataset()
     elif(dataset_type==DATA.MPII):
-        print("using Mpii dataset!")
+        print("using MPII dataset!")
         if(model_type==MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose or model_type==MODEL.Openpose):
             from .mpii_dataset.define import opps_input_converter as input_kpt_cvter
             from .mpii_dataset.define import opps_output_converter as output_kpt_cvter
@@ -65,8 +68,34 @@ def get_dataset(config):
             from .mpii_dataset.define import ppn_output_converter as output_kpt_cvter
         dataset=MPII_dataset(config,input_kpt_cvter,output_kpt_cvter)
         dataset.prepare_dataset()
-    else:
+    elif(dataset_type==DATA.USERDEF):
         print("using user-defined dataset!")
-        user_dataset=dataset_type
-        dataset=user_dataset(config)
+        userdef_dataset=config.data.userdef_dataset
+        dataset=userdef_dataset(config)
+    elif(dataset_type==DATA.MULTIPLE):
+        print("using multiple-combined dataset!")
+        combined_dataset_list=[]
+        multiple_dataset_configs=config.data.multiple_dataset_configs
+        print(f"total {len(multiple_dataset_configs)} datasets settled, initializing combined datasets individualy....")
+        for dataset_idx,dataset_config in enumerate(multiple_dataset_configs):
+            print(f"initializing combined dataset {dataset_idx},config:{dataset_config.data}...")
+            combined_dataset_list.append(get_dataset(dataset_config))
+        print("initialization finished")
+        dataset=Multi_dataset(config,combined_dataset_list)
+    else:
+        raise NotImplementedError(f"invalid dataset_type:{dataset_type}")
     return dataset
+
+
+def get_pretrain_dataset(config):
+    return Imagenet_dataset(config)
+
+def enum2dataset(dataset_type):
+    if(dataset_type==DATA.MSCOCO):
+        return MSCOCO_dataset
+    elif(dataset_type==DATA.MPII):
+        return MPII_dataset
+    elif(dataset_type==DATA.MULTIPLE):
+        raise NotImplementedError("multiple dataset shouldn't be nested!")
+    else:
+        raise NotImplementedError("Unknow dataset!")

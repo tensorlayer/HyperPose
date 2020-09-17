@@ -7,7 +7,8 @@ from ..utils import tf_repeat
 from ..define import CocoPart,CocoLimb
 
 class Mobilenetv2_small_Openpose(Model):
-    def __init__(self,parts=CocoPart,limbs=CocoLimb,colors=None,n_pos=19,n_limbs=19,num_channels=128,hin=368,win=368,hout=46,wout=46,data_format="channels_first"):
+    def __init__(self,parts=CocoPart,limbs=CocoLimb,colors=None,n_pos=19,n_limbs=19,num_channels=128,\
+        hin=368,win=368,hout=46,wout=46,backbone=None,pretraining=False,data_format="channels_first"):
         super().__init__()
         self.num_channels=num_channels
         self.parts=parts
@@ -26,8 +27,10 @@ class Mobilenetv2_small_Openpose(Model):
             self.concat_dim=1
         else:
             self.concat_dim=-1
-        
-        self.backbone=self.Mobilenetv2_variant(data_format=self.data_format)
+        if(backbone==None):
+            self.backbone=self.Mobilenetv2_variant(data_format=self.data_format)
+        else:
+            self.backbone=backbone(scale_size=8,pretraining=pretraining,data_format=self.data_format)
         self.init_stage=self.Init_stage(n_confmaps=self.n_confmaps,n_pafmaps=self.n_pafmaps,in_channels=self.backbone.out_channels,data_format=self.data_format)
         self.refinement_stage_1=self.Refinement_stage(n_confmaps=self.n_confmaps,n_pafmaps=self.n_pafmaps,in_channels=self.backbone.out_channels+3*self.n_confmaps,data_format=self.data_format)
         self.refinement_stage_2=self.Refinement_stage(n_confmaps=self.n_confmaps,n_pafmaps=self.n_pafmaps,in_channels=self.backbone.out_channels+3*self.n_confmaps,data_format=self.data_format)
@@ -35,24 +38,26 @@ class Mobilenetv2_small_Openpose(Model):
         self.refinement_stage_4=self.Refinement_stage(n_confmaps=self.n_confmaps,n_pafmaps=self.n_pafmaps,in_channels=self.backbone.out_channels+3*self.n_confmaps,data_format=self.data_format)
     
     @tf.function
-    def forward(self,x,mask_conf=None,mask_paf=None,is_train=False):
+    def forward(self,x,mask_conf=None,mask_paf=None,is_train=False,stage_num=4,domainadapt=False):
         conf_list=[]
         paf_list=[] 
         backbone_features=self.backbone.forward(x)
         conf_map,paf_map=self.init_stage.forward(backbone_features)
         conf_list.append(conf_map)
         paf_list.append(paf_map)
-        for refinement_stage_idx in range(1,6):
+        for refinement_stage_idx in range(1,stage_num+1):
             x=tf.concat([backbone_features,conf_list[-1],paf_list[-1]],self.concat_dim)
             conf_map,paf_map=eval(f"self.refinement_stage_{refinement_stage_idx}.forward(x)")
             conf_list.append(conf_map)
             paf_list.append(paf_map)
-        if(is_train):
+        if(domainadapt):
+            return conf_list[-1],paf_list[-1],conf_list,paf_list,backbone_features
+        elif(is_train):
             return conf_list[-1],paf_list[-1],conf_list,paf_list
         else:
             return conf_list[-1],paf_list[-1]
     
-    @tf.function
+    @tf.function(experimental_relax_shapes=True)
     def infer(self,x):
         conf_map,paf_map=self.forward(x,is_train=False)
         return conf_map,paf_map
@@ -82,6 +87,7 @@ class Mobilenetv2_small_Openpose(Model):
             else:
                 self.concat_dim=-1
             self.out_channels=704
+            self.scale_size=8
             self.convblock_0=conv_block(n_filter=32,in_channels=3,filter_size=(3,3),strides=(2,2),act=tf.nn.relu,data_format=self.data_format)
             self.convblock_1=separable_block(n_filter=64,in_channels=32,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
             self.convblock_2=separable_block(n_filter=128,in_channels=64,filter_size=(3,3),strides=(2,2),act=tf.nn.relu,data_format=self.data_format)

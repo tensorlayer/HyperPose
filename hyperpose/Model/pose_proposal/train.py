@@ -16,7 +16,7 @@ from pycocotools.coco import maskUtils
 import _pickle as cPickle
 from .utils import  tf_repeat, draw_results, get_pose_proposals
 from .utils import get_parts,get_limbs
-from ..common import init_log,log,KUNGFU
+from ..common import log,KUNGFU,get_optim,init_log
 
 def regulize_loss(target_model,weight_decay_factor):
     re_loss=0
@@ -37,6 +37,7 @@ def _data_aug_fn(image, ground_truth, hin, win, hout, wout, hnei, wnei, parts, l
     img_h,img_w,_=image.shape
     annos=np.array(annos).astype(np.float32)
     bbxs=np.array(bbxs).astype(np.float32)
+    '''
     scale_w=np.float32(win/img_w)
     scale_h=np.float32(hin/img_h)
     annos[:,:,0]*=scale_w
@@ -46,6 +47,7 @@ def _data_aug_fn(image, ground_truth, hin, win, hout, wout, hnei, wnei, parts, l
     bbxs[:,1]*=scale_h
     bbxs[:,2]*=scale_w
     bbxs[:,3]*=scale_h
+    '''
     # decode mask
     h_mask, w_mask, _ = np.shape(image)
     mask_miss = np.ones((h_mask, w_mask), dtype=np.uint8)
@@ -54,12 +56,49 @@ def _data_aug_fn(image, ground_truth, hin, win, hout, wout, hnei, wnei, parts, l
             bin_mask = maskUtils.decode(seg)
             bin_mask = np.logical_not(bin_mask)
             mask_miss = np.bitwise_and(mask_miss, bin_mask)
+
+    #prepare transform bbx    
+    transform_bbx=np.zeros(shape=(bbxs.shape[0],4,2))
+    bbxs_x,bbxs_y,bbxs_w,bbxs_h=bbxs[:,0],bbxs[:,1],bbxs[:,2],bbxs[:,3]
+    transform_bbx[:,0,0],transform_bbx[:,0,1]=bbxs_x,bbxs_y #left_top
+    transform_bbx[:,1,0],transform_bbx[:,1,1]=bbxs_x+bbxs_w,bbxs_y #right_top
+    transform_bbx[:,2,0],transform_bbx[:,2,1]=bbxs_x,bbxs_y+bbxs_h #left_buttom
+    transform_bbx[:,3,0],transform_bbx[:,3,1]=bbxs_x+bbxs_w,bbxs_y+bbxs_h #right top
+
     #image transform
-    image=cv2.resize(image,dsize=(win,hin))
-    mask_miss=cv2.resize(mask_miss,dsize=(win,hin))
+    #get transform matrix
+    h, w, _ = image.shape
+    M_rotate = tl.prepro.affine_rotation_matrix(angle=(-30, 30))  # original paper: -40~40
+    M_zoom = tl.prepro.affine_zoom_matrix(zoom_range=(0.5, 0.8))  # original paper: 0.5~1.1
+    M_combined = M_rotate.dot(M_zoom)
+    transform_matrix = tl.prepro.transform_matrix_offset_center(M_combined, x=w, y=h)
+    #transform
+    image = tl.prepro.affine_transform_cv2(image, transform_matrix)
+    mask_miss = tl.prepro.affine_transform_cv2(mask_miss, transform_matrix, border_mode='replicate')
+    annos = tl.prepro.affine_transform_keypoints(annos, transform_matrix)
+    transform_bbx=tl.prepro.affine_transform_keypoints(transform_bbx,transform_matrix)
+    #construct transformed bbx
+    transform_bbx=np.array(transform_bbx)
+    final_bbxs=np.zeros(shape=bbxs.shape)
+    for bbx_id in range(0,transform_bbx.shape[0]):
+        bbx=transform_bbx[bbx_id,:,:]
+        bbx_min_x=np.amin(bbx[:,0])
+        bbx_max_x=np.amax(bbx[:,0])
+        bbx_min_y=np.amin(bbx[:,1])
+        bbx_max_y=np.amax(bbx[:,1])
+        final_bbxs[bbx_id,0]=bbx_min_x
+        final_bbxs[bbx_id,1]=bbx_min_y
+        final_bbxs[bbx_id,2]=bbx_max_x-bbx_min_x
+        final_bbxs[bbx_id,3]=bbx_max_y-bbx_min_y
+    #resize crop
+    transform_h,transform_w,_=image.shape
+    image, annos, mask_miss = tl.prepro.keypoint_resize_random_crop(image, annos, mask_miss, size=(hin, win))
+    resize_ratio=max(hin/transform_h,win/transform_w) #follow tl.prepro.keypoint_resize_random_crop
+    final_bbxs[:,2]=final_bbxs[:,2]*resize_ratio
+    final_bbxs[:,3]=final_bbxs[:,3]*resize_ratio
     
     # generate result which include proposal region x,y,w,h,edges
-    delta,tx,ty,tw,th,te,te_mask=get_pose_proposals(annos,bbxs,hin,win,hout,wout,hnei,wnei,parts,limbs,mask_miss,data_format)
+    delta,tx,ty,tw,th,te,te_mask=get_pose_proposals(annos,final_bbxs,hin,win,hout,wout,hnei,wnei,parts,limbs,mask_miss,data_format)
 
     #generate output masked image, result map and maskes
     img_mask = mask_miss[:,:,np.newaxis]
@@ -112,6 +151,7 @@ def single_train(train_model,dataset,config):
     -------
     None
     '''
+
     init_log(config)
     #train hyper paramss
     #dataset params
@@ -134,9 +174,10 @@ def single_train(train_model,dataset,config):
     hnei = train_model.hnei
     wnei = train_model.wnei
     model_dir = config.model.model_dir
-
+    pretrain_model_dir=config.pretrain.pretrain_model_dir
+    pretrain_model_path=f"{pretrain_model_dir}/newest_{train_model.backbone.name}.npz"
     
-    print(f"single training using learning rate:{lr_init} batch_size:{batch_size}")
+    log(f"\nsingle training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
     parts,limbs,data_format=train_model.parts,train_model.limbs,train_model.data_format
@@ -149,16 +190,25 @@ def single_train(train_model,dataset,config):
     #train params configure
     step=tf.Variable(1, trainable=False)
     lr=tf.Variable(lr_init,trainable=False)
-    opt=tf.keras.optimizers.Adam(learning_rate=lr)
+    opt=tf.keras.optimizers.SGD(learning_rate=lr,momentum=0.9)
     ckpt=tf.train.Checkpoint(step=step,optimizer=opt,lr=lr)
     ckpt_manager=tf.train.CheckpointManager(ckpt,model_dir,max_to_keep=3)
     
     #load from ckpt
     try:
+        log("loading ckpt...")
         ckpt.restore(ckpt_manager.latest_checkpoint)
     except:
         log("ckpt_path doesn't exist, step and optimizer are initialized")
+    #load pretrained backbone
     try:
+        log("loading pretrained backbone...")
+        tl.files.load_and_assign_npz_dict(name=pretrain_model_path,network=train_model.backbone,skip=True)
+    except:
+        log("pretrained backbone doesn't exist, model backbone are initialized")
+    #load model weights
+    try:
+        log("logging model weights...")
         train_model.load_weights(os.path.join(model_dir,"newest_model.npz"))
     except:
         log("model_path doesn't exist, model parameters are initialized")
@@ -170,16 +220,15 @@ def single_train(train_model,dataset,config):
         with tf.GradientTape() as tape:
             delta,tx,ty,tw,th,te,te_mask=targets
             pc,pi,px,py,pw,ph,pe=train_model.forward(image,is_train=True)
-            loss_rsp,loss_iou,loss_coor,loss_size,loss_limb=\
-                train_model.cal_loss(delta,tx,ty,tw,th,te,te_mask,pc,pi,px,py,pw,ph,pe)
+            loss_rsp,loss_iou,loss_coor,loss_size,loss_limb=train_model.cal_loss(delta,tx,ty,tw,th,te,te_mask,pc,pi,px,py,pw,ph,pe)
             pd_loss=loss_rsp+loss_iou+loss_coor+loss_size+loss_limb
             re_loss=regulize_loss(train_model,weight_decay_factor)
             total_loss=pd_loss+re_loss
-        
+
         gradients=tape.gradient(total_loss,train_model.trainable_weights)
         opt.apply_gradients(zip(gradients,train_model.trainable_weights))
         predicts=(pc,px,py,pw,ph,pe)
-        return predicts,targets,pd_loss,re_loss, loss_rsp,loss_iou,loss_coor,loss_size,loss_limb
+        return predicts,targets,pd_loss,re_loss,loss_rsp,loss_iou,loss_coor,loss_size,loss_limb
 
     #train each step
     tic=time.time()
@@ -201,7 +250,7 @@ def single_train(train_model,dataset,config):
         avg_pd_loss+=pd_loss/log_interval
         avg_re_loss+=re_loss/log_interval
         #save log info periodly
-        if((step!=0) and (step%log_interval)==0):
+        if((step.numpy()!=0) and (step.numpy()%log_interval)==0):
             tic=time.time()
             log(f"Train iteration {step.numpy()}/{n_step}, learning rate:{lr.numpy()},loss_rsp:{avg_loss_rsp},"+\
                     f"loss_iou:{avg_loss_iou},loss_coor:{avg_loss_coor},loss_size:{avg_loss_size},loss_limb:{avg_loss_limb},"+\
@@ -209,7 +258,7 @@ def single_train(train_model,dataset,config):
             avg_loss_rsp,avg_loss_iou,avg_loss_coor,avg_loss_size,avg_loss_limb,avg_pd_loss,avg_re_loss=0.,0.,0.,0.,0.,0.,0.
             
         #save result and ckpt periodly
-        if((step!=0) and (step%save_interval)==0):
+        if((step.numpy()!=0) and (step.numpy()%save_interval)==0):
             log("saving model ckpt and result...")
             draw_results(image.numpy(),predicts,targets,parts,limbs,save_dir=vis_dir,name=f"ppn_step_{step.numpy()}")
             ckpt_save_path=ckpt_manager.save()
@@ -218,6 +267,8 @@ def single_train(train_model,dataset,config):
             train_model.save_weights(model_save_path)
             model_save_path=os.path.join(model_dir,f"step_{step.numpy()}_model.npz")
             train_model.save_weights(model_save_path)
+            model_save_npzd_path=os.path.join(model_dir,"newest_model_dict.npz")
+            train_model.save_weights(model_save_npzd_path,format="npz_dict")
             log(f"model save_path:{model_save_path} saved!\n")
 
         #training finished
@@ -247,6 +298,7 @@ def parallel_train(train_model,dataset,config):
     -------
     None
     '''
+
     init_log(config)
     #train hyper params
     #dataset params
@@ -269,6 +321,8 @@ def parallel_train(train_model,dataset,config):
     hnei = train_model.hnei
     wnei = train_model.wnei
     model_dir = config.model.model_dir
+    pretrain_model_dir=config.pretrain.pretrain_model_dir
+    pretrain_model_path=f"{pretrain_model_dir}/newest_{train_model.backbone.name}.npz"
     
     #import kungfu
     from kungfu import current_cluster_size, current_rank
@@ -298,9 +352,17 @@ def parallel_train(train_model,dataset,config):
 
     #load from ckpt
     try:
+        log("loading ckpt...")
         ckpt.restore(ckpt_manager.latest_checkpoint)
     except:
         log("ckpt_path doesn't exist, step and optimizer are initialized")
+    #load pretrained backbone
+    try:
+        log("loading pretrained backbone...")
+        tl.files.load_and_assign_npz_dict(name=pretrain_model_path,network=train_model.backbone,skip=True)
+    except:
+        log("pretrained backbone doesn't exist, model backbone are initialized")
+    #load model weights
     try:
         train_model.load_weights(os.path.join(model_dir,"newest_model.npz"))
     except:
@@ -327,12 +389,11 @@ def parallel_train(train_model,dataset,config):
         with tf.GradientTape() as tape:
             delta,tx,ty,tw,th,te,te_mask=targets
             pc,pi,px,py,pw,ph,pe=train_model.forward(image,is_train=True)
-            loss_rsp,loss_iou,loss_coor,loss_size,loss_limb=\
-                train_model.cal_loss(delta,tx,ty,tw,th,te,te_mask,pc,pi,px,py,pw,ph,pe)
+            loss_rsp,loss_iou,loss_coor,loss_size,loss_limb=train_model.cal_loss(delta,tx,ty,tw,th,te,te_mask,pc,pi,px,py,pw,ph,pe)
             pd_loss=loss_rsp+loss_iou+loss_coor+loss_size+loss_limb
             re_loss=regulize_loss(train_model,weight_decay_factor)
             total_loss=pd_loss+re_loss
-        
+
         gradients=tape.gradient(total_loss,train_model.trainable_weights)
         opt.apply_gradients(zip(gradients,train_model.trainable_weights))
         #Kung fu
@@ -363,7 +424,7 @@ def parallel_train(train_model,dataset,config):
         avg_re_loss+=re_loss/log_interval
         
         #save log info periodly
-        if((step!=0) and (step%log_interval)==0):
+        if((step.numpy()!=0) and (step.numpy()%log_interval)==0):
             tic=time.time()
             log(f"worker:{current_rank()} Train iteration {step.numpy()}/{n_step}, learning rate:{lr.numpy()},"+\
                     f"loss_rsp:{avg_loss_rsp},loss_iou:{avg_loss_iou},loss_coor:{avg_loss_coor},loss_size:{avg_loss_size},"+\

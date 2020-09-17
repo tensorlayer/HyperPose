@@ -19,6 +19,8 @@ class MODEL(Enum):
 class DATA(Enum):
     MSCOCO=0
     MPII=1
+    USERDEF=2
+    MULTIPLE=3
 
 class TRAIN(Enum):
     Single_train=0
@@ -28,3 +30,8 @@ class KUNGFU(Enum):
     Sync_sgd=0
     Sync_avg=1
     Pair_avg=2
+
+class OPTIM(Enum):
+    Adam=0
+    SGD=2
+    RMSprop=1

@@ -4,22 +4,25 @@ import json
 import numpy as np
 import _pickle as cPickle
 
+from ..base_dataset import Base_dataset
+from ..common import visualize
 from .define import MpiiPart,MpiiColor
 from .format import PoseInfo
 from .prepare import prepare_dataset
-from .visualize import visualize
-from .generate import get_train_dataset,get_eval_dataset
+from .generate import generate_train_data,generate_eval_data
 
 def init_dataset(config):
     dataset=MPII_dataset(config)
     return dataset
 
-class MPII_dataset:
+class MPII_dataset(Base_dataset):
     '''a dataset class specified for mpii dataset, provides uniform APIs'''
-    def __init__(self,config,input_kpt_cvter=None,output_kpt_cvter=None):
+    def __init__(self,config,input_kpt_cvter=None,output_kpt_cvter=None,dataset_filter=None):
+        super().__init__(config,input_kpt_cvter,output_kpt_cvter)
+        #basic data configure
+        self.official_flag=config.data.official_flag
         self.dataset_type=config.data.dataset_type
         self.dataset_path=config.data.dataset_path
-        self.dataset_filter=config.data.dataset_filter
         self.vis_dir=config.data.vis_dir
         self.annos_path=None
         self.images_path=None
@@ -31,6 +34,7 @@ class MPII_dataset:
             output_kpt_cvter=lambda x:x
         self.input_kpt_cvter=input_kpt_cvter
         self.output_kpt_cvter=output_kpt_cvter
+        self.dataset_filter=dataset_filter
     
     def visualize(self,vis_num=10):
         '''visualize annotations of the train dataset
@@ -49,7 +53,7 @@ class MPII_dataset:
         None
         '''
         train_dataset=self.get_train_dataset()
-        visualize(self.vis_dir,vis_num,train_dataset,self.parts,self.colors)
+        visualize(self.vis_dir,vis_num,train_dataset,self.parts,self.colors,dataset_name="mpii")
     
     def get_parts(self):
         return self.parts
@@ -73,83 +77,12 @@ class MPII_dataset:
         None
         '''
         self.train_annos_path,self.val_annos_path,self.images_path=prepare_dataset(self.dataset_path)
-
-    def get_train_dataset(self):
-        '''provide uniform tensorflow dataset for training
-
-        return a tensorflow dataset based on MPII dataset, each iter contains two following object
-
-        1.image_path
-            a image path string encoded in utf-8 mode
-
-        2.target
-            bytes of a dict object encoded by _pickle, should be decode by "_pickle.loads(target.numpy())"
-            the dict contains the following key-value pair:
-
-            2.1 key: "obj" 
-                value: a list of keypoint annotations, each annotation corresponds to a person and is a list of
-                keypoints of the person, each keypoint is represent in the [x,y,v] mode, v=0 is unvisible and unanotated,
-                v=1 is unvisible but annotated, v=2 is visible and annotated.
-            2.2 key: "mask" 
-                value: None(MPII doesn't provide any mask information)
-            2.3 key: "bbx"
-                value: a list of bbx annotation of the image, each bbx is in the [x,y,w,h] form.
-
-        example use
-            1.use tensorflow map function to convert the target format
-            map_function(image_path,target):
-
-                image = tf.io.read_file(image_path)
-                image, target, mask=tf.py_function(defined_pyfunction, [image, target], [tf.float32, tf.float32, tf.float32])
-            2.process the target to your own format when in need in defined_pyfunction
-            defined_pyfunction(image, target):
-
-                target = _pickle.loads(target.numpy())
-                annos = target["obj"]
-                mask = target["mask"]
-                bbxs = target["bbxs"]
-                processing
-            3. for image,target in train_dataset  
-
-        for more detail use, one can refer the training pipeline of models.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        tensorflow dataset object 
-            a unifrom formated tensorflow dataset object for training
-        '''
-        return get_train_dataset(self.images_path,self.train_annos_path,self.dataset_filter,self.input_kpt_cvter)
     
-    def get_eval_dataset(self):
-        '''provide uniform tensorflow dataset for evaluating
-
-        return a tensorflow dataset based on MPII dataset, each iter contains two following object
-
-        1.image_path: 
-            a image path string encoded in utf-8 mode
-        
-        2.image_id: 
-            a image id string encoded in utf-8 mode
-        
-        example use:
-            for image_path,image_id in eval_dataset
-
-        for more detail use, one can refer the evaluating pipeline of models.
-
-        Parameters
-        ----------
-        None
-        
-        Returns
-        -------
-        tensorflow dataset object 
-            a unifrom formated tensorflow dataset object for evaluating
-        '''
-        return get_eval_dataset(self.images_path,self.val_annos_path,self.dataset_filter)
+    def generate_train_data(self):
+        return generate_train_data(self.images_path,self.train_annos_path,self.dataset_filter,self.input_kpt_cvter)
+    
+    def generate_eval_data(self):
+        return generate_eval_data(self.images_path,self.val_annos_path,self.dataset_filter)
     
     def set_input_kpt_cvter(self,input_kpt_cvter):
         self.input_kpt_cvter=input_kpt_cvter
@@ -180,7 +113,7 @@ class MPII_dataset:
         -------
         None
         '''
-        #format result
+        #format predict result in dict
         pd_anns=pd_json["annotations"]
         pd_dict={}
         for pd_ann in pd_anns:
@@ -201,12 +134,16 @@ class MPII_dataset:
                 kpt_list=np.array(gt_ann["keypoints"])
                 x=kpt_list[0::3][np.newaxis,...]
                 y=kpt_list[1::3][np.newaxis,...]
+                vis_list=np.array(gt_ann["vis"])
+                vis_list=np.where(vis_list>0,1,0)
                 gt_ann["keypoints"]=np.concatenate([x,y],axis=0)
+                gt_ann["vis"]=vis_list
             gt_dict[meta.image_id]=gt_ann_list
 
         all_pd_kpts=[]
         all_gt_kpts=[]
         all_gt_vis=[]
+        all_gt_headbbxs=[]
         #match kpt into order for PCK calculation
         for image_id in pd_dict.keys():
             #sort pd_anns by score
@@ -226,7 +163,12 @@ class MPII_dataset:
                         continue
                     gt_kpts=gt_img_ann["keypoints"]
                     gt_vis=gt_img_ann["vis"]
-                    dist=np.mean(np.linalg.norm((pd_kpts-gt_kpts)*gt_vis,axis=0))
+                    vis_mask=np.ones(shape=gt_vis.shape)
+                    vis_mask[6:8]=0
+                    vis_num=np.sum(gt_vis)
+                    if(vis_num==0):
+                        continue
+                    dist=np.sum(np.linalg.norm((pd_kpts-gt_kpts)*gt_vis*vis_mask,axis=0))/vis_num
                     if(dist<match_dist):
                         match_dist=dist
                         match_id=gt_id
@@ -236,6 +178,7 @@ class MPII_dataset:
             for gt_id,gt_img_ann in enumerate(gt_img_anns):
                 all_gt_kpts.append(gt_img_ann["keypoints"])
                 all_gt_vis.append(gt_img_ann["vis"])
+                all_gt_headbbxs.append(gt_img_ann["headbbx"])
                 match_pd_id=match_pd_ids[gt_id]
                 if(match_pd_id!=-1):
                     all_pd_kpts.append(pd_img_anns[match_pd_id]["keypoints"])
@@ -243,29 +186,33 @@ class MPII_dataset:
                 else:
                     all_pd_kpts.append(np.zeros_like(all_gt_kpts[-1]))
         #calculate pchk
+        #input shape:
         #shape kpts 2*n_pos*val_num
         #shape vis n_pos*val_num
+        #shape headbbxs(x,y,w,h) 4*val_num
         #shape all_dist n_pos*val_num
         #shape headsize val_num
+        print(f"evaluating over {len(pd_dict.keys())} images and {len(all_gt_kpts)} people")
         all_pd_kpts=np.array(all_pd_kpts).transpose([1,2,0])
         all_gt_kpts=np.array(all_gt_kpts).transpose([1,2,0])
         all_gt_vis=np.array(all_gt_vis).transpose([1,0])
-        all_gt_headsize=np.linalg.norm(all_gt_kpts[:,MpiiPart.Headtop.value,:]-all_gt_kpts[:,MpiiPart.UpperNeck.value,:],axis=0)
+        all_gt_headbbxs=np.array(all_gt_headbbxs).transpose([1,0])
+        all_gt_headsize=np.linalg.norm(all_gt_headbbxs[2:4,:],axis=0) #[2:4] correspond to w,h
         all_dist=np.linalg.norm(all_pd_kpts-all_gt_kpts,axis=0)/all_gt_headsize
         jnt_vis_num=np.sum(all_gt_vis,axis=1)
         PCKh=100.0*np.sum(all_dist<=0.5,axis=1)/jnt_vis_num
         #calculate pchk_all
-        rng = np.arange(0, 0.5+0.01, 0.01)
-        pckAll = np.zeros((len(rng), 16))
+        rng = np.arange(0, 0.5+0.1, 0.1)
+        pckAll = np.zeros((len(rng), len(self.parts)))
         for r in range(0,len(rng)):
             threshold=rng[r]
             pckAll[r]=100.0*np.sum(all_dist<=threshold,axis=1)/jnt_vis_num
         #calculate mean
         PCKh_mask = np.ma.array(PCKh, mask=False)
-        PCKh_mask.mask[6:8] = True
+        PCKh_mask.mask[6:8] = True      #ignore thorax and pevis
 
         jnt_count = np.ma.array(jnt_vis_num, mask=False)
-        jnt_count.mask[6:8] = True
+        jnt_count.mask[6:8] = True      #ignore thorax and pevis
         jnt_ratio = jnt_count / np.sum(jnt_count).astype(np.float64)
         
         result_dict={
@@ -277,11 +224,11 @@ class MPII_dataset:
             "Knee":     0.5*(PCKh[MpiiPart.LKnee.value]+PCKh[MpiiPart.RKnee.value]),
             "Ankle":    0.5*(PCKh[MpiiPart.LAnkle.value]+PCKh[MpiiPart.RAnkle.value]),
             "Mean":     np.sum(PCKh_mask*jnt_ratio),
-            "Mean@0.1": np.sum(pckAll[11,:]*jnt_ratio)
+            "Mean@0.1": np.mean(np.sum(pckAll[1:,:]*jnt_ratio,axis=1))
         }
-        print("evaluation result-PCKh:")
+        print("\tresult-PCKh:")
         for key in result_dict.keys():
-            print(f"{key}: {result_dict[key]}")
+            print(f"\t{key}:   {result_dict[key]}")
         result_path=os.path.join(eval_dir,"result.json")
         json.dump(result_dict,open(result_path,"w"))
         return result_dict

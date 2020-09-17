@@ -190,36 +190,27 @@ def get_heatmap(annos, height, width, hout, wout, parts, limbs, data_format="cha
     # n_pos is 19 for coco, 15 for MPII
     # the heatmap for every joints takes the maximum over all people
     n_pos=len(parts)
-    joints_heatmap = np.zeros((n_pos, height, width), dtype=np.float32)
-    scale=min(height/hout,width/wout)
+    joints_heatmap = np.zeros((n_pos, hout, wout), dtype=np.float32)
+    stride=height/hout
     # among all people
     for joint in annos:
         # generate heatmap for every keypoints
         # loop through all people and keep the maximum
 
-        for i, points in enumerate(joint):
-            if points[0] < 0 or points[1] < 0:
+        for i, point in enumerate(joint):
+            if point[0] < 0 or point[1] < 0:
                 continue
-            joints_heatmap = put_heatmap(joints_heatmap, i, points, 8.0)
+            joints_heatmap = put_heatmap(joints_heatmap, i, point, stride, 7.0)
 
     # 0: joint index, 1:y, 2:x
-    joints_heatmap = joints_heatmap.transpose((1, 2, 0))
-
-    # background
-    joints_heatmap[:, :, -1] = np.clip(1 - np.amax(joints_heatmap, axis=2), 0.0, 1.0)
+    joints_heatmap[-1, :, :] = np.clip(1 - np.amax(joints_heatmap, axis=0), 0.0, 1.0)
 
     #resize
-    if(data_format=="channels_first"):
-        resized_joints_heatmap=np.zeros((n_pos,hout,wout),dtype=np.float32)
-        for i in range(0, n_pos):
-            resized_joints_heatmap[i,:,:] = cv2.resize(np.array(joints_heatmap[:, :, i]), (wout, hout), interpolation=cv2.INTER_AREA)
-    elif(data_format=="channels_last"):
-        resized_joints_heatmap=np.zeros((hout,wout,n_pos),dtype=np.float32)
-        for i in range(0, n_pos):
-            resized_joints_heatmap[:,:,i] = cv2.resize(np.array(joints_heatmap[:, :, i]), (wout, hout), interpolation=cv2.INTER_AREA)
-    return resized_joints_heatmap
+    if(data_format=="channels_last"):
+        joints_heatmap=np.transpose(joints_heatmap,[1,2,0])
+    return joints_heatmap
 
-def put_heatmap(heatmap, plane_idx, center, sigma):
+def put_heatmap(heatmap, plane_idx, center, stride, sigma):
     """
 
     Parameters
@@ -231,29 +222,25 @@ def put_heatmap(heatmap, plane_idx, center, sigma):
 
 
     """
-    center_x, center_y = center
-    _, height, width = heatmap.shape[:3]
+    center_x,center_y=center
+    _,hout,wout=heatmap.shape[:3]
 
-    th = 4.6052
-    delta = math.sqrt(th * 2)
+    thresh = 4.6052
+    offset = stride/2-0.5
+    exp_factor = 1/(2*sigma*sigma)
 
-    x0 = int(max(0, center_x - delta * sigma + 0.5))
-    y0 = int(max(0, center_y - delta * sigma + 0.5))
-
-    x1 = int(min(width - 1, center_x + delta * sigma + 0.5))
-    y1 = int(min(height - 1, center_y + delta * sigma + 0.5))
-
-    exp_factor = 1 / 2.0 / sigma / sigma
-
-    ## fast - vectorize
-    arr_heatmap = heatmap[plane_idx, y0:y1 + 1, x0:x1 + 1]
-    y_vec = (np.arange(y0, y1 + 1) - center_y)**2  # y1 included
-    x_vec = (np.arange(x0, x1 + 1) - center_x)**2
+    y=np.arange(0,hout)*stride+offset
+    x=np.arange(0,wout)*stride+offset
+       
+    # fast - vectorize
+    # meshgrid(x,y)=>(shape_y*shape_x)
+    y_vec=(y-center_y)**2
+    x_vec=(x-center_x)**2
     xv, yv = np.meshgrid(x_vec, y_vec)
     arr_sum = exp_factor * (xv + yv)
     arr_exp = np.exp(-arr_sum)
-    arr_exp[arr_sum > th] = 0
-    heatmap[plane_idx, y0:y1 + 1, x0:x1 + 1] = np.maximum(arr_heatmap, arr_exp)
+    arr_exp[arr_sum > thresh] = 0
+    heatmap[plane_idx,:,:]=np.maximum(heatmap[plane_idx,:,:],arr_exp)
     return heatmap
 
 
@@ -270,16 +257,18 @@ def get_vectormap(annos, height, width , hout, wout, parts, limbs, data_format="
 
     """
     n_limbs=len(limbs)
-    vectormap = np.zeros((2*n_limbs, height, width), dtype=np.float32)
-    counter = np.zeros((n_limbs, height, width), dtype=np.int16)
+    stride=height/hout
+    vectormap = np.zeros((2*n_limbs, hout, wout), dtype=np.float32)
+    counter = np.zeros((n_limbs, hout, wout), dtype=np.int16)
+
 
     for joint in annos:
         for i, (a, b) in enumerate(limbs):
-            v_start = joint[a]
-            v_end = joint[b]
             # exclude invisible or unmarked point
-            if v_start[0] < -100 or v_start[1] < -100 or v_end[0] < -100 or v_end[1] < -100:
+            if joint[a][0] < -100 or joint[a][1] < -100 or joint[b][0] < -100 or joint[b][1] < -100:
                 continue
+            v_start=np.array(joint[a])/stride
+            v_end=np.array(joint[b])/stride
             vectormap = cal_vectormap_fast(vectormap, counter, i, v_start, v_end)
 
     # normalize the PAF (otherwise longer limb gives stronger absolute strength)
@@ -290,15 +279,9 @@ def get_vectormap(annos, height, width , hout, wout, parts, limbs, data_format="
         vectormap[i*2+1]/=div_counter
 
     #resize
-    if(data_format=="channels_first"):
-        resized_vectormap=np.zeros((n_limbs*2,hout,wout),dtype= np.float32)
-        for i in range(0, n_limbs * 2):
-            resized_vectormap[i,:,:] = cv2.resize(np.array(vectormap[i, :, :]), (wout, hout), interpolation=cv2.INTER_AREA)
-    elif(data_format=="channels_last"):
-        resized_vectormap=np.zeros((hout,wout,n_limbs*2),dtype= np.float32)
-        for i in range(0, n_limbs * 2):
-            resized_vectormap[:,:,i] = cv2.resize(np.array(vectormap[i, :, :]), (wout, hout), interpolation=cv2.INTER_AREA)
-    return resized_vectormap
+    if(data_format=="channels_last"):
+        vectormap=np.transpose(vectormap,[1,2,0])
+    return vectormap
 
 def cal_vectormap_ori(vectormap, countmap, i, v_start, v_end):
     """
@@ -358,10 +341,9 @@ def cal_vectormap_fast(vectormap, countmap, i, v_start, v_end):
 
 
     """
-    _, height, width = vectormap.shape[:3]
-    _, height, width = vectormap.shape[:3]
+    _, hout, wout = vectormap.shape[:3]
 
-    threshold = 8
+    threshold = 1
     vector_x = v_end[0] - v_start[0]
     vector_y = v_end[1] - v_start[1]
 
@@ -369,11 +351,11 @@ def cal_vectormap_fast(vectormap, countmap, i, v_start, v_end):
     if length == 0:
         return vectormap
 
-    min_x = max(0, int(min(v_start[0], v_end[0]) - threshold))
-    min_y = max(0, int(min(v_start[1], v_end[1]) - threshold))
+    min_x = max(0, int(np.round(min(v_start[0], v_end[0]) - threshold)))
+    min_y = max(0, int(np.round(min(v_start[1], v_end[1]) - threshold)))
 
-    max_x = min(width, int(max(v_start[0], v_end[0]) + threshold))
-    max_y = min(height, int(max(v_start[1], v_end[1]) + threshold))
+    max_x = min(wout, int(np.round(max(v_start[0], v_end[0]) + threshold)))
+    max_y = min(hout, int(np.round(max(v_start[1], v_end[1]) + threshold)))
 
     norm_x = vector_x / length
     norm_y = vector_y / length
@@ -405,7 +387,7 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
     masks : a list of mask for people
     """
     # interval = len(images)
-    if(data_format=="channnels_last"):
+    if(data_format=="channels_last"):
         images=np.transpose(images,[0,3,1,2])
         heats_ground=np.transpose(heats_ground,[0,3,1,2])
         heats_result=np.transpose(heats_result,[0,3,1,2])
@@ -441,27 +423,16 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
         fig = plt.figure(figsize=(8, 8))
         a = fig.add_subplot(2, 3, 1)
         plt.imshow(image)
-        cv2.imwrite(f"./test_dir/test_{name}_{i}_input_image.jpg.jpg",cv2.cvtColor(np.clip(image*255.0,0.,255.).astype(np.uint8),cv2.COLOR_RGB2BGR))
-
+        
         if pafs_ground is not None:
             a = fig.add_subplot(2, 3, 2)
             a.set_title('Vectormap_ground')
             vectormap=paf_ground
             if(masks is not None):
                 vectormap = paf_ground * mask2
-            tmp2 = vectormap
-            tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
-            tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
-
-            # tmp2_odd = tmp2_odd * 255
-            # tmp2_odd = tmp2_odd.astype(np.int)
-            plt.imshow(tmp2_odd, alpha=0.3)
-            cv2.imwrite(f"./test_dir/test_{name}_{i}_paf_odd_gt.jpg",np.clip(cv2.resize(tmp2_odd,(img_w,img_h))*255.0,0.,255.).astype(np.uint8))
-            cv2.imwrite(f"./test_dir/test_{name}_{i}_paf_even_gt.jpg",np.clip(cv2.resize(tmp2_even,(img_w,img_h))*255.0,0.,255.).astype(np.uint8))
-            # tmp2_even = tmp2_even * 255
-            # tmp2_even = tmp2_even.astype(np.int)
+            tmp2=np.amax(np.absolute(vectormap[:, :, :]),axis=0)
+            plt.imshow(tmp2, alpha=0.8)
             plt.colorbar()
-            plt.imshow(tmp2_even, alpha=0.3)
 
         if pafs_result is not None:
             a = fig.add_subplot(2, 3, 3)
@@ -471,15 +442,9 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
             else:
                 vectormap = paf_result
             tmp2 = vectormap
-            tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
-            tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
-            plt.imshow(tmp2_odd, alpha=0.3)
-
-            cv2.imwrite(f"./test_dir/test_{name}_{i}_paf_odd_rs.jpg",np.clip(cv2.resize(tmp2_odd,(img_w,img_h))*255.0,0.,255.).astype(np.uint8))
-            cv2.imwrite(f"./test_dir/test_{name}_{i}_paf_even_rs.jpg",np.clip(cv2.resize(tmp2_even,(img_w,img_h))*255.0,0.,255.).astype(np.uint8))
-
+            tmp2=np.amax(np.absolute(vectormap[:, :, :]),axis=0)
+            plt.imshow(tmp2, alpha=0.8)
             plt.colorbar()
-            plt.imshow(tmp2_even, alpha=0.3)
 
         if heats_result is not None:
             a = fig.add_subplot(2, 3, 4)
@@ -490,9 +455,9 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
                 heatmap = heat_result
             tmp = heatmap
             tmp = np.amax(heatmap[:-1, :, :], axis=0)
-            cv2.imwrite(f"./test_dir/test_heatmap_{name}_{i}_rs.jpg",np.clip(cv2.resize(tmp,(img_w,img_h))*255.0,0.,255.).astype(np.uint8))
+            #cv2.imwrite(f"./test_dir/test_heatmap_{name}_{i}_rs.jpg",np.clip(cv2.resize(tmp,(img_w,img_h))*255.0,0.,255.).astype(np.uint8))
 
-            plt.imshow(tmp, alpha=0.3)
+            plt.imshow(tmp, alpha=0.8)
             plt.colorbar()
 
         if heats_ground is not None:
@@ -504,16 +469,16 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
                 heatmap = heat_ground
             tmp = heatmap
             tmp = np.amax(heatmap[:-1, :, :], axis=0)
-            cv2.imwrite(f"./test_dir/test_heatmap_{name}_{i}_gt.jpg",np.clip(cv2.resize(tmp,(img_w,img_h))*255.0,0.,255.).astype(np.uint8))
+            #cv2.imwrite(f"./test_dir/test_heatmap_{name}_{i}_gt.jpg",np.clip(cv2.resize(tmp,(img_w,img_h))*255.0,0.,255.).astype(np.uint8))
 
-            plt.imshow(tmp, alpha=0.3)
+            plt.imshow(tmp, alpha=0.8)
             plt.colorbar()
 
         if masks is not None:
             a = fig.add_subplot(2, 3, 6)
             a.set_title('Mask')
             # print(mask.shape, tmp.shape)
-            plt.imshow(mask[0, :, :], alpha=0.3)
+            plt.imshow(mask[0, :, :], alpha=0.8)
             plt.colorbar()
         # plt.savefig(str(i)+'.png',dpi=300)
         # plt.show()

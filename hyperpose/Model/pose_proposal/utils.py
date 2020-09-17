@@ -81,19 +81,22 @@ def draw_bbx(img,img_pc,rx,ry,rw,rh,threshold=0.7):
     color=(0,255,0)
     valid_idxs=np.where(img_pc>=threshold,1,0)
     ks,iys,ixs=np.nonzero(valid_idxs)
+    h,w,_=img.shape
+    thickness=int(min(h,w)/100)
     for k,iy,ix in zip(ks,iys,ixs):
         x=rx[k][iy][ix]
         y=ry[k][iy][ix]
         w=rw[k][iy][ix]
         h=rh[k][iy][ix]
-        img=cv2.circle(img,(int(x),int(y)),radius=2,color=color,thickness=-1)
-        img=cv2.rectangle(img,(int(x-w//2),int(y-h//2)),(int(x+w//2),int(y+h//2)),color,1)
+        img=cv2.rectangle(img,(int(x-w//2),int(y-h//2)),(int(x+w//2),int(y+h//2)),color,thickness=thickness)
     return img
 
 def draw_edge(img,img_e,rx,ry,rw,rh,hnei,wnei,hout,wout,limbs,threshold=0.7):
     color=(255,0,0)
     valid_idxs=np.where(img_e>=threshold,1,0)
     ls,niys,nixs,iys,ixs=np.nonzero(valid_idxs)
+    h,w,_=img.shape
+    thickness=int(min(h,w)/100)
     for l,niy,nix,iy,ix in zip(ls,niys,nixs,iys,ixs):
         s_id=limbs[l][0]
         d_id=limbs[l][1]
@@ -110,7 +113,7 @@ def draw_edge(img,img_e,rx,ry,rw,rh,hnei,wnei,hout,wout,limbs,threshold=0.7):
         dst_x=rx[d_id][dst_iy][dst_ix]
         dst_y=ry[d_id][dst_iy][dst_ix]
         #draw line
-        img=cv2.line(img,(int(src_x),int(src_y)),(int(dst_x),int(dst_y)),color,2)
+        img=cv2.line(img,(int(src_x),int(src_y)),(int(dst_x),int(dst_y)),color,thickness=thickness)
     return img
 
 def draw_results(img,predicts,targets,parts,limbs,save_dir,threshold=0.3,name="",is_train=True,data_format="channels_first"):
@@ -227,7 +230,7 @@ def non_maximium_supress(bbxs,scores,thres):
         #ious is the size [left_bbxnum]
         #print(f"test maxconf_bbx:{maxconf_bbx} lef_bbxs[0]:{left_bbxs[:,0:4].transpose()[:,0]}")
         ious=cal_iou(maxconf_bbx[0:4],left_bbxs[:,0:4].transpose())
-        print(f"test iter one ious:{ious}")
+        #print(f"test iter one ious:{ious}")
         left_idx=np.where(ious<thres)[0]
         #print(f"ious:{ious} left_idx:{left_idx} len_left_idx:{len(left_idx)}")
         if(len(left_idx)==0):

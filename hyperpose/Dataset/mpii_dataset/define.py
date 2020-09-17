@@ -54,8 +54,9 @@ MpiiColor=[[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0
               [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],
               [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
 
+#convert kpts from opps to mpii
 from_opps_converter={0:9, 1:8, 2:12, 3:11, 4:10, 5:13, 6:14, 7:15, 8:2, 9:1, 10:0, 11:3, 12:4, 13:5}
-
+#convert kpts from mpii to opps
 to_opps_converter={0:10, 1:9, 2:8, 3:11, 4:12, 5:13, 8:1, 9:0, 10:4, 11:3, 12:2, 13:5, 14:6, 15:7}
 
 def opps_input_converter(mpii_kpts):
@@ -96,8 +97,9 @@ def opps_output_converter(kpt_list):
             kpts+=[0.0,0.0,-1.0]
     return kpts
 
+#convert kpts from ppn to mpii
 from_ppn_converter={0:9, 1:8, 2:12, 3:11, 4:10, 5:13, 6:14, 7:15, 8:2, 9:1, 10:0, 11:3, 12:4, 13:5}
-
+#convert kpts from mpii to ppn
 to_ppn_converter={0:10, 1:9, 2:8, 3:11, 4:12, 5:13, 8:1, 9:0, 10:4, 11:3, 12:2, 13:5, 14:6, 15:7}
 
 def ppn_input_converter(coco_kpts):
@@ -115,7 +117,7 @@ def ppn_input_converter(coco_kpts):
     center_x=(xs[2]+xs[3]+xs[12]+xs[13])/4
     center_y=(ys[2]+ys[3]+ys[12]+ys[13])/4
     cvt_kpts[14,:]=np.array([center_x,center_y])
-    #adding background point
+    #adding person instance
     cvt_kpts[15,:]=(cvt_kpts[0,:]+cvt_kpts[1,:])/2
     return cvt_kpts
 

@@ -32,6 +32,10 @@ if __name__ == '__main__':
                         type=str,
                         default="MSCOCO",
                         help="dataset name,to determine which dataset to use, available options: coco ")
+    parser.add_argument("--dataset_version",
+                        type=str,
+                        default="2017",
+                        help="dataset version, only use for MSCOCO and available for version 2014 and 2017 ")
     parser.add_argument("--dataset_path",
                         type=str,
                         default="data",
@@ -48,6 +52,14 @@ if __name__ == '__main__':
                         type=int,
                         default=10000,
                         help='number of evaluation')
+    parser.add_argument('--vis_num',
+                        type=int,
+                        default=60,
+                        help='number of visible evaluation')
+    parser.add_argument('--multiscale',
+                        type=bool,
+                        default=False,
+                        help='enable multiscale_search')
                         
 
     args=parser.parse_args()
@@ -56,10 +68,11 @@ if __name__ == '__main__':
     Config.set_model_backbone(Config.BACKBONE[args.model_backbone])
     Config.set_dataset_type(Config.DATA[args.dataset_type])
     Config.set_dataset_path(args.dataset_path)
+    Config.set_dataset_version(args.dataset_version)
     
     config=Config.get_config()
     model=Model.get_model(config)
     evaluate=Model.get_evaluate(config)
     dataset=Dataset.get_dataset(config)
 
-    evaluate(model,dataset,vis_num=30,total_eval_num=args.eval_num)
+    evaluate(model,dataset,vis_num=args.vis_num,total_eval_num=args.eval_num,enable_multiscale_search=args.multiscale)
