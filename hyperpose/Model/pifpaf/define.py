@@ -66,5 +66,12 @@ COCO_UPRIGHT_POSE = np.array([
     [-1.4, 0.0, 2.0],  # 'left_ankle',      # 16
     [1.4, 0.1, 2.0],  # 'right_ankle',     # 17
 ])
+area_ref=((np.max(COCO_UPRIGHT_POSE[:, 0]) - np.min(COCO_UPRIGHT_POSE[:, 0])) *
+            (np.max(COCO_UPRIGHT_POSE[:, 1]) - np.min(COCO_UPRIGHT_POSE[:, 1])))
 
+c, s = np.cos(np.deg2rad(45)), np.sin(np.deg2rad(45))
+rotate = np.array(((c, -s), (s, c)))
+COCO_UPRIGHT_POSE_45=np.einsum('ij,kj->ki', rotate, np.copy(COCO_UPRIGHT_POSE))
+area_ref_45=((np.max(COCO_UPRIGHT_POSE_45[:, 0]) - np.min(COCO_UPRIGHT_POSE_45[:, 0])) *
+            (np.max(COCO_UPRIGHT_POSE_45[:, 1]) - np.min(COCO_UPRIGHT_POSE_45[:, 1])))
 
