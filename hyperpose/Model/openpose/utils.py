@@ -8,7 +8,6 @@ import math
 import logging
 import numpy as np
 import tensorflow as tf
-from tensorlayer import logging
 from tensorlayer.files.utils import (del_file, folder_exists, maybe_download_and_extract)
 
 import matplotlib

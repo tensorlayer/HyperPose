@@ -58,7 +58,7 @@ class MSCOCO_dataset(Base_dataset):
         '''
         
         train_dataset=self.get_train_dataset()
-        visualize(self.vis_dir,vis_num,train_dataset,self.parts,self.colors,dataset_name="mpii")
+        visualize(self.vis_dir,vis_num,train_dataset,self.parts,self.colors,dataset_name="mscoco")
 
     def get_parts(self):
         return self.parts

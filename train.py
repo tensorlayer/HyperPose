@@ -89,7 +89,6 @@ if __name__ == '__main__':
     Config.set_optim_type(Config.OPTIM[args.optim_type])
     Config.set_kungfu_option(Config.KUNGFU[args.kf_optimizer])
     #config dataset
-    print(f"test enabling official dataset:{args.use_official_dataset}")
     Config.set_official_dataset(args.use_official_dataset)
     Config.set_dataset_type(Config.DATA[args.dataset_type])
     Config.set_dataset_path(args.dataset_path)

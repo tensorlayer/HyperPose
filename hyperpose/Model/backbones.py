@@ -414,7 +414,7 @@ class Resnet18_backbone(Model):
             return tf.nn.relu(x+res)   
 
 class Resnet50_backbone(Model):
-    def __init__(self,in_channels=3,n_filter=64,scale_size=8,data_format="channels_first",pretraining=False):
+    def __init__(self,in_channels=3,n_filter=64,scale_size=8,data_format="channels_first",pretraining=False,use_pool=True):
         super().__init__()
         self.name="resnet50_backbone"
         self.in_channels=in_channels
@@ -423,6 +423,7 @@ class Resnet50_backbone(Model):
         self.data_format=data_format
         self.pretraining=pretraining
         self.out_channels=2048
+        self.use_pool=use_pool
         if(self.scale_size==8):
             strides=(1,1)
         elif(self.scale_size==32 or self.pretraining):
@@ -461,7 +462,8 @@ class Resnet50_backbone(Model):
     def forward(self,x):
         x=self.conv1.forward(x)
         x=self.bn1.forward(x)
-        x=self.maxpool1.forward(x)
+        if(self.use_pool):
+            x=self.maxpool1.forward(x)
         #block_1
         x=self.block_1_1.forward(x)
         x=self.block_1_2.forward(x)
