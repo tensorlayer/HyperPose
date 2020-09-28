@@ -37,11 +37,12 @@ class Pifpaf(Model):
             self.quad_size=quad_size
             self.out_features=self.n_pos*5*(2**self.quad_size)
             self.data_format=data_format
+            self.tf_data_format="NCHW" if self.data_format=="channels_first" else "NHWC"
             self.main_block=Conv2d(n_filter=self.out_features,in_channels=self.input_features,filter_size=(1,1),data_format=self.data_format)
 
         def forward(self,x):
             x=self.main_block.forward(x)
-            x=tf.nn.depth_to_space(x,block_size=self.quad_size)
+            x=tf.nn.depth_to_space(x,block_size=self.quad_size,data_format=self.tf_data_format)
             x=tf.reshape(x,[x.shape[0],self.n_pos,5,x.shape[2],x.shape[3]])
             pif_conf=x[:,:,0:1,:,:]
             pif_vec=x[:,:,1:3,:,:]
@@ -57,11 +58,12 @@ class Pifpaf(Model):
             self.quad_size=quad_size
             self.out_features=self.n_limbs*9*(2**self.quad_size)
             self.data_format=data_format
+            self.tf_data_format="NCHW" if self.data_format=="channels_first" else "NHWC"
             self.main_block=Conv2d(n_filter=self.out_features,in_channels=self.input_features,filter_size=(1,1),data_format=self.data_format)
         
         def forward(self,x):
             x=self.main_block.forward(x)
-            x=tf.nn.depth_to_space(x,block_size=self.quad_size)
+            x=tf.nn.depth_to_space(x,block_size=self.quad_size,data_format=self.tf_data_format)
             x=tf.reshape(x,[x.shape[0],self.n_limbs,9,x.shape[2],x.shape[3]])
             paf_conf=x[:,:,0:1,:,:]
             paf_vec1=x[:,:,1:3,:,:]

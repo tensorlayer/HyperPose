@@ -65,9 +65,8 @@ def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_l
 
     # generate result which include keypoints heatmap and vectormap
     height, width, _ = image.shape
-    heatmap = get_heatmap(annos, height, width, hout, wout, parts, limbs, data_format=data_format)
-    vectormap = get_vectormap(annos, height, width, hout, wout, parts, limbs, data_format=data_format)
-    resultmap = np.concatenate((heatmap, vectormap), axis=concat_dim)
+    pif_conf,pif_vec,pif_scale = get_pifmap(annos, mask_miss, height, width, hout, wout, parts, limbs, data_format=data_format)
+    paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst = get_pafmap(annos, mask_miss, height, width, hout, wout, parts, limbs, data_format=data_format)
 
     image=cv2.resize(image,(win,hin))
     mask_miss=cv2.resize(mask_miss,(win,hin))

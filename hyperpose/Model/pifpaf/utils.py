@@ -17,8 +17,6 @@ def get_patch_meshgrid(patch_size):
     return patch_grid
 
 def get_max_r(kpt,other_kpts):
-    kpt=np.array(kpt)
-    other_kpts=np.array(other_kpts)
     min_dist=np.array([np.inf, np.inf, np.inf, np.inf], dtype=np.float32)
     dif=other_kpts-kpt[np.newaxis,:]
     mask=np.zeros(shape=(other_kpts.shape[0]))
@@ -57,16 +55,17 @@ def get_scale(keypoints):
     return scale
 
 def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,dist_thresh=1.0,patch_size=4,padding=10, data_format="channels_first"):
+    stride=height/hout
     n_pos,n_limbs=len(parts),len(limbs)
     padded_h,padded_w=hout+2*padding,wout+2*padding
-    #init maps
-    pif_conf=np.zeros(shape=(n_pos,padded_h,padded_w))
-    pif_vec=np.zeros(shape=(n_pos,2,padded_h,padded_w))
-    pif_scale=np.zeros(shape=(n_pos,padded_h,padded_w))
-    pif_vec_norm=np.zeros(shape=(n_pos,padded_h,padded_w))
-    inv_mask=1-mask
-    pif_vec_norm[:,inv_mask==1]=dist_thresh
-    #generate maps
+    #init fields
+    pif_conf=np.full(shape=(n_pos,padded_h,padded_w),fill_value=0.0,dtype=np.float32)
+    pif_vec=np.full(shape=(n_pos,2,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    pif_scale=np.full(shape=(n_pos,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    pif_vec_norm=np.full(shape=(n_pos,padded_h,padded_w),fill_value=np.inf,dtype=np.float32)
+    pif_vec_norm[:,padding:-padding,padding:-padding][mask==0]=dist_thresh
+    pif_conf[:,padding:-padding][mask==0]=np.nan
+    #generate fields
     for anno_id,anno in enumerate(annos):
         other_annos=[other_anno for other_id,other_anno in enumerate(annos) if other_id!=anno_id]
         anno_scale=get_scale(anno)
@@ -79,9 +78,12 @@ def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,dist_thresh=
                 if(other_kpt[0]<0 or other_kpt[0]>width or other_kpt[1]<0 or other_kpt[1]>height):
                     continue
                 other_kpts.append(other_kpt)
+            kpt=np.array(kpt)/stride
+            other_kpts=np.array(other_kpts)/stride
             max_r=get_max_r(kpt,other_kpts)
             kpt_scale=min(anno_scale*COCO_SIGMA[part_idx],np.min(max_r)*0.25)
-            pif_conf,pif_vec,pif_scale,pif_vec_norm=put_pifmap(pif_conf,pif_vec,pif_scale,pif_vec_norm,\
+            pif_maps=[pif_conf,pif_vec,pif_scale,pif_vec_norm]
+            pif_conf,pif_vec,pif_scale,pif_vec_norm=put_pifmap(pif_maps,\
                 part_idx,kpt,kpt_scale=kpt_scale,dist_thresh=dist_thresh,patch_size=patch_size,padding=padding)
     #get field without padding (TODO: valid area?)
     pif_conf=pif_conf[:,padding:-padding,padding:-padding]
@@ -89,7 +91,8 @@ def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,dist_thresh=
     pif_scale=pif_scale[:,padding:-padding,padding:-padding]
     return pif_conf,pif_vec,pif_scale
 
-def put_pifmap(pif_conf,pif_vec,pif_scale,pif_vec_norm,part_idx,kpt,kpt_scale,dist_thresh=1.0,patch_size=4,padding=10):
+def put_pifmap(pif_maps,part_idx,kpt,kpt_scale,dist_thresh=1.0,patch_size=4,padding=10):
+    pif_conf,pif_vec,pif_scale,pif_vec_norm=pif_maps
     padded_h,padded_w=pif_conf.shape[1],pif_conf.shape[2]
     #calculate patch grid coordinate range in padded map
     patch_offset=(patch_size-1)/2
@@ -105,6 +108,7 @@ def put_pifmap(pif_conf,pif_vec,pif_scale,pif_vec_norm,part_idx,kpt,kpt_scale,di
     #calculate mesh grid to kpt offset
     patch_grid_offset=patch_meshgrid+patch_center_offset[:,np.newaxis,np.newaxis]
     patch_grid_offset_norm=np.linalg.norm(patch_grid_offset,axis=0)
+    #calculate mash mask acordding to the distance to the keypoints
     grid_mask=patch_grid_offset_norm<pif_vec_norm[part_idx,min_y:max_y,min_x:max_x]
     
     #update pif_vec_norm (to closet distance)
@@ -117,10 +121,103 @@ def put_pifmap(pif_conf,pif_vec,pif_scale,pif_vec_norm,part_idx,kpt,kpt_scale,di
     pif_scale[part_idx,min_y:max_y,min_x:max_x][grid_mask]=kpt_scale
     return pif_conf,pif_vec,pif_scale,pif_vec_norm
 
+def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.0,patch_size=3,padding=10, data_format="channels_first"):
+    stride=height/hout
+    n_pos,n_limbs=len(parts),len(limbs)
+    padded_h,padded_w=hout+2*padding,wout+2*padding
+    #init fields
+    paf_conf=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=0.0,dtype=np.float32)
+    paf_vec_src=np.full(shape=(n_limbs,2,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    paf_vec_dst=np.full(shape=(n_limbs,2,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    paf_scale_src=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    paf_scale_dst=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    paf_vec_norm=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.inf,dtype=np.float32)
+    paf_vec_norm[:,padding:-padding,padding:-padding][mask==0]=1.0
+    paf_conf[:,padding:-padding,padding:-padding][mask==0]=np.nan
+    #generate fields
+    for anno_id,anno in enumerate(annos):
+        other_annos=[other_anno for other_id,other_anno in enumerate(annos) if other_id!=anno_id]
+        anno_scale=get_scale(anno)
+        for limb_idx,(src_idx,dst_idx) in enumerate(limbs):
+            src_kpt=np.array(anno[src_idx])/stride
+            dst_kpt=np.array(anno[dst_idx])/stride
+            out_of_field_src=(src_kpt[0]<0 or src_kpt[0]>=wout or src_kpt[1]<0 or src_kpt[1]>=hout)
+            out_of_field_dst=(dst_kpt[0]<0 or dst_kpt[1]>=wout or dst_kpt[1]<0 or dst_kpt[1]>=hout)
+            if(out_of_field_src and out_of_field_dst):
+                continue
+            other_src_kpts,other_dst_kpts=[],[]
+            for other_anno in other_annos:
+                other_src_kpt=np.array(other_anno[src_kpt])/stride
+                other_dst_kpt=np.array(other_anno[dst_kpt])/stride
+                if(not (other_src_kpt[0]<0 or other_src_kpt[0]>=wout or other_src_kpt[1]<0 or other_src_kpt[1]>=hout)):
+                    other_src_kpts.append(other_dst_kpt)
+                if(not (other_dst_kpt[0]<0 or other_dst_kpt[0]>=wout or other_dst_kpt[1]<0 or other_dst_kpt[1]>=hout)):
+                    other_dst_kpts.append(other_dst_kpt)
+            other_src_kpts=np.array(other_src_kpts)
+            other_dst_kpts=np.array(other_dst_kpts)
+            src_max_r=get_max_r(src_kpt,other_src_kpts)
+            src_scale=min(anno_scale*COCO_SIGMA[src_idx],np.min(src_max_r)*0.25)
+            dst_max_r=get_max_r(dst_kpt,other_dst_kpts)
+            dst_scale=min(anno_scale*COCO_SIGMA[dst_idx],np.min(dst_max_r)*0.25)
+            paf_maps=[paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst,paf_vec_norm]
+            paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst,paf_vec_norm=put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,\
+                padding=padding,patch_size=patch_size,data_format=data_format)
+    #get field without padding (TODO: valid area?)
+    paf_conf=paf_conf[:,padding:-padding,padding:-padding]
+    paf_vec_src=paf_vec_src[:,:,padding:-padding,padding:-padding]
+    paf_vec_dst=paf_vec_dst[:,:,padding,-padding,padding:-padding]
+    paf_scale_src=paf_scale_src[:,padding:-padding,padding:-padding]
+    paf_scale_dst=paf_scale_dst[:,padding:-padding,padding:-padding]
+    return paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst
 
-    
-    
+def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=3,padding=10,data_format="channels_first"):
+    paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst,paf_vec_norm=paf_maps
+    padded_h,padded_w=paf_conf.shape[1],paf_conf.shape[2]
+    patch_offset=(patch_size-1)/2
+    limb_vec=dst_kpt-src_kpt
+    limb_vec_norm=np.linalg.norm(limb_vec)
+    patch_meshgrid=get_patch_meshgrid(patch_size=patch_size)
+    #split the limb vec into line segmentations to fill the field
+    sample_num=max(2,int(np.ceil(limb_vec_norm)))
+    fmargin=(patch_offset+1)/(limb_vec_norm+np.spacing(1))
+    fmargin=np.clip(fmargin,0.25,0.4)
+    frange=np.linspace(fmargin,1.0-fmargin,num=sample_num)
+    for lmbda in frange:
+        left_top=np.round(src_kpt+lmbda*limb_vec-patch_offset)+padding
+        min_x,min_y=int(left_top[0]),int(left_top[1])
+        max_x,max_y=min_x+patch_offset,min_y+patch_offset
+        if(min_x<0 or max_x>=padded_w or min_y<0 or max_y>=padded_h):
+            continue
+        patch_center=left_top+patch_offset-padding
+        #calculate mesh grid offset towards src kpt
+        patch_center_offset_src=src_kpt-patch_center
+        patch_grid_offset_src=patch_meshgrid+patch_center_offset_src[:,np.newaxis,np.newaxis]
+        #calculate mesh grid offset toward dst kpt
+        patch_center_offset_dst=dst_kpt-patch_center
+        patch_grid_offset_dst=patch_meshgrid+patch_center_offset_dst[:,np.newaxis,np.newaxis]
+        #calculate mesh mask according to the src mesh grid's vertical distance to the limb vector
+        patch_grid_norm=np.fabs(limb_vec[1]*patch_grid_offset_src[0]-limb_vec[0]*patch_center_offset_src[1])/(limb_vec_norm+0.01)
+        grid_mask=patch_grid_norm<paf_vec_norm[limb_idx,min_y:max_y,min_x:max_x]
 
-            
+        #update paf_vec_norm
+        paf_vec_norm[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=patch_grid_norm[grid_mask]
+        #update paf_conf
+        paf_conf[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=1
+        #update paf_vec_src
+        paf_vec_src[limb_idx,:,min_y:max_y,min_x:max_x][grid_mask]=patch_grid_offset_src[grid_mask]
+        #update paf_vec_dst
+        paf_vec_dst[limb_idx,:,min_y:max_y,min_x:max_x][grid_mask]=patch_grid_offset_dst[grid_mask]
+        #update paf_scale_src
+        paf_scale_src[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=src_scale
+        #update paf_scale_dst
+        paf_scale_dst[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=dst_scale
+        return paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst,paf_vec_norm
+
+
+
+
+
+
+
 
 
