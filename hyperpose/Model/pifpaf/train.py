@@ -18,6 +18,7 @@ from functools import partial
 from .utils import get_pifmap,get_pafmap
 from ..common import log,KUNGFU,MODEL,get_optim,init_log
 from ..domainadapt import get_discriminator
+from ..metrics import AvgMetric
 
 def regulize_loss(target_model,weight_decay_factor):
     re_loss=0
@@ -65,8 +66,9 @@ def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_l
 
     # generate result which include keypoints heatmap and vectormap
     height, width, _ = image.shape
-    pif_conf,pif_vec,pif_scale = get_pifmap(annos, mask_miss, height, width, hout, wout, parts, limbs, data_format=data_format)
-    paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst = get_pafmap(annos, mask_miss, height, width, hout, wout, parts, limbs, data_format=data_format)
+    out_mask_miss=cv2.resize(mask,(wout,hout))
+    pif_conf,pif_vec,pif_scale = get_pifmap(annos, out_mask_miss, height, width, hout, wout, parts, limbs, data_format=data_format)
+    paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst = get_pafmap(annos, out_mask_miss, height, width, hout, wout, parts, limbs, data_format=data_format)
 
     image=cv2.resize(image,(win,hin))
     mask_miss=cv2.resize(mask_miss,(win,hin))
@@ -75,13 +77,12 @@ def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_l
     #generate output masked image, result map and maskes
     img_mask = mask_miss.reshape(hin, win, 1)
     image = image * np.repeat(img_mask, 3, 2)
-    resultmap = np.array(resultmap, dtype=np.float32)
     mask_miss = np.array(cv2.resize(mask_miss, (wout, hout), interpolation=cv2.INTER_AREA),dtype=np.float32)[:,:,np.newaxis]
     if(data_format=="channels_first"):
         image=np.transpose(image,[2,0,1])
         mask_miss=np.transpose(mask_miss,[2,0,1])
     labeled=np.float32(labeled)
-    return image, resultmap, mask_miss, labeled
+    return image, pif_conf,pif_vec,pif_scale,paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst, mask_miss, labeled
 
 
 def _map_fn(img_list, annos ,data_aug_fn, hin, win, hout, wout, parts, limbs):
@@ -91,12 +92,17 @@ def _map_fn(img_list, annos ,data_aug_fn, hin, win, hout, wout, parts, limbs):
     image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
     #data augmentation using affine transform and get paf maps
-    image, resultmap, mask, labeled = tf.py_function(data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32, tf.float32])
+    image, pif_conf, pif_vec, pif_scale, paf_conf, paf_vec_src, paf_vec_dst, paf_scale_src, paf_scale_dst, mask, labeled = \
+        tf.py_function(data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32, tf.float32. tf.float32, tf.float32,\
+            tf.float32,tf.float32,tf.float32, tf.float32, tf.float32])
+    pif_maps=[pif_conf,pif_vec,pif_scale]
+    paf_maps=[paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst]
+    result_maps=[pif_maps,paf_maps]
     #data augmentaion using tf
     image = tf.image.random_brightness(image, max_delta=35./255.)   # 64./255. 32./255.)  caffe -30~50
     image = tf.image.random_contrast(image, lower=0.5, upper=1.5)   # lower=0.2, upper=1.8)  caffe 0.3~1.5
     image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
-    return image, resultmap, mask, labeled
+    return image, result_maps, mask, labeled
 
 def get_paramed_map_fn(hin,win,hout,wout,parts,limbs,flip_list=None,data_format="channels_first"):
     paramed_data_aug_fn=partial(_data_aug_fn,hin=hin,win=win,hout=hout,wout=wout,parts=parts,limbs=limbs,\
@@ -158,8 +164,7 @@ def single_train(train_model,dataset,config):
     train_dataset=dataset.get_train_dataset()
     dataset_type=dataset.get_dataset_type()
     parts,limbs,data_format=train_model.parts,train_model.limbs,train_model.data_format
-    flip_list=get_flip_list(dataset_type)
-    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,parts,limbs,flip_list=flip_list,data_format=data_format)
+    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,parts,limbs,data_format=data_format)
     train_dataset = train_dataset.shuffle(buffer_size=4096).repeat()
     train_dataset = train_dataset.map(paramed_map_fn,num_parallel_calls=max(multiprocessing.cpu_count()//2,1))
     train_dataset = train_dataset.batch(config.train.batch_size)  
@@ -174,29 +179,26 @@ def single_train(train_model,dataset,config):
     ckpt_manager=tf.train.CheckpointManager(ckpt,model_dir,max_to_keep=3)
     
     #load from ckpt
+    log("loading ckpt...")
     try:
-        log("loading ckpt...")
         ckpt.restore(ckpt_manager.latest_checkpoint)
+        log("ckpt loaded successfully!")
     except:
         log("ckpt_path doesn't exist, step and optimizer are initialized")
     #load pretrained backbone
+    log("loading pretrained backbone...")
     try:
-        log("loading pretrained backbone...")
         tl.files.load_and_assign_npz_dict(name=pretrain_model_path,network=train_model.backbone,skip=True)
+        log("pretrained backbone loaded successfully")
     except:
         log("pretrained backbone doesn't exist, model backbone are initialized")
     #load model weights
+    log("loading saved training model weights...")
     try:
-        log("loading saved training model weights...")
         train_model.load_weights(os.path.join(model_dir,"newest_model.npz"))
+        log("saved training model weights loaded successfully")
     except:
         log("model_path doesn't exist, model parameters are initialized")
-    if(domainadapt_flag):
-        try:
-            log("loading saved domain adaptation discriminator weight...")
-            discriminator.load_weights(os.path.join(model_dir,"newest_discriminator.npz"))
-        except:
-            log("discriminator path doesn't exist, discriminator parameters are initialized")
     
     for lr_decay_step in lr_decay_steps:
         if(step>lr_decay_step):
@@ -204,93 +206,66 @@ def single_train(train_model,dataset,config):
         
     #optimize one step
     @tf.function
-    def one_step(image,gt_conf,gt_paf,mask,train_model):
+    def one_step(image,gt_label,mask,train_model):
         step.assign_add(1)
         with tf.GradientTape() as tape:
-            pd_conf,pd_paf,stage_confs,stage_pafs=train_model.forward(image,is_train=True)
-            pd_loss,loss_confs,loss_pafs=train_model.cal_loss(gt_conf,gt_paf,mask,stage_confs,stage_pafs)
-            re_loss=regulize_loss(train_model,weight_decay_factor)
-            total_loss=pd_loss+re_loss
+            gt_pif_maps,gt_paf_maps=gt_label
+            pd_pif_maps,pd_paf_maps=train_model.forward(image,is_train=True)
+            loss_pif_maps,loss_paf_maps=train_model.cal_loss(pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps)
+            total_loss=sum(loss_pif_maps)+sum(loss_paf_maps)
         
         gradients=tape.gradient(total_loss,train_model.trainable_weights)
         opt.apply_gradients(zip(gradients,train_model.trainable_weights))
-        return pd_conf,pd_paf,total_loss,re_loss,loss_confs,loss_pafs
-    
-    @tf.function
-    def one_step_domainadpat(image,gt_conf,gt_paf,mask,labeled,train_model,discriminator,lambda_d):
-        step.assign_add(1)
-        with tf.GradientTape(persistent=True) as tape:
-            #optimize train model
-            pd_conf,pd_paf,stage_confs,stage_pafs,backbone_fatures=train_model.forward(image,is_train=True,domainadapt=True)
-            d_predict=discriminator.forward(backbone_fatures)
-            pd_loss,loss_confs,loss_pafs=train_model.cal_loss(gt_conf,gt_paf,mask,stage_confs,stage_pafs)
-            re_loss=regulize_loss(train_model,weight_decay_factor)
-            gan_loss=lambda_d*tf.nn.sigmoid_cross_entropy_with_logits(logits=d_predict,labels=1-labeled)
-            total_loss=pd_loss+re_loss+gan_loss
-            d_loss=tf.nn.sigmoid_cross_entropy_with_logits(logits=d_predict,labels=labeled)
-        #optimize G
-        g_gradients=tape.gradient(total_loss,train_model.trainable_weights)
-        opt.apply_gradients(zip(g_gradients,train_model.trainable_weights))
-        #optimize D
-        d_gradients=tape.gradient(d_loss,discriminator.trainable_weights)
-        opt_d.apply_gradients(zip(d_gradients,discriminator.trainable_weights))
-        return pd_conf,pd_paf,total_loss,re_loss,loss_confs,loss_pafs,gan_loss,d_loss
+        return loss_pif_maps,loss_paf_maps,total_loss
 
     #train each step
     tic=time.time()
     train_model.train()
-    conf_losses,paf_losses=np.zeros(shape=(6)),np.zeros(shape=(6))
-    avg_conf_loss,avg_paf_loss,avg_total_loss,avg_re_loss=0,0,0,0
-    avg_gan_loss,avg_d_loss=0,0
+    #total loss metrics
+    avg_total_loss=AvgMetric(name="total_loss",metric_interval=log_interval)
+    #pif loss metrics
+    avg_pif_conf_loss=AvgMetric(name="pif_conf_loss",metric_interval=log_interval)
+    avg_pif_vec_loss=AvgMetric(name="pif_vec_loss",metric_interval=log_interval)
+    avg_pif_scale_loss=AvgMetric(name="pif_scale_loss",metric_interval=log_interval)
+    #paf loss metrics
+    avg_paf_conf_loss=AvgMetric(name="paf_conf_loss",metric_interval=log_interval)
+    avg_paf_src_vec_loss=AvgMetric(name="paf_src_vec_loss",metric_interval=log_interval)
+    avg_paf_dst_vec_loss=AvgMetric(name="paf_dst_vec_loss",metric_interval=log_interval)
+    avg_paf_src_scale_loss=AvgMetric(name="paf_src_scale_loss",metric_interval=log_interval)
+    avg_paf_dst_scale_loss=AvgMetric(name="paf_dst_scale_loss",metric_interval=log_interval)
     log('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_steps: {} lr_decay_factor: {} weight_decay_factor: {}'.format(
             n_step, batch_size, lr_init.numpy(), lr_decay_steps, lr_decay_factor, weight_decay_factor))
     for image,gt_label,mask,labeled in train_dataset:
-        #extract gt_label
-        if(train_model.data_format=="channels_first"):
-            gt_conf=gt_label[:,:n_pos,:,:]
-            gt_paf=gt_label[:,n_pos:,:,:]
-        else:
-            gt_conf=gt_label[:,:,:,:n_pos]
-            gt_paf=gt_label[:,:,:,n_pos:]
+        #get losses
+        loss_pif_maps,loss_paf_maps,total_loss=one_step(image,gt_label,mask,train_model)
+        loss_pif_conf,loss_pif_vec,loss_pif_scale=loss_pif_maps
+        loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec,loss_paf_src_scale,loss_paf_dst_scale=loss_paf_maps
+        #update loss metrics
+        #update total losses
+        avg_total_loss.update(total_loss)
+        #update pif_losses metrics
+        avg_pif_conf_loss.update(loss_pif_conf)
+        avg_pif_vec_loss.update(loss_pif_vec)
+        avg_pif_scale_loss.update(loss_pif_scale)
+        #update paf_losses metrics
+        avg_paf_conf_loss.update(loss_paf_conf)
+        avg_paf_src_vec_loss.update(loss_paf_src_vec)
+        avg_paf_dst_vec_loss.update(loss_paf_dst_vec)
+        avg_paf_src_scale_loss.update(loss_paf_src_scale)
+        avg_paf_dst_scale_loss.update(loss_paf_dst_scale)
+
         #learning rate decay
         if(step in lr_decay_steps):
             new_lr_decay = lr_decay_factor**(lr_decay_steps.index(step)+1) 
             lr=lr_init*new_lr_decay
 
-        #optimize one step
-        if(domainadapt_flag):
-            lambda_d=2/(1+tf.math.exp(-10*(step/n_step)))-1
-            pd_conf,pd_paf,total_loss,re_loss,loss_confs,loss_pafs,gan_loss,d_loss=\
-                one_step_domainadpat(image.numpy(),gt_conf.numpy(),gt_paf.numpy(),mask.numpy(),labeled.numpy(),train_model,discriminator,lambda_d)
-            avg_gan_loss+=gan_loss/log_interval
-            avg_d_loss+=d_loss/log_interval
-        else:
-            pd_conf,pd_paf,total_loss,re_loss,loss_confs,loss_pafs=\
-                one_step(image.numpy(),gt_conf.numpy(),gt_paf.numpy(),mask.numpy(),train_model)
-
-        avg_conf_loss+=tf.reduce_mean(loss_confs)/batch_size/log_interval
-        avg_paf_loss+=tf.reduce_mean(loss_pafs)/batch_size/log_interval
-        avg_total_loss+=total_loss/log_interval
-        avg_re_loss+=re_loss/log_interval
-
-        #debug
-        for stage_id,(loss_conf,loss_paf) in enumerate(zip(loss_confs,loss_pafs)):
-            conf_losses[stage_id]+=loss_conf/batch_size/log_interval
-            paf_losses[stage_id]+=loss_paf/batch_size/log_interval
-
         #save log info periodly
         if((step.numpy()!=0) and (step.numpy()%log_interval)==0):
             tic=time.time()
-            log('Train iteration {} / {}: Learning rate {} total_loss:{}, conf_loss:{}, paf_loss:{}, l2_loss {} stage_num:{} time:{}'.format(
-                step.numpy(), n_step, lr.numpy(), avg_total_loss, avg_conf_loss, avg_paf_loss, avg_re_loss, len(loss_confs), time.time()-tic))
-            for stage_id in range(0,len(loss_confs)):
-                log(f"stage_{stage_id} conf_loss:{conf_losses[stage_id]} paf_loss:{paf_losses[stage_id]}")
-            if(domainadapt_flag):
-                log(f"adaptation loss: g_loss:{avg_gan_loss} d_loss:{avg_d_loss}")
-                
-            avg_total_loss,avg_conf_loss,avg_paf_loss,avg_re_loss=0,0,0,0
-            avg_gan_loss,avg_d_loss=0,0
-            conf_losses,paf_losses=np.zeros(shape=(6)),np.zeros(shape=(6))
+            log(f"Train iteration {n_step} / {step.numpy()}: Learning rate {lr.numpy()} {avg_total_loss.get_metric()} "+\
+                f"{avg_pif_conf_loss.get_metric()} {avg_pif_vec_loss.get_metric()} {avg_pif_scale_loss.get_metric()}"+\
+                f"{avg_paf_conf_loss.get_metric()} {avg_paf_src_vec_loss.get_metric()} {avg_paf_dst_vec_loss.get_metric()}"+\
+                f"{avg_paf_src_scale_loss.get_metric()} {avg_paf_dst_scale_loss.get_metric()}")
 
         #save result and ckpt periodly
         if((step.numpy()!=0) and (step.numpy()%save_interval)==0):
@@ -302,11 +277,6 @@ def single_train(train_model,dataset,config):
             model_save_path=os.path.join(model_dir,"newest_model.npz")
             train_model.save_weights(model_save_path)
             log(f"model save_path:{model_save_path} saved!\n")
-            #save discriminator model
-            if(domainadapt_flag):
-                dis_save_path=os.path.join(model_dir,"newest_discriminator.npz")
-                discriminator.save_weights(dis_save_path)
-                log(f"discriminator save_path:{dis_save_path} saved!\n")
             #draw result
             draw_results(image.numpy(), gt_conf.numpy(), pd_conf.numpy(), gt_paf.numpy(), pd_paf.numpy(), mask.numpy(),\
                  vis_dir,'train_%d_' % step,data_format=data_format)

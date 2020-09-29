@@ -127,10 +127,10 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
     padded_h,padded_w=hout+2*padding,wout+2*padding
     #init fields
     paf_conf=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=0.0,dtype=np.float32)
-    paf_vec_src=np.full(shape=(n_limbs,2,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
-    paf_vec_dst=np.full(shape=(n_limbs,2,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
-    paf_scale_src=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
-    paf_scale_dst=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    paf_src_vec=np.full(shape=(n_limbs,2,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    paf_dst_vec=np.full(shape=(n_limbs,2,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    paf_src_scale=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    paf_dst_scale=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     paf_vec_norm=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.inf,dtype=np.float32)
     paf_vec_norm[:,padding:-padding,padding:-padding][mask==0]=1.0
     paf_conf[:,padding:-padding,padding:-padding][mask==0]=np.nan
@@ -159,19 +159,19 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
             src_scale=min(anno_scale*COCO_SIGMA[src_idx],np.min(src_max_r)*0.25)
             dst_max_r=get_max_r(dst_kpt,other_dst_kpts)
             dst_scale=min(anno_scale*COCO_SIGMA[dst_idx],np.min(dst_max_r)*0.25)
-            paf_maps=[paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst,paf_vec_norm]
-            paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst,paf_vec_norm=put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,\
+            paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm]
+            paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm=put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,\
                 padding=padding,patch_size=patch_size,data_format=data_format)
     #get field without padding (TODO: valid area?)
     paf_conf=paf_conf[:,padding:-padding,padding:-padding]
-    paf_vec_src=paf_vec_src[:,:,padding:-padding,padding:-padding]
-    paf_vec_dst=paf_vec_dst[:,:,padding,-padding,padding:-padding]
-    paf_scale_src=paf_scale_src[:,padding:-padding,padding:-padding]
-    paf_scale_dst=paf_scale_dst[:,padding:-padding,padding:-padding]
-    return paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst
+    paf_src_vec=paf_src_vec[:,:,padding:-padding,padding:-padding]
+    paf_dst_vec=paf_dst_vec[:,:,padding,-padding,padding:-padding]
+    paf_src_scale=paf_src_scale[:,padding:-padding,padding:-padding]
+    paf_dst_scale=paf_dst_scale[:,padding:-padding,padding:-padding]
+    return paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale
 
 def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=3,padding=10,data_format="channels_first"):
-    paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst,paf_vec_norm=paf_maps
+    paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm=paf_maps
     padded_h,padded_w=paf_conf.shape[1],paf_conf.shape[2]
     patch_offset=(patch_size-1)/2
     limb_vec=dst_kpt-src_kpt
@@ -203,15 +203,15 @@ def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=
         paf_vec_norm[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=patch_grid_norm[grid_mask]
         #update paf_conf
         paf_conf[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=1
-        #update paf_vec_src
-        paf_vec_src[limb_idx,:,min_y:max_y,min_x:max_x][grid_mask]=patch_grid_offset_src[grid_mask]
-        #update paf_vec_dst
-        paf_vec_dst[limb_idx,:,min_y:max_y,min_x:max_x][grid_mask]=patch_grid_offset_dst[grid_mask]
-        #update paf_scale_src
-        paf_scale_src[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=src_scale
-        #update paf_scale_dst
-        paf_scale_dst[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=dst_scale
-        return paf_conf,paf_vec_src,paf_vec_dst,paf_scale_src,paf_scale_dst,paf_vec_norm
+        #update paf_src_vec
+        paf_src_vec[limb_idx,:,min_y:max_y,min_x:max_x][grid_mask]=patch_grid_offset_src[grid_mask]
+        #update paf_dst_vec
+        paf_dst_vec[limb_idx,:,min_y:max_y,min_x:max_x][grid_mask]=patch_grid_offset_dst[grid_mask]
+        #update paf_src_scale
+        paf_src_scale[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=src_scale
+        #update paf_dst_scale
+        paf_dst_scale[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=dst_scale
+        return paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm
 
 
 
