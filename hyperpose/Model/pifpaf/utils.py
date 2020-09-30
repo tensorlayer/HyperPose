@@ -5,6 +5,9 @@ import logging
 import functools
 import numpy as np
 import tensorflow as tf
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from .define import COCO_SIGMA,COCO_UPRIGHT_POSE,COCO_UPRIGHT_POSE_45
 from .define import area_ref,area_ref_45
 
@@ -213,37 +216,88 @@ def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=
         paf_dst_scale[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=dst_scale
         return paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm
 
+def nan2zero(x):
+    x[x!=x]=0
+    return x
+
+def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0):
+    field_h,field_w=hr_conf.shape
+    for conf,vec,scale in zip(confs,vecs,scales):
+        x,y=vec
+        #calculate mesh range
+        min_x=np.clip(x-truncate*scale,0,field_w-1).astype(np.int)
+        max_x=np.clip(x+truncate*scale+1,min_x+1,field_w).astype(np.int)
+        min_y=np.clip(y-truncate*scale,0,field_h-1).astype(np.int)
+        max_y=np.clip(y+truncate*scale+1,min_y+1,field_h).astype(np.int)
+        #calculate mesh grid
+        x_range=np.linspace(start=min_x,stop=max_x,num=max_x-min_x)
+        y_range=np.linspace(start=min_y,stop=max_y,num=max_y-min_y)
+        mesh_x,mesh_y=np.meshgrid(x_range,y_range)
+        #calculate gaussian heatmap according to the mesh grid distance
+        mesh_dist=(mesh_x-x)**2+(mesh_y-y)**2
+        mesh_mask=np.where(mesh_dist<=((scale*truncate)**2),1,0)
+        mesh_update_conf=conf*np.exp(-0.5*mesh_dist/(scale**2))
+        #adjust heatmap score of the center point
+        center_x,center_y=np.round(x),np.round(y)
+        mesh_update_conf[center_x,center_y]=conf
+        #update heatmap according to distance mask
+        hr_conf[min_y:max_y,min_x:max_x][mesh_mask]+=mesh_update_conf[mesh_mask]
+    hr_conf=np.clip(hr_conf,0.0,max_value)
+    return hr_conf
+
 def get_hr_conf(conf_map,vec_map,scale_map,stride=8,thresh=0.1):
     #shape
     #conf [field_num,hout,wout]
     #vec [field_num,2,hout,wout]
     #scale [field_num,hout,wout]
     field_num,hout,wout=conf_map.shape
-    hr_conf=np.zeros(shape=(field_num,hout,wout))
+    hr_conf=np.zeros(shape=(field_num,hout*stride,wout*stride))
     for field_idx in range(0,field_num):
         #filter by thresh
         thresh_mask=conf_map[field_idx]>thresh
         confs=conf_map[field_idx][thresh_mask]
         vecs=vec_map[field_idx][thresh_mask]*stride
         scales=np.maximum(1.0,scale_map[field_idx][thresh_mask]*0.5*stride)
+        hr_conf[field_idx]=add_gaussian(hr_conf[field_idx],confs,vecs,scales)
+    return hr_conf
 
-    
-    
+def draw_vecs(image,vecs,thickness=3,color=(0,255,0)):
+    for vec in vecs:
+        
 
-
-
-def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,parts,limbs,stride=8):
+def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,parts,limbs,stride=8,thresh_pif=0.1,thresh_paf=0.1,\
+    save_dir="./save_dir",name="default"):
     #shape
     #conf [batch_size,field_num,hout,wout]
     #vec [batch_size,field_num,2,hout,wout]
     #scale [batch_size,field_num,hout,wout]
     #decode pif_maps
-    pd_pif_conf,pd_pif_vec,pd_pif_logb,pd_pif_scale=pd_pif_maps
+    pd_pif_conf,pd_pif_vec,_,pd_pif_scale=pd_pif_maps
     gt_pif_conf,gt_pif_vec,gt_pif_scale=gt_pif_maps
     #decode paf_maps
-    pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,_,_,pd_paf_src_scale,pd_paf_dst_scale=pd_paf_maps
-    gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,gt_paf_src_scale,gt_paf_dst_scale=gt_paf_maps
+    pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,_,_,_,_=pd_paf_maps
+    gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,_,_=gt_paf_maps
+    #restore nan in gt_maps
+    gt_pif_conf=nan2zero(gt_pif_conf)
+    gt_pif_vec=nan2zero(gt_pif_vec)
+    gt_pif_scale=nan2zero(gt_pif_scale)
+    gt_paf_conf=nan2zero(gt_paf_conf)
+    gt_paf_src_vec=nan2zero(gt_paf_src_vec)
+    gt_paf_dst_vec=nan2zero(gt_paf_dst_vec)
+    #restore vector maps
+    _,_,hout,wout=pd_pif_maps.shape
+    x_range=np.linspace(start=0,stop=wout-1,num=wout)
+    y_range=np.linspace(start=0,stop=hout-1,num=hout)
+    mesh_x,mesh_y=np.meshgrid(x_range,y_range)
+    mesh_grid=np.stack([mesh_x,mesh_y])
+    pd_pif_vec[:,:]+=mesh_grid
+    gt_pif_vec[:,:]+=mesh_grid
+    pd_paf_src_vec[:,:]+=mesh_grid
+    pd_paf_dst_vec[:,:]+=mesh_grid
+    gt_paf_src_vec[:,:]+=mesh_grid
+    gt_paf_dst_vec[:,:]+=mesh_grid
     #draw
+    os.makedirs(save_dir,exist_ok=True)
     batch_size=pd_paf_conf.shape[0]
     for batch_idx in range(0,batch_size):
         #image and mask
@@ -255,10 +309,70 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
         pd_pif_conf_show=np.amax(pd_pif_conf[batch_idx],axis=0)
         gt_pif_conf_show=np.amax(gt_pif_conf[batch_idx],axis=0)
         #pif_hr_conf_map
-        pd_pif_hr_conf=get_hr_conf(pd_pif_conf[batch_idx],pd_pif_vec[batch_idx],pd_pif_scale[batch_idx])
+        pd_pif_hr_conf=get_hr_conf(pd_pif_conf[batch_idx],pd_pif_vec[batch_idx],pd_pif_scale[batch_idx],stride=stride,thresh=thresh_pif)
         pd_pif_hr_conf_show=np.amax(pd_pif_hr_conf,axis=0)
-        gt_pif_hr_conf=get_hr_conf(gt_pif_conf[batch_idx],gt_pif_vec[batch_idx],gt_pif_scale[batch_idx])
+        gt_pif_hr_conf=get_hr_conf(gt_pif_conf[batch_idx],gt_pif_vec[batch_idx],gt_pif_scale[batch_idx],stride=stride,thresh=thresh_pif)
         gt_pif_hr_conf_show=np.amax(gt_pif_hr_conf,axis=0)
+        #plt draw
+        fig=plt.figure(figsize=(8,8))
+        #show image
+        a=fig.add_subplot(2,3,1)
+        a.set_title("image")
+        plt.imshow(image_show)
+        #show gt_pif_conf
+        a=fig.add_subplot(2,3,2)
+        a.set_title("gt_pif_conf")
+        plt.imshow(gt_pif_conf_show,alpha=0.8)
+        plt.colorbar()
+        #show gt_pif_hr_conf
+        a=fig.add_subplot(2,3,3)
+        a.set_title("gt_pif_hr_conf")
+        plt.imshow(gt_pif_hr_conf_show,alpha=0.8)
+        plt.colorbar()
+        #show mask
+        a=fig.add_subplot(2,3,4)
+        a.set_title("mask")
+        plt.imshow(mask_show)
+        #show pd_pif_conf
+        a=fig.add_subplot(2,3,5)
+        a.set_title("pd_pif_conf")
+        plt.imshow(pd_pif_conf_show,alpha=0.8)
+        plt.colorbar()
+        #show pd_pif_hr_conf
+        a=fig.add_subplot(2,3,6)
+        a.set_title("pd_pif_hr_conf")
+        plt.imshow(pd_pif_hr_conf_show,alpha=0.8)
+        plt.colorbar()
+        #save drawn figures
+        plt.savefig(os.path.join(save_dir,f"{name}_pif.png"),dpi=400)
+
+        #draw paf maps
+        #paf_conf_map
+        pd_paf_conf_show=np.amax(pd_paf_conf[batch_idx],axis=0)
+        gt_paf_conf_show=np.amax(gt_paf_conf[batch_idx],axis=0)
+        #paf_vec_map
+        #pd_paf_vec_map
+        pd_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride))
+        pd_paf_mask=pd_paf_conf[batch_idx]>thresh_paf
+        pd_src_fields,pd_src_ys,pd_src_xs=np.where(pd_paf_mask)
+        for pd_src_field,pd_src_y,pd_src_x in zip(pd_src_fields,pd_src_ys,pd_src_xs):
+            
+        pd_src_vecs=pd_paf_src_vec[batch_idx][pd_paf_mask]
+        pd_dst_vecs=pd_paf_dst_vec[batch_idx][pd_paf_mask]
+        pd_paf_vec_show=draw_vecs(pd_paf_vec_show,pd_src_vecs+pd_dst_vecs)
+        #gt_paf_vec_map
+        gt_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride))
+        gt_paf_mask=np.where(gt_paf_conf_show[batch_idx]>thresh_paf)
+        gt_src_vecs=gt_paf_src_vec[batch_idx][gt_paf_mask]
+        gt_dst_vecs=gt_paf_dst_vec[batch_idx][gt_paf_mask]
+        gt_paf_vec_show=draw_vecs(gt_paf_vec_show,gt_src_vecs+gt_dst_vecs)
+
+
+        
+
+
+
+
 
 
 
