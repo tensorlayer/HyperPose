@@ -219,8 +219,9 @@ def single_train(train_model,dataset,config):
         return loss_pif_maps,loss_paf_maps,total_loss
 
     #train each step
-    tic=time.time()
     train_model.train()
+    tic=time.time()
+    avg_time=AvgMetric(name="time_iter",metric_interval=log_interval)
     #total loss metrics
     avg_total_loss=AvgMetric(name="total_loss",metric_interval=log_interval)
     #pif loss metrics
@@ -240,7 +241,9 @@ def single_train(train_model,dataset,config):
         loss_pif_maps,loss_paf_maps,total_loss=one_step(image,gt_label,mask,train_model)
         loss_pif_conf,loss_pif_vec,loss_pif_scale=loss_pif_maps
         loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec,loss_paf_src_scale,loss_paf_dst_scale=loss_paf_maps
-        #update loss metrics
+        #update metrics
+        avg_time.update(time.time()-tic)
+        tic=time.time()
         #update total losses
         avg_total_loss.update(total_loss)
         #update pif_losses metrics
@@ -261,11 +264,10 @@ def single_train(train_model,dataset,config):
 
         #save log info periodly
         if((step.numpy()!=0) and (step.numpy()%log_interval)==0):
-            tic=time.time()
             log(f"Train iteration {n_step} / {step.numpy()}: Learning rate {lr.numpy()} {avg_total_loss.get_metric()} "+\
                 f"{avg_pif_conf_loss.get_metric()} {avg_pif_vec_loss.get_metric()} {avg_pif_scale_loss.get_metric()}"+\
                 f"{avg_paf_conf_loss.get_metric()} {avg_paf_src_vec_loss.get_metric()} {avg_paf_dst_vec_loss.get_metric()}"+\
-                f"{avg_paf_src_scale_loss.get_metric()} {avg_paf_dst_scale_loss.get_metric()}")
+                f"{avg_paf_src_scale_loss.get_metric()} {avg_paf_dst_scale_loss.get_metric()} {avg_time.get_metric()}")
 
         #save result and ckpt periodly
         if((step.numpy()!=0) and (step.numpy()%save_interval)==0):

@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
 from tensorlayer import layers
@@ -6,20 +7,19 @@ from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, 
 from ..backbones import Resnet50_backbone
 
 class Pifpaf(Model):
-    def __init__(self,parts,limbs,n_pos=18,n_limbs=19,hin=368,win=368,backbone=None,pretraining=False,quad_size=2,data_format="channels_first"):
+    def __init__(self,parts,limbs,n_pos=18,n_limbs=19,hin=368,win=368,scale_size=8,backbone=None,pretraining=False,quad_size=1,data_format="channels_first"):
         super().__init__()
         self.parts=parts
         self.limbs=limbs
         self.n_pos=n_pos
         self.n_limbs=n_limbs
         self.quad_size=quad_size
+        self.scale_size=scale_size*(2**self.quad_size)
         self.data_format=data_format
-        #loss weights
-
         if(backbone==None):
-            self.backbone=Resnet50_backbone(data_format=data_format,use_pool=False)
+            self.backbone=Resnet50_backbone(data_format=data_format,use_pool=False,scale_size=32)
         else:
-            self.backbone=backbone(data_format=data_format)
+            self.backbone=backbone(data_format=data_format,scale_size=self.scale_size)
         self.pif_head=self.PifHead(input_features=self.backbone.out_channels,n_pos=self.n_pos,n_limbs=self.n_limbs,\
             quad_size=self.quad_size,data_format=self.data_format)
         self.paf_head=self.PafHead(input_features=self.backbone.out_channels,n_pos=self.n_pos,n_limbs=self.n_limbs,\
@@ -59,14 +59,54 @@ class Pifpaf(Model):
         #retun losses
         return loss_pif_maps,loss_paf_maps
     
-    def Bce_loss(self,pd_conf,gt_conf)
-        return loss_conf
+    def Bce_loss(self,pd_conf,gt_conf,focal_gamma=1.0):
+        batch_size=pd_conf.shape[0]
+        valid_mask=tf.logical_not(tf.math.is_nan(gt_conf))
+        #select pd_conf
+        pd_conf=pd_conf[valid_mask]
+        #select gt_conf
+        gt_conf=gt_conf[valid_mask]
+        #calculate loss
+        bce_loss=tf.nn.sigmoid_cross_entropy_with_logits(pd_conf,gt_conf)
+        bce_loss=tf.clip_by_value(bce_loss,0.02,5.0)
+        if(focal_gamma!=0.0):
+            focal=(1-tf.exp(-bce_loss))**focal_gamma
+            focal=tf.stop_gradient(focal)
+            bce_loss=focal*bce_loss
+        bce_loss=tf.reduce_sum(bce_loss)/batch_size
+        return bce_loss
     
-    def Laplace_loss(self,pd_vec,pd_logb,gt_vec)
-        return loss_vec
+    def Laplace_loss(self,pd_vec,pd_logb,gt_vec):
+        batch_size=pd_vec.shape[0]
+        valid_mask=tf.logical_not(tf.math.is_nan(gt_vec[:,:,0:1,:,:]))
+        #select pd_vec
+        pd_vec_x=pd_vec[:,:,0:1,:,:][valid_mask]
+        pd_vec_y=pd_vec[:,:,1:2,:,:][valid_mask]
+        pd_vec=tf.stack([pd_vec_x,pd_vec_y])
+        #select pd_logb
+        pd_logb=pd_logb[:,:,:,:,:][valid_mask]
+        #select gt_vec
+        gt_vec_x=gt_vec[:,:,0:1,:,:][valid_mask]
+        gt_vec_y=gt_vec[:,:,1:2,:,:][valid_mask]
+        gt_vec=tf.stack([gt_vec_x,gt_vec_y])
+        #calculate loss
+        norm=tf.norm(pd_vec-gt_vec,axis=0)
+        norm=tf.clip_by_value(norm,0.0,5.0)
+        pd_logb=tf.clip_by_value(pd_logb,-3.0,np.inf)
+        laplace_loss=pd_logb+(norm+0.1)*tf.exp(-pd_logb)
+        laplace_loss=tf.reduce_sum(laplace_loss)/batch_size
+        return laplace_loss
     
-    def Scale_loss(self,pd_scale,gt_scale):
-        return loss_scale
+    def Scale_loss(self,pd_scale,gt_scale,b=1.0):
+        valid_mask=tf.logical_not(tf.math.is_nan(gt_scale))
+        pd_scale=pd_scale[valid_mask]
+        gt_scale=gt_scale[valid_mask]
+        valid_num=pd_scale.shape[0]
+        scale_loss=0.0
+        if(valid_num!=0):
+            scale_loss=tf.norm(pd_scale-gt_scale,ord=1)/valid_num
+        scale_loss=tf.clip_by_value(scale_loss,0.0,5.0)/b
+        return scale_loss
     
     class PifHead(Model):
         def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,data_format="channels_first"):

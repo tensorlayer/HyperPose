@@ -213,6 +213,52 @@ def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=
         paf_dst_scale[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=dst_scale
         return paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm
 
+def get_hr_conf(conf_map,vec_map,scale_map,stride=8,thresh=0.1):
+    #shape
+    #conf [field_num,hout,wout]
+    #vec [field_num,2,hout,wout]
+    #scale [field_num,hout,wout]
+    field_num,hout,wout=conf_map.shape
+    hr_conf=np.zeros(shape=(field_num,hout,wout))
+    for field_idx in range(0,field_num):
+        #filter by thresh
+        thresh_mask=conf_map[field_idx]>thresh
+        confs=conf_map[field_idx][thresh_mask]
+        vecs=vec_map[field_idx][thresh_mask]*stride
+        scales=np.maximum(1.0,scale_map[field_idx][thresh_mask]*0.5*stride)
+
+    
+    
+
+
+
+def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,parts,limbs,stride=8):
+    #shape
+    #conf [batch_size,field_num,hout,wout]
+    #vec [batch_size,field_num,2,hout,wout]
+    #scale [batch_size,field_num,hout,wout]
+    #decode pif_maps
+    pd_pif_conf,pd_pif_vec,pd_pif_logb,pd_pif_scale=pd_pif_maps
+    gt_pif_conf,gt_pif_vec,gt_pif_scale=gt_pif_maps
+    #decode paf_maps
+    pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,_,_,pd_paf_src_scale,pd_paf_dst_scale=pd_paf_maps
+    gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,gt_paf_src_scale,gt_paf_dst_scale=gt_paf_maps
+    #draw
+    batch_size=pd_paf_conf.shape[0]
+    for batch_idx in range(0,batch_size):
+        #image and mask
+        image_show=images[batch_idx].transpose([1,2,0])
+        mask_show=masks[batch_idx]
+
+        #draw pif maps
+        #pif_conf_map
+        pd_pif_conf_show=np.amax(pd_pif_conf[batch_idx],axis=0)
+        gt_pif_conf_show=np.amax(gt_pif_conf[batch_idx],axis=0)
+        #pif_hr_conf_map
+        pd_pif_hr_conf=get_hr_conf(pd_pif_conf[batch_idx],pd_pif_vec[batch_idx],pd_pif_scale[batch_idx])
+        pd_pif_hr_conf_show=np.amax(pd_pif_hr_conf,axis=0)
+        gt_pif_hr_conf=get_hr_conf(gt_pif_conf[batch_idx],gt_pif_vec[batch_idx],gt_pif_scale[batch_idx])
+        gt_pif_hr_conf_show=np.amax(gt_pif_hr_conf,axis=0)
 
 
 
