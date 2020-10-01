@@ -7,7 +7,7 @@ from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, 
 from ..backbones import Resnet50_backbone
 
 class Pifpaf(Model):
-    def __init__(self,parts,limbs,n_pos=18,n_limbs=19,hin=368,win=368,scale_size=8,backbone=None,pretraining=False,quad_size=1,data_format="channels_first"):
+    def __init__(self,parts,limbs,n_pos=17,n_limbs=19,hin=368,win=368,scale_size=8,backbone=None,pretraining=False,quad_size=1,data_format="channels_first"):
         super().__init__()
         self.parts=parts
         self.limbs=limbs
@@ -26,7 +26,7 @@ class Pifpaf(Model):
             quad_size=self.quad_size,data_format=self.data_format)
     
     @tf.function
-    def forward(self,x):
+    def forward(self,x,is_train=False):
         x=self.backbone.forward(x)
         pif_maps=self.pif_head.forward(x)
         paf_maps=self.paf_head.forward(x)
@@ -34,7 +34,7 @@ class Pifpaf(Model):
     
     @tf.function
     def infer(self,x):
-        pif_maps,paf_maps=self.forward(x)
+        pif_maps,paf_maps=self.forward(x,is_train=False)
         pif_maps=tf.stack(pif_maps,axis=2)
         paf_maps=tf.stack(paf_maps,axis=2)
         return pif_maps,paf_maps

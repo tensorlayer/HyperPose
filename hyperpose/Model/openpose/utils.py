@@ -476,7 +476,7 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
             a.set_title('Mask')
             plt.imshow(mask[0, :, :], alpha=0.8)
             plt.colorbar()
-
+            
         os.makedirs(save_dir,exist_ok=True)
         plt.savefig(os.path.join(save_dir, '%s_%d.png' % (name, i)), dpi=300)
         plt.close()

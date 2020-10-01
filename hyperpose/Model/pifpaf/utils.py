@@ -11,6 +11,10 @@ import matplotlib.pyplot as plt
 from .define import COCO_SIGMA,COCO_UPRIGHT_POSE,COCO_UPRIGHT_POSE_45
 from .define import area_ref,area_ref_45
 
+def nan2zero(x):
+    x[x!=x]=0
+    return x
+
 @functools.lru_cache(maxsize=64)
 def get_patch_meshgrid(patch_size):
     x_range=np.linspace(start=(patch_size-1)/2,stop=-(patch_size-1)/2,num=patch_size)
@@ -81,10 +85,12 @@ def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,dist_thresh=
                 if(other_kpt[0]<0 or other_kpt[0]>width or other_kpt[1]<0 or other_kpt[1]>height):
                     continue
                 other_kpts.append(other_kpt)
+            #calculate max_r and scale
             kpt=np.array(kpt)/stride
             other_kpts=np.array(other_kpts)/stride
             max_r=get_max_r(kpt,other_kpts)
             kpt_scale=min(anno_scale*COCO_SIGMA[part_idx],np.min(max_r)*0.25)
+            #generate pif_maps for single point
             pif_maps=[pif_conf,pif_vec,pif_scale,pif_vec_norm]
             pif_conf,pif_vec,pif_scale,pif_vec_norm=put_pifmap(pif_maps,\
                 part_idx,kpt,kpt_scale=kpt_scale,dist_thresh=dist_thresh,patch_size=patch_size,padding=padding)
@@ -150,6 +156,7 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
                 continue
             other_src_kpts,other_dst_kpts=[],[]
             for other_anno in other_annos:
+                #stride kpts into output_map size
                 other_src_kpt=np.array(other_anno[src_kpt])/stride
                 other_dst_kpt=np.array(other_anno[dst_kpt])/stride
                 if(not (other_src_kpt[0]<0 or other_src_kpt[0]>=wout or other_src_kpt[1]<0 or other_src_kpt[1]>=hout)):
@@ -158,10 +165,13 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
                     other_dst_kpts.append(other_dst_kpt)
             other_src_kpts=np.array(other_src_kpts)
             other_dst_kpts=np.array(other_dst_kpts)
+            #calculate src max_r and scale
             src_max_r=get_max_r(src_kpt,other_src_kpts)
             src_scale=min(anno_scale*COCO_SIGMA[src_idx],np.min(src_max_r)*0.25)
+            #calculate dst max_r and scale
             dst_max_r=get_max_r(dst_kpt,other_dst_kpts)
             dst_scale=min(anno_scale*COCO_SIGMA[dst_idx],np.min(dst_max_r)*0.25)
+            #generate paf_maps for single point
             paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm]
             paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm=put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,\
                 padding=padding,patch_size=patch_size,data_format=data_format)
@@ -216,10 +226,6 @@ def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=
         paf_dst_scale[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=dst_scale
         return paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm
 
-def nan2zero(x):
-    x[x!=x]=0
-    return x
-
 def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0):
     field_h,field_w=hr_conf.shape
     for conf,vec,scale in zip(confs,vecs,scales):
@@ -261,9 +267,21 @@ def get_hr_conf(conf_map,vec_map,scale_map,stride=8,thresh=0.1):
         hr_conf[field_idx]=add_gaussian(hr_conf[field_idx],confs,vecs,scales)
     return hr_conf
 
-def draw_vecs(image,vecs,thickness=3,color=(0,255,0)):
-    for vec in vecs:
-        
+def get_arrow_map(array_map,conf_map,src_vec_map,dst_vec_map,thresh=0.1,src_color=(255,0,0),dst_color=(0,0,255)):
+    #make integer indexes
+    def toidx(x):
+        return np.round(x).astype(np.int)
+    stride=array_map.shape[1]/conf_map.shape[1]
+    thickness=min(array_max.shape[1],array_map.shape[2])/40
+    mask=conf_map>thresh
+    fields,grid_ys,grid_xs=np.where(mask)
+    for field,grid_y,grid_x in zip(fields,grid_ys,grid_xs):
+        src_y,src_x=toidx(src_vec_map[field,grid_y,grid_x])
+        dst_y,dst_x=toidx(dst_vec_map[field,grid_y,grid_x])
+        grid_y,grid_x=toidx(grid_y*stride),toidx(grid_x*stride)
+        array_map=cv2.arrowedLine(array_map,(grid_x,grid_y),(src_x,src_y),color=src_color,thickness=thickness)
+        array_map=cv2.arrowedLine(array_map,(grid_x,grid_y),(dst_x,dst_y),color=dst_color,thickness=thickness)
+    return array_map
 
 def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,parts,limbs,stride=8,thresh_pif=0.1,thresh_paf=0.1,\
     save_dir="./save_dir",name="default"):
@@ -345,6 +363,7 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
         plt.colorbar()
         #save drawn figures
         plt.savefig(os.path.join(save_dir,f"{name}_pif.png"),dpi=400)
+        plt.close()
 
         #draw paf maps
         #paf_conf_map
@@ -353,20 +372,71 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
         #paf_vec_map
         #pd_paf_vec_map
         pd_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride))
-        pd_paf_mask=pd_paf_conf[batch_idx]>thresh_paf
-        pd_src_fields,pd_src_ys,pd_src_xs=np.where(pd_paf_mask)
-        for pd_src_field,pd_src_y,pd_src_x in zip(pd_src_fields,pd_src_ys,pd_src_xs):
-            
-        pd_src_vecs=pd_paf_src_vec[batch_idx][pd_paf_mask]
-        pd_dst_vecs=pd_paf_dst_vec[batch_idx][pd_paf_mask]
-        pd_paf_vec_show=draw_vecs(pd_paf_vec_show,pd_src_vecs+pd_dst_vecs)
+        pd_paf_vec_show=get_arrow_map(pd_paf_vec_show,pd_paf_conf[batch_idx],pd_paf_src_vec[batch_idx],pd_paf_dst_vec[batch_idx],thresh_paf)
         #gt_paf_vec_map
         gt_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride))
-        gt_paf_mask=np.where(gt_paf_conf_show[batch_idx]>thresh_paf)
-        gt_src_vecs=gt_paf_src_vec[batch_idx][gt_paf_mask]
-        gt_dst_vecs=gt_paf_dst_vec[batch_idx][gt_paf_mask]
-        gt_paf_vec_show=draw_vecs(gt_paf_vec_show,gt_src_vecs+gt_dst_vecs)
+        gt_paf_vec_show=get_arrow_map(gt_paf_vec_show,gt_paf_conf[batch_idx],gt_paf_src_vec[batch_idx],gt_paf_dst_vec[batch_idx],thresh_paf)
+        #plt draw
+        fig=plt.figure(figsize=(8,8))
+        #show image
+        a=fig.add_subplot(2,3,1)
+        a.set_title("image")
+        plt.imshow(image_show)
+        #show gt_pif_conf
+        a=fig.add_subplot(2,3,2)
+        a.set_title("gt_paf_conf")
+        plt.imshow(gt_paf_conf_show,alpha=0.8)
+        plt.colorbar()
+        #show gt_pif_hr_conf
+        a=fig.add_subplot(2,3,3)
+        a.set_title("gt_paf_vec_conf")
+        plt.imshow(gt_paf_vec_show,alpha=0.8)
+        plt.colorbar()
+        #show mask
+        a=fig.add_subplot(2,3,4)
+        a.set_title("mask")
+        plt.imshow(mask_show)
+        #show pd_pif_conf
+        a=fig.add_subplot(2,3,5)
+        a.set_title("pd_paf_conf")
+        plt.imshow(pd_paf_conf_show,alpha=0.8)
+        plt.colorbar()
+        #show pd_pif_hr_conf
+        a=fig.add_subplot(2,3,6)
+        a.set_title("pd_paf_vec_show")
+        plt.imshow(pd_paf_vec_show,alpha=0.8)
+        plt.colorbar()
+        #save drawn figures
+        plt.savefig(os.path.join(save_dir,f"{name}_paf.png"),dpi=400)
+        plt.close()
 
+from ..common import DATA
+from .define import CocoPart,CocoLimb,CocoColor
+from .define import MpiiPart,MpiiLimb,MpiiColor
+
+def get_parts(dataset_type):
+    if(dataset_type==DATA.MSCOCO):
+        return CocoPart
+    elif(dataset_type==DATA.MPII):
+        return MpiiPart
+    else:
+        return dataset_type.get_parts()
+
+def get_limbs(dataset_type):
+    if(dataset_type==DATA.MSCOCO):
+        return CocoLimb
+    elif(dataset_type==DATA.MPII):
+        return MpiiLimb
+    else:
+        return dataset_type.get_limbs()
+
+def get_colors(dataset_type):
+    if(dataset_type==DATA.MSCOCO):
+        return CocoColor
+    elif(dataset_type==DATA.MPII):
+        return MpiiColor
+    else:
+        return dataset_type.get_colors()
 
         
 

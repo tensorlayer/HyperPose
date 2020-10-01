@@ -65,6 +65,8 @@ def get_config():
         from .config_mbtopps import model,train,eval,data,log
     elif(update_model.model_type==MODEL.PoseProposal):
         from .config_ppn import model,train,eval,data,log
+    elif(update_model.model_type==MODEL.Pifpaf):
+        from .config_pifpaf import model,train,eval,data,log
     #merge settings with basic configurations
     model.update(update_model)
     train.update(update_train)

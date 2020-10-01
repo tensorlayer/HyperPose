@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser.add_argument("--model_type",
                         type=str,
                         default="Openpose",
-                        help="human pose estimation model type, available options: Openpose, LightweightOpenpose ,MobilenetThinOpenpose, PoseProposal")
+                        help="human pose estimation model type, available options: Openpose, LightweightOpenpose ,MobilenetThinOpenpose, PoseProposal, Pifpaf")
     parser.add_argument("--model_backbone",
                         type=str,
                         default="Default",

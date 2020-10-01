@@ -77,6 +77,12 @@ def get_model(config):
             from .pose_proposal.utils import get_limbs
             model.parts=get_parts(dataset_type)
             model.limbs=get_limbs(dataset_type)
+        elif(model_type == MODEL.Pifpaf):
+            from  .pifpaf.utils import get_parts
+            from  .pifpaf.utils import get_limbs
+            model.parts=get_parts(dataset_type)
+            model.limbs=get_limbs(dataset_type)
+
         userdef_parts=config.model.userdef_parts
         userdef_limbs=config.model.userdef_limbs
         if(userdef_parts!=None):
@@ -93,18 +99,21 @@ def get_model(config):
                 hin=model.hin,win=model.win,hout=model.hout,wout=model.wout,backbone=backbone,pretraining=pretraining,data_format=model.data_format)
         elif model_type == MODEL.LightweightOpenpose:
             from .openpose import LightWeightOpenPose as model_arch
-            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),num_channels=model.num_channels,hin=model.hin,win=model.win,\
-                hout=model.hout,wout=model.wout,backbone=backbone,pretraining=pretraining,data_format=model.data_format)
+            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),num_channels=model.num_channels,\
+                hin=model.hin,win=model.win,hout=model.hout,wout=model.wout,backbone=backbone,pretraining=pretraining,data_format=model.data_format)
         elif model_type == MODEL.MobilenetThinOpenpose:
             from .openpose import MobilenetThinOpenpose as model_arch
-            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),num_channels=model.num_channels,hin=model.hin,win=model.win,\
-                hout=model.hout,wout=model.wout,backbone=backbone,pretraining=pretraining,data_format=model.data_format)
+            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),num_channels=model.num_channels,\
+                hin=model.hin,win=model.win,hout=model.hout,wout=model.wout,backbone=backbone,pretraining=pretraining,data_format=model.data_format)
         elif model_type == MODEL.PoseProposal:
             from .pose_proposal import PoseProposal as model_arch
             ret_model=model_arch(parts=model.parts,K_size=len(model.parts),limbs=model.limbs,L_size=len(model.limbs),hnei=model.hnei,wnei=model.wnei,lmd_rsp=model.lmd_rsp,\
                 lmd_iou=model.lmd_iou,lmd_coor=model.lmd_coor,lmd_size=model.lmd_size,lmd_limb=model.lmd_limb,backbone=backbone,\
                 pretraining=pretraining,data_format=model.data_format)
-            #print(f"\n!!!test in get_model: parts:{model.parts} limbs:{model.limbs}\n\n")
+        elif model_type == MODEL.Pifpaf:
+            from .pifpaf import Pifpaf as model_arch
+            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),hin=model.hin,win=model.win,\
+                scale_size=8,pretraining=pretraining,data_format=model.data_format)
         else:
             raise RuntimeError(f'unknown model type {model_type}')
         print(f"using {model_type.name} model arch!")
@@ -143,6 +152,8 @@ def get_train(config):
         from .openpose import single_train,parallel_train
     elif model_type == MODEL.PoseProposal:
         from .pose_proposal import single_train,parallel_train
+    elif model_type == MODEL.Pifpaf:
+        from .pifpaf import single_train,parallel_train
     else:
         raise RuntimeError(f'unknown model type {model_type}')
     print(f"training {model_type.name} model...")
@@ -193,6 +204,8 @@ def get_evaluate(config):
         from .openpose import evaluate
     elif model_type == MODEL.PoseProposal:
         from .pose_proposal import evaluate
+    elif model_type == MODEL.Pifpaf:
+        from .pifpaf import evaluate
     else:
         raise RuntimeError(f'unknown model type {model_type}')
     evaluate=partial(evaluate,config=config)

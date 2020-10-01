@@ -75,3 +75,30 @@ COCO_UPRIGHT_POSE_45=np.einsum('ij,kj->ki', rotate, np.copy(COCO_UPRIGHT_POSE))
 area_ref_45=((np.max(COCO_UPRIGHT_POSE_45[:, 0]) - np.min(COCO_UPRIGHT_POSE_45[:, 0])) *
             (np.max(COCO_UPRIGHT_POSE_45[:, 1]) - np.min(COCO_UPRIGHT_POSE_45[:, 1])))
 
+#specialize for MPII
+#TODO: modified to be specialized for MPII
+class MpiiPart(Enum):
+    Headtop=0
+    Neck=1
+    RShoulder=2
+    RElbow=3
+    RWrist=4
+    LShoulder=5
+    LElbow=6
+    LWrist=7
+    RHip=8
+    RKnee=9
+    RAnkle=10
+    LHip=11
+    LKnee=12
+    LAnkle=13
+    Center=14
+    Background=15
+
+MpiiLimb=list(zip([0, 1, 2, 3, 1, 5, 6, 1,  14,  8, 9,  14, 11, 12],
+                  [1, 2, 3, 4, 5, 6, 7, 14,  8,  9, 10, 11, 12, 13]))
+
+MpiiColor = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0],
+              [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],
+              [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
+

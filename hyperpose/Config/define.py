@@ -15,6 +15,7 @@ class MODEL(Enum):
     LightweightOpenpose=1
     PoseProposal=2
     MobilenetThinOpenpose=3
+    Pifpaf=4
 
 class DATA(Enum):
     MSCOCO=0
@@ -33,5 +34,5 @@ class KUNGFU(Enum):
 
 class OPTIM(Enum):
     Adam=0
-    SGD=2
     RMSprop=1
+    SGD=2
