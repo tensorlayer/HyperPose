@@ -14,7 +14,7 @@ import tensorlayer as tl
 from hyperpose import Config,Model,Dataset
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='FastPose.')
+    parser = argparse.ArgumentParser(description='Hyperpose')
     parser.add_argument("--model_type",
                         type=str,
                         default="Openpose",

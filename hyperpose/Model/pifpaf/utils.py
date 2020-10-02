@@ -226,7 +226,7 @@ def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=
         paf_dst_scale[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=dst_scale
         return paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm
 
-def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0):
+def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0,neighbor_num=16):
     field_h,field_w=hr_conf.shape
     for conf,vec,scale in zip(confs,vecs,scales):
         x,y=vec
@@ -247,7 +247,9 @@ def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0):
         center_x,center_y=np.round(x),np.round(y)
         mesh_update_conf[center_x,center_y]=conf
         #update heatmap according to distance mask
-        hr_conf[min_y:max_y,min_x:max_x][mesh_mask]+=mesh_update_conf[mesh_mask]
+        #TODO: original code divide add by neighbor_num, this will result in larger target get higher score
+        #so judge whether should divide this by scale_size
+        hr_conf[min_y:max_y,min_x:max_x][mesh_mask]+=mesh_update_conf[mesh_mask]/neighbor_num
     hr_conf=np.clip(hr_conf,0.0,max_value)
     return hr_conf
 

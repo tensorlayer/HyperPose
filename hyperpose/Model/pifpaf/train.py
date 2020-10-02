@@ -20,6 +20,7 @@ from ..common import log,KUNGFU,MODEL,get_optim,init_log
 from ..domainadapt import get_discriminator
 from ..metrics import AvgMetric
 
+#TODO:check all the x, y and scale correspond to the map shape(e.g. whether multiple by stride)
 def regulize_loss(target_model,weight_decay_factor):
     re_loss=0
     regularizer=tf.keras.regularizers.l2(l=weight_decay_factor)
@@ -30,7 +31,6 @@ def regulize_loss(target_model,weight_decay_factor):
 def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_list=None, data_format="channels_first"):
     """Data augmentation function."""
     #restore data
-    concat_dim=0 if data_format=="channels_first" else -1
     ground_truth = cPickle.loads(ground_truth.numpy())
     image=image.numpy()
     annos = ground_truth["kpt"]
@@ -220,6 +220,7 @@ def single_train(train_model,dataset,config):
     #train each step
     train_model.train()
     tic=time.time()
+    log(f"Worker {current_rank()}: Initialized")
     avg_time=AvgMetric(name="time_iter",metric_interval=log_interval)
     #total loss metrics
     avg_total_loss=AvgMetric(name="total_loss",metric_interval=log_interval)
@@ -269,7 +270,7 @@ def single_train(train_model,dataset,config):
                 f"{avg_paf_src_scale_loss.get_metric()} {avg_paf_dst_scale_loss.get_metric()} {avg_time.get_metric()}")
 
         #save result and ckpt periodly
-        if((step.numpy()!=0) and (step.numpy()%save_interval)==0):
+        if(step.numpy()!=0 and step.numpy()%save_interval==0 and current_rank()==0):
             #save ckpt
             log("saving model ckpt and result...")
             ckpt_save_path=ckpt_manager.save()
@@ -407,11 +408,9 @@ def parallel_train(train_model,dataset,config):
         if(step>lr_decay_step):
             lr=lr*lr_decay_factor
     
-    #TODO:.....
-
     #optimize one step
     @tf.function
-    def one_step(image,gt_label,mask,train_model):
+    def one_step(image,gt_label,mask,train_model,is_first_batch=False):
         step.assign_add(1)
         with tf.GradientTape() as tape:
             gt_pif_maps,gt_paf_maps=gt_label
@@ -421,6 +420,10 @@ def parallel_train(train_model,dataset,config):
         
         gradients=tape.gradient(total_loss,train_model.trainable_weights)
         opt.apply_gradients(zip(gradients,train_model.trainable_weights))
+        #Kung fu
+        if(is_first_batch):
+            broadcast_variables(train_model.all_weights)
+            broadcast_variables(opt.variables())
         return pd_pif_maps,pd_paf_maps,loss_pif_maps,loss_paf_maps,total_loss
 
     #train each step
@@ -443,7 +446,7 @@ def parallel_train(train_model,dataset,config):
             n_step, batch_size, lr_init.numpy(), lr_decay_steps, lr_decay_factor, weight_decay_factor))
     for image,gt_label,mask,labeled in train_dataset:
         #get losses
-        pd_pif_maps,pd_paf_maps,loss_pif_maps,loss_paf_maps,total_loss=one_step(image,gt_label,mask,train_model)
+        pd_pif_maps,pd_paf_maps,loss_pif_maps,loss_paf_maps,total_loss=one_step(image,gt_label,mask,train_model,step==0)
         loss_pif_conf,loss_pif_vec,loss_pif_scale=loss_pif_maps
         loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec,loss_paf_src_scale,loss_paf_dst_scale=loss_paf_maps
         #update metrics
