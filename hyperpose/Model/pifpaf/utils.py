@@ -376,7 +376,7 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
         gt_paf_conf_show=np.amax(gt_paf_conf[batch_idx],axis=0)
         #paf_vec_map
         #pd_paf_vec_map
-        pd_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride))
+        pd_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride,3))
         pd_paf_vec_show=get_arrow_map(pd_paf_vec_show,pd_paf_conf[batch_idx],pd_paf_src_vec[batch_idx],pd_paf_dst_vec[batch_idx],thresh_paf)
         #gt_paf_vec_map
         gt_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride))

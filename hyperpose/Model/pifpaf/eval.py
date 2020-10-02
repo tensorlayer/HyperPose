@@ -15,6 +15,8 @@ def infer_one_img(model,post_processor,img,image_id=-1,is_visual=False,save_dir=
     img_id=img_id.numpy()
     img_h,img_w,_=img.shape
     input_image=cv2.resize(img,(model.win,model.hin))[np.newaxis,:,:,:]
+    #default channels_first
+    input_image=np.transpose(input_image,[0,3,1,2])
     pif_maps,paf_maps=model.forward(input_image,is_train=False)
     pif_maps=[pif_map[0] for pif_map in pif_maps]
     paf_maps=[paf_map[0] for paf_map in paf_maps]
@@ -35,26 +37,45 @@ def visualize(img,img_id,pd_pif_maps,pd_paf_maps,humans,stride=8,save_dir=".save
     #decode result_maps
     stride=model.shape
     pd_pif_conf,pd_pif_vec,_,pd_pif_scale=pd_pif_maps
-    pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,_,_,_,_=paf_maps
+    pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,_,_,_,_=pd_paf_maps
     pd_pif_conf_show=np.amax(pd_pif_conf,axis=0)
-    pd_pif_hr_show=np.amax(get_hr_conf(pd_pif_conf,pd_pif_vec,pd_pif_scale,stride=stride,thresh=0.1),axis=0)
+    pd_pif_hr_conf_show=np.amax(get_hr_conf(pd_pif_conf,pd_pif_vec,pd_pif_scale,stride=stride,thresh=0.1),axis=0)
     pd_paf_conf_show=np.amax(pd_paf_conf,axis=0)
-    pd_paf_vec_show=np.zeros_like(pd_pif_hr_show)
+    pd_paf_vec_show=np.zeros(pd_pif_hr_conf_show.shape[0],pd_pif_hr_conf_show.shape[1],3)
     pd_paf_vec_show=get_arrow_map(pd_paf_vec_show,pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,thresh=0.1)
     #plt draw
     fig=plt.figure(figsize=(12,12))
     #show input image
-    a=fig.add_subplot(2,2,1)
+    a=fig.add_subplot(2,3,1)
     a.set_title("input image")
     plt.imshow(ori_img)
     #show output result
-    a=fig.add_subplot(2,2,2)
+    a=fig.add_subplot(2,3,4)
     a.set_title("output result")
     plt.imshow(vis_img)
     #show pif_conf_map
-
-
-
+    a=fig.add_subplot(2,3,2)
+    a.set_title("pif_conf_map")
+    plt.imshow(pd_pif_conf_show,alpha=0.8)
+    plt.colorbar()
+    #show pif_hr_conf_map
+    a=fig.add_subplot(2,3,3)
+    a.set_title("pif_hr_conf_map")
+    plt.imshow(pd_pif_hr_conf_show,alpha=0.8)
+    plt.colorbar()
+    #show paf_conf_map
+    a=fig.add_subplot(2,3,5)
+    a.set_title("paf_conf_map")
+    plt.imshow(pd_paf_conf_show,alpha=0.8)
+    plt.colorbar()
+    #show paf_vec_map
+    a=fig.add_subplot(2,3,6)
+    a.set_title("paf_vec_map")
+    plt.imshow(pd_paf_vec_show,alpha=0.8)
+    plt.colorbar()
+    #save fig
+    plt.savefig(os.path.join(save_dir,f"{image_id}_visualize.png"))
+    plt.close()
 
 def _map_fn(image_file,image_id,hin,win):
     #load data
