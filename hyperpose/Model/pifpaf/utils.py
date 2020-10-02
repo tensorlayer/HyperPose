@@ -264,7 +264,7 @@ def get_hr_conf(conf_map,vec_map,scale_map,stride=8,thresh=0.1):
         #filter by thresh
         thresh_mask=conf_map[field_idx]>thresh
         confs=conf_map[field_idx][thresh_mask]
-        vecs=vec_map[field_idx][thresh_mask]*stride
+        vecs=vec_map[field_idx,:,thresh_mask]*stride
         scales=np.maximum(1.0,scale_map[field_idx][thresh_mask]*0.5*stride)
         hr_conf[field_idx]=add_gaussian(hr_conf[field_idx],confs,vecs,scales)
     return hr_conf
@@ -273,13 +273,16 @@ def get_arrow_map(array_map,conf_map,src_vec_map,dst_vec_map,thresh=0.1,src_colo
     #make integer indexes
     def toidx(x):
         return np.round(x).astype(np.int)
+    #shape conf:[field,h,w]
+    #shape vec:[field,2,h,w]
+    #shape array:[h,w,3]
     stride=array_map.shape[1]/conf_map.shape[1]
-    thickness=min(array_max.shape[1],array_map.shape[2])/40
+    thickness=min(array_map.shape[1],array_map.shape[2])/40
     mask=conf_map>thresh
     fields,grid_ys,grid_xs=np.where(mask)
     for field,grid_y,grid_x in zip(fields,grid_ys,grid_xs):
-        src_y,src_x=toidx(src_vec_map[field,grid_y,grid_x])
-        dst_y,dst_x=toidx(dst_vec_map[field,grid_y,grid_x])
+        src_y,src_x=toidx(src_vec_map[field,:,grid_y,grid_x])
+        dst_y,dst_x=toidx(dst_vec_map[field,:,grid_y,grid_x])
         grid_y,grid_x=toidx(grid_y*stride),toidx(grid_x*stride)
         array_map=cv2.arrowedLine(array_map,(grid_x,grid_y),(src_x,src_y),color=src_color,thickness=thickness)
         array_map=cv2.arrowedLine(array_map,(grid_x,grid_y),(dst_x,dst_y),color=dst_color,thickness=thickness)

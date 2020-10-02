@@ -35,9 +35,9 @@ class Pifpaf(Model):
     @tf.function
     def infer(self,x):
         pif_maps,paf_maps=self.forward(x,is_train=False)
-        pif_maps=tf.stack(pif_maps,axis=2)
-        paf_maps=tf.stack(paf_maps,axis=2)
-        return pif_maps,paf_maps
+        pif_conf,pif_vec,_,pif_scale=pif_maps
+        paf_conf,paf_src_vec,paf_dst_vec,_,_,paf_src_scale,paf_dst_scale=paf_maps
+        return pif_conf,pif_vec,pif_scale,paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale
     
     def cal_loss(self,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps):
         #calculate pif losses
@@ -60,6 +60,7 @@ class Pifpaf(Model):
         return loss_pif_maps,loss_paf_maps
     
     def Bce_loss(self,pd_conf,gt_conf,focal_gamma=1.0):
+        #shape conf:[batch,field,h,w]
         batch_size=pd_conf.shape[0]
         valid_mask=tf.logical_not(tf.math.is_nan(gt_conf))
         #select pd_conf
@@ -77,6 +78,8 @@ class Pifpaf(Model):
         return bce_loss
     
     def Laplace_loss(self,pd_vec,pd_logb,gt_vec):
+        #shape vec: [batch,field,2,h,w]
+        #shape logb: [batch,field,h,w]
         batch_size=pd_vec.shape[0]
         valid_mask=tf.logical_not(tf.math.is_nan(gt_vec[:,:,0:1,:,:]))
         #select pd_vec
@@ -90,7 +93,7 @@ class Pifpaf(Model):
         gt_vec_y=gt_vec[:,:,1:2,:,:][valid_mask]
         gt_vec=tf.stack([gt_vec_x,gt_vec_y])
         #calculate loss
-        norm=tf.norm(pd_vec-gt_vec,axis=0)
+        norm=tf.norm(pd_vec-gt_vec,axis=2)
         norm=tf.clip_by_value(norm,0.0,5.0)
         pd_logb=tf.clip_by_value(pd_logb,-3.0,np.inf)
         laplace_loss=pd_logb+(norm+0.1)*tf.exp(-pd_logb)
@@ -123,10 +126,10 @@ class Pifpaf(Model):
             x=self.main_block.forward(x)
             x=tf.nn.depth_to_space(x,block_size=self.quad_size,data_format=self.tf_data_format)
             x=tf.reshape(x,[x.shape[0],self.n_pos,5,x.shape[2],x.shape[3]])
-            pif_conf=x[:,:,0:1,:,:]
+            pif_conf=x[:,:,0,:,:]
             pif_vec=x[:,:,1:3,:,:]
-            pif_logb=x[:,:,3:4,:,:]
-            pif_scale=x[:,:,4:5,:,:]
+            pif_logb=x[:,:,3,:,:]
+            pif_scale=x[:,:,4,:,:]
             #difference in paper and code
             #paper use sigmoid for conf_map in training while code not
             pif_conf=tf.nn.sigmoid(pif_conf)
@@ -147,13 +150,13 @@ class Pifpaf(Model):
             x=self.main_block.forward(x)
             x=tf.nn.depth_to_space(x,block_size=self.quad_size,data_format=self.tf_data_format)
             x=tf.reshape(x,[x.shape[0],self.n_limbs,9,x.shape[2],x.shape[3]])
-            paf_conf=x[:,:,0:1,:,:]
+            paf_conf=x[:,:,0,:,:]
             paf_src_vec=x[:,:,1:3,:,:]
             paf_dst_vec=x[:,:,3:5,:,:]
-            paf_src_logb=x[:,:,5:6,:,:]
-            paf_dst_logb=x[:,:,6:7,:,:]
-            paf_src_scale=x[:,:,7:8,:,:]
-            paf_dst_scale=x[:,:,8:9,:,:]
+            paf_src_logb=x[:,:,5,:,:]
+            paf_dst_logb=x[:,:,6,:,:]
+            paf_src_scale=x[:,:,7,:,:]
+            paf_dst_scale=x[:,:,8,:,:]
             #difference in paper and code
             #paper use sigmoid for conf_map in training while code not
             paf_conf=tf.nn.sigmoid(paf_conf)
