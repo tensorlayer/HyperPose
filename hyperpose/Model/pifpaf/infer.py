@@ -25,13 +25,15 @@ class Post_Processor:
         self.thresh_ref_paf=thresh_ref_paf
         self.reduction=reduction
         self.min_scale=min_scale
-        self.by_source=defaultdict()
         self.greedy_match=greedy_match
         self.reverse_match=reverse_match
-
+        self.by_source=defaultdict()
         for limb_idx,(src_idx,dst_idx) in enumerate(self.limbs):
             self.by_source[src_idx][dst_idx]=(limb_idx,True)
             self.by_source[dst_idx][src_idx]=(limb_idx,False)
+        self.part_num_thresh=4
+        self.score_thresh=0.1
+        #TODO:whether add score weight for each parts
     
     #convert vector field to scalar
     def field_to_scalar(self,vec_x,vec_y,scalar_map):
@@ -47,15 +49,43 @@ class Post_Processor:
         return ret_scalar
     
     #check whether the position is occupied
-    def check_occupy(self,occupied,pos_idx,x,y):
+    def check_occupy(self,occupied,pos_idx,x,y,reduction=2):
         _,field_h,field_w=occupied.shape
-        x,y=x/self.reduction,y/self.reduction
+        x,y=np.round(x/reduction),np.round(y/reduction)
         if(x<0 or x>=field_w or y>0 or y>=field_h):
             return True
         if(occupied[pos_idx,y,x]!=0):
             return True
         else:
             return False
+    
+    #mark the postion as occupied
+    def put_occupy(self,occupied,pos_idx,x,y,scale,reduction=2,min_scale=4,value=1):
+        _,field_h,field_w=occupied.shape
+        x,y=np.round(x/reduction),np.round(y/reduction)
+        size=np.round(max(min_scale/reduction,scale/reduction))
+        min_x=max(0,int(x-size))
+        max_x=max(min_x+1,min(field_w,int(x+size)+1))
+        min_y=max(0,int(y-size))
+        max_y=max(min_y+1,min(field_h,int(y+size)+1))
+        occupied[pos_idx,min_y:max_y,min_x:max_x]+=value
+        return occupied
+    
+    #keypoint-wise nms
+    def nms(self,annotations):
+        max_x=int(max([np.max(ann[:,1]) for ann in annotations])+1)
+        max_y=int(max([np.max(ann[:,2]) for ann in annotations])+1)
+        occupied=np.zeros(shape=(self.n_pos,max_y,max_x))
+        annotations=sorted(annotations,key=lambda ann: -np.sum(ann[:,0]))
+        for ann in annotations:
+            for pos_idx in range(0,self.n_pos):
+                _,x,y,scale=ann[pos_idx]
+                if(self.check_occupy(occupied,pos_idx,x,y,reduction=2)):
+                    ann[pos_idx,0]=0
+                else:
+                    self.put_occupy(occupied,pos_idx,x,y,scale,reduction=2,min_scale=4)
+        annotations=sorted(annotations,key=lambda ann: -np.sum(ann[:,0]))
+        return annotations
     
     #get closest matching connection and blend them
     def find_connection(self,connections,x,y,scale,connection_method="blend",thresh_second=0.01):
@@ -87,7 +117,7 @@ class Post_Processor:
                 second_score=w_score
         #not find match connections
         if(first_idx==-1 or first_score==0.0):
-            return None
+            return 0.0,0.0,0.0,0.0
         #method max:
         if(connection_method=="max"):
             return first_score,dst_x[first_idx],dst_y[first_idx],dst_scale[first_idx]
@@ -115,12 +145,22 @@ class Post_Processor:
         else:
             forward_cons,backward_cons=backward_list[limb_idx],forward_list[limb_idx]
         c,x,y,scale=ann[src_idx]
-        find_connection=self.find_connection(forward_cons,x,y,scale,connection_method)
-        
-            
-
-
-
+        #forward matching
+        fc,fx,fy,fscale=self.find_connection(forward_cons,x,y,scale,connection_method=connection_method)
+        if(fc==0.0):
+            return 0.0,0.0,0.0,0.0
+        merge_score=np.sqrt(fc*c)
+        #reverse matching
+        if(reverse_match):
+            rc,rx,ry,_=self.find_connection(backward_cons,fx,fy,fscale,connection_method=connection_method)
+            #couldn't find a reverse one
+            if(rc==0.0):
+                return 0.0,0.0,0.0,0.0
+            #reverse finding is distant from the orginal founded one
+            if abs(x-rx)+abs(y-ry)>scale:
+                return 0.0,0.0,0.0,0.0
+        #successfully found connection
+        return merge_score,fx,fy,fscale
     
     #greedy matching pif seeds with forward and backward connections generated from paf maps
     def grow(self,ann,forward_list,backward_list,reverse_match=True):
@@ -149,18 +189,32 @@ class Post_Processor:
                 #ignore points that assigned by other frontier
                 if(ann[dst_idx,0]>0.0):
                     continue
-                match_xycs=self.get_connection_value(ann,src_idx,dst_idx,forward_slist,backward_list,reverse_match=reverse_match)
+                #find conection
+                fc,fx,fy,fscale=self.get_connection_value(ann,src_idx,dst_idx,forward_list,backward_list,reverse_match=reverse_match)
+                if(fc==0.0):
+                    continue
+                return fc,fx,fy,fscale,src_idx,dst_idx
+            return None
 
         #initially add joints to frontier
         for pos_idx in range(0,self.n_pos):
-            if(ann[pos_idx,0]>0):
+            if(ann[pos_idx,0]>0.0):
                 add_frontier(ann,pos_idx)
         #recurrently finding the match connections
         while True:
             find_match=get_frontier(ann)
-
-
-
+            if(find_match==None):
+                break
+            score,x,y,scale,_,dst_idx=find_match
+            if(ann[dst_idx,0]>0.0):
+                continue
+            ann[dst_idx,0]=score
+            ann[dst_idx,1]=x
+            ann[dst_idx,2]=y
+            ann[dst_idx,3]=scale
+            add_frontier(ann,dst_idx)
+        #finished matching a person
+        return ann
 
     def process(self,pif_maps,paf_maps):
         #shape:
@@ -213,10 +267,40 @@ class Post_Processor:
             forward_list.append([score_f[mask_f],src_x[mask_f],src_y[mask_f],src_scale[mask_f],dst_x[mask_f],dst_y[mask_f],dst_scale[mask_f]])
         #greedy assemble
         occupied=np.zeros(shape=(self.n_pos,pif_hr_conf.shape[1]/self.reduction,pif_hr_conf.shape[2]/self.reduction))
+        annotations=[]
         for c,x,y,scale,pos_idx in seeds:
-            if(self.check_occupy(occupied,pos_idx,x,y)):
+            if(self.check_occupy(occupied,pos_idx,x,y,reduction=self.reduction)):
                 continue
+            #ann meaning: ann[0]=conf ann[1]=x ann[2]=y ann[3]=scale
             ann=np.zeros(shape=(self.n_pos,4))
             ann[pos_idx]=c,x,y,scale
-            self.grow(ann,forward_list,backward_list,reverse_match=self.reverse_match)
+            ann=self.grow(ann,forward_list,backward_list,reverse_match=self.reverse_match)
+            annotations.append(ann)
+            #put the ann into occupacy
+            for ann_pos_idx in range(0,self.n_pos):
+                occupied=self.put_occupy(occupied,ann_pos_idx,ann[ann_pos_idx,1],ann[ann_pos_idx,2],ann[ann_pos_idx,3],\
+                    reduction=self.reduction,min_scale=self.min_scale)
+        #point-wise nms
+        annotations=self.kpt_nms(annotations)
+        #convert to humans
+        ret_humans=[]
+        for ann_idx,ann in enumerate(annotations):
+            ret_human=Human(parts=self.parts,limbs=self.limbs,colors=self.colors)
+            for pos_idx in range(0,self.n_pos):
+                score,x,y,scale=ann[pos_idx]
+                ret_human.body_parts[pos_idx]=BodyPart(parts=self.parts,u_idx=f"{ann_idx}-{pos_idx}",part_idx=pos_idx,\
+                    x=x,y=y,score=score)
+            #check for num
+            if(ret_human.get_partnum()<self.part_num_thresh):
+                continue
+            if(ret_human.get_score()<self.score_thresh):
+                continue
+            ret_humans.append(ret_human)
+        if(self.debug):
+            print(f"total {len(ret_humans)} human detected!")
+        return ret_humans
+
+
+
+
 

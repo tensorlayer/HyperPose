@@ -13,6 +13,10 @@ class Pifpaf(Model):
         self.limbs=limbs
         self.n_pos=n_pos
         self.n_limbs=n_limbs
+        self.hin=hin
+        self.win=win
+        self.hout=hin/scale_size
+        self.wout=win/scale_size
         self.quad_size=quad_size
         self.scale_size=scale_size*(2**self.quad_size)
         self.data_format=data_format
@@ -24,15 +28,20 @@ class Pifpaf(Model):
             quad_size=self.quad_size,data_format=self.data_format)
         self.paf_head=self.PafHead(input_features=self.backbone.out_channels,n_pos=self.n_pos,n_limbs=self.n_limbs,\
             quad_size=self.quad_size,data_format=self.data_format)
+        #generate mesh grid
+        x_range=np.linspace(start=0,stop=self.wout-1,num=self.wout)
+        y_range=np.linspace(start=0,stop=self.hout-1,num=self.hout)
+        mesh_x,mesh_y=np.meshgrid(x_range,y_range)
+        self.mesh_grid=np.stack([mesh_x,mesh_y])
     
-    @tf.function
+    @tf.function(experimental_relax_shapes=True)
     def forward(self,x,is_train=False):
         x=self.backbone.forward(x)
-        pif_maps=self.pif_head.forward(x)
-        paf_maps=self.paf_head.forward(x)
+        pif_maps=self.pif_head.forward(x,is_train=is_train)
+        paf_maps=self.paf_head.forward(x,is_train=is_train)
         return pif_maps,paf_maps
     
-    @tf.function
+    @tf.function(experimental_relax_shapes=True)
     def infer(self,x):
         pif_maps,paf_maps=self.forward(x,is_train=False)
         pif_conf,pif_vec,_,pif_scale=pif_maps
@@ -122,7 +131,7 @@ class Pifpaf(Model):
             self.tf_data_format="NCHW" if self.data_format=="channels_first" else "NHWC"
             self.main_block=Conv2d(n_filter=self.out_features,in_channels=self.input_features,filter_size=(1,1),data_format=self.data_format)
 
-        def forward(self,x):
+        def forward(self,x,is_train=False):
             x=self.main_block.forward(x)
             x=tf.nn.depth_to_space(x,block_size=self.quad_size,data_format=self.tf_data_format)
             x=tf.reshape(x,[x.shape[0],self.n_pos,5,x.shape[2],x.shape[3]])
@@ -130,7 +139,10 @@ class Pifpaf(Model):
             pif_vec=x[:,:,1:3,:,:]
             pif_logb=x[:,:,3,:,:]
             pif_scale=x[:,:,4,:,:]
-            #difference in paper and code
+            #restore vec_maps in inference
+            if(is_train==False):
+                pif_vec[:,:]+=self.mesh_grid
+            #TODO:difference in paper and code
             #paper use sigmoid for conf_map in training while code not
             pif_conf=tf.nn.sigmoid(pif_conf)
             return pif_conf,pif_vec,pif_logb,pif_scale
@@ -146,7 +158,7 @@ class Pifpaf(Model):
             self.tf_data_format="NCHW" if self.data_format=="channels_first" else "NHWC"
             self.main_block=Conv2d(n_filter=self.out_features,in_channels=self.input_features,filter_size=(1,1),data_format=self.data_format)
         
-        def forward(self,x):
+        def forward(self,x,is_train=False):
             x=self.main_block.forward(x)
             x=tf.nn.depth_to_space(x,block_size=self.quad_size,data_format=self.tf_data_format)
             x=tf.reshape(x,[x.shape[0],self.n_limbs,9,x.shape[2],x.shape[3]])
@@ -157,6 +169,10 @@ class Pifpaf(Model):
             paf_dst_logb=x[:,:,6,:,:]
             paf_src_scale=x[:,:,7,:,:]
             paf_dst_scale=x[:,:,8,:,:]
+            #restore vec_maps in inference
+            if(is_train==False):
+                paf_src_vec[:,:]+=self.mesh_grid
+                paf_dst_vec[:,:]+=self.mesh_grid
             #difference in paper and code
             #paper use sigmoid for conf_map in training while code not
             paf_conf=tf.nn.sigmoid(paf_conf)

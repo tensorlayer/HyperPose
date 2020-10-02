@@ -50,7 +50,6 @@ def multiscale_search(img,model):
         #average
         avg_conf_map+=conf_map/(len(scales))
         avg_paf_map+=paf_map/(len(scales))
-    #print(f"test shape in multi: conf_map:{avg_conf_map.shape} paf_map:{avg_paf_map.shape}")
     return avg_conf_map,avg_paf_map
 
 def infer_one_img(model,post_processor,img,img_id=-1,enable_multiscale_search=False,is_visual=False,save_dir="./vis_dir"):
@@ -68,7 +67,6 @@ def infer_one_img(model,post_processor,img,img_id=-1,enable_multiscale_search=Fa
         conf_map=conf_map.numpy()[0]
         paf_map=paf_map.numpy()[0]
     humans=post_processor.process(conf_map.copy(),paf_map.copy(),img_h,img_w,data_format=data_format)
-    #print(f"test shape before draw: img:{img.shape} conf_map:{conf_map.shape} paf_map:{paf_map.shape}")
     if(is_visual):
         if(data_format=="channels_first"):
             conf_map=conf_map.transpose([1,2,0])
