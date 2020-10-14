@@ -11,8 +11,8 @@ from ..human import Human,BodyPart
 from collections import defaultdict
 
 class Post_Processor:
-    def __init__(self,parts,limbs,colors,debug=False,stride=8,thresh_pif=0.1,thresh_paf=0.1,thresh_ref_pif=0.1,thresh_ref_paf=0.1,\
-        reduction=2,min_scale=4,greedy_match=True,reverse_match=True):
+    def __init__(self,parts,limbs,colors,stride=8,thresh_pif=0.1,thresh_paf=0.1,thresh_ref_pif=0.1,thresh_ref_paf=0.1,\
+        reduction=2,min_scale=4,greedy_match=True,reverse_match=True,debug=False):
         self.parts=parts
         self.limbs=limbs
         self.colors=colors
@@ -33,7 +33,9 @@ class Post_Processor:
             self.by_source[dst_idx][src_idx]=(limb_idx,False)
         self.part_num_thresh=4
         self.score_thresh=0.1
+        self.debug=debug
         #TODO:whether add score weight for each parts
+    
     
     #convert vector field to scalar
     def field_to_scalar(self,vec_x,vec_y,scalar_map):
@@ -72,7 +74,7 @@ class Post_Processor:
         return occupied
     
     #keypoint-wise nms
-    def nms(self,annotations):
+    def kpt_nms(self,annotations):
         max_x=int(max([np.max(ann[:,1]) for ann in annotations])+1)
         max_y=int(max([np.max(ann[:,2]) for ann in annotations])+1)
         occupied=np.zeros(shape=(self.n_pos,max_y,max_x))

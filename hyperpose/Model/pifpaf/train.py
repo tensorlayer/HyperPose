@@ -66,7 +66,7 @@ def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_l
 
     # generate result incluing pif_maps and paf_maps
     height, width, _ = image.shape
-    out_mask_miss=cv2.resize(mask,(wout,hout))
+    out_mask_miss=cv2.resize(mask_miss,(wout,hout))
     pif_conf,pif_vec,pif_scale = get_pifmap(annos, out_mask_miss, height, width, hout, wout, parts, limbs, data_format=data_format)
     paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale = get_pafmap(annos, out_mask_miss, height, width, hout, wout, parts, limbs, data_format=data_format)
 
@@ -83,8 +83,7 @@ def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_l
         mask_miss=np.transpose(mask_miss,[2,0,1])
     labeled=np.float32(labeled)
     return image, pif_conf,pif_vec,pif_scale,paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale, mask_miss, labeled
-
-
+    
 def _map_fn(img_list, annos ,data_aug_fn, hin, win, hout, wout, parts, limbs):
     """TF Dataset pipeline."""
     #load data
@@ -92,17 +91,14 @@ def _map_fn(img_list, annos ,data_aug_fn, hin, win, hout, wout, parts, limbs):
     image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
     #data augmentation using affine transform and get paf maps
-    image, pif_conf, pif_vec, pif_scale, paf_conf, paf_src_vec, paf_dst_vec, paf_src_scale, paf_dst_scale, mask, labeled = \
-        tf.py_function(data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32, tf.float32. tf.float32, tf.float32,\
+    image, pif_conf, pif_vec, pif_scale, paf_conf, paf_src_vec, paf_dst_vec, paf_src_scale, paf_dst_scale, mask, labeled = tf.py_function(\
+        data_aug_fn, [image, annos], [tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32,\
             tf.float32,tf.float32,tf.float32, tf.float32, tf.float32])
-    pif_maps=[pif_conf,pif_vec,pif_scale]
-    paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale]
-    result_maps=[pif_maps,paf_maps]
     #data augmentaion using tf
     image = tf.image.random_brightness(image, max_delta=35./255.)   # 64./255. 32./255.)  caffe -30~50
     image = tf.image.random_contrast(image, lower=0.5, upper=1.5)   # lower=0.2, upper=1.8)  caffe 0.3~1.5
     image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
-    return image, result_maps, mask, labeled
+    return image, pif_conf, pif_vec, pif_scale, paf_conf, paf_src_vec, paf_dst_vec, paf_src_scale, paf_dst_scale, mask, labeled
 
 def get_paramed_map_fn(hin,win,hout,wout,parts,limbs,flip_list=None,data_format="channels_first"):
     paramed_data_aug_fn=partial(_data_aug_fn,hin=hin,win=win,hout=hout,wout=wout,parts=parts,limbs=limbs,\
@@ -161,7 +157,6 @@ def single_train(train_model,dataset,config):
     log(f"single training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
-    dataset_type=dataset.get_dataset_type()
     parts,limbs,data_format=train_model.parts,train_model.limbs,train_model.data_format
     paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,parts,limbs,data_format=data_format)
     train_dataset = train_dataset.shuffle(buffer_size=4096).repeat()
@@ -186,10 +181,9 @@ def single_train(train_model,dataset,config):
         log("ckpt_path doesn't exist, step and optimizer are initialized")
     #load pretrained backbone
     log("loading pretrained backbone...")
-    try:
-        tl.files.load_and_assign_npz_dict(name=pretrain_model_path,network=train_model.backbone,skip=True)
+    if(tl.files.load_and_assign_npz_dict(name=pretrain_model_path,network=train_model.backbone,skip=True)):
         log("pretrained backbone loaded successfully")
-    except:
+    else:
         log("pretrained backbone doesn't exist, model backbone are initialized")
     #load model weights
     log("loading saved training model weights...")
@@ -220,7 +214,6 @@ def single_train(train_model,dataset,config):
     #train each step
     train_model.train()
     tic=time.time()
-    log(f"Worker {current_rank()}: Initialized")
     avg_time=AvgMetric(name="time_iter",metric_interval=log_interval)
     #total loss metrics
     avg_total_loss=AvgMetric(name="total_loss",metric_interval=log_interval)
@@ -236,8 +229,12 @@ def single_train(train_model,dataset,config):
     avg_paf_dst_scale_loss=AvgMetric(name="paf_dst_scale_loss",metric_interval=log_interval)
     log('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_steps: {} lr_decay_factor: {} weight_decay_factor: {}'.format(
             n_step, batch_size, lr_init.numpy(), lr_decay_steps, lr_decay_factor, weight_decay_factor))
-    for image,gt_label,mask,labeled in train_dataset:
+    for image, pif_conf, pif_vec, pif_scale, paf_conf, paf_src_vec, paf_dst_vec, paf_src_scale, paf_dst_scale, mask, labeled in train_dataset:
         #get losses
+        #debug
+        gt_pif_maps=[pif_conf,pif_vec,pif_scale]
+        gt_paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale]
+        gt_label=[gt_pif_maps,gt_paf_maps]
         pd_pif_maps,pd_paf_maps,loss_pif_maps,loss_paf_maps,total_loss=one_step(image,gt_label,mask,train_model)
         loss_pif_conf,loss_pif_vec,loss_pif_scale=loss_pif_maps
         loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec,loss_paf_src_scale,loss_paf_dst_scale=loss_paf_maps
@@ -270,7 +267,7 @@ def single_train(train_model,dataset,config):
                 f"{avg_paf_src_scale_loss.get_metric()} {avg_paf_dst_scale_loss.get_metric()} {avg_time.get_metric()}")
 
         #save result and ckpt periodly
-        if(step.numpy()!=0 and step.numpy()%save_interval==0 and current_rank()==0):
+        if(step.numpy()!=0 and step.numpy()%save_interval==0):
             #save ckpt
             log("saving model ckpt and result...")
             ckpt_save_path=ckpt_manager.save()

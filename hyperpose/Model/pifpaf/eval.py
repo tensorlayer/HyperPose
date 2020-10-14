@@ -13,6 +13,7 @@ from .utils import get_hr_conf,get_arrow_map
 def infer_one_img(model,post_processor,img,image_id=-1,is_visual=False,save_dir="./save_dir"):
     img=img.numpy().astype(np.float32)
     img_id=img_id.numpy()
+    #TODO: use padded-scale that wouldn't casue deformation
     img_h,img_w,_=img.shape
     input_image=cv2.resize(img,(model.win,model.hin))[np.newaxis,:,:,:]
     #default channels_first

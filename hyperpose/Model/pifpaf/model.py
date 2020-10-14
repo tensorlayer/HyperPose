@@ -15,8 +15,8 @@ class Pifpaf(Model):
         self.n_limbs=n_limbs
         self.hin=hin
         self.win=win
-        self.hout=hin/scale_size
-        self.wout=win/scale_size
+        self.hout=int(hin/scale_size)
+        self.wout=int(win/scale_size)
         self.quad_size=quad_size
         self.scale_size=scale_size*(2**self.quad_size)
         self.data_format=data_format
@@ -122,6 +122,7 @@ class Pifpaf(Model):
     
     class PifHead(Model):
         def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,data_format="channels_first"):
+            super().__init__()
             self.input_features=input_features
             self.n_pos=n_pos
             self.n_limbs=n_limbs
@@ -149,6 +150,7 @@ class Pifpaf(Model):
         
     class PafHead(Model):
         def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,data_format="channels_first"):
+            super().__init__()
             self.input_features=input_features
             self.n_pos=n_pos
             self.n_limbs=n_limbs

@@ -71,7 +71,7 @@ area_ref=((np.max(COCO_UPRIGHT_POSE[:, 0]) - np.min(COCO_UPRIGHT_POSE[:, 0])) *
 
 c, s = np.cos(np.deg2rad(45)), np.sin(np.deg2rad(45))
 rotate = np.array(((c, -s), (s, c)))
-COCO_UPRIGHT_POSE_45=np.einsum('ij,kj->ki', rotate, np.copy(COCO_UPRIGHT_POSE))
+COCO_UPRIGHT_POSE_45=np.einsum('ij,kj->ki', rotate, np.copy(COCO_UPRIGHT_POSE[:,:2]))
 area_ref_45=((np.max(COCO_UPRIGHT_POSE_45[:, 0]) - np.min(COCO_UPRIGHT_POSE_45[:, 0])) *
             (np.max(COCO_UPRIGHT_POSE_45[:, 1]) - np.min(COCO_UPRIGHT_POSE_45[:, 1])))
 

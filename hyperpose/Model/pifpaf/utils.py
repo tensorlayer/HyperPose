@@ -25,20 +25,24 @@ def get_patch_meshgrid(patch_size):
 
 def get_max_r(kpt,other_kpts):
     min_dist=np.array([np.inf, np.inf, np.inf, np.inf], dtype=np.float32)
-    dif=other_kpts-kpt[np.newaxis,:]
-    mask=np.zeros(shape=(other_kpts.shape[0]))
-    mask[dif[:,0]<0.0]+=1
-    mask[dif[:,1]<0.0]+=2
-    for quadrant in range(0,4):
-        if(not np.any(mask==quadrant)):
-            continue
-        min_dist[quadrant]=np.min(np.linalg.norm(dif[mask==quadrant],axis=1))
+    if(len(other_kpts)!=0):
+        dif=other_kpts-kpt[np.newaxis,:]
+        mask=np.zeros(shape=(other_kpts.shape[0]))
+        mask[dif[:,0]<0.0]+=1
+        mask[dif[:,1]<0.0]+=2
+        for quadrant in range(0,4):
+            if(not np.any(mask==quadrant)):
+                continue
+            min_dist[quadrant]=np.min(np.linalg.norm(dif[mask==quadrant],axis=1))
     return min_dist
 
 def get_scale(keypoints):
+    keypoints=np.array(keypoints)
     ref_pose=np.copy(COCO_UPRIGHT_POSE)
     ref_pose_45=np.copy(COCO_UPRIGHT_POSE_45)
     visible=np.logical_not(np.logical_and(keypoints[:,0]<0,keypoints[:,1]<0))
+    if(np.sum(visible)<=3):
+        return None
     #calculate visible area
     area_vis=(np.max(keypoints[visible, 0]) - np.min(keypoints[visible, 0]))*\
             (np.max(keypoints[visible, 1]) - np.min(keypoints[visible, 1]))
@@ -70,12 +74,14 @@ def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,dist_thresh=
     pif_vec=np.full(shape=(n_pos,2,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     pif_scale=np.full(shape=(n_pos,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     pif_vec_norm=np.full(shape=(n_pos,padded_h,padded_w),fill_value=np.inf,dtype=np.float32)
-    pif_vec_norm[:,padding:-padding,padding:-padding][mask==0]=dist_thresh
-    pif_conf[:,padding:-padding][mask==0]=np.nan
+    pif_vec_norm[:,padding:-padding,padding:-padding][:,mask==0]=dist_thresh
+    pif_conf[:,padding:-padding,padding:-padding][:,mask==0]=np.nan
     #generate fields
     for anno_id,anno in enumerate(annos):
         other_annos=[other_anno for other_id,other_anno in enumerate(annos) if other_id!=anno_id]
         anno_scale=get_scale(anno)
+        if(anno_scale==None):
+            continue
         for part_idx,kpt in enumerate(anno):
             if(kpt[0]<0 or kpt[0]>width or kpt[1]<0 or kpt[1]>height):
                 continue
@@ -125,7 +131,7 @@ def put_pifmap(pif_maps,part_idx,kpt,kpt_scale,dist_thresh=1.0,patch_size=4,padd
     #update pif_conf (to 1.0 where less than dist_trhsh)
     pif_conf[part_idx,min_y:max_y,min_x:max_x][grid_mask]=1.0
     #update pif_vec (to patch_grid to kpt offset)
-    pif_vec[part_idx,:,min_y:max_y,min_x:max_x][grid_mask]=patch_grid_offset[grid_mask]
+    pif_vec[part_idx,:,min_y:max_y,min_x:max_x][:,grid_mask]=patch_grid_offset[:,grid_mask]
     #update pif_scale (to kpt scale)
     pif_scale[part_idx,min_y:max_y,min_x:max_x][grid_mask]=kpt_scale
     return pif_conf,pif_vec,pif_scale,pif_vec_norm
@@ -141,12 +147,14 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
     paf_src_scale=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     paf_dst_scale=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     paf_vec_norm=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.inf,dtype=np.float32)
-    paf_vec_norm[:,padding:-padding,padding:-padding][mask==0]=1.0
-    paf_conf[:,padding:-padding,padding:-padding][mask==0]=np.nan
+    paf_vec_norm[:,padding:-padding,padding:-padding][:,mask==0]=1.0
+    paf_conf[:,padding:-padding,padding:-padding][:,mask==0]=np.nan
     #generate fields
     for anno_id,anno in enumerate(annos):
         other_annos=[other_anno for other_id,other_anno in enumerate(annos) if other_id!=anno_id]
         anno_scale=get_scale(anno)
+        if(anno_scale==None):
+            continue
         for limb_idx,(src_idx,dst_idx) in enumerate(limbs):
             src_kpt=np.array(anno[src_idx])/stride
             dst_kpt=np.array(anno[dst_idx])/stride
@@ -157,8 +165,8 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
             other_src_kpts,other_dst_kpts=[],[]
             for other_anno in other_annos:
                 #stride kpts into output_map size
-                other_src_kpt=np.array(other_anno[src_kpt])/stride
-                other_dst_kpt=np.array(other_anno[dst_kpt])/stride
+                other_src_kpt=np.array(other_anno[src_idx])/stride
+                other_dst_kpt=np.array(other_anno[dst_idx])/stride
                 if(not (other_src_kpt[0]<0 or other_src_kpt[0]>=wout or other_src_kpt[1]<0 or other_src_kpt[1]>=hout)):
                     other_src_kpts.append(other_dst_kpt)
                 if(not (other_dst_kpt[0]<0 or other_dst_kpt[0]>=wout or other_dst_kpt[1]<0 or other_dst_kpt[1]>=hout)):
@@ -178,7 +186,7 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
     #get field without padding (TODO: valid area?)
     paf_conf=paf_conf[:,padding:-padding,padding:-padding]
     paf_src_vec=paf_src_vec[:,:,padding:-padding,padding:-padding]
-    paf_dst_vec=paf_dst_vec[:,:,padding,-padding,padding:-padding]
+    paf_dst_vec=paf_dst_vec[:,:,padding:-padding,padding:-padding]
     paf_src_scale=paf_src_scale[:,padding:-padding,padding:-padding]
     paf_dst_scale=paf_dst_scale[:,padding:-padding,padding:-padding]
     return paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale
@@ -198,7 +206,7 @@ def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=
     for lmbda in frange:
         left_top=np.round(src_kpt+lmbda*limb_vec-patch_offset)+padding
         min_x,min_y=int(left_top[0]),int(left_top[1])
-        max_x,max_y=min_x+patch_offset,min_y+patch_offset
+        max_x,max_y=min_x+patch_size,min_y+patch_size
         if(min_x<0 or max_x>=padded_w or min_y<0 or max_y>=padded_h):
             continue
         patch_center=left_top+patch_offset-padding
@@ -217,14 +225,14 @@ def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=
         #update paf_conf
         paf_conf[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=1
         #update paf_src_vec
-        paf_src_vec[limb_idx,:,min_y:max_y,min_x:max_x][grid_mask]=patch_grid_offset_src[grid_mask]
+        paf_src_vec[limb_idx,:,min_y:max_y,min_x:max_x][:,grid_mask]=patch_grid_offset_src[:,grid_mask]
         #update paf_dst_vec
-        paf_dst_vec[limb_idx,:,min_y:max_y,min_x:max_x][grid_mask]=patch_grid_offset_dst[grid_mask]
+        paf_dst_vec[limb_idx,:,min_y:max_y,min_x:max_x][:,grid_mask]=patch_grid_offset_dst[:,grid_mask]
         #update paf_src_scale
         paf_src_scale[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=src_scale
         #update paf_dst_scale
         paf_dst_scale[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=dst_scale
-        return paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm
+    return paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm
 
 def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0,neighbor_num=16):
     field_h,field_w=hr_conf.shape
