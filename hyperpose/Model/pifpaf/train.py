@@ -198,7 +198,6 @@ def single_train(train_model,dataset,config):
             lr=lr*lr_decay_factor
         
     #optimize one step
-    @tf.function
     def one_step(image,gt_label,mask,train_model):
         step.assign_add(1)
         with tf.GradientTape() as tape:
@@ -262,9 +261,9 @@ def single_train(train_model,dataset,config):
         #save log info periodly
         if((step.numpy()!=0) and (step.numpy()%log_interval)==0):
             log(f"Train iteration {n_step} / {step.numpy()}, Learning rate:{lr.numpy()} {avg_total_loss.get_metric()} "+\
-                f"{avg_pif_conf_loss.get_metric()} {avg_pif_vec_loss.get_metric()} {avg_pif_scale_loss.get_metric()}"+\
-                f"{avg_paf_conf_loss.get_metric()} {avg_paf_src_vec_loss.get_metric()} {avg_paf_dst_vec_loss.get_metric()}"+\
-                f"{avg_paf_src_scale_loss.get_metric()} {avg_paf_dst_scale_loss.get_metric()} {avg_time.get_metric()}")
+                f"{avg_pif_conf_loss.get_metric()} {avg_pif_vec_loss.get_metric()} {avg_pif_scale_loss.get_metric()} "+\
+                f"{avg_paf_conf_loss.get_metric()} {avg_paf_src_vec_loss.get_metric()} {avg_paf_dst_vec_loss.get_metric()} "+\
+                f"{avg_paf_src_scale_loss.get_metric()} {avg_paf_dst_scale_loss.get_metric()} {avg_time.get_metric()} ")
 
         #save result and ckpt periodly
         if(step.numpy()!=0 and step.numpy()%save_interval==0):
@@ -279,7 +278,11 @@ def single_train(train_model,dataset,config):
             #draw result
             stride=train_model.stride
             gt_pif_maps,gt_paf_maps=gt_label
-            draw_result(image,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,mask,parts,limbs,stride,save_dir=vis_dir,\
+            for map_idx,gt_pif_map in enumerate(gt_pif_maps):
+                gt_pif_maps[map_idx]=gt_pif_map.numpy()
+            for map_idx,gt_paf_map in enumerate(gt_paf_maps):
+                gt_paf_maps[map_idx]=gt_paf_map.numpy()
+            draw_result(image.numpy(),pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,mask.numpy(),parts,limbs,stride,save_dir=vis_dir,\
                 name=f"train_{step.numpy()}")
 
         #training finished

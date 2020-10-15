@@ -12,7 +12,7 @@ from .define import COCO_SIGMA,COCO_UPRIGHT_POSE,COCO_UPRIGHT_POSE_45
 from .define import area_ref,area_ref_45
 
 def nan2zero(x):
-    x[x!=x]=0
+    x=np.where(x!=x,0,x)
     return x
 
 @functools.lru_cache(maxsize=64)
@@ -96,6 +96,7 @@ def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,dist_thresh=
             other_kpts=np.array(other_kpts)/stride
             max_r=get_max_r(kpt,other_kpts)
             kpt_scale=min(anno_scale*COCO_SIGMA[part_idx],np.min(max_r)*0.25)
+            #print(f"test pif-scale scale:{kpt_scale}")
             #generate pif_maps for single point
             pif_maps=[pif_conf,pif_vec,pif_scale,pif_vec_norm]
             pif_conf,pif_vec,pif_scale,pif_vec_norm=put_pifmap(pif_maps,\
@@ -179,6 +180,7 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
             #calculate dst max_r and scale
             dst_max_r=get_max_r(dst_kpt,other_dst_kpts)
             dst_scale=min(anno_scale*COCO_SIGMA[dst_idx],np.min(dst_max_r)*0.25)
+            #print(f"test paf-scale: src_scale:{src_scale} dst_scale:{dst_scale}")
             #generate paf_maps for single point
             paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm]
             paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm=put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,\
@@ -273,6 +275,7 @@ def get_hr_conf(conf_map,vec_map,scale_map,stride=8,thresh=0.1):
         thresh_mask=conf_map[field_idx]>thresh
         confs=conf_map[field_idx][thresh_mask]
         vecs=vec_map[field_idx,:,thresh_mask]*stride
+        print(f"test shape vec_map:{vec_map.shape} thresh_mask:{thresh_mask.shape}")
         scales=np.maximum(1.0,scale_map[field_idx][thresh_mask]*0.5*stride)
         hr_conf[field_idx]=add_gaussian(hr_conf[field_idx],confs,vecs,scales)
     return hr_conf
@@ -316,17 +319,17 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
     gt_paf_src_vec=nan2zero(gt_paf_src_vec)
     gt_paf_dst_vec=nan2zero(gt_paf_dst_vec)
     #restore vector maps
-    _,_,hout,wout=pd_pif_maps.shape
+    _,_,hout,wout=pd_pif_conf.shape
     x_range=np.linspace(start=0,stop=wout-1,num=wout)
     y_range=np.linspace(start=0,stop=hout-1,num=hout)
     mesh_x,mesh_y=np.meshgrid(x_range,y_range)
     mesh_grid=np.stack([mesh_x,mesh_y])
-    pd_pif_vec[:,:]+=mesh_grid
-    gt_pif_vec[:,:]+=mesh_grid
-    pd_paf_src_vec[:,:]+=mesh_grid
-    pd_paf_dst_vec[:,:]+=mesh_grid
-    gt_paf_src_vec[:,:]+=mesh_grid
-    gt_paf_dst_vec[:,:]+=mesh_grid
+    pd_pif_vec=pd_pif_vec+mesh_grid
+    gt_pif_vec=gt_pif_vec+mesh_grid
+    pd_paf_src_vec=pd_paf_src_vec+mesh_grid
+    pd_paf_dst_vec=pd_paf_dst_vec+mesh_grid
+    gt_paf_src_vec=gt_paf_src_vec+mesh_grid
+    gt_paf_dst_vec=gt_paf_dst_vec+mesh_grid
     #draw
     os.makedirs(save_dir,exist_ok=True)
     batch_size=pd_paf_conf.shape[0]

@@ -7,7 +7,7 @@ from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, 
 from ..backbones import Resnet50_backbone
 
 class Pifpaf(Model):
-    def __init__(self,parts,limbs,n_pos=17,n_limbs=19,hin=368,win=368,scale_size=8,backbone=None,pretraining=False,quad_size=1,data_format="channels_first"):
+    def __init__(self,parts,limbs,n_pos=17,n_limbs=19,hin=368,win=368,scale_size=8,backbone=None,pretraining=False,quad_size=2,data_format="channels_first"):
         super().__init__()
         self.parts=parts
         self.limbs=limbs
@@ -18,6 +18,7 @@ class Pifpaf(Model):
         self.hout=int(hin/scale_size)
         self.wout=int(win/scale_size)
         self.quad_size=quad_size
+        self.stride=scale_size
         self.scale_size=scale_size*(2**self.quad_size)
         self.data_format=data_format
         if(backbone==None):
@@ -96,13 +97,13 @@ class Pifpaf(Model):
         pd_vec_y=pd_vec[:,:,1:2,:,:][valid_mask]
         pd_vec=tf.stack([pd_vec_x,pd_vec_y])
         #select pd_logb
-        pd_logb=pd_logb[:,:,:,:,:][valid_mask]
+        pd_logb=pd_logb[:,:,np.newaxis,:,:][valid_mask]
         #select gt_vec
         gt_vec_x=gt_vec[:,:,0:1,:,:][valid_mask]
         gt_vec_y=gt_vec[:,:,1:2,:,:][valid_mask]
         gt_vec=tf.stack([gt_vec_x,gt_vec_y])
         #calculate loss
-        norm=tf.norm(pd_vec-gt_vec,axis=2)
+        norm=tf.norm(pd_vec-gt_vec,axis=0)
         norm=tf.clip_by_value(norm,0.0,5.0)
         pd_logb=tf.clip_by_value(pd_logb,-3.0,np.inf)
         laplace_loss=pd_logb+(norm+0.1)*tf.exp(-pd_logb)
@@ -116,7 +117,7 @@ class Pifpaf(Model):
         valid_num=pd_scale.shape[0]
         scale_loss=0.0
         if(valid_num!=0):
-            scale_loss=tf.norm(pd_scale-gt_scale,ord=1)/valid_num
+            scale_loss=tf.reduce_sum(tf.abs(pd_scale-gt_scale))/valid_num
         scale_loss=tf.clip_by_value(scale_loss,0.0,5.0)/b
         return scale_loss
     
