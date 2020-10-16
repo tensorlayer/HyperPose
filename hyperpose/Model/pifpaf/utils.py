@@ -15,6 +15,12 @@ def nan2zero(x):
     x=np.where(x!=x,0,x)
     return x
 
+def maps_to_numpy(maps):
+    ret_maps=[]
+    for m_idx,m in enumerate(maps):
+        ret_maps.append(m.numpy())
+    return ret_maps
+
 @functools.lru_cache(maxsize=64)
 def get_patch_meshgrid(patch_size):
     x_range=np.linspace(start=(patch_size-1)/2,stop=-(patch_size-1)/2,num=patch_size)
@@ -238,7 +244,9 @@ def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=
 
 def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0,neighbor_num=16):
     field_h,field_w=hr_conf.shape
+    print(f"test vecs.shape:{vecs.shape}")
     for conf,vec,scale in zip(confs,vecs,scales):
+        print(f"test vec.shape:{vec.shape}")
         x,y=vec
         #calculate mesh range
         min_x=np.clip(x-truncate*scale,0,field_w-1).astype(np.int)
@@ -246,16 +254,17 @@ def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0,neighbor_n
         min_y=np.clip(y-truncate*scale,0,field_h-1).astype(np.int)
         max_y=np.clip(y+truncate*scale+1,min_y+1,field_h).astype(np.int)
         #calculate mesh grid
-        x_range=np.linspace(start=min_x,stop=max_x,num=max_x-min_x)
-        y_range=np.linspace(start=min_y,stop=max_y,num=max_y-min_y)
+        x_range=np.linspace(start=min_x,stop=max_x-1,num=max_x-min_x)
+        y_range=np.linspace(start=min_y,stop=max_y-1,num=max_y-min_y)
         mesh_x,mesh_y=np.meshgrid(x_range,y_range)
         #calculate gaussian heatmap according to the mesh grid distance
         mesh_dist=(mesh_x-x)**2+(mesh_y-y)**2
         mesh_mask=np.where(mesh_dist<=((scale*truncate)**2),1,0)
         mesh_update_conf=conf*np.exp(-0.5*mesh_dist/(scale**2))
         #adjust heatmap score of the center point
-        center_x,center_y=np.round(x),np.round(y)
-        mesh_update_conf[center_x,center_y]=conf
+        center_x,center_y=np.round(x).astype(np.int),np.round(y).astype(np.int)
+        if(center_x>=min_x and center_x<max_x and center_y>=min_y and center_y<max_y):
+            mesh_update_conf[center_x,center_y]=conf
         #update heatmap according to distance mask
         #TODO: original code divide add by neighbor_num, this will result in larger target get higher score
         #so judge whether should divide this by scale_size
@@ -275,7 +284,7 @@ def get_hr_conf(conf_map,vec_map,scale_map,stride=8,thresh=0.1):
         thresh_mask=conf_map[field_idx]>thresh
         confs=conf_map[field_idx][thresh_mask]
         vecs=vec_map[field_idx,:,thresh_mask]*stride
-        print(f"test shape vec_map:{vec_map.shape} thresh_mask:{thresh_mask.shape}")
+        print(f"test shape vec_map:{vec_map.shape} thresh_mask:{thresh_mask.shape} vecs.shape:{vecs.shape}")
         scales=np.maximum(1.0,scale_map[field_idx][thresh_mask]*0.5*stride)
         hr_conf[field_idx]=add_gaussian(hr_conf[field_idx],confs,vecs,scales)
     return hr_conf
@@ -311,6 +320,15 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
     #decode paf_maps
     pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,_,_,_,_=pd_paf_maps
     gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,_,_=gt_paf_maps
+    #debug
+    for idx,pd_pif_map in enumerate(pd_pif_maps):
+        print(f"test pd_pif_map type {idx} {type(pd_pif_map)} {pd_pif_map.shape}")
+    for idx,pd_paf_map in enumerate(pd_paf_maps):
+        print(f"test pd_paf_map type {idx} {type(pd_paf_map)} {pd_paf_map.shape}")
+    for idx,gt_pif_map in enumerate(gt_pif_maps) :
+        print(f"test gt_pif_map type {idx} {type(gt_pif_map)} {gt_pif_map.shape}")
+    for idx,gt_paf_map in enumerate(gt_paf_maps):
+        print(f"test gt_paf_map type {idx} {type(gt_paf_map)} {gt_paf_map.shape}")
     #restore nan in gt_maps
     gt_pif_conf=nan2zero(gt_pif_conf)
     gt_pif_vec=nan2zero(gt_pif_vec)

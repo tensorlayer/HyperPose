@@ -15,7 +15,7 @@ import tensorlayer as tl
 from pycocotools.coco import maskUtils
 import _pickle as cPickle
 from functools import partial
-from .utils import get_pifmap,get_pafmap,draw_result
+from .utils import get_pifmap,get_pafmap,draw_result,maps_to_numpy
 from ..common import log,KUNGFU,MODEL,get_optim,init_log
 from ..domainadapt import get_discriminator
 from ..metrics import AvgMetric
@@ -260,7 +260,7 @@ def single_train(train_model,dataset,config):
 
         #save log info periodly
         if((step.numpy()!=0) and (step.numpy()%log_interval)==0):
-            log(f"Train iteration {n_step} / {step.numpy()}, Learning rate:{lr.numpy()} {avg_total_loss.get_metric()} "+\
+            log(f"Train iteration {step.numpy()} / {n_step}, Learning rate:{lr.numpy()} {avg_total_loss.get_metric()} "+\
                 f"{avg_pif_conf_loss.get_metric()} {avg_pif_vec_loss.get_metric()} {avg_pif_scale_loss.get_metric()} "+\
                 f"{avg_paf_conf_loss.get_metric()} {avg_paf_src_vec_loss.get_metric()} {avg_paf_dst_vec_loss.get_metric()} "+\
                 f"{avg_paf_src_scale_loss.get_metric()} {avg_paf_dst_scale_loss.get_metric()} {avg_time.get_metric()} ")
@@ -278,10 +278,11 @@ def single_train(train_model,dataset,config):
             #draw result
             stride=train_model.stride
             gt_pif_maps,gt_paf_maps=gt_label
-            for map_idx,gt_pif_map in enumerate(gt_pif_maps):
-                gt_pif_maps[map_idx]=gt_pif_map.numpy()
-            for map_idx,gt_paf_map in enumerate(gt_paf_maps):
-                gt_paf_maps[map_idx]=gt_paf_map.numpy()
+            #turn into numpy
+            pd_pif_maps=maps_to_numpy(pd_pif_maps)
+            pd_paf_maps=maps_to_numpy(pd_paf_maps)
+            gt_pif_maps=maps_to_numpy(gt_pif_maps)
+            gt_paf_maps=maps_to_numpy(gt_paf_maps)
             draw_result(image.numpy(),pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,mask.numpy(),parts,limbs,stride,save_dir=vis_dir,\
                 name=f"train_{step.numpy()}")
 
