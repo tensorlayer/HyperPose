@@ -224,15 +224,11 @@ def non_maximium_supress(bbxs,scores,thres):
         left_scores=left_scores[sort_idx]
         left_bbxs=left_bbxs[sort_idx,:]
         maxconf_bbx=left_bbxs[0]
-        #print(f"max_score:{left_scores[0]} chosen_idx:{maxconf_bbx[4]}\n")
         chosen_idxs.append(maxconf_bbx[4])
         #calculate iou with other bbxs
         #ious is the size [left_bbxnum]
-        #print(f"test maxconf_bbx:{maxconf_bbx} lef_bbxs[0]:{left_bbxs[:,0:4].transpose()[:,0]}")
         ious=cal_iou(maxconf_bbx[0:4],left_bbxs[:,0:4].transpose())
-        #print(f"test iter one ious:{ious}")
         left_idx=np.where(ious<thres)[0]
-        #print(f"ious:{ious} left_idx:{left_idx} len_left_idx:{len(left_idx)}")
         if(len(left_idx)==0):
             break
         else:
@@ -241,28 +237,6 @@ def non_maximium_supress(bbxs,scores,thres):
     chosen_idxs=np.array(chosen_idxs).astype(np.int)
     #print(f"test chosen_idxs")
     return chosen_idxs
-
-
-def vis_annos(image, annos, save_dir ,name=''):
-    """Save results for debugging.
-
-    Parameters
-    -----------
-    images : single RGB image
-    annos  : annotation, list of lists
-    """
-
-    fig = plt.figure(figsize=(8, 8))
-    a = fig.add_subplot(1, 1, 1)
-
-    plt.imshow(image)
-    for people in annos:
-        for idx, jo in enumerate(people):
-            if jo[0] > 0 and jo[1] > 0:
-                plt.plot(jo[0], jo[1], '*')
-
-    plt.savefig(os.path.join(save_dir, 'keypoints%s%d.png' % (name, i)), dpi=300)
-
 
 from .define import CocoPart,CocoLimb,CocoColor,Coco_flip_list
 from .define import MpiiPart,MpiiLimb,MpiiColor,Mpii_flip_list

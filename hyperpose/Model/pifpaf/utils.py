@@ -104,8 +104,8 @@ def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,dist_thresh=
             other_kpts=np.array(other_kpts)/stride
             max_r=get_max_r(kpt,other_kpts)
             kpt_scale=min(anno_scale*COCO_SIGMA[part_idx],np.min(max_r)*0.25)
-            print(f"test gt label anno_id:{anno_id} part:{parts(part_idx)} anno_scale:{anno_scale} COCO_SIGMA:{COCO_SIGMA[part_idx]} "+\
-                f"sigmaed_scale:{anno_scale*COCO_SIGMA[part_idx]} max_r:{np.min(max_r)*0.25} kpt_scale:{kpt_scale}\n")
+            #print(f"test gt label anno_id:{anno_id} part:{parts(part_idx)} anno_scale:{anno_scale} COCO_SIGMA:{COCO_SIGMA[part_idx]} "+\
+            #    f"sigmaed_scale:{anno_scale*COCO_SIGMA[part_idx]} max_r:{np.min(max_r)*0.25} kpt_scale:{kpt_scale}\n")
             #generate pif_maps for single point
             pif_maps=[pif_conf,pif_vec,pif_scale,pif_vec_norm]
             pif_conf,pif_vec,pif_scale,pif_vec_norm=put_pifmap(pif_maps,\
@@ -189,7 +189,6 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
             #calculate dst max_r and scale
             dst_max_r=get_max_r(dst_kpt,other_dst_kpts)
             dst_scale=min(anno_scale*COCO_SIGMA[dst_idx],np.min(dst_max_r)*0.25)
-            #print(f"test paf-scale: src_scale:{src_scale} dst_scale:{dst_scale}")
             #generate paf_maps for single point
             paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm]
             paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm=put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,\
@@ -266,15 +265,12 @@ def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0,neighbor_n
         mesh_update_conf=conf*np.exp(-0.5*mesh_dist/(scale**2))
         #adjust heatmap score of the center point
         center_x,center_y=np.round(x).astype(np.int),np.round(y).astype(np.int)
-        #print(f"test center_x:{center_x} center_y:{center_y} mesh_update_conf.shape:{mesh_update_conf.shape} mesh_mask.shape:{mesh_mask.shape}")
         if(center_x>=min_x and center_x<max_x and center_y>=min_y and center_y<max_y):
             mesh_update_conf[center_y-min_y,center_x-min_x]=conf
         #update heatmap according to distance mask
         #TODO: original code divide add by neighbor_num, this will result in larger target get higher score
         #so judge whether should divide this by scale_size
-        #hr_conf[min_y:max_y,min_x:max_x][mesh_mask]+=mesh_update_conf[mesh_mask]/neighbor_num
-        hr_patch=hr_conf[min_y:max_y,min_x:max_x]
-        hr_patch[mesh_mask]+=mesh_update_conf[mesh_mask]/neighbor_num
+        hr_conf[min_y:max_y,min_x:max_x][mesh_mask]+=mesh_update_conf[mesh_mask]/neighbor_num
     hr_conf=np.clip(hr_conf,0.0,max_value)
     return hr_conf
 
@@ -289,12 +285,12 @@ def get_hr_conf(conf_map,vec_map,scale_map,stride=8,thresh=0.1,debug=False):
         #filter by thresh
         thresh_mask=conf_map[field_idx]>thresh
         confs=conf_map[field_idx][thresh_mask]
-        vecs=vec_map[field_idx,:,thresh_mask]*stride
-        scales=np.maximum(1.0,scale_map[field_idx][thresh_mask]*0.5*stride)
+        vecs=vec_map[field_idx,:,thresh_mask]
+        scales=np.maximum(1.0,scale_map[field_idx][thresh_mask]*0.75)
         hr_conf[field_idx]=add_gaussian(hr_conf[field_idx],confs,vecs,scales,debug=debug)
     return hr_conf
 
-def get_arrow_map(array_map,conf_map,src_vec_map,dst_vec_map,thresh=0.1,src_color=(255,0,0),dst_color=(0,0,255)):
+def get_arrow_map(array_map,conf_map,src_vec_map,dst_vec_map,thresh=0.1,src_color=(255,0,0),dst_color=(0,0,255),debug=False):
     #make integer indexes
     def toidx(x):
         return np.round(x).astype(np.int)
@@ -303,17 +299,21 @@ def get_arrow_map(array_map,conf_map,src_vec_map,dst_vec_map,thresh=0.1,src_colo
     #shape array:[h,w,3]
     image_h,image_w,_=array_map.shape
     stride=image_h/conf_map.shape[1]
-    thickness=np.round(min(image_h,image_w)/30).astype(np.int)
+    circle=np.round(min(image_h,image_w)/100).astype(np.int)
+    thickness=np.round(min(image_h,image_w)/120).astype(np.int)
     mask=conf_map>thresh
     fields,grid_ys,grid_xs=np.where(mask)
     for field,grid_y,grid_x in zip(fields,grid_ys,grid_xs):
         src_x,src_y=toidx(src_vec_map[field,:,grid_y,grid_x])
         dst_x,dst_y=toidx(dst_vec_map[field,:,grid_y,grid_x])
         grid_y,grid_x=toidx(grid_y*stride),toidx(grid_x*stride)
+        cv2.
+        if(debug):
+            print(f"test get_arrow_map image_h:{image_h} image_w:{image_w} field:{field} gird_x:{grid_x} grid_y:{grid_y} src_x:{src_x} src_y:{src_y} dst_x:{dst_x} dst_y:{dst_y}")
         if(src_x>=0 and src_x<image_w and src_y>=0 and src_y<image_h):
-            array_map=cv2.arrowedLine(array_map,(grid_x,grid_y),(src_x,src_y),color=src_color,thickness=thickness)
+            array_map=cv2.line(array_map,(grid_x,grid_y),(src_x,src_y),color=src_color,thickness=thickness)
         if(dst_x>=0 and dst_x<image_w and dst_y>=0 and dst_y<image_h):
-            array_map=cv2.arrowedLine(array_map,(grid_x,grid_y),(dst_x,dst_y),color=dst_color,thickness=thickness)
+            array_map=cv2.line(array_map,(grid_x,grid_y),(dst_x,dst_y),color=dst_color,thickness=thickness)
     return array_map
 
 def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,parts,limbs,stride=8,thresh_pif=0.1,thresh_paf=0.1,\
@@ -341,12 +341,14 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
     y_range=np.linspace(start=0,stop=hout-1,num=hout)
     mesh_x,mesh_y=np.meshgrid(x_range,y_range)
     mesh_grid=np.stack([mesh_x,mesh_y])
-    pd_pif_vec=pd_pif_vec+mesh_grid
-    gt_pif_vec=gt_pif_vec+mesh_grid
-    pd_paf_src_vec=pd_paf_src_vec+mesh_grid
-    pd_paf_dst_vec=pd_paf_dst_vec+mesh_grid
-    gt_paf_src_vec=gt_paf_src_vec+mesh_grid
-    gt_paf_dst_vec=gt_paf_dst_vec+mesh_grid
+    pd_pif_scale=pd_pif_scale*stride
+    gt_pif_scale=gt_pif_scale*stride
+    pd_pif_vec=(pd_pif_vec+mesh_grid)*stride
+    gt_pif_vec=(gt_pif_vec+mesh_grid)*stride
+    pd_paf_src_vec=(pd_paf_src_vec+mesh_grid)*stride
+    pd_paf_dst_vec=(pd_paf_dst_vec+mesh_grid)*stride
+    gt_paf_src_vec=(gt_paf_src_vec+mesh_grid)*stride
+    gt_paf_dst_vec=(gt_paf_dst_vec+mesh_grid)*stride
     #draw
     os.makedirs(save_dir,exist_ok=True)
     batch_size=pd_paf_conf.shape[0]
@@ -362,7 +364,7 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
         #pif_hr_conf_map
         pd_pif_hr_conf=get_hr_conf(pd_pif_conf[batch_idx],pd_pif_vec[batch_idx],pd_pif_scale[batch_idx],stride=stride,thresh=thresh_pif)
         pd_pif_hr_conf_show=np.amax(pd_pif_hr_conf,axis=0)
-        gt_pif_hr_conf=get_hr_conf(gt_pif_conf[batch_idx],gt_pif_vec[batch_idx],gt_pif_scale[batch_idx],stride=stride,thresh=thresh_pif,debug=True)
+        gt_pif_hr_conf=get_hr_conf(gt_pif_conf[batch_idx],gt_pif_vec[batch_idx],gt_pif_scale[batch_idx],stride=stride,thresh=thresh_pif)
         gt_pif_hr_conf_show=np.amax(gt_pif_hr_conf,axis=0)
         #plt draw
         fig=plt.figure(figsize=(8,8))
@@ -384,6 +386,7 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
         a=fig.add_subplot(2,3,4)
         a.set_title("mask")
         plt.imshow(mask_show)
+        plt.colorbar()
         #show pd_pif_conf
         a=fig.add_subplot(2,3,5)
         a.set_title("pd_pif_conf")
@@ -403,12 +406,13 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
         pd_paf_conf_show=np.amax(pd_paf_conf[batch_idx],axis=0)
         gt_paf_conf_show=np.amax(gt_paf_conf[batch_idx],axis=0)
         #paf_vec_map
+        print(f"drawing paf_map of image {name}-batch_{batch_idx}")
         #pd_paf_vec_map
-        pd_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride,3))
+        pd_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
         pd_paf_vec_show=get_arrow_map(pd_paf_vec_show,pd_paf_conf[batch_idx],pd_paf_src_vec[batch_idx],pd_paf_dst_vec[batch_idx],thresh_paf)
         #gt_paf_vec_map
-        gt_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride,3))
-        gt_paf_vec_show=get_arrow_map(gt_paf_vec_show,gt_paf_conf[batch_idx],gt_paf_src_vec[batch_idx],gt_paf_dst_vec[batch_idx],thresh_paf)
+        gt_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
+        gt_paf_vec_show=get_arrow_map(gt_paf_vec_show,gt_paf_conf[batch_idx],gt_paf_src_vec[batch_idx],gt_paf_dst_vec[batch_idx],thresh_paf,debug=True)
         #plt draw
         fig=plt.figure(figsize=(8,8))
         #show image
@@ -429,6 +433,7 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
         a=fig.add_subplot(2,3,4)
         a.set_title("mask")
         plt.imshow(mask_show)
+        plt.colorbar()
         #show pd_paf_conf
         a=fig.add_subplot(2,3,5)
         a.set_title("pd_paf_conf")
