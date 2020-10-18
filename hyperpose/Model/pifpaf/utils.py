@@ -290,29 +290,34 @@ def get_hr_conf(conf_map,vec_map,scale_map,stride=8,thresh=0.1,debug=False):
         hr_conf[field_idx]=add_gaussian(hr_conf[field_idx],confs,vecs,scales,debug=debug)
     return hr_conf
 
-def get_arrow_map(array_map,conf_map,src_vec_map,dst_vec_map,thresh=0.1,src_color=(255,0,0),dst_color=(0,0,255),debug=False):
+def get_arrow_map(array_map,conf_map,src_vec_map,dst_vec_map,thresh=0.1,src_color=(255,255,0),dst_color=(0,0,255),debug=False):
     #make integer indexes
     def toidx(x):
         return np.round(x).astype(np.int)
     #shape conf:[field,h,w]
     #shape vec:[field,2,h,w]
     #shape array:[h,w,3]
+    grid_center_color=(165,42,42)
+    src_center_color=(179,238,58)
+    dst_center_color=(30,144,255)
     image_h,image_w,_=array_map.shape
     stride=image_h/conf_map.shape[1]
-    circle=np.round(min(image_h,image_w)/100).astype(np.int)
-    thickness=np.round(min(image_h,image_w)/120).astype(np.int)
+    radius=np.round(min(image_h,image_w)/300).astype(np.int)
+    thickness=np.round(min(image_h,image_w)/240).astype(np.int)
     mask=conf_map>thresh
     fields,grid_ys,grid_xs=np.where(mask)
     for field,grid_y,grid_x in zip(fields,grid_ys,grid_xs):
         src_x,src_y=toidx(src_vec_map[field,:,grid_y,grid_x])
         dst_x,dst_y=toidx(dst_vec_map[field,:,grid_y,grid_x])
         grid_y,grid_x=toidx(grid_y*stride),toidx(grid_x*stride)
-        cv2.
+        array_map=cv2.circle(array_map,(grid_x,grid_y),radius=radius,color=grid_center_color,thickness=thickness)
         if(debug):
             print(f"test get_arrow_map image_h:{image_h} image_w:{image_w} field:{field} gird_x:{grid_x} grid_y:{grid_y} src_x:{src_x} src_y:{src_y} dst_x:{dst_x} dst_y:{dst_y}")
         if(src_x>=0 and src_x<image_w and src_y>=0 and src_y<image_h):
+            array_map=cv2.circle(array_map,(src_x,src_y),radius=radius,color=src_center_color,thickness=thickness)
             array_map=cv2.line(array_map,(grid_x,grid_y),(src_x,src_y),color=src_color,thickness=thickness)
         if(dst_x>=0 and dst_x<image_w and dst_y>=0 and dst_y<image_h):
+            array_map=cv2.circle(array_map,(dst_x,dst_y),radius=radius,color=dst_center_color,thickness=thickness)
             array_map=cv2.line(array_map,(grid_x,grid_y),(dst_x,dst_y),color=dst_color,thickness=thickness)
     return array_map
 
@@ -406,13 +411,12 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
         pd_paf_conf_show=np.amax(pd_paf_conf[batch_idx],axis=0)
         gt_paf_conf_show=np.amax(gt_paf_conf[batch_idx],axis=0)
         #paf_vec_map
-        print(f"drawing paf_map of image {name}-batch_{batch_idx}")
         #pd_paf_vec_map
         pd_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
         pd_paf_vec_show=get_arrow_map(pd_paf_vec_show,pd_paf_conf[batch_idx],pd_paf_src_vec[batch_idx],pd_paf_dst_vec[batch_idx],thresh_paf)
         #gt_paf_vec_map
         gt_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
-        gt_paf_vec_show=get_arrow_map(gt_paf_vec_show,gt_paf_conf[batch_idx],gt_paf_src_vec[batch_idx],gt_paf_dst_vec[batch_idx],thresh_paf,debug=True)
+        gt_paf_vec_show=get_arrow_map(gt_paf_vec_show,gt_paf_conf[batch_idx],gt_paf_src_vec[batch_idx],gt_paf_dst_vec[batch_idx],thresh_paf,debug=False)
         #plt draw
         fig=plt.figure(figsize=(8,8))
         #show image

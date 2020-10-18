@@ -179,12 +179,14 @@ def single_train(train_model,dataset,config):
         log("ckpt loaded successfully!")
     except:
         log("ckpt_path doesn't exist, step and optimizer are initialized")
+
     #load pretrained backbone
     log("loading pretrained backbone...")
     if(tl.files.load_and_assign_npz_dict(name=pretrain_model_path,network=train_model.backbone,skip=True)):
         log("pretrained backbone loaded successfully")
     else:
         log("pretrained backbone doesn't exist, model backbone are initialized")
+        
     #load model weights
     log("loading saved training model weights...")
     try:
