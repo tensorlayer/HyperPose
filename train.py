@@ -67,6 +67,10 @@ if __name__ == '__main__':
                         type=float,
                         default=1e-4,
                         help='learning rate')
+    parser.add_argument('--batch_size',
+                        type=int,
+                        default=8,
+                        help='size of a training batch')
     parser.add_argument('--log_interval',
                         type=int,
                         default=1e2,
@@ -86,6 +90,7 @@ if __name__ == '__main__':
     #config train
     Config.set_train_type(Config.TRAIN[args.train_type])
     Config.set_learning_rate(args.learning_rate)
+    Config.set_batch_size(args.batch_size)
     Config.set_optim_type(Config.OPTIM[args.optim_type])
     Config.set_kungfu_option(Config.KUNGFU[args.kf_optimizer])
     #config dataset

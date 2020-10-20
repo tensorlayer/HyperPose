@@ -168,7 +168,7 @@ def single_train(train_model,dataset,config):
     step=tf.Variable(1, trainable=False)
     lr=tf.Variable(lr_init,trainable=False)
     lr_init=tf.Variable(lr_init,trainable=False)
-    opt=tf.optimizers.SGD(learning_rate=lr,momentum=0.95)
+    opt=tf.optimizers.Adam(learning_rate=lr)
     ckpt=tf.train.Checkpoint(step=step,optimizer=opt,lr=lr)
     ckpt_manager=tf.train.CheckpointManager(ckpt,model_dir,max_to_keep=3)
     
@@ -362,7 +362,7 @@ def parallel_train(train_model,dataset,config):
     step=tf.Variable(1, trainable=False)
     lr=tf.Variable(lr_init,trainable=False)
     lr_init=tf.Variable(lr_init,trainable=False)
-    opt=tf.optimizers.SGD(learning_rate=lr,momentum=0.95)
+    opt=tf.optimizers.Adam(learning_rate=lr)
     ckpt=tf.train.Checkpoint(step=step,optimizer=opt,lr=lr)
     ckpt_manager=tf.train.CheckpointManager(ckpt,model_dir,max_to_keep=3)
     
