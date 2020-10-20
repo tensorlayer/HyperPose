@@ -402,7 +402,7 @@ class Resnet18_backbone(Model):
             ])
             if(self.is_down_sample):
                 self.down_sample=LayerList([
-                    Conv2d(n_filter=n_filter,in_channels=in_channels,filter_size=(1,1),strides=strides,b_init=None,data_format=self.data_format),
+                    Conv2d(n_filter=n_filter,in_channels=in_channels,filter_size=(3,3),strides=strides,b_init=None,data_format=self.data_format),
                     BatchNorm2d(decay=0.9,is_train=True,num_features=n_filter,data_format=self.data_format)
                 ])
 

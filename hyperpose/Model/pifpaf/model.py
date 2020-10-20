@@ -146,7 +146,6 @@ class Pifpaf(Model):
                 pif_vec[:,:]+=self.mesh_grid
             #TODO:difference in paper and code
             #paper use sigmoid for conf_map in training while code not
-            pif_conf=tf.nn.sigmoid(pif_conf)
             return pif_conf,pif_vec,pif_logb,pif_scale
         
     class PafHead(Model):
@@ -178,5 +177,4 @@ class Pifpaf(Model):
                 paf_dst_vec[:,:]+=self.mesh_grid
             #difference in paper and code
             #paper use sigmoid for conf_map in training while code not
-            paf_conf=tf.nn.sigmoid(paf_conf)
             return paf_conf,paf_src_vec,paf_dst_vec,paf_src_logb,paf_dst_logb,paf_src_scale,paf_dst_scale

@@ -182,7 +182,7 @@ def single_train(train_model,dataset,config):
 
     #load pretrained backbone
     log("loading pretrained backbone...")
-    if(tl.files.load_and_assign_npz_dict(name=pretrain_model_path,network=train_model.backbone,skip=True)):
+    if(tl.files.load_and_assign_npz_dict(name=pretrain_model_path,network=train_model.backbone,skip=True)!=False):
         log("pretrained backbone loaded successfully")
     else:
         log("pretrained backbone doesn't exist, model backbone are initialized")
