@@ -278,6 +278,12 @@ def get_optim(optim_type):
     else:
         raise NotImplementedError("invalid optim type")
 
+def regulize_loss(target_model,weight_decay_factor):
+    re_loss=0
+    regularizer=tf.keras.regularizers.l2(l=weight_decay_factor)
+    for weight in target_model.trainable_weights:
+        re_loss+=regularizer(weight)
+    return re_loss
 
 def init_log(config):
     logger=logging.getLogger(name="hyperpose")

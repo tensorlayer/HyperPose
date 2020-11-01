@@ -31,14 +31,15 @@ train.lr_init = 1e-3
 # evey number of step to decay lr
 train.lr_decay_every_step = 136120  
 # decay lr factor
-train.lr_decay_factor = 0.666
-train.weight_decay_factor = 1e-4
+train.lr_decay_factor = 0.1
+train.lr_decay_steps=[420000,495000]
+train.weight_decay_factor = 1e-5
 train.train_type=TRAIN.Single_train
 train.vis_dir=f"./save_dir/{model.model_name}/train_vis_dir"
 
 #eval configuration
 eval =edict()
-eval.batch_size=22
+eval.batch_size=8
 eval.vis_dir= f"./save_dir/{model.model_name}/eval_vis_dir"
 
 #data configuration

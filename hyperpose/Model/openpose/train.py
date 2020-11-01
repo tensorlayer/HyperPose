@@ -15,17 +15,10 @@ import tensorlayer as tl
 from pycocotools.coco import maskUtils
 import _pickle as cPickle
 from functools import partial
-from .utils import tf_repeat, get_heatmap, get_vectormap, draw_results 
+from .utils import tf_repeat, get_heatmap, get_vectormap, draw_results
 from .utils import get_parts,get_limbs,get_flip_list
-from ..common import log,KUNGFU,MODEL,get_optim,init_log
+from ..common import log,KUNGFU,MODEL,get_optim,init_log,regulize_loss
 from ..domainadapt import get_discriminator
-
-def regulize_loss(target_model,weight_decay_factor):
-    re_loss=0
-    regularizer=tf.keras.regularizers.l2(l=weight_decay_factor)
-    for weight in target_model.trainable_weights:
-        re_loss+=regularizer(weight)
-    return re_loss
 
 def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_list=None, data_format="channels_first"):
     """Data augmentation function."""

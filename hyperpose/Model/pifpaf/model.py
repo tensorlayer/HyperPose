@@ -7,7 +7,8 @@ from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, 
 from ..backbones import Resnet50_backbone
 
 class Pifpaf(Model):
-    def __init__(self,parts,limbs,n_pos=17,n_limbs=19,hin=368,win=368,scale_size=8,backbone=None,pretraining=False,quad_size=2,data_format="channels_first"):
+    def __init__(self,parts,limbs,n_pos=17,n_limbs=19,hin=368,win=368,scale_size=8,backbone=None,pretraining=False,quad_size=2,
+    lambda_pif_conf=30.0,lambda_pif_vec=2.0,lambda_pif_scale=2.0,lambda_paf_conf=50.0,lambda_paf_src_vec=3.0,lambda_paf_dst_vec=3.0,data_format="channels_first"):
         super().__init__()
         self.parts=parts
         self.limbs=limbs
@@ -20,6 +21,12 @@ class Pifpaf(Model):
         self.quad_size=quad_size
         self.stride=scale_size
         self.scale_size=scale_size*(2**self.quad_size)
+        self.lambda_pif_conf=lambda_pif_conf
+        self.lambda_pif_vec=lambda_pif_vec
+        self.lambda_pif_scale=lambda_pif_scale
+        self.lambda_paf_conf=lambda_paf_conf
+        self.lambda_paf_src_vec=lambda_paf_src_vec
+        self.lambda_paf_dst_vec=lambda_paf_dst_vec
         self.data_format=data_format
         if(backbone==None):
             self.backbone=Resnet50_backbone(data_format=data_format,use_pool=False,scale_size=32)
@@ -53,25 +60,22 @@ class Pifpaf(Model):
         #calculate pif losses
         pd_pif_conf,pd_pif_vec,pd_pif_logb,pd_pif_scale=pd_pif_maps
         gt_pif_conf,gt_pif_vec,gt_pif_scale=gt_pif_maps
-        loss_pif_conf=self.Bce_loss(pd_pif_conf,gt_pif_conf)
-        loss_pif_vec=self.Laplace_loss(pd_pif_vec,pd_pif_logb,gt_pif_vec)
-        loss_pif_scale=self.Scale_loss(pd_pif_scale,gt_pif_scale)
+        loss_pif_conf=self.Bce_loss(pd_pif_conf,gt_pif_conf)*self.lambda_pif_conf
+        loss_pif_vec=self.Laplace_loss(pd_pif_vec,pd_pif_logb,gt_pif_vec)*self.lambda_pif_vec
+        loss_pif_scale=self.Scale_loss(pd_pif_scale,gt_pif_scale)*self.lambda_pif_scale
         loss_pif_maps=[loss_pif_conf,loss_pif_vec,loss_pif_scale]
         #calculate paf losses
         pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,pd_paf_src_logb,pd_paf_dst_logb,pd_paf_src_scale,pd_paf_dst_scale=pd_paf_maps
         gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,gt_paf_src_scale,gt_paf_dst_scale=gt_paf_maps
-        loss_paf_conf=self.Bce_loss(pd_paf_conf,gt_paf_conf)
-        loss_paf_src_vec=self.Laplace_loss(pd_paf_src_vec,pd_paf_src_logb,gt_paf_src_vec)
-        loss_paf_dst_vec=self.Laplace_loss(pd_paf_dst_vec,pd_paf_dst_logb,gt_paf_dst_vec)
-        loss_paf_src_scale=self.Scale_loss(pd_paf_src_scale,gt_paf_src_scale)
-        loss_paf_dst_scale=self.Scale_loss(pd_paf_dst_scale,gt_paf_dst_scale)
-        loss_paf_maps=[loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec,loss_paf_src_scale,loss_paf_dst_scale]
+        loss_paf_conf=self.Bce_loss(pd_paf_conf,gt_paf_conf)*self.lambda_paf_conf
+        loss_paf_src_vec=self.Laplace_loss(pd_paf_src_vec,pd_paf_src_logb,gt_paf_src_vec)*self.lambda_paf_src_vec
+        loss_paf_dst_vec=self.Laplace_loss(pd_paf_dst_vec,pd_paf_dst_logb,gt_paf_dst_vec)*self.lambda_paf_dst_vec
+        loss_paf_maps=[loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec]
         #retun losses
         return loss_pif_maps,loss_paf_maps
     
     def Bce_loss(self,pd_conf,gt_conf,focal_gamma=1.0):
         #shape conf:[batch,field,h,w]
-        batch_size=pd_conf.shape[0]
         valid_mask=tf.logical_not(tf.math.is_nan(gt_conf))
         #select pd_conf
         pd_conf=pd_conf[valid_mask]
@@ -84,7 +88,7 @@ class Pifpaf(Model):
             focal=(1-tf.exp(-bce_loss))**focal_gamma
             focal=tf.stop_gradient(focal)
             bce_loss=focal*bce_loss
-        bce_loss=tf.reduce_sum(bce_loss)/batch_size
+        bce_loss=tf.reduce_mean(bce_loss)
         return bce_loss
     
     def Laplace_loss(self,pd_vec,pd_logb,gt_vec):

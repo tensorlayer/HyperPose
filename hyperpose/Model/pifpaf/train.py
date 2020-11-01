@@ -16,7 +16,7 @@ from pycocotools.coco import maskUtils
 import _pickle as cPickle
 from functools import partial
 from .utils import get_pifmap,get_pafmap,draw_result,maps_to_numpy
-from ..common import log,KUNGFU,MODEL,get_optim,init_log
+from ..common import log,KUNGFU,MODEL,get_optim,init_log,regulize_loss
 from ..domainadapt import get_discriminator
 from ..metrics import AvgMetric
 
@@ -138,7 +138,9 @@ def single_train(train_model,dataset,config):
     #learning rate params
     lr_init = config.train.lr_init
     lr_decay_factor = config.train.lr_decay_factor
-    lr_decay_steps= [200000,300000,360000,420000,480000,540000,600000,700000,800000,900000]
+    lr_decay_steps= config.train.lr_decay_steps
+    warm_up_step=8000
+    warm_up_decay=lr_decay_factor
     weight_decay_factor = config.train.weight_decay_factor
     #log and checkpoint params
     log_interval=config.log.log_interval
@@ -168,7 +170,7 @@ def single_train(train_model,dataset,config):
     step=tf.Variable(1, trainable=False)
     lr=tf.Variable(lr_init,trainable=False)
     lr_init=tf.Variable(lr_init,trainable=False)
-    opt=tf.optimizers.Adam(learning_rate=lr)
+    opt=tf.optimizers.SGD(learning_rate=lr,momentum=0.9)
     ckpt=tf.train.Checkpoint(step=step,optimizer=opt,lr=lr)
     ckpt_manager=tf.train.CheckpointManager(ckpt,model_dir,max_to_keep=3)
     
@@ -206,11 +208,12 @@ def single_train(train_model,dataset,config):
             gt_pif_maps,gt_paf_maps=gt_label
             pd_pif_maps,pd_paf_maps=train_model.forward(image,is_train=True)
             loss_pif_maps,loss_paf_maps=train_model.cal_loss(pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps)
-            total_loss=sum(loss_pif_maps)+sum(loss_paf_maps)
+            decay_loss=regulize_loss(train_model,weight_decay_factor)
+            total_loss=sum(loss_pif_maps)+sum(loss_paf_maps)+decay_loss
         
         gradients=tape.gradient(total_loss,train_model.trainable_weights)
         opt.apply_gradients(zip(gradients,train_model.trainable_weights))
-        return pd_pif_maps,pd_paf_maps,loss_pif_maps,loss_paf_maps,total_loss
+        return pd_pif_maps,pd_paf_maps,loss_pif_maps,loss_paf_maps,decay_loss,total_loss
 
     #train each step
     train_model.train()
@@ -218,6 +221,8 @@ def single_train(train_model,dataset,config):
     avg_time=AvgMetric(name="time_iter",metric_interval=log_interval)
     #total loss metrics
     avg_total_loss=AvgMetric(name="total_loss",metric_interval=log_interval)
+    #weight_decay loss metrics
+    avg_decay_loss=AvgMetric(name="decay_loss",metric_interval=log_interval)
     #pif loss metrics
     avg_pif_conf_loss=AvgMetric(name="pif_conf_loss",metric_interval=log_interval)
     avg_pif_vec_loss=AvgMetric(name="pif_vec_loss",metric_interval=log_interval)
@@ -226,24 +231,33 @@ def single_train(train_model,dataset,config):
     avg_paf_conf_loss=AvgMetric(name="paf_conf_loss",metric_interval=log_interval)
     avg_paf_src_vec_loss=AvgMetric(name="paf_src_vec_loss",metric_interval=log_interval)
     avg_paf_dst_vec_loss=AvgMetric(name="paf_dst_vec_loss",metric_interval=log_interval)
-    avg_paf_src_scale_loss=AvgMetric(name="paf_src_scale_loss",metric_interval=log_interval)
-    avg_paf_dst_scale_loss=AvgMetric(name="paf_dst_scale_loss",metric_interval=log_interval)
     log('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_steps: {} lr_decay_factor: {} weight_decay_factor: {}'.format(
             n_step, batch_size, lr_init.numpy(), lr_decay_steps, lr_decay_factor, weight_decay_factor))
     for image, pif_conf, pif_vec, pif_scale, paf_conf, paf_src_vec, paf_dst_vec, paf_src_scale, paf_dst_scale, mask, labeled in train_dataset:
+        #learning rate decay
+        if(step in lr_decay_steps):
+            new_lr_decay = lr_decay_factor**(lr_decay_steps.index(step)+1) 
+            lr=lr_init*new_lr_decay
+        #warm_up learning rate decay
+        if(step <= warm_up_step):
+            factor=float(1.0)-step/warm_up_step
+            lr=lr_init*tf.cast(warm_up_decay**factor,tf.float32)
+
         #get losses
         #debug
         gt_pif_maps=[pif_conf,pif_vec,pif_scale]
         gt_paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale]
         gt_label=[gt_pif_maps,gt_paf_maps]
-        pd_pif_maps,pd_paf_maps,loss_pif_maps,loss_paf_maps,total_loss=one_step(image,gt_label,mask,train_model)
+        pd_pif_maps,pd_paf_maps,loss_pif_maps,loss_paf_maps,decay_loss,total_loss=one_step(image,gt_label,mask,train_model)
         loss_pif_conf,loss_pif_vec,loss_pif_scale=loss_pif_maps
-        loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec,loss_paf_src_scale,loss_paf_dst_scale=loss_paf_maps
+        loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec=loss_paf_maps
         #update metrics
         avg_time.update(time.time()-tic)
         tic=time.time()
         #update total losses
         avg_total_loss.update(total_loss)
+        #update decay loss
+        avg_decay_loss.update(decay_loss)
         #update pif_losses metrics
         avg_pif_conf_loss.update(loss_pif_conf)
         avg_pif_vec_loss.update(loss_pif_vec)
@@ -252,20 +266,13 @@ def single_train(train_model,dataset,config):
         avg_paf_conf_loss.update(loss_paf_conf)
         avg_paf_src_vec_loss.update(loss_paf_src_vec)
         avg_paf_dst_vec_loss.update(loss_paf_dst_vec)
-        avg_paf_src_scale_loss.update(loss_paf_src_scale)
-        avg_paf_dst_scale_loss.update(loss_paf_dst_scale)
-
-        #learning rate decay
-        if(step in lr_decay_steps):
-            new_lr_decay = lr_decay_factor**(lr_decay_steps.index(step)+1) 
-            lr=lr_init*new_lr_decay
 
         #save log info periodly
         if((step.numpy()!=0) and (step.numpy()%log_interval)==0):
             log(f"Train iteration {step.numpy()} / {n_step}, Learning rate:{lr.numpy()} {avg_total_loss.get_metric()} "+\
                 f"{avg_pif_conf_loss.get_metric()} {avg_pif_vec_loss.get_metric()} {avg_pif_scale_loss.get_metric()} "+\
                 f"{avg_paf_conf_loss.get_metric()} {avg_paf_src_vec_loss.get_metric()} {avg_paf_dst_vec_loss.get_metric()} "+\
-                f"{avg_paf_src_scale_loss.get_metric()} {avg_paf_dst_scale_loss.get_metric()} {avg_time.get_metric()} ")
+                f"{avg_decay_loss.get_metric()} {avg_time.get_metric()} ")
 
         #save result and ckpt periodly
         if(step.numpy()!=0 and step.numpy()%save_interval==0):
@@ -324,7 +331,9 @@ def parallel_train(train_model,dataset,config):
     #learning rate params
     lr_init = config.train.lr_init
     lr_decay_factor = config.train.lr_decay_factor
-    lr_decay_steps= [200000,300000,360000,420000,480000,540000,600000,700000,800000,900000]
+    lr_decay_steps = config.train.lr_decay_steps
+    warm_up_step=8000
+    warm_up_decay=lr_decay_factor
     weight_decay_factor = config.train.weight_decay_factor
     #log and checkpoint params
     log_interval=config.log.log_interval
@@ -362,7 +371,7 @@ def parallel_train(train_model,dataset,config):
     step=tf.Variable(1, trainable=False)
     lr=tf.Variable(lr_init,trainable=False)
     lr_init=tf.Variable(lr_init,trainable=False)
-    opt=tf.optimizers.Adam(learning_rate=lr)
+    opt=tf.optimizers.SGD(learning_rate=lr,momentum=0.9)
     ckpt=tf.train.Checkpoint(step=step,optimizer=opt,lr=lr)
     ckpt_manager=tf.train.CheckpointManager(ckpt,model_dir,max_to_keep=3)
     
@@ -419,7 +428,8 @@ def parallel_train(train_model,dataset,config):
             gt_pif_maps,gt_paf_maps=gt_label
             pd_pif_maps,pd_paf_maps=train_model.forward(image,is_train=True)
             loss_pif_maps,loss_paf_maps=train_model.cal_loss(pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps)
-            total_loss=sum(loss_pif_maps)+sum(loss_paf_maps)
+            decay_loss=regulize_loss(train_model,weight_decay_factor)
+            total_loss=sum(loss_pif_maps)+sum(loss_paf_maps)+decay_loss
         
         gradients=tape.gradient(total_loss,train_model.trainable_weights)
         opt.apply_gradients(zip(gradients,train_model.trainable_weights))
@@ -427,7 +437,7 @@ def parallel_train(train_model,dataset,config):
         if(is_first_batch):
             broadcast_variables(train_model.all_weights)
             broadcast_variables(opt.variables())
-        return pd_pif_maps,pd_paf_maps,loss_pif_maps,loss_paf_maps,total_loss
+        return pd_pif_maps,pd_paf_maps,loss_pif_maps,loss_paf_maps,decay_loss,total_loss
 
     #train each step
     train_model.train()
@@ -435,6 +445,8 @@ def parallel_train(train_model,dataset,config):
     avg_time=AvgMetric(name="time_iter",metric_interval=log_interval)
     #total loss metrics
     avg_total_loss=AvgMetric(name="total_loss",metric_interval=log_interval)
+    #decay loss metrics
+    avg_decay_loss=AvgMetric(name="decay_loss",metric_interval=log_interval)
     #pif loss metrics
     avg_pif_conf_loss=AvgMetric(name="pif_conf_loss",metric_interval=log_interval)
     avg_pif_vec_loss=AvgMetric(name="pif_vec_loss",metric_interval=log_interval)
@@ -443,20 +455,20 @@ def parallel_train(train_model,dataset,config):
     avg_paf_conf_loss=AvgMetric(name="paf_conf_loss",metric_interval=log_interval)
     avg_paf_src_vec_loss=AvgMetric(name="paf_src_vec_loss",metric_interval=log_interval)
     avg_paf_dst_vec_loss=AvgMetric(name="paf_dst_vec_loss",metric_interval=log_interval)
-    avg_paf_src_scale_loss=AvgMetric(name="paf_src_scale_loss",metric_interval=log_interval)
-    avg_paf_dst_scale_loss=AvgMetric(name="paf_dst_scale_loss",metric_interval=log_interval)
     log('Start - n_step: {} batch_size: {} lr_init: {} lr_decay_steps: {} lr_decay_factor: {} weight_decay_factor: {}'.format(
             n_step, batch_size, lr_init.numpy(), lr_decay_steps, lr_decay_factor, weight_decay_factor))
     for image,gt_label,mask,labeled in train_dataset:
         #get losses
-        pd_pif_maps,pd_paf_maps,loss_pif_maps,loss_paf_maps,total_loss=one_step(image,gt_label,mask,train_model,step==0)
+        pd_pif_maps,pd_paf_maps,loss_pif_maps,loss_paf_maps,decay_loss,total_loss=one_step(image,gt_label,mask,train_model,step==0)
         loss_pif_conf,loss_pif_vec,loss_pif_scale=loss_pif_maps
-        loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec,loss_paf_src_scale,loss_paf_dst_scale=loss_paf_maps
+        loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec=loss_paf_maps
         #update metrics
         avg_time.update(time.time()-tic)
         tic=time.time()
         #update total losses
         avg_total_loss.update(total_loss)
+        #update decay loss
+        avg_decay_loss.update(decay_loss)
         #update pif_losses metrics
         avg_pif_conf_loss.update(loss_pif_conf)
         avg_pif_vec_loss.update(loss_pif_vec)
@@ -465,20 +477,21 @@ def parallel_train(train_model,dataset,config):
         avg_paf_conf_loss.update(loss_paf_conf)
         avg_paf_src_vec_loss.update(loss_paf_src_vec)
         avg_paf_dst_vec_loss.update(loss_paf_dst_vec)
-        avg_paf_src_scale_loss.update(loss_paf_src_scale)
-        avg_paf_dst_scale_loss.update(loss_paf_dst_scale)
 
         #learning rate decay
         if(step in lr_decay_steps):
             new_lr_decay = lr_decay_factor**(lr_decay_steps.index(step)+1) 
             lr=lr_init*new_lr_decay
+        #warm_up learning rate decay
+        if(step <= warm_up_step):
+            lr=lr_init*warm_up_decay**(1.0-step/warm_up_step)
 
         #save log info periodly
         if((step.numpy()!=0) and (step.numpy()%log_interval)==0):
             log(f"Train iteration {n_step} / {step.numpy()}, Learning rate:{lr.numpy()} {avg_total_loss.get_metric()} "+\
                 f"{avg_pif_conf_loss.get_metric()} {avg_pif_vec_loss.get_metric()} {avg_pif_scale_loss.get_metric()}"+\
                 f"{avg_paf_conf_loss.get_metric()} {avg_paf_src_vec_loss.get_metric()} {avg_paf_dst_vec_loss.get_metric()}"+\
-                f"{avg_paf_src_scale_loss.get_metric()} {avg_paf_dst_scale_loss.get_metric()} {avg_time.get_metric()}")
+                f"{avg_decay_loss.get_metric()} {avg_time.get_metric()}")
 
         #save result and ckpt periodly
         if((step.numpy()!=0) and (step.numpy()%save_interval)==0):
