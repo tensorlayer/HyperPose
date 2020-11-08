@@ -140,7 +140,7 @@ def single_train(train_model,dataset,config):
     lr_decay_factor = config.train.lr_decay_factor
     lr_decay_steps= config.train.lr_decay_steps
     warm_up_step=8000
-    warm_up_decay=lr_decay_factor
+    warm_up_decay=0.01
     weight_decay_factor = config.train.weight_decay_factor
     #log and checkpoint params
     log_interval=config.log.log_interval
@@ -202,14 +202,15 @@ def single_train(train_model,dataset,config):
             lr=lr*lr_decay_factor
         
     #optimize one step
+    @tf.function
     def one_step(image,gt_label,mask,train_model):
         step.assign_add(1)
         with tf.GradientTape() as tape:
             gt_pif_maps,gt_paf_maps=gt_label
             pd_pif_maps,pd_paf_maps=train_model.forward(image,is_train=True)
-            loss_pif_maps,loss_paf_maps=train_model.cal_loss(pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps)
+            loss_pif_maps,loss_paf_maps,total_loss=train_model.cal_loss(pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps)
             decay_loss=regulize_loss(train_model,weight_decay_factor)
-            total_loss=sum(loss_pif_maps)+sum(loss_paf_maps)+decay_loss
+            total_loss+=decay_loss
         
         gradients=tape.gradient(total_loss,train_model.trainable_weights)
         opt.apply_gradients(zip(gradients,train_model.trainable_weights))
@@ -333,7 +334,7 @@ def parallel_train(train_model,dataset,config):
     lr_decay_factor = config.train.lr_decay_factor
     lr_decay_steps = config.train.lr_decay_steps
     warm_up_step=8000
-    warm_up_decay=lr_decay_factor
+    warm_up_decay=0.01
     weight_decay_factor = config.train.weight_decay_factor
     #log and checkpoint params
     log_interval=config.log.log_interval
@@ -427,9 +428,9 @@ def parallel_train(train_model,dataset,config):
         with tf.GradientTape() as tape:
             gt_pif_maps,gt_paf_maps=gt_label
             pd_pif_maps,pd_paf_maps=train_model.forward(image,is_train=True)
-            loss_pif_maps,loss_paf_maps=train_model.cal_loss(pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps)
+            loss_pif_maps,loss_paf_maps,total_loss=train_model.cal_loss(pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps)
             decay_loss=regulize_loss(train_model,weight_decay_factor)
-            total_loss=sum(loss_pif_maps)+sum(loss_paf_maps)+decay_loss
+            total_loss+=decay_loss
         
         gradients=tape.gradient(total_loss,train_model.trainable_weights)
         opt.apply_gradients(zip(gradients,train_model.trainable_weights))

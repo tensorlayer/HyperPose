@@ -333,6 +333,9 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
     #decode paf_maps
     pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,_,_,_,_=pd_paf_maps
     gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,_,_=gt_paf_maps
+    #restore conf_maps
+    pd_pif_conf=tf.nn.sigmoid(pd_pif_conf)
+    pd_paf_conf=tf.nn.sigmoid(pd_paf_conf)
     #restore nan in gt_maps
     gt_pif_conf=nan2zero(gt_pif_conf)
     gt_pif_vec=nan2zero(gt_pif_vec)

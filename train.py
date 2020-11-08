@@ -66,7 +66,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size',
                         type=int,
                         default=8,
-                        help='size of a training batch')
+                        help='batch size used in training')
     parser.add_argument('--log_interval',
                         type=int,
                         default=1e2,
@@ -85,7 +85,6 @@ if __name__ == '__main__':
     Config.set_save_interval(args.save_interval)
     #config train
     Config.set_train_type(Config.TRAIN[args.train_type])
-    Config.set_batch_size(args.batch_size)
     Config.set_optim_type(Config.OPTIM[args.optim_type])
     Config.set_kungfu_option(Config.KUNGFU[args.kf_optimizer])
     #config dataset

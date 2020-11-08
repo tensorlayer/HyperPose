@@ -56,39 +56,22 @@ class Pifpaf(Model):
         paf_conf,paf_src_vec,paf_dst_vec,_,_,paf_src_scale,paf_dst_scale=paf_maps
         return pif_conf,pif_vec,pif_scale,paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale
     
-    def cal_loss(self,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps):
-        #calculate pif losses
-        pd_pif_conf,pd_pif_vec,pd_pif_logb,pd_pif_scale=pd_pif_maps
-        gt_pif_conf,gt_pif_vec,gt_pif_scale=gt_pif_maps
-        loss_pif_conf=self.Bce_loss(pd_pif_conf,gt_pif_conf)*self.lambda_pif_conf
-        loss_pif_vec=self.Laplace_loss(pd_pif_vec,pd_pif_logb,gt_pif_vec)*self.lambda_pif_vec
-        loss_pif_scale=self.Scale_loss(pd_pif_scale,gt_pif_scale)*self.lambda_pif_scale
-        loss_pif_maps=[loss_pif_conf,loss_pif_vec,loss_pif_scale]
-        #calculate paf losses
-        pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,pd_paf_src_logb,pd_paf_dst_logb,pd_paf_src_scale,pd_paf_dst_scale=pd_paf_maps
-        gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,gt_paf_src_scale,gt_paf_dst_scale=gt_paf_maps
-        loss_paf_conf=self.Bce_loss(pd_paf_conf,gt_paf_conf)*self.lambda_paf_conf
-        loss_paf_src_vec=self.Laplace_loss(pd_paf_src_vec,pd_paf_src_logb,gt_paf_src_vec)*self.lambda_paf_src_vec
-        loss_paf_dst_vec=self.Laplace_loss(pd_paf_dst_vec,pd_paf_dst_logb,gt_paf_dst_vec)*self.lambda_paf_dst_vec
-        loss_paf_maps=[loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec]
-        #retun losses
-        return loss_pif_maps,loss_paf_maps
-    
     def Bce_loss(self,pd_conf,gt_conf,focal_gamma=1.0):
         #shape conf:[batch,field,h,w]
+        batch_size=pd_conf.shape[0]
         valid_mask=tf.logical_not(tf.math.is_nan(gt_conf))
         #select pd_conf
         pd_conf=pd_conf[valid_mask]
         #select gt_conf
         gt_conf=gt_conf[valid_mask]
         #calculate loss
-        bce_loss=tf.nn.sigmoid_cross_entropy_with_logits(pd_conf,gt_conf)
+        bce_loss=tf.nn.sigmoid_cross_entropy_with_logits(logits=pd_conf,labels=gt_conf)
         bce_loss=tf.clip_by_value(bce_loss,0.02,5.0)
         if(focal_gamma!=0.0):
             focal=(1-tf.exp(-bce_loss))**focal_gamma
             focal=tf.stop_gradient(focal)
             bce_loss=focal*bce_loss
-        bce_loss=tf.reduce_mean(bce_loss)
+        bce_loss=tf.reduce_sum(bce_loss)/batch_size
         return bce_loss
     
     def Laplace_loss(self,pd_vec,pd_logb,gt_vec):
@@ -115,15 +98,35 @@ class Pifpaf(Model):
         return laplace_loss
     
     def Scale_loss(self,pd_scale,gt_scale,b=1.0):
+        batch_size=pd_scale.shape[0]
         valid_mask=tf.logical_not(tf.math.is_nan(gt_scale))
         pd_scale=pd_scale[valid_mask]
         gt_scale=gt_scale[valid_mask]
-        valid_num=pd_scale.shape[0]
-        scale_loss=0.0
-        if(valid_num!=0):
-            scale_loss=tf.reduce_sum(tf.abs(pd_scale-gt_scale))/valid_num
+        scale_loss=tf.abs(pd_scale-gt_scale)
         scale_loss=tf.clip_by_value(scale_loss,0.0,5.0)/b
+        scale_loss=tf.reduce_sum(scale_loss)/batch_size
         return scale_loss
+    
+    def cal_loss(self,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps):
+        #calculate pif losses
+        pd_pif_conf,pd_pif_vec,pd_pif_logb,pd_pif_scale=pd_pif_maps
+        gt_pif_conf,gt_pif_vec,gt_pif_scale=gt_pif_maps
+        loss_pif_conf=self.Bce_loss(pd_pif_conf,gt_pif_conf)
+        loss_pif_vec=self.Laplace_loss(pd_pif_vec,pd_pif_logb,gt_pif_vec)
+        loss_pif_scale=self.Scale_loss(pd_pif_scale,gt_pif_scale)
+        loss_pif_maps=[loss_pif_conf,loss_pif_vec,loss_pif_scale]
+        #calculate paf losses
+        pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,pd_paf_src_logb,pd_paf_dst_logb,pd_paf_src_scale,pd_paf_dst_scale=pd_paf_maps
+        gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,gt_paf_src_scale,gt_paf_dst_scale=gt_paf_maps
+        loss_paf_conf=self.Bce_loss(pd_paf_conf,gt_paf_conf)
+        loss_paf_src_vec=self.Laplace_loss(pd_paf_src_vec,pd_paf_src_logb,gt_paf_src_vec)
+        loss_paf_dst_vec=self.Laplace_loss(pd_paf_dst_vec,pd_paf_dst_logb,gt_paf_dst_vec)
+        loss_paf_maps=[loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec]
+        #calculate total loss
+        total_loss=(loss_pif_conf*self.lambda_pif_conf+loss_pif_vec*self.lambda_pif_vec+loss_pif_scale*self.lambda_pif_scale+
+            loss_paf_conf*self.lambda_paf_conf+loss_paf_src_vec*self.lambda_paf_src_vec+loss_paf_dst_vec*self.lambda_paf_dst_vec)
+        #retun losses
+        return loss_pif_maps,loss_paf_maps,total_loss
     
     class PifHead(Model):
         def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,data_format="channels_first"):
@@ -144,12 +147,11 @@ class Pifpaf(Model):
             pif_conf=x[:,:,0,:,:]
             pif_vec=x[:,:,1:3,:,:]
             pif_logb=x[:,:,3,:,:]
-            pif_scale=x[:,:,4,:,:]
+            pif_scale=tf.exp(x[:,:,4,:,:])
             #restore vec_maps in inference
             if(is_train==False):
+                pif_conf=tf.nn.sigmoid(pif_conf)
                 pif_vec[:,:]+=self.mesh_grid
-            #TODO:difference in paper and code
-            #paper use sigmoid for conf_map in training while code not
             return pif_conf,pif_vec,pif_logb,pif_scale
         
     class PafHead(Model):
@@ -173,12 +175,11 @@ class Pifpaf(Model):
             paf_dst_vec=x[:,:,3:5,:,:]
             paf_src_logb=x[:,:,5,:,:]
             paf_dst_logb=x[:,:,6,:,:]
-            paf_src_scale=x[:,:,7,:,:]
-            paf_dst_scale=x[:,:,8,:,:]
+            paf_src_scale=tf.exp(x[:,:,7,:,:])
+            paf_dst_scale=tf.exp(x[:,:,8,:,:])
             #restore vec_maps in inference
             if(is_train==False):
+                paf_conf=tf.nn.sigmoid(paf_conf)
                 paf_src_vec[:,:]+=self.mesh_grid
                 paf_dst_vec[:,:]+=self.mesh_grid
-            #difference in paper and code
-            #paper use sigmoid for conf_map in training while code not
             return paf_conf,paf_src_vec,paf_dst_vec,paf_src_logb,paf_dst_logb,paf_src_scale,paf_dst_scale

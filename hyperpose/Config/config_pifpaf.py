@@ -22,7 +22,7 @@ model.model_dir = f"./save_dir/{model.model_name}/model_dir"
 
 #train configuration
 train=edict()
-train.batch_size = 8
+train.batch_size = 4
 train.save_interval = 2000
 # total number of step
 train.n_step = 1000000
@@ -33,7 +33,7 @@ train.lr_decay_every_step = 136120
 # decay lr factor
 train.lr_decay_factor = 0.1
 train.lr_decay_steps=[420000,495000]
-train.weight_decay_factor = 1e-5
+train.weight_decay_factor = 0.0
 train.train_type=TRAIN.Single_train
 train.vis_dir=f"./save_dir/{model.model_name}/train_vis_dir"
 

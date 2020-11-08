@@ -81,7 +81,7 @@ def _map_fn(image_file,image_id):
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
     return image,image_id
 
-def evaluate(model,dataset,config,vis_num=30,total_eval_num=30,enable_multiscale_search=False):
+def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multiscale_search=False):
     '''evaluate pipeline of poseProposal class models
 
     input model and dataset, the evaluate pipeline will start automaticly

@@ -116,7 +116,7 @@ def _map_fn(image_file,image_id,hin,win):
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
     return image,image_id
 
-def evaluate(model,dataset,config,vis_num=30,total_eval_num=30,enable_multiscale_search=True):
+def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multiscale_search=True):
     '''evaluate pipeline of Openpose class models
 
     input model and dataset, the evaluate pipeline will start automaticly
