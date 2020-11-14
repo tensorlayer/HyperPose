@@ -176,7 +176,7 @@ namespace dnn {
             exit(-1);
         }
 
-        if (network->getNbInputs() != 1)
+        if (network->getNbInputs() > 1)
             error("Detected multiple inputs. (Only support one-input mode currently)\n");
 
         destroy_ptr<nvinfer1::IBuilderConfig> config(builder->createBuilderConfig());
@@ -209,14 +209,14 @@ namespace dnn {
         info("Started profiling and engine building.\n");
         auto engine = builder->buildEngineWithConfig(*network, *config);
 
-        info("Profile Info: Minimum input shape: ", to_string(engine->getProfileDimensions(0, 0, nvinfer1::OptProfileSelector::kMIN)), '\n');
-        info("Profile Info: Optimum input shape: ", to_string(engine->getProfileDimensions(0, 0, nvinfer1::OptProfileSelector::kOPT)), '\n');
-        info("Profile Info: Maximum input shape: ", to_string(engine->getProfileDimensions(0, 0, nvinfer1::OptProfileSelector::kMAX)), '\n');
-
         if (nullptr == engine) {
             gLogger.log(nvinfer1::ILogger::Severity::kERROR, "Failed to created engine");
             exit(1);
         }
+
+        info("Profile Info: Minimum input shape: ", to_string(engine->getProfileDimensions(0, 0, nvinfer1::OptProfileSelector::kMIN)), '\n');
+        info("Profile Info: Optimum input shape: ", to_string(engine->getProfileDimensions(0, 0, nvinfer1::OptProfileSelector::kOPT)), '\n');
+        info("Profile Info: Maximum input shape: ", to_string(engine->getProfileDimensions(0, 0, nvinfer1::OptProfileSelector::kMAX)), '\n');
 
         info("Succeed in engine building.\n");
         return engine;
