@@ -7,8 +7,9 @@ from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, 
 from ..backbones import Resnet50_backbone
 
 class Pifpaf(Model):
-    def __init__(self,parts,limbs,n_pos=17,n_limbs=19,hin=368,win=368,scale_size=8,backbone=None,pretraining=False,quad_size=2,
-    lambda_pif_conf=30.0,lambda_pif_vec=2.0,lambda_pif_scale=2.0,lambda_paf_conf=50.0,lambda_paf_src_vec=3.0,lambda_paf_dst_vec=3.0,data_format="channels_first"):
+    def __init__(self,parts,limbs,n_pos=17,n_limbs=19,hin=368,win=368,scale_size=16,backbone=None,pretraining=False,quad_size=2,quad_num=1,
+    lambda_pif_conf=30.0,lambda_pif_vec=2.0,lambda_pif_scale=2.0,lambda_paf_conf=50.0,lambda_paf_src_vec=3.0,lambda_paf_dst_vec=3.0,
+    lambda_paf_src_scale=2.0,lambda_paf_dst_scale=2.0,data_format="channels_first"):
         super().__init__()
         self.parts=parts
         self.limbs=limbs
@@ -16,20 +17,23 @@ class Pifpaf(Model):
         self.n_limbs=n_limbs
         self.hin=hin
         self.win=win
-        self.hout=int(hin/scale_size)
-        self.wout=int(win/scale_size)
         self.quad_size=quad_size
+        self.quad_num=quad_num
         self.stride=scale_size
-        self.scale_size=scale_size*(2**self.quad_size)
+        self.scale_size=scale_size/(self.quad_size**self.quad_num)
+        self.hout=int(hin/self.scale_size)
+        self.wout=int(win/self.scale_size)
         self.lambda_pif_conf=lambda_pif_conf
         self.lambda_pif_vec=lambda_pif_vec
         self.lambda_pif_scale=lambda_pif_scale
         self.lambda_paf_conf=lambda_paf_conf
         self.lambda_paf_src_vec=lambda_paf_src_vec
         self.lambda_paf_dst_vec=lambda_paf_dst_vec
+        self.lambda_paf_src_scale=lambda_paf_src_scale
+        self.lambda_paf_dst_scale=lambda_paf_dst_scale
         self.data_format=data_format
         if(backbone==None):
-            self.backbone=Resnet50_backbone(data_format=data_format,use_pool=False,scale_size=32)
+            self.backbone=Resnet50_backbone(data_format=data_format,use_pool=False,scale_size=32,decay=0.99,eps=1e-4)
         else:
             self.backbone=backbone(data_format=data_format,scale_size=self.scale_size)
         self.pif_head=self.PifHead(input_features=self.backbone.out_channels,n_pos=self.n_pos,n_limbs=self.n_limbs,\
@@ -119,12 +123,15 @@ class Pifpaf(Model):
         pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,pd_paf_src_logb,pd_paf_dst_logb,pd_paf_src_scale,pd_paf_dst_scale=pd_paf_maps
         gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,gt_paf_src_scale,gt_paf_dst_scale=gt_paf_maps
         loss_paf_conf=self.Bce_loss(pd_paf_conf,gt_paf_conf)
+        loss_paf_src_scale=self.Scale_loss(pd_paf_src_scale,gt_paf_src_scale)
+        loss_paf_dst_scale=self.Scale_loss(pd_paf_dst_scale,gt_paf_dst_scale)
         loss_paf_src_vec=self.Laplace_loss(pd_paf_src_vec,pd_paf_src_logb,gt_paf_src_vec)
         loss_paf_dst_vec=self.Laplace_loss(pd_paf_dst_vec,pd_paf_dst_logb,gt_paf_dst_vec)
-        loss_paf_maps=[loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec]
+        loss_paf_maps=[loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec,loss_paf_src_scale,loss_paf_dst_scale]
         #calculate total loss
         total_loss=(loss_pif_conf*self.lambda_pif_conf+loss_pif_vec*self.lambda_pif_vec+loss_pif_scale*self.lambda_pif_scale+
-            loss_paf_conf*self.lambda_paf_conf+loss_paf_src_vec*self.lambda_paf_src_vec+loss_paf_dst_vec*self.lambda_paf_dst_vec)
+            loss_paf_conf*self.lambda_paf_conf+loss_paf_src_vec*self.lambda_paf_src_vec+loss_paf_dst_vec*self.lambda_paf_dst_vec+
+            loss_paf_src_scale*self.lambda_paf_src_scale+loss_paf_dst_scale*self.lambda_paf_dst_scale)
         #retun losses
         return loss_pif_maps,loss_paf_maps,total_loss
     
@@ -135,7 +142,7 @@ class Pifpaf(Model):
             self.n_pos=n_pos
             self.n_limbs=n_limbs
             self.quad_size=quad_size
-            self.out_features=self.n_pos*5*(2**self.quad_size)
+            self.out_features=self.n_pos*5*(self.quad_size**2)
             self.data_format=data_format
             self.tf_data_format="NCHW" if self.data_format=="channels_first" else "NHWC"
             self.main_block=Conv2d(n_filter=self.out_features,in_channels=self.input_features,filter_size=(1,1),data_format=self.data_format)
@@ -161,7 +168,7 @@ class Pifpaf(Model):
             self.n_pos=n_pos
             self.n_limbs=n_limbs
             self.quad_size=quad_size
-            self.out_features=self.n_limbs*9*(2**self.quad_size)
+            self.out_features=self.n_limbs*9*(self.quad_size**2)
             self.data_format=data_format
             self.tf_data_format="NCHW" if self.data_format=="channels_first" else "NHWC"
             self.main_block=Conv2d(n_filter=self.out_features,in_channels=self.input_features,filter_size=(1,1),data_format=self.data_format)

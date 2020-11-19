@@ -96,7 +96,7 @@ def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,dist_thresh=
             other_kpts=[]
             for other_anno in other_annos:
                 other_kpt=other_anno[part_idx]
-                if(other_kpt[0]<0 or other_kpt[0]>width or other_kpt[1]<0 or other_kpt[1]>height):
+                if(other_kpt[0]<0 or other_kpt[0]>=width or other_kpt[1]<0 or other_kpt[1]>=height):
                     continue
                 other_kpts.append(other_kpt)
             #calculate max_r and scale
@@ -170,7 +170,7 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
             dst_kpt=np.array(anno[dst_idx])/stride
             out_of_field_src=(src_kpt[0]<0 or src_kpt[0]>=wout or src_kpt[1]<0 or src_kpt[1]>=hout)
             out_of_field_dst=(dst_kpt[0]<0 or dst_kpt[1]>=wout or dst_kpt[1]<0 or dst_kpt[1]>=hout)
-            if(out_of_field_src and out_of_field_dst):
+            if(out_of_field_src or out_of_field_dst):
                 continue
             other_src_kpts,other_dst_kpts=[],[]
             for other_anno in other_annos:
@@ -334,8 +334,8 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
     pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,_,_,_,_=pd_paf_maps
     gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,_,_=gt_paf_maps
     #restore conf_maps
-    pd_pif_conf=tf.nn.sigmoid(pd_pif_conf)
-    pd_paf_conf=tf.nn.sigmoid(pd_paf_conf)
+    pd_pif_conf=tf.nn.sigmoid(pd_pif_conf).numpy()
+    pd_paf_conf=tf.nn.sigmoid(pd_paf_conf).numpy()
     #restore nan in gt_maps
     gt_pif_conf=nan2zero(gt_pif_conf)
     gt_pif_vec=nan2zero(gt_pif_vec)
