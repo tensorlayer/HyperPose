@@ -265,6 +265,16 @@ def pad_image(img,stride,pad_value=0.0):
     padded_image[pad[0]:img_h+pad[0],pad[2]:img_w+pad[2],:]=img
     return padded_image,pad
 
+def pad_image_shape(img,shape,pad_value=0.0):
+    img_h,img_w,img_c=img.shape
+    dst_h,dst_w=shape
+    pad_h=dst_h-img_h
+    pad_w=dst_w-img_w
+    pad=[pad_h//2,pad_h-pad_h//2,pad_w//2,pad_w-pad_w//2]
+    padded_image=np.zeros(shape=(img_h+pad_h,img_w+pad_w,img_c))+pad_value
+    padded_image[pad[0]:img_h+pad[0],pad[2]:img_w+pad[2],:]=img
+    return padded_image,pad
+
 def get_optim(optim_type):
     if(optim_type==OPTIM.Adam):
         print("using optimizer Adam!")

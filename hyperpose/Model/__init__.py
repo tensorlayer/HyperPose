@@ -113,7 +113,7 @@ def get_model(config):
         elif model_type == MODEL.Pifpaf:
             from .pifpaf import Pifpaf as model_arch
             ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),hin=model.hin,win=model.win,\
-                scale_size=16,pretraining=pretraining,data_format=model.data_format)
+                scale_size=32,pretraining=pretraining,data_format=model.data_format)
         else:
             raise RuntimeError(f'unknown model type {model_type}')
         print(f"using {model_type.name} model arch!")

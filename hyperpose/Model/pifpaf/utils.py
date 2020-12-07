@@ -162,7 +162,7 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
     #generate fields
     for anno_id,anno in enumerate(annos):
         other_annos=[other_anno for other_id,other_anno in enumerate(annos) if other_id!=anno_id]
-        anno_scale=get_scale(anno)
+        anno_scale=get_scale(np.array(anno)/stride)
         if(anno_scale==None):
             continue
         for limb_idx,(src_idx,dst_idx) in enumerate(limbs):
@@ -244,7 +244,9 @@ def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=
         paf_dst_scale[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=dst_scale
     return paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm
 
-def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0,neighbor_num=16,debug=False):
+def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0,neighbor_num=9,debug=False):
+    if(debug):
+        print()
     field_h,field_w=hr_conf.shape
     for conf,vec,scale in zip(confs,vecs,scales):
         x,y=vec
@@ -253,8 +255,6 @@ def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0,neighbor_n
         max_x=np.clip(x+truncate*scale+1,min_x+1,field_w).astype(np.int)
         min_y=np.clip(y-truncate*scale,0,field_h-1).astype(np.int)
         max_y=np.clip(y+truncate*scale+1,min_y+1,field_h).astype(np.int)
-        if(debug):
-            print(f"test hr_conf.shape:{hr_conf.shape} x:{x} y:{y} min_x:{min_x} max_x:{max_x} min_y:{min_y} max_y:{max_y} conf:{conf} scale:{scale}")
         #calculate mesh grid
         x_range=np.linspace(start=min_x,stop=max_x-1,num=max_x-min_x)
         y_range=np.linspace(start=min_y,stop=max_y-1,num=max_y-min_y)
@@ -267,6 +267,9 @@ def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0,neighbor_n
         center_x,center_y=np.round(x).astype(np.int),np.round(y).astype(np.int)
         if(center_x>=min_x and center_x<max_x and center_y>=min_y and center_y<max_y):
             mesh_update_conf[center_y-min_y,center_x-min_x]=conf
+        if(debug):
+            print(f"test hr_conf.shape:{hr_conf.shape} scale:{scale} x:{x} y:{y} min_x:{min_x} max_x:{max_x} min_y:{min_y} max_y:{max_y} conf:{conf} scale:{scale}")
+            print(f"center_x:{center_x} center_y:{center_y} \nmesh_update_conf:\n{mesh_update_conf}")
         #update heatmap according to distance mask
         #TODO: original code divide add by neighbor_num, this will result in larger target get higher score
         #so judge whether should divide this by scale_size
@@ -283,10 +286,12 @@ def get_hr_conf(conf_map,vec_map,scale_map,stride=8,thresh=0.1,debug=False):
     hr_conf=np.zeros(shape=(field_num,hout*stride,wout*stride))
     for field_idx in range(0,field_num):
         #filter by thresh
+        if(debug):
+            print(f"\ngenerating hr_conf {field_idx}:")
         thresh_mask=conf_map[field_idx]>thresh
         confs=conf_map[field_idx][thresh_mask]
         vecs=vec_map[field_idx,:,thresh_mask]
-        scales=np.maximum(1.0,scale_map[field_idx][thresh_mask]*0.75)
+        scales=np.maximum(1.0,0.75*scale_map[field_idx][thresh_mask])
         hr_conf[field_idx]=add_gaussian(hr_conf[field_idx],confs,vecs,scales,debug=debug)
     return hr_conf
 

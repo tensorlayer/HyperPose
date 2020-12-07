@@ -27,7 +27,7 @@ class Post_Processor:
         self.min_scale=min_scale
         self.greedy_match=greedy_match
         self.reverse_match=reverse_match
-        self.by_source=defaultdict()
+        self.by_source=defaultdict(dict)
         for limb_idx,(src_idx,dst_idx) in enumerate(self.limbs):
             self.by_source[src_idx][dst_idx]=(limb_idx,True)
             self.by_source[dst_idx][src_idx]=(limb_idx,False)
@@ -38,23 +38,25 @@ class Post_Processor:
     
     
     #convert vector field to scalar
-    def field_to_scalar(self,vec_x,vec_y,scalar_map):
+    def field_to_scalar(self,vec_x,vec_y,scalar_map,debug=False):
         #scalar_map shape:[height,width]
         #vec_map shape:[2,vec_num]
         h,w=scalar_map.shape
-        vec_num=vec_x.shape[1]
+        vec_num=vec_x.shape[0]
         ret_scalar=np.zeros(vec_num)
         for vec_idx in range(0,vec_num):
-            x,y=np.round(vec_x[vec_idx]),np.round(vec_y[vec_idx])
+            x,y=np.round(vec_x[vec_idx]).astype(np.int32),np.round(vec_y[vec_idx]).astype(np.int32)
+            if(debug):
+                print(f"test field_to_scalar x:{x} y:{y} w:{w} h:{h} scalar_map.shape:{scalar_map.shape}")
             if(x>=0 and x<w and y>=0 and y<h):
-                ret_scalar[vec_idx]=scalar_map[x,y]
+                ret_scalar[vec_idx]=scalar_map[y,x]
         return ret_scalar
     
     #check whether the position is occupied
     def check_occupy(self,occupied,pos_idx,x,y,reduction=2):
         _,field_h,field_w=occupied.shape
-        x,y=np.round(x/reduction),np.round(y/reduction)
-        if(x<0 or x>=field_w or y>0 or y>=field_h):
+        x,y=np.round(x/reduction).astype(np.int32),np.round(y/reduction).astype(np.int32)
+        if(x<0 or x>=field_w or y<0 or y>=field_h):
             return True
         if(occupied[pos_idx,y,x]!=0):
             return True
@@ -97,7 +99,8 @@ class Post_Processor:
         second_idx,second_score=-1,0.0
         #traverse connections to find the highest score connection weighted by distance
         score_f,src_x,src_y,src_scale,dst_x,dst_y,dst_scale=connections
-        con_num=score_f.shape[1]
+        print(f"test find_connection shape: score_f:{score_f.shape} src_x:{src_x.shape} src_y:{src_y.shape}")
+        con_num=score_f.shape[0]
         for con_idx in range(0,con_num):
             con_score=score_f[con_idx]
             con_src_x,con_src_y,_=src_x[con_idx],src_y[con_idx],src_scale[con_idx]
@@ -146,6 +149,7 @@ class Post_Processor:
             forward_cons,backward_cons=forward_list[limb_idx],backward_list[limb_idx]
         else:
             forward_cons,backward_cons=backward_list[limb_idx],forward_list[limb_idx]
+        print(f"\ntest connecting {self.parts(self.limbs[limb_idx][0])}-{self.parts(self.limbs[limb_idx][1])}:")
         c,x,y,scale=ann[src_idx]
         #forward matching
         fc,fx,fy,fscale=self.find_connection(forward_cons,x,y,scale,connection_method=connection_method)
@@ -168,7 +172,7 @@ class Post_Processor:
     def grow(self,ann,forward_list,backward_list,reverse_match=True):
         frontier = []
         in_frontier = set()
-        #add the point to assemble frontier
+        #add the point to assemble frontierby_source
         def add_frontier(ann,src_idx):
             #traverse all the part that the current part connect to
             for dst_idx,(_,_) in self.by_source[src_idx].items():
@@ -192,7 +196,7 @@ class Post_Processor:
                 if(ann[dst_idx,0]>0.0):
                     continue
                 #find conection
-                fc,fx,fy,fscale=self.get_connection_value(ann,src_idx,dst_idx,forward_list,backward_list,reverse_match=reverse_match)
+                fc,fx,fy,fscale=self.get_connection(ann,src_idx,dst_idx,forward_list,backward_list,reverse_match=reverse_match)
                 if(fc==0.0):
                     continue
                 return fc,fx,fy,fscale,src_idx,dst_idx
@@ -202,18 +206,19 @@ class Post_Processor:
         for pos_idx in range(0,self.n_pos):
             if(ann[pos_idx,0]>0.0):
                 add_frontier(ann,pos_idx)
-        #recurrently finding the match connections
+        #recurrently find the matched connections
         while True:
             find_match=get_frontier(ann)
             if(find_match==None):
                 break
-            score,x,y,scale,_,dst_idx=find_match
+            score,x,y,scale,src_idx,dst_idx=find_match
             if(ann[dst_idx,0]>0.0):
                 continue
             ann[dst_idx,0]=score
             ann[dst_idx,1]=x
             ann[dst_idx,2]=y
             ann[dst_idx,3]=scale
+            print(f"grow part:{self.parts(src_idx)} score:{score} x:{x} y:{y} scale:{scale}")
             add_frontier(ann,dst_idx)
         #finished matching a person
         return ann
@@ -223,26 +228,34 @@ class Post_Processor:
         #conf_map:[field_num,hout,wout]
         #vec_map:[field_num,2,hout,wout]
         #scale_map:[field_num,hout,wout]
-        stride=self.stride
         #decode pif_maps,paf_maps
         pif_conf,pif_vec,_,pif_scale=pif_maps
         paf_conf,paf_src_vec,paf_dst_vec,_,_,paf_src_scale,paf_dst_scale=paf_maps
         #get pif_hr_conf
-        pif_hr_conf=get_hr_conf(pif_conf,pif_vec,pif_scale,stride=self.stride,thresh=self.thresh_pif)
+        pif_hr_conf=get_hr_conf(pif_conf,pif_vec,pif_scale,stride=self.stride,thresh=self.thresh_pif,debug=True)
+        print(f"test hr_conf")
+        for pos_idx in range(0,self.n_pos):
+            print(f"test hr_conf idx:{pos_idx} max_conf:{np.max(pif_conf[pos_idx])} max_hr_conf:{np.max(pif_hr_conf[pos_idx])}")
+            print(f"{pif_hr_conf[pos_idx]}")
         #generate pose seeds according to refined pif_conf
         seeds=[]
         for pos_idx in range(0,self.n_pos):
             seeds=[]
             mask_conf=pif_conf[pos_idx]>self.thresh_pif
-            c=pif_conf[pos_idx,mask_conf]
-            x=pif_vec[pos_idx,0,mask_conf]*stride
-            y=pif_vec[pos_idx,1,mask_conf]*stride
-            scale=pif_scale[pos_idx,mask_conf]
-            hr_c=self.field_to_scalar(x,y,pif_hr_conf[pos_idx])
-            ref_c=0.9*hr_c+0.1*c
-            mask_ref_conf=ref_c>self.thresh_ref_pif
-            seeds.append((ref_c[mask_ref_conf],x[mask_ref_conf],y[mask_ref_conf],scale[mask_ref_conf],pos_idx))
-        sorted(seeds,reverse=True)
+            cs=pif_conf[pos_idx,mask_conf]
+            xs=pif_vec[pos_idx,0,mask_conf]
+            ys=pif_vec[pos_idx,1,mask_conf]
+            scales=pif_scale[pos_idx,mask_conf]
+            hr_cs=self.field_to_scalar(xs,ys,pif_hr_conf[pos_idx])
+            ref_cs=0.9*hr_cs+0.1*cs
+            mask_ref_conf=ref_cs>self.thresh_ref_pif
+            #print(f"test_pif pos:{self.parts(pos_idx)} max_pif_conf:{np.max(pif_conf[pos_idx])} max_c:{np.max(cs)} max_pif_hr_conf:{np.max(hr_cs)} "+\
+            #    f"max_ref_c:{np.max(ref_cs)} mask_ref_conf:{mask_ref_conf} sum_mask:{np.sum(mask_ref_conf)}")
+            for ref_c,x,y,scale in zip(ref_cs[mask_ref_conf],xs[mask_ref_conf],ys[mask_ref_conf],scales[mask_ref_conf]):
+                seeds.append((ref_c,pos_idx,x,y,scale))
+                print(f"seed gen pos_idx:{pos_idx} ref_c:{ref_c} x:{x} y:{y} scale:{scale}")
+        seeds=sorted(seeds,reverse=True)
+        print()
         #generate connection seeds according to paf_map
         cif_floor=0.1
         forward_list=[]
@@ -251,12 +264,12 @@ class Post_Processor:
             src_idx,dst_idx=self.limbs[limb_idx]
             mask_conf=paf_conf[limb_idx]>self.thresh_paf
             score=paf_conf[limb_idx,mask_conf]
-            src_x=paf_src_vec[limb_idx,0,mask_conf]*stride
-            src_y=paf_src_vec[limb_idx,1,mask_conf]*stride
-            dst_x=paf_dst_vec[limb_idx,0,mask_conf]*stride
-            dst_y=paf_dst_vec[limb_idx,1,mask_conf]*stride
-            src_scale=paf_src_scale[limb_idx,mask_conf]*stride
-            dst_scale=paf_dst_scale[limb_idx,mask_conf]*stride
+            src_x=paf_src_vec[limb_idx,0,mask_conf]
+            src_y=paf_src_vec[limb_idx,1,mask_conf]
+            dst_x=paf_dst_vec[limb_idx,0,mask_conf]
+            dst_y=paf_dst_vec[limb_idx,1,mask_conf]
+            src_scale=paf_src_scale[limb_idx,mask_conf]
+            dst_scale=paf_dst_scale[limb_idx,mask_conf]
             #generate backward (merge score with the src pif_score)
             cifhr_b=self.field_to_scalar(src_x,src_y,pif_hr_conf[src_idx])
             score_b=score*(cif_floor+(1-cif_floor)*cifhr_b)
@@ -267,15 +280,24 @@ class Post_Processor:
             score_f=score*(cif_floor+(1-cif_floor)*cifhr_f)
             mask_f=score_f>self.thresh_ref_paf
             forward_list.append([score_f[mask_f],src_x[mask_f],src_y[mask_f],src_scale[mask_f],dst_x[mask_f],dst_y[mask_f],dst_scale[mask_f]])
+            #debug
+            mask_all=np.sum(mask_conf)
+            print(f"test limb_gen limb_idx:{limb_idx} {self.parts(self.limbs[limb_idx][0])}-{self.parts(self.limbs[limb_idx][1])} max_conf:{np.max(paf_conf[limb_idx])} mask_all:{mask_all}")
+            if(mask_all>0):
+                print(f"test bk_list_gen: limb_idx:{limb_idx} max_score:{np.max(score)} max_cifhr_b:{np.max(cifhr_b)} max_score_b:{np.max(score_b)} mask_num_b：{np.sum(mask_b)}")
+                print(f"test fw_list_gen: limb_idx:{limb_idx} max_score:{np.max(score)} max_cifhr_f:{np.max(cifhr_f)} max_score_f:{np.max(score_f)} mask_num_f:{np.sum(mask_f)}")
+            print("")
         #greedy assemble
-        occupied=np.zeros(shape=(self.n_pos,pif_hr_conf.shape[1]/self.reduction,pif_hr_conf.shape[2]/self.reduction))
+        occupied=np.zeros(shape=(self.n_pos,int(pif_hr_conf.shape[1]/self.reduction),int(pif_hr_conf.shape[2]/self.reduction)))
         annotations=[]
-        for c,x,y,scale,pos_idx in seeds:
-            if(self.check_occupy(occupied,pos_idx,x,y,reduction=self.reduction)):
+        for c,pos_idx,x,y,scale in seeds:
+            check_occupy=self.check_occupy(occupied,pos_idx,x,y,reduction=self.reduction)
+            print(f"test shape part: pos_idx:{pos_idx} c:{c} x:{x} y:{y} scale:{scale} {np.array([c,x,y,scale]).shape} check_occupy:{check_occupy}")
+            if(check_occupy):
                 continue
             #ann meaning: ann[0]=conf ann[1]=x ann[2]=y ann[3]=scale
             ann=np.zeros(shape=(self.n_pos,4))
-            ann[pos_idx]=c,x,y,scale
+            ann[pos_idx]=np.array([c,x,y,scale])
             ann=self.grow(ann,forward_list,backward_list,reverse_match=self.reverse_match)
             annotations.append(ann)
             #put the ann into occupacy
