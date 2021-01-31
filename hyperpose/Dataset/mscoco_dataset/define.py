@@ -87,3 +87,36 @@ def ppn_output_converter(kpt_list):
         else:
             kpts+=[x,y,1.0]
     return kpts
+
+#convert kpts from pifpaf to mscoco
+from_pifpaf_converter={}
+for part_idx in range(0,len(CocoPart)):
+    from_pifpaf_converter[part_idx]=part_idx
+#convert kpts from mscoco to pifpaf
+to_pifpaf_converter={}
+for part_idx in range(0,len(CocoPart)):
+    to_pifpaf_converter[part_idx]=part_idx
+
+def pifpaf_input_converter(coco_kpts):
+    xs=coco_kpts[0::3]
+    ys=coco_kpts[1::3]
+    vs=coco_kpts[2::3]
+    lost_idx=np.where(vs<=0)[0]
+    xs[lost_idx]=-1000
+    ys[lost_idx]=-1000
+    cvt_kpts=np.array([xs,ys]).transpose()
+    return cvt_kpts
+
+def pifpaf_output_converter(kpt_list):
+    kpts=[]
+    for coco_idx in range(0,len(CocoPart)):
+        flag=False
+        if(coco_idx in to_pifpaf_converter):
+            model_idx=to_pifpaf_converter[coco_idx]
+            x,y=kpt_list[model_idx]
+            if(x>=0 and y>=0):
+                kpts==[x,y,1.0]
+                flag=True
+        if(not flag):
+            kpts+=[0.0,0.0,0.0]            
+    return kpts

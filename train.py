@@ -14,11 +14,11 @@ import tensorlayer as tl
 from hyperpose import Config,Model,Dataset
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='FastPose.')
+    parser = argparse.ArgumentParser(description='Hyperpose')
     parser.add_argument("--model_type",
                         type=str,
                         default="Openpose",
-                        help="human pose estimation model type, available options: Openpose, LightweightOpenpose ,MobilenetThinOpenpose, PoseProposal")
+                        help="human pose estimation model type, available options: Openpose, LightweightOpenpose ,MobilenetThinOpenpose, PoseProposal, Pifpaf")
     parser.add_argument("--model_backbone",
                         type=str,
                         default="Default",
@@ -63,10 +63,10 @@ if __name__ == '__main__':
                         type=str,
                         default="Adam",
                         help='optimizer type used for training')
-    parser.add_argument('--learning_rate',
-                        type=float,
-                        default=1e-4,
-                        help='learning rate')
+    parser.add_argument('--batch_size',
+                        type=int,
+                        default=8,
+                        help='batch size used in training')
     parser.add_argument('--log_interval',
                         type=int,
                         default=1e2,
@@ -85,11 +85,9 @@ if __name__ == '__main__':
     Config.set_save_interval(args.save_interval)
     #config train
     Config.set_train_type(Config.TRAIN[args.train_type])
-    Config.set_learning_rate(args.learning_rate)
     Config.set_optim_type(Config.OPTIM[args.optim_type])
     Config.set_kungfu_option(Config.KUNGFU[args.kf_optimizer])
     #config dataset
-    print(f"test enabling official dataset:{args.use_official_dataset}")
     Config.set_official_dataset(args.use_official_dataset)
     Config.set_dataset_type(Config.DATA[args.dataset_type])
     Config.set_dataset_path(args.dataset_path)

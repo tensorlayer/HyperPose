@@ -402,7 +402,7 @@ class Resnet18_backbone(Model):
             ])
             if(self.is_down_sample):
                 self.down_sample=LayerList([
-                    Conv2d(n_filter=n_filter,in_channels=in_channels,filter_size=(1,1),strides=strides,b_init=None,data_format=self.data_format),
+                    Conv2d(n_filter=n_filter,in_channels=in_channels,filter_size=(3,3),strides=strides,b_init=None,data_format=self.data_format),
                     BatchNorm2d(decay=0.9,is_train=True,num_features=n_filter,data_format=self.data_format)
                 ])
 
@@ -414,7 +414,7 @@ class Resnet18_backbone(Model):
             return tf.nn.relu(x+res)   
 
 class Resnet50_backbone(Model):
-    def __init__(self,in_channels=3,n_filter=64,scale_size=8,data_format="channels_first",pretraining=False):
+    def __init__(self,in_channels=3,n_filter=64,scale_size=8,decay=0.9,eps=1e-5,data_format="channels_first",pretraining=False,use_pool=True):
         super().__init__()
         self.name="resnet50_backbone"
         self.in_channels=in_channels
@@ -423,34 +423,37 @@ class Resnet50_backbone(Model):
         self.data_format=data_format
         self.pretraining=pretraining
         self.out_channels=2048
+        self.use_pool=use_pool
         if(self.scale_size==8):
             strides=(1,1)
         elif(self.scale_size==32 or self.pretraining):
             strides=(2,2)
+        self.eps=eps
+        self.decay=decay
         #first layers
         self.conv1=Conv2d(n_filter=64,in_channels=self.in_channels,filter_size=(7,7),strides=(2,2),padding="SAME",b_init=None,data_format=self.data_format,name="conv1")
-        self.bn1=BatchNorm2d(is_train=True,num_features=64,data_format=self.data_format,act=tf.nn.relu,name="bn1")
+        self.bn1=BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=64,data_format=self.data_format,act=tf.nn.relu,name="bn1")
         self.maxpool1=MaxPool2d(filter_size=(3,3),strides=(2,2),data_format=self.data_format,name="maxpool_1")
         #block_1
-        self.block_1_1=self.Basic_block(in_channels=64,n_filter=64,strides=(1,1),data_format=self.data_format,name="block_1_1")
-        self.block_1_2=self.Basic_block(in_channels=256,n_filter=64,strides=(1,1),data_format=self.data_format,name="block_1_2")
-        self.block_1_3=self.Basic_block(in_channels=256,n_filter=64,strides=(1,1),data_format=self.data_format,name="block_1_3")
+        self.block_1_1=self.Basic_block(in_channels=64,n_filter=64,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_1_1")
+        self.block_1_2=self.Basic_block(in_channels=256,n_filter=64,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_1_2")
+        self.block_1_3=self.Basic_block(in_channels=256,n_filter=64,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_1_3")
         #block_2
-        self.block_2_1=self.Basic_block(in_channels=256,n_filter=128,strides=(2,2),data_format=self.data_format,name="block_2_1")
-        self.block_2_2=self.Basic_block(in_channels=512,n_filter=128,strides=(1,1),data_format=self.data_format,name="block_2_2")
-        self.block_2_3=self.Basic_block(in_channels=512,n_filter=128,strides=(1,1),data_format=self.data_format,name="block_2_3")
-        self.block_2_4=self.Basic_block(in_channels=512,n_filter=128,strides=(1,1),data_format=self.data_format,name="block_2_4")
+        self.block_2_1=self.Basic_block(in_channels=256,n_filter=128,strides=(2,2),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_2_1")
+        self.block_2_2=self.Basic_block(in_channels=512,n_filter=128,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_2_2")
+        self.block_2_3=self.Basic_block(in_channels=512,n_filter=128,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_2_3")
+        self.block_2_4=self.Basic_block(in_channels=512,n_filter=128,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_2_4")
         #block_3
-        self.block_3_1=self.Basic_block(in_channels=512,n_filter=256,strides=strides,data_format=self.data_format,name="block_3_1")
-        self.block_3_2=self.Basic_block(in_channels=1024,n_filter=256,strides=(1,1),data_format=self.data_format,name="block_3_2")
-        self.block_3_3=self.Basic_block(in_channels=1024,n_filter=256,strides=(1,1),data_format=self.data_format,name="block_3_3")
-        self.block_3_4=self.Basic_block(in_channels=1024,n_filter=256,strides=(1,1),data_format=self.data_format,name="block_3_4")
-        self.block_3_5=self.Basic_block(in_channels=1024,n_filter=256,strides=(1,1),data_format=self.data_format,name="block_3_5")
-        self.block_3_6=self.Basic_block(in_channels=1024,n_filter=256,strides=(1,1),data_format=self.data_format,name="block_3_6")
+        self.block_3_1=self.Basic_block(in_channels=512,n_filter=256,strides=strides,data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_3_1")
+        self.block_3_2=self.Basic_block(in_channels=1024,n_filter=256,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_3_2")
+        self.block_3_3=self.Basic_block(in_channels=1024,n_filter=256,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_3_3")
+        self.block_3_4=self.Basic_block(in_channels=1024,n_filter=256,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_3_4")
+        self.block_3_5=self.Basic_block(in_channels=1024,n_filter=256,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_3_5")
+        self.block_3_6=self.Basic_block(in_channels=1024,n_filter=256,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_3_6")
         #block_4
-        self.block_4_1=self.Basic_block(in_channels=1024,n_filter=512,strides=strides,data_format=self.data_format,name="block_4_1")
-        self.block_4_2=self.Basic_block(in_channels=2048,n_filter=512,strides=(1,1),data_format=self.data_format,name="block_4_2")
-        self.block_4_3=self.Basic_block(in_channels=2048,n_filter=512,strides=(1,1),data_format=self.data_format,name="block_4_3")
+        self.block_4_1=self.Basic_block(in_channels=1024,n_filter=512,strides=strides,data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_4_1")
+        self.block_4_2=self.Basic_block(in_channels=2048,n_filter=512,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_4_2")
+        self.block_4_3=self.Basic_block(in_channels=2048,n_filter=512,strides=(1,1),data_format=self.data_format,eps=self.eps,decay=self.decay,name="block_4_3")
         if(self.pretraining):
             self.block_5=LayerList([
                 MeanPool2d(filter_size=(7,7),strides=(1,1),data_format=self.data_format,name="avgpool_1"),
@@ -461,7 +464,8 @@ class Resnet50_backbone(Model):
     def forward(self,x):
         x=self.conv1.forward(x)
         x=self.bn1.forward(x)
-        x=self.maxpool1.forward(x)
+        if(self.use_pool):
+            x=self.maxpool1.forward(x)
         #block_1
         x=self.block_1_1.forward(x)
         x=self.block_1_2.forward(x)
@@ -490,7 +494,7 @@ class Resnet50_backbone(Model):
         return tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label,logits=predict))
 
     class Basic_block(Model):
-        def __init__(self,in_channels=64,n_filter=64,strides=(1,1),data_format="channels_first",name="basic_block"):
+        def __init__(self,in_channels=64,n_filter=64,strides=(1,1),data_format="channels_first",decay=0.9,eps=1e-5,name="basic_block"):
             super().__init__()
             self.in_channels=in_channels
             self.n_filter=n_filter
@@ -498,19 +502,21 @@ class Resnet50_backbone(Model):
             self.data_format=data_format
             self.downsample=None
             self.name=name
+            self.decay=decay
+            self.eps=eps
             if(self.strides!=(1,1) or self.in_channels!=4*self.n_filter):
                 self.downsample=LayerList([
                     Conv2d(n_filter=4*self.n_filter,in_channels=self.in_channels,filter_size=(1,1),strides=self.strides,b_init=None,\
                         data_format=self.data_format,name=f"{name}_ds_conv1"),
-                    BatchNorm2d(is_train=True,num_features=4*self.n_filter,data_format=self.data_format,name=f"{name}_ds_bn1")
+                    BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=4*self.n_filter,data_format=self.data_format,name=f"{name}_ds_bn1")
                     ])
             self.main_block=LayerList([
                 Conv2d(n_filter=self.n_filter,in_channels=self.in_channels,filter_size=(1,1),strides=(1,1),b_init=None,data_format=self.data_format,name=f"{name}_conv1"),
-                BatchNorm2d(is_train=True,num_features=self.n_filter,act=tf.nn.relu,data_format=self.data_format,name=f"{name}_bn1"),
+                BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=self.n_filter,act=None,data_format=self.data_format,name=f"{name}_bn1"),
                 Conv2d(n_filter=self.n_filter,in_channels=self.n_filter,filter_size=(3,3),strides=self.strides,b_init=None,data_format=self.data_format,name=f"{name}_conv2"),
-                BatchNorm2d(is_train=True,num_features=self.n_filter,act=tf.nn.relu,data_format=self.data_format,name=f"{name}_bn2"),
+                BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=self.n_filter,act=None,data_format=self.data_format,name=f"{name}_bn2"),
                 Conv2d(n_filter=4*self.n_filter,in_channels=self.n_filter,filter_size=(1,1),strides=(1,1),b_init=None,data_format=self.data_format,name=f"{name}_conv3"),
-                BatchNorm2d(is_train=True,num_features=4*self.n_filter,act=None,data_format=self.data_format,name=f"{name}_bn3")
+                BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=4*self.n_filter,act=tf.nn.relu,data_format=self.data_format,name=f"{name}_bn3")
             ])
         
         def forward(self,x):
