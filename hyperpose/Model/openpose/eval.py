@@ -7,7 +7,7 @@ import scipy.stats as st
 from functools import partial
 import multiprocessing
 import matplotlib.pyplot as plt
-from .infer import Post_Processor
+from .processor import PostProcessor
 from .utils import draw_results
 from ..common import pad_image
 
@@ -150,7 +150,7 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
     pd_anns=[]
     vis_dir=config.eval.vis_dir
     kpt_converter=dataset.get_output_kpt_cvter()
-    post_processor=Post_Processor(parts=model.parts,limbs=model.limbs,colors=model.colors)
+    post_processor=PostProcessor(parts=model.parts,limbs=model.limbs,colors=model.colors)
     
     eval_dataset=dataset.get_eval_dataset()
     paramed_map_fn=partial(_map_fn,hin=model.hin,win=model.win)

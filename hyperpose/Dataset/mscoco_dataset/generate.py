@@ -23,4 +23,6 @@ def generate_eval_data(val_imgs_path,val_anns_path,dataset_filter=None):
     # read coco training images contains valid people
     coco_data=PoseInfo(val_imgs_path,val_anns_path,with_mask=False, dataset_filter=dataset_filter, eval=True)
     img_file_list,img_id_list=coco_data.get_image_list(),coco_data.get_image_id_list()
+    print(f"test gen_eval_data:")
+    print(f"test len img_file_list:{len(img_file_list)} img_id_list:{len(img_id_list)}")
     return img_file_list,img_id_list

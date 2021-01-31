@@ -131,7 +131,7 @@ class MSCOCO_dataset(Base_dataset):
         image_ids=[]
         category_ids=[]
         pd_anns=pd_json["annotations"]
-        for pd_ann in pd_anns:
+        for pd_idx,pd_ann in enumerate(pd_anns):
             image_ids.append(pd_ann["image_id"])
             category_ids.append(pd_ann["category_id"])
         image_ids=list(np.unique(image_ids))
