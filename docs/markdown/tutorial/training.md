@@ -95,7 +95,7 @@ Config.set_model_name(args.model_name)
 Config.set_model_type(Config.MODEL.LightweightOpenpose)
 Config.set_model_backbone(Config.BACKBONE.Vggtiny)
 # >>> set dataset to use
-Config.set_dataset_type(Config.DATA.COCO)
+Config.set_dataset_type(Config.DATA.MSCOCO)
 # >>> configuration is done, get config object to assemble the system
 config=Config.get_config()
 model=Model.get_model(config)
@@ -164,7 +164,7 @@ model, functions of preprocess, postprocess and visualize are provided.
 The preprocess function is able to convert the annotaion into targets used for training the model.
 ```bash
 preprocess=Model.get_preprocess(Config.MODEL.LightweightOPenpose)
-conf_map,paf_map=preprocess(annos,img_height,img_width,model_hout,model_wout,Config.DATA.COCO,data_format="channels_first")
+conf_map,paf_map=preprocess(annos,img_height,img_width,model_hout,model_wout,Config.DATA.MSCOCO,data_format="channels_first")
 pd_conf_map,pd_paf_map=my_model.forward(input_image[np.newaxis,...])
 my_model.cal_loss(conf_map,pd_conf_map,paf_map,pd_paf_map)
 ```  
