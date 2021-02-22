@@ -44,7 +44,7 @@ def _data_aug_fn(image, ground_truth, augmentor, preprocessor, data_format="chan
             mask_valid = np.bitwise_and(mask_valid, bin_mask)
 
     # general augmentaton process
-    image,annos,mask_vaid,bbxs=augmentor.process(image=image,annos=annos,mask_valid=mask_valid,bbxs=bbxs)
+    image,annos,mask_valid,bbxs=augmentor.process(image=image,annos=annos,mask_valid=mask_valid,bbxs=bbxs)
     
     # generate result which include proposal region x,y,w,h,edges
     delta,tx,ty,tw,th,te,te_mask=preprocessor.process(annos=annos,mask_valid=mask_valid,bbxs=bbxs)
@@ -127,11 +127,11 @@ def single_train(train_model,dataset,config):
     pretrain_model_dir=config.pretrain.pretrain_model_dir
     pretrain_model_path=f"{pretrain_model_dir}/newest_{train_model.backbone.name}.npz"
     
-    log(f"\nsingle training using learning rate:{lr_init} batch_size:{batch_size}")
+    log(f"single training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
     augmentor=Augmentor(hin=hin,win=win,angle_min=-30,angle_max=30,zoom_min=0.5,zoom_max=0.8)
-    preprocessor=PreProcessor(parts=parts,limbs=limbs,hin=hin,win=win,hout=hout,wout=wout,hneo=hnei,wnei=wnei,colors=colors,data_format=data_format)
+    preprocessor=PreProcessor(parts=parts,limbs=limbs,hin=hin,win=win,hout=hout,wout=wout,hnei=hnei,wnei=wnei,colors=colors,data_format=data_format)
     paramed_map_fn=get_paramed_map_fn(augmentor=augmentor,preprocessor=preprocessor,data_format=data_format)
     train_dataset = train_dataset.shuffle(buffer_size=4096).repeat()
     train_dataset = train_dataset.map(paramed_map_fn, num_parallel_calls=max(multiprocessing.cpu_count()//2,1))

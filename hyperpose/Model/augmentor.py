@@ -27,7 +27,7 @@ class Augmentor:
         if(self.flip_list!=None):
             image, annos, mask_valid = tl.prepro.keypoint_random_flip(image, annos, mask_valid, prob=0.5, flip_list=self.flip_list)
         image, annos, mask_valid = tl.prepro.keypoint_resize_random_crop(image, annos, mask_valid, size=(self.hin, self.win))
-        if(bbxs!=None):
+        if(type(bbxs)==np.ndarray):
             #prepare transform bbx    
             transform_bbx=np.zeros(shape=(bbxs.shape[0],4,2))
             bbxs_x,bbxs_y,bbxs_w,bbxs_h=bbxs[:,0],bbxs[:,1],bbxs[:,2],bbxs[:,3]
@@ -49,8 +49,8 @@ class Augmentor:
                 final_bbxs[bbx_id,2]=bbx_max_x-bbx_min_x
                 final_bbxs[bbx_id,3]=bbx_max_y-bbx_min_y
             resize_ratio=max(self.hin/image_h,self.win/image_w)
-            final_bbxs=final_bbxs[:,2]*resize_ratio
-            final_bbxs=final_bbxs[:,3]*resize_ratio
+            final_bbxs[:,2]=final_bbxs[:,2]*resize_ratio
+            final_bbxs[:,2]=final_bbxs[:,3]*resize_ratio
             bbxs=final_bbxs
             return image,annos,mask_valid,bbxs
         return image,annos,mask_valid

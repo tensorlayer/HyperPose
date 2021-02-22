@@ -1,7 +1,5 @@
 import os
 import cv2
-import math
-import logging
 import numpy as np
 import tensorflow as tf
 from tensorlayer import logging
@@ -271,7 +269,7 @@ def get_flip_list(dataset_type):
     elif(dataset_type==DATA.MPII):
         return Mpii_flip_list
 
-from .infer import Post_Processor
+from .processor import PostProcessor
 from ..common import tf_repeat,TRAIN,MODEL,DATA
 
 
@@ -381,7 +379,7 @@ def postprocess(predicts,parts,limbs,data_format="channels_first",colors=None):
             x=x.numpy()
     if(colors==None):
         colors=[[255,0,0]]*len(parts)
-    post_processor=Post_Processor(parts,limbs,colors)
+    post_processor=PostProcessor(parts,limbs,colors)
     if(data_format=="channels_last"):
         pc=np.transpose(pc,[2,0,1])
         pi=np.transpose(pi,[2,0,1])
