@@ -63,10 +63,6 @@ if __name__ == '__main__':
                         type=str,
                         default="Adam",
                         help='optimizer type used for training')
-    parser.add_argument('--batch_size',
-                        type=int,
-                        default=8,
-                        help='batch size used in training')
     parser.add_argument('--log_interval',
                         type=int,
                         default=1e2,

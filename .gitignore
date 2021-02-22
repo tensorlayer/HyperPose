@@ -38,6 +38,7 @@ libstdtensor-prefix
 libstdtracer-prefix
 Makefile
 test.py
+save_dir
 Testing
 third_party
 venv

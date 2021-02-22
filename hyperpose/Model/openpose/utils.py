@@ -15,7 +15,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from distutils.dir_util import mkpath
 from scipy.spatial.distance import cdist
-from .infer import Post_Processor
 from ..human import Human
 from ..common import tf_repeat,TRAIN,MODEL,DATA
 
@@ -95,6 +94,7 @@ def postprocess(conf_map,paf_map,img_h,img_w,parts,limbs,data_format="channels_f
     list
         contain object of humans,see Model.Human for detail information of Human object
     '''
+    from .processor import PostProcessor
     if(type(conf_map)!=np.ndarray):
         conf_map=conf_map.numpy()
     if(type(paf_map)!=np.ndarray):
@@ -102,7 +102,7 @@ def postprocess(conf_map,paf_map,img_h,img_w,parts,limbs,data_format="channels_f
 
     if(colors==None):
         colors=[[255,0,0]]*len(parts)
-    post_processor=Post_Processor(parts,limbs,colors)
+    post_processor=PostProcessor(parts,limbs,colors)
     humans=post_processor.process(conf_map,paf_map,img_h,img_w,data_format=data_format)
     return humans
 

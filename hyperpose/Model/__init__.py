@@ -9,6 +9,10 @@ from .backbones import MobilenetV1_backbone,MobilenetV2_backbone,vgg16_backbone,
 from .backbones import Resnet18_backbone,Resnet50_backbone
 from .pretrain import single_pretrain
 
+#claim:
+#all the model preprocessor,postprocessor,and visualizer processing logic are written in 'channels_first' data_format
+#input data in "channels_last" data_format will be converted to "channels_first" format first and then handled
+
 def get_model(config):
     '''get model based on config object
 
@@ -119,6 +123,9 @@ def get_model(config):
         print(f"using {model_type.name} model arch!")
     return ret_model
 
+def get_pretrain(config):
+    return partial(single_pretrain,config=config)
+
 def get_train(config):
     '''get train pipeline based on config object
 
@@ -170,9 +177,6 @@ def get_train(config):
     print(f"using {train_type.name}...")
     return train
 
-def get_pretrain(config):
-    return partial(single_pretrain,config=config)
-
 def get_evaluate(config):
     '''get evaluate pipeline based on config object
 
@@ -211,6 +215,46 @@ def get_evaluate(config):
     evaluate=partial(evaluate,config=config)
     print(f"evaluating {model_type.name} model...")
     return evaluate
+
+def get_test(config):
+    '''get test pipeline based on config object
+
+    construct test pipeline based on the chosen model_type and dataset_type,
+    the test metric fellows the official metrics of the chosen dataset.
+
+    the returned test pipeline can be easily used by test(model,dataset),
+    where model is obtained by Model.get_model(), dataset is obtained by Dataset.get_dataset()
+
+    the test pipeline will:
+    1.loading newest model at path ./save_dir/model_name/model_dir/newest_model.npz
+    2.perform inference and parsing over the chosen test dataset
+    3.visualize model output in test in directory ./save_dir/model_name/test_vis_dir
+    4.output model test result file at path ./save_dir/model_name/test_vis_dir/pd_ann.json
+    5.the test dataset ground truth is often preserved by the dataset creator, you may need to upload the test result file to the official server to get model test metrics
+
+    Parameters
+    ----------
+    arg1 : config object
+        the config object return by Config.get_config() function, which includes all the configuration information.
+    
+    Returns
+    -------
+    function
+        a test pipeline function which takes model and dataset as input, and output model metrics
+    
+    '''
+    model_type=config.model.model_type
+    if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
+        from .openpose import test
+    elif model_type == MODEL.PoseProposal:
+        from .pose_proposal import test
+    elif model_type == MODEL.Pifpaf:
+        from .pifpaf import test
+    else:
+        raise RuntimeError(f'unknown model type {model_type}')
+    test=partial(test,config=config)
+    print(f"testing {model_type.name} model...")
+    return test
 
 def get_preprocess(model_type):
     '''get preprocess function based model_type

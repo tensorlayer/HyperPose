@@ -31,3 +31,6 @@ def generate_eval_data(eval_images_path,eval_annos_path,dataset_filter=None):
     img_file_list=mpii_data.get_image_list()
     img_id_list=mpii_data.get_image_id_list()
     return img_file_list,img_id_list
+
+def generate_test_data(test_images_path,test_annos_path):
+    raise NotImplementedError("MPII test dataset generation has not implemented!")

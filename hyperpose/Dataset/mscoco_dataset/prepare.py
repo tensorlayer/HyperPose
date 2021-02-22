@@ -21,15 +21,15 @@ def prepare_dataset(data_path="./data",version="2017",task="person"):
 
         Returns
         ---------
-        train_im_path : str
+        train_image_path : str
             Folder path of all training images.
         train_ann_path : str
             File path of training annotations.
-        val_im_path : str
+        val_image_path : str
             Folder path of all validating images.
         val_ann_path : str
             File path of validating annotations.
-        test_im_path : str
+        test_image_path : str
             Folder path of all testing images.
         test_ann_path : None
             File path of testing annotations, but as the test sets of MSCOCO 2014 and 2017 do not have annotation, returns None.
@@ -108,17 +108,23 @@ def prepare_dataset(data_path="./data",version="2017",task="person"):
             else:
                 logging.info("    training images exists")
             
-            '''
             if folder_exists(os.path.join(path, "test2017")) is False:
+                #downloading test images
                 logging.info("    downloading testing images")
                 os.system("wget http://images.cocodataset.org/zips/test2017.zip -P {}".format(path))
                 unzip(os.path.join(path, "test2017.zip"), path)
                 del_file(os.path.join(path, "test2017.zip"))
-            
             else:
                 logging.info("    testing images exists")
-            '''
-            print("temply ignore test dataset")
+
+            if os.path.exists(os.path.join(path,"annotations","image_info_test-dev2017.json")) is False:
+                #downloading test split infos
+                logging.info("    downloading testing split info")
+                os.system("wget http://images.cocodataset.org/annotations/image_info_test2017.zip -P {}".format(path))
+                unzip(os.path.join(path, "image_info_test2017.zip"),path)
+                del_file(os.path.join(path,"image_info_test2017.zip"))
+            else:
+                logging.info("    testing split info exists")
 
         else:
             raise Exception("dataset can only be 2014 and 2017, see MSCOCO website for more details.")
@@ -153,6 +159,7 @@ def prepare_dataset(data_path="./data",version="2017",task="person"):
                 train_annotations_file_path = os.path.join(path, "annotations", "instances_train2017.json")
             else:
                 raise Exception("unknown task")
+            
             val_images_path = os.path.join(path, "val2017")
             if task == "person":
                 val_annotations_file_path = os.path.join(path, "annotations", "person_keypoints_val2017.json")
@@ -160,8 +167,9 @@ def prepare_dataset(data_path="./data",version="2017",task="person"):
                 val_annotations_file_path = os.path.join(path, "annotations", "captions_val2017.json")
             elif task == "instance":
                 val_annotations_file_path = os.path.join(path, "annotations", "instances_val2017.json")
+            
             test_images_path = os.path.join(path, "test2017")
-            test_annotations_file_path =None # os.path.join(path, "annotations", "person_keypoints_test2017.json")
+            test_annotations_file_path = os.path.join(path,"annotations","image_info_test-dev2017.json")
 
         return train_images_path,train_annotations_file_path,\
                      val_images_path,val_annotations_file_path,\

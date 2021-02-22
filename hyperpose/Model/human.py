@@ -57,6 +57,10 @@ class Human:
             body_part=self.body_parts[part_idx]
             body_part.x=body_part.x+bias_w
             body_part.y=body_part.y+bias_h
+            if(body_part.x<0):
+                body_part.x=-1000.0
+            if(body_part.y<0):
+                body_part.y=-1000.0
     
     def scale(self,scale_w,scale_h):
         for part_idx in self.body_parts.keys():
@@ -65,6 +69,11 @@ class Human:
             body_part.y=body_part.y*scale_h
             body_part.w=body_part.w*scale_w
             body_part.h=body_part.h*scale_h
+            if(body_part.x<0):
+                body_part.x=-1000.0
+            if(body_part.y<0):
+                body_part.y=-1000.0
+                
     
     def draw_human(self,img):
         img_h,img_w,img_c=img.shape

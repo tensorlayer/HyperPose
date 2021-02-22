@@ -47,9 +47,9 @@ class Pifpaf(Model):
         self.mesh_grid=np.stack([mesh_x,mesh_y])
         #construct head
         self.pif_head=self.PifHead(input_features=self.backbone.out_channels,n_pos=self.n_pos,n_limbs=self.n_limbs,\
-            quad_size=self.quad_size,stride=self.stride,mesh_grid=self.mesh_grid,data_format=self.data_format)
+            quad_size=self.quad_size,hout=self.hout,wout=self.wout,stride=self.stride,mesh_grid=self.mesh_grid,data_format=self.data_format)
         self.paf_head=self.PafHead(input_features=self.backbone.out_channels,n_pos=self.n_pos,n_limbs=self.n_limbs,\
-            quad_size=self.quad_size,stride=self.stride,mesh_grid=self.mesh_grid,data_format=self.data_format)
+            quad_size=self.quad_size,hout=self.hout,wout=self.wout,stride=self.stride,mesh_grid=self.mesh_grid,data_format=self.data_format)
     
     @tf.function(experimental_relax_shapes=True)
     def forward(self,x,is_train=False):
@@ -141,11 +141,14 @@ class Pifpaf(Model):
         return loss_pif_maps,loss_paf_maps,total_loss
     
     class PifHead(Model):
-        def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,stride=8,mesh_grid=None,data_format="channels_first"):
+        def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,hout=8,wout=8,stride=8,mesh_grid=None,data_format="channels_first"):
+
             super().__init__()
             self.input_features=input_features
             self.n_pos=n_pos
             self.n_limbs=n_limbs
+            self.hout=hout
+            self.wout=wout
             self.stride=stride
             self.quad_size=quad_size
             self.out_features=self.n_pos*5*(self.quad_size**2)
@@ -157,7 +160,7 @@ class Pifpaf(Model):
         def forward(self,x,is_train=False):
             x=self.main_block.forward(x)
             x=tf.nn.depth_to_space(x,block_size=self.quad_size,data_format=self.tf_data_format)
-            x=tf.reshape(x,[x.shape[0],self.n_pos,5,x.shape[2],x.shape[3]])
+            x=tf.reshape(x,[-1,self.n_pos,5,self.hout,self.wout])
             pif_conf=x[:,:,0,:,:]
             pif_vec=x[:,:,1:3,:,:]
             pif_logb=x[:,:,3,:,:]
@@ -171,12 +174,14 @@ class Pifpaf(Model):
             return pif_conf,pif_vec,pif_logb,pif_scale
         
     class PafHead(Model):
-        def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,stride=8,mesh_grid=None,data_format="channels_first"):
+        def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,hout=46,wout=46,stride=8,mesh_grid=None,data_format="channels_first"):
             super().__init__()
             self.input_features=input_features
             self.n_pos=n_pos
             self.n_limbs=n_limbs
             self.quad_size=quad_size
+            self.hout=hout
+            self.wout=wout
             self.stride=stride
             self.out_features=self.n_limbs*9*(self.quad_size**2)
             self.mesh_grid=mesh_grid
@@ -187,7 +192,7 @@ class Pifpaf(Model):
         def forward(self,x,is_train=False):
             x=self.main_block.forward(x)
             x=tf.nn.depth_to_space(x,block_size=self.quad_size,data_format=self.tf_data_format)
-            x=tf.reshape(x,[x.shape[0],self.n_limbs,9,x.shape[2],x.shape[3]])
+            x=tf.reshape(x,[-1,self.n_limbs,9,self.hout,self.wout])
             paf_conf=x[:,:,0,:,:]
             paf_src_vec=x[:,:,1:3,:,:]
             paf_dst_vec=x[:,:,3:5,:,:]

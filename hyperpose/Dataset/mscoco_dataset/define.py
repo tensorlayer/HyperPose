@@ -54,7 +54,7 @@ def opps_output_converter(kpt_list):
         if(x<0 or y<0):
             kpts+=[0.0,0.0,0.0]
         else:
-            kpts+=[x,y,2.0]
+            kpts+=[x,y,1.0]
     return kpts
 
 #convert kpts from ppn to mscoco
@@ -115,8 +115,8 @@ def pifpaf_output_converter(kpt_list):
             model_idx=to_pifpaf_converter[coco_idx]
             x,y=kpt_list[model_idx]
             if(x>=0 and y>=0):
-                kpts==[x,y,1.0]
+                kpts+=[x,y,1.0]
                 flag=True
         if(not flag):
-            kpts+=[0.0,0.0,0.0]            
+            kpts+=[0.0,0.0,0.0]
     return kpts

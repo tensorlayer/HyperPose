@@ -14,6 +14,9 @@ class Base_dataset:
         self.dataset_filter=config.data.dataset_filter
         self.input_kpt_cvter=input_kpt_cvter
         self.output_kpt_cvter=output_kpt_cvter
+        self.train_datasize=0
+        self.eval_datasize=0
+        self.test_datasize=0
         # user-define dataset configure
         self.useradd_flag=config.data.useradd_flag
         self.useradd_scale_rate=config.data.useradd_scale_rate
@@ -45,6 +48,18 @@ class Base_dataset:
     
     def get_dataset_type(self):
         return DATA.USERDEF
+    
+    def get_train_datasize(self):
+        #make sure cal this API to get datasize after calling get_train_dataset
+        return self.train_datasize
+    
+    def get_eval_datasize(self):
+        #make sure cal this API to get datasize after calling get_eval_dataset
+        return self.eval_datasize
+    
+    def get_test_datasize(self):
+        #make sure cal this API to get datasize after calling get_test_dataset
+        return self.test_datasize
 
     def get_train_dataset(self,in_list=False):
         '''provide uniform tensorflow dataset for training
@@ -160,6 +175,9 @@ class Base_dataset:
                 yield _input.encode('utf-8'), cPickle.dumps(_target)
         
         train_dataset = tf.data.Dataset.from_generator(generator, output_types=(tf.string, tf.string))
+        #update datasize
+        self.train_datasize=len(train_img_paths_list)
+        print(f"train dataset generation finished!")
         if(in_list):
             return train_img_paths_list,train_targets_list
         else:
@@ -214,10 +232,45 @@ class Base_dataset:
                 yield img_file.encode("utf-8"),img_id
 
         eval_dataset = tf.data.Dataset.from_generator(generator,output_types=(tf.string,tf.int32))
+        #update datasize
+        self.eval_datasize=len(eval_img_files_list)
+        print(f"eval dataset generation finished!")
         if(in_list):
             return eval_img_files_list,eval_img_ids_list
         else:
             return eval_dataset
+    
+    def get_test_dataset(self,in_list=False):
+        print("generating official test dataset...")
+        test_img_files_list,test_img_ids_list=self.generate_test_data()
+        print(f"total {len(test_img_files_list)} official test data generated!")
+        #filter non-exist test images and targets
+        filter_img_files_list,filter_img_ids_list=[],[]
+        filter_num=0
+        for img_file,img_id in zip(test_img_files_list,test_img_ids_list):
+            if(os.path.exists(img_file)):
+                filter_img_files_list.append(img_file)
+                filter_img_ids_list.append(img_id)
+            else:
+                filter_num+=1
+        test_img_files_list=filter_img_files_list
+        test_img_ids_list=filter_img_ids_list
+        print(f"filtering finished! total {len(test_img_files_list)} images and targets left, {filter_num} invalid found.")
+        #tensorflow data pipeline
+        def generator():
+            """TF Dataset generator."""
+            assert len(test_img_files_list)==len(test_img_ids_list)
+            for img_file,img_id in zip(test_img_files_list,test_img_ids_list):
+                yield img_file.encode("utf-8"),img_id
+        
+        test_dataset=tf.data.Dataset.from_generator(generator,output_types=(tf.string,tf.int32))
+        #update datasize
+        self.test_datasize=len(test_img_files_list)
+        print("test dataset generation finished!")
+        if(in_list):
+            return test_img_files_list,test_img_ids_list
+        else:
+            return test_dataset
 
     def official_eval(self,pd_json,eval_dir=f"./eval_dir"):
         raise NotImplementedError("virtual class Base_dataset function: official_eval not implemented!")
