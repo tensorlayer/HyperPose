@@ -6,10 +6,10 @@ import tensorflow as tf
 
 import matplotlib.pyplot as plt
 from functools import partial
-from .infer import Post_Processor
+from .processor import PostProcessor
 from .utils import draw_bbx,draw_edge
 
-def infer_one_img(model,post_processor,img,img_id=-1,is_visual=False,save_dir="./vis_dir/pose_proposal"):
+def infer_one_img(model,postprocessor,img,img_id=-1,is_visual=False,save_dir="./vis_dir/pose_proposal"):
     img=img.numpy()
     img_h,img_w,img_c=img.shape
     data_format=model.data_format
@@ -30,14 +30,14 @@ def infer_one_img(model,post_processor,img,img_id=-1,is_visual=False,save_dir=".
         pw=np.transpose(pw,[0,3,1,2])
         ph=np.transpose(ph,[0,3,1,2])
         pe=np.transpose(pe,[0,5,1,2,3,4])
-    humans=post_processor.process(pc[0].numpy(),pi[0].numpy(),px[0].numpy(),py[0].numpy(),\
+    humans=postprocessor.process(pc[0].numpy(),pi[0].numpy(),px[0].numpy(),py[0].numpy(),\
         pw[0].numpy(),ph[0].numpy(),pe[0].numpy(),scale_w_rate=scale_rate,scale_h_rate=scale_rate)
     #resize output
     for human in humans:
         human.scale(scale_w=1/scale_rate,scale_h=1/scale_rate)
     if(is_visual):
         predicts=(pc[0],px[0]/scale_rate,py[0]/scale_rate,pw[0]/scale_rate,ph[0]/scale_rate,pe[0])
-        visualize(img,img_id,humans,predicts,model.hnei,model.wnei,model.hout,model.wout,post_processor.limbs,save_dir)
+        visualize(img,img_id,humans,predicts,model.hnei,model.wnei,model.hout,model.wout,postprocessor.limbs,save_dir)
     return humans
 
 def visualize(img,img_id,humans,predicts,hnei,wnei,hout,wout,limbs,save_dir):
@@ -110,7 +110,7 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
     pd_anns=[]
     vis_dir=config.eval.vis_dir
     kpt_converter=dataset.get_output_kpt_cvter()
-    post_processor=Post_Processor(model.parts,model.limbs,model.colors)
+    postprocessor=PostProcessor(model.parts,model.limbs,model.colors)
     
     eval_dataset=dataset.get_eval_dataset()
     dataset_size=dataset.get_eval_datasize()
@@ -121,9 +121,9 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
         if(eval_num>=total_eval_num):
             break
         if(eval_num<=vis_num):
-            humans=infer_one_img(model,post_processor,img,img_id,is_visual=True,save_dir=vis_dir)
+            humans=infer_one_img(model,postprocessor,img,img_id,is_visual=True,save_dir=vis_dir)
         else:
-            humans=infer_one_img(model,post_processor,img,img_id,is_visual=False,save_dir=vis_dir)
+            humans=infer_one_img(model,postprocessor,img,img_id,is_visual=False,save_dir=vis_dir)
         if(len(humans)==0):
             pd_anns.append({"category_id":1,"image_id":int(img_id),"id":-1,\
             "area":-1,"score":-1,"keypoints":[0,0,-1]*len(dataset.get_parts())})
@@ -135,7 +135,7 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
             ann["area"]=human.get_area()
             ann["score"]=human.get_score()
             kpt_list=[]
-            for part_idx in range(0,len(post_processor.parts)):
+            for part_idx in range(0,len(postprocessor.parts)):
                 if(part_idx not in human.body_parts):
                     kpt_list.append([-1000,-1000])
                 else:
@@ -181,7 +181,7 @@ def test(model,dataset,config,vis_num=30,total_test_num=10000,enable_multiscale_
     pd_anns=[]
     vis_dir=config.test.vis_dir
     kpt_converter=dataset.get_output_kpt_cvter()
-    post_processor=Post_Processor(model.parts,model.limbs,model.colors)
+    postprocessor=PostProcessor(model.parts,model.limbs,model.colors)
     
     test_dataset=dataset.get_test_dataset()
     dataset_size=dataset.get_test_datasize()
@@ -192,7 +192,7 @@ def test(model,dataset,config,vis_num=30,total_test_num=10000,enable_multiscale_
         if(test_num>=total_test_num):
             break
         is_visual=(test_num<=vis_num)
-        humans=infer_one_img(model,post_processor,img,img_id,is_visual=is_visual,save_dir=vis_dir)
+        humans=infer_one_img(model,postprocessor,img,img_id,is_visual=is_visual,save_dir=vis_dir)
         if(len(humans)==0):
             pd_anns.append({"category_id":1,"image_id":int(img_id),"id":-1,\
             "area":-1,"score":-1,"keypoints":[0,0,-1]*len(dataset.get_parts())})
@@ -204,7 +204,7 @@ def test(model,dataset,config,vis_num=30,total_test_num=10000,enable_multiscale_
             ann["area"]=human.get_area()
             ann["score"]=human.get_score()
             kpt_list=[]
-            for part_idx in range(0,len(post_processor.parts)):
+            for part_idx in range(0,len(postprocessor.parts)):
                 if(part_idx not in human.body_parts):
                     kpt_list.append([-1000,-1000])
                 else:

@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
-
-import math
 import multiprocessing
 import os
-import cv2
 import time
-import sys
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np
@@ -14,8 +10,9 @@ import tensorlayer as tl
 from functools import partial
 from pycocotools.coco import maskUtils
 import _pickle as cPickle
-from .utils import  tf_repeat, draw_results, get_pose_proposals
-from .utils import get_parts,get_limbs
+from .utils import  draw_results
+from .processor import PreProcessor
+from ..augmentor import Augmentor
 from ..common import log,KUNGFU,get_optim,init_log
 
 def regulize_loss(target_model,weight_decay_factor):
@@ -25,89 +22,41 @@ def regulize_loss(target_model,weight_decay_factor):
         re_loss+=regularizer(trainable_weight)
     return re_loss
 
-def _data_aug_fn(image, ground_truth, hin, win, hout, wout, hnei, wnei, parts, limbs, data_format="channels_first"):
+def _data_aug_fn(image, ground_truth, augmentor, preprocessor, data_format="channels_first"):
     """Data augmentation function."""
-    #restore data
+    # restore data
     ground_truth = cPickle.loads(ground_truth.numpy())
     image=image.numpy()
     annos = ground_truth["kpt"]
     mask = ground_truth["mask"]
     bbxs = ground_truth["bbx"]
-    #kepoint transform
+    # kepoint transform
     img_h,img_w,_=image.shape
     annos=np.array(annos).astype(np.float32)
     bbxs=np.array(bbxs).astype(np.float32)
-    '''
-    scale_w=np.float32(win/img_w)
-    scale_h=np.float32(hin/img_h)
-    annos[:,:,0]*=scale_w
-    annos[:,:,1]*=scale_h
-    #bbx transform
-    bbxs[:,0]*=scale_w
-    bbxs[:,1]*=scale_h
-    bbxs[:,2]*=scale_w
-    bbxs[:,3]*=scale_h
-    '''
     # decode mask
     h_mask, w_mask, _ = np.shape(image)
-    mask_miss = np.ones((h_mask, w_mask), dtype=np.uint8)
+    mask_valid = np.ones((h_mask, w_mask), dtype=np.uint8)
     if(mask!=None):
         for seg in mask:
             bin_mask = maskUtils.decode(seg)
             bin_mask = np.logical_not(bin_mask)
-            mask_miss = np.bitwise_and(mask_miss, bin_mask)
+            mask_valid = np.bitwise_and(mask_valid, bin_mask)
 
-    #prepare transform bbx    
-    transform_bbx=np.zeros(shape=(bbxs.shape[0],4,2))
-    bbxs_x,bbxs_y,bbxs_w,bbxs_h=bbxs[:,0],bbxs[:,1],bbxs[:,2],bbxs[:,3]
-    transform_bbx[:,0,0],transform_bbx[:,0,1]=bbxs_x,bbxs_y #left_top
-    transform_bbx[:,1,0],transform_bbx[:,1,1]=bbxs_x+bbxs_w,bbxs_y #right_top
-    transform_bbx[:,2,0],transform_bbx[:,2,1]=bbxs_x,bbxs_y+bbxs_h #left_buttom
-    transform_bbx[:,3,0],transform_bbx[:,3,1]=bbxs_x+bbxs_w,bbxs_y+bbxs_h #right top
-
-    #image transform
-    #get transform matrix
-    h, w, _ = image.shape
-    M_rotate = tl.prepro.affine_rotation_matrix(angle=(-30, 30))  # original paper: -40~40
-    M_zoom = tl.prepro.affine_zoom_matrix(zoom_range=(0.5, 0.8))  # original paper: 0.5~1.1
-    M_combined = M_rotate.dot(M_zoom)
-    transform_matrix = tl.prepro.transform_matrix_offset_center(M_combined, x=w, y=h)
-    #transform
-    image = tl.prepro.affine_transform_cv2(image, transform_matrix)
-    mask_miss = tl.prepro.affine_transform_cv2(mask_miss, transform_matrix, border_mode='replicate')
-    annos = tl.prepro.affine_transform_keypoints(annos, transform_matrix)
-    transform_bbx=tl.prepro.affine_transform_keypoints(transform_bbx,transform_matrix)
-    #construct transformed bbx
-    transform_bbx=np.array(transform_bbx)
-    final_bbxs=np.zeros(shape=bbxs.shape)
-    for bbx_id in range(0,transform_bbx.shape[0]):
-        bbx=transform_bbx[bbx_id,:,:]
-        bbx_min_x=np.amin(bbx[:,0])
-        bbx_max_x=np.amax(bbx[:,0])
-        bbx_min_y=np.amin(bbx[:,1])
-        bbx_max_y=np.amax(bbx[:,1])
-        final_bbxs[bbx_id,0]=bbx_min_x
-        final_bbxs[bbx_id,1]=bbx_min_y
-        final_bbxs[bbx_id,2]=bbx_max_x-bbx_min_x
-        final_bbxs[bbx_id,3]=bbx_max_y-bbx_min_y
-    #resize crop
-    transform_h,transform_w,_=image.shape
-    image, annos, mask_miss = tl.prepro.keypoint_resize_random_crop(image, annos, mask_miss, size=(hin, win))
-    resize_ratio=max(hin/transform_h,win/transform_w) #follow tl.prepro.keypoint_resize_random_crop
-    final_bbxs[:,2]=final_bbxs[:,2]*resize_ratio
-    final_bbxs[:,3]=final_bbxs[:,3]*resize_ratio
+    # general augmentaton process
+    image,annos,mask_valid,bbxs=augmentor.process(image=image,annos=annos,mask_valid=mask_valid,bbxs=bbxs)
     
     # generate result which include proposal region x,y,w,h,edges
-    delta,tx,ty,tw,th,te,te_mask=get_pose_proposals(annos,final_bbxs,hin,win,hout,wout,hnei,wnei,parts,limbs,mask_miss,data_format)
+    delta,tx,ty,tw,th,te,te_mask=preprocessor.process(annos=annos,mask_valid=mask_valid,bbxs=bbxs)
 
     #generate output masked image, result map and maskes
-    img_mask = mask_miss[:,:,np.newaxis]
+    img_mask = mask_valid[:,:,np.newaxis]
     image = image * np.repeat(img_mask, 3, 2)
     if(data_format=="channels_first"):
         image=np.transpose(image,[2,0,1])
     return image,delta,tx,ty,tw,th,te,te_mask
 
-def _map_fn(img_list, annos, data_aug_fn, hin, win):
+def _map_fn(img_list, annos, data_aug_fn):
     """TF Dataset pipeline."""
     #load data
     image = tf.io.read_file(img_list)
@@ -122,10 +71,9 @@ def _map_fn(img_list, annos, data_aug_fn, hin, win):
     image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
     return image,(delta,tx,ty,tw,th,te,te_mask)
 
-def get_paramed_map_fn(hin,win,hout,wout,hnei,wnei,parts,limbs,data_format="channels_first"):
-    paramed_data_aug_fn=partial(_data_aug_fn,hin=hin,win=win,hout=hout,wout=wout,hnei=hnei,wnei=wnei,\
-        parts=parts,limbs=limbs,data_format=data_format)
-    paramed_map_fn=partial(_map_fn,data_aug_fn=paramed_data_aug_fn,hin=hin, win=win)
+def get_paramed_map_fn(augmentor,preprocessor,data_format="channels_first"):
+    paramed_data_aug_fn=partial(_data_aug_fn,augmentor=augmentor,preprocessor=preprocessor,data_format=data_format)
+    paramed_map_fn=partial(_map_fn,data_aug_fn=paramed_data_aug_fn)
     return paramed_map_fn
 
 def single_train(train_model,dataset,config):
@@ -173,15 +121,18 @@ def single_train(train_model,dataset,config):
     wout = train_model.wout
     hnei = train_model.hnei
     wnei = train_model.wnei
+    parts,limbs,colors=train_model.parts,train_model.limbs,train_model.colors
+    data_format=train_model.data_format
     model_dir = config.model.model_dir
     pretrain_model_dir=config.pretrain.pretrain_model_dir
     pretrain_model_path=f"{pretrain_model_dir}/newest_{train_model.backbone.name}.npz"
     
-    log(f"\nsingle training using learning rate:{lr_init} batch_size:{batch_size}")
+    log(f"single training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
-    parts,limbs,data_format=train_model.parts,train_model.limbs,train_model.data_format
-    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,hnei,wnei,parts,limbs,data_format)
+    augmentor=Augmentor(hin=hin,win=win,angle_min=-30,angle_max=30,zoom_min=0.5,zoom_max=0.8)
+    preprocessor=PreProcessor(parts=parts,limbs=limbs,hin=hin,win=win,hout=hout,wout=wout,hnei=hnei,wnei=wnei,colors=colors,data_format=data_format)
+    paramed_map_fn=get_paramed_map_fn(augmentor=augmentor,preprocessor=preprocessor,data_format=data_format)
     train_dataset = train_dataset.shuffle(buffer_size=4096).repeat()
     train_dataset = train_dataset.map(paramed_map_fn, num_parallel_calls=max(multiprocessing.cpu_count()//2,1))
     train_dataset = train_dataset.batch(batch_size)  
@@ -320,6 +271,8 @@ def parallel_train(train_model,dataset,config):
     wout = train_model.wout
     hnei = train_model.hnei
     wnei = train_model.wnei
+    parts,limbs,colors=train_model.parts,train_model.limbs,train_model.colors
+    data_format=train_model.data_format
     model_dir = config.model.model_dir
     pretrain_model_dir=config.pretrain.pretrain_model_dir
     pretrain_model_path=f"{pretrain_model_dir}/newest_{train_model.backbone.name}.npz"
@@ -333,8 +286,9 @@ def parallel_train(train_model,dataset,config):
     print(f"parallel training using learning rate:{lr_init} batch_size:{batch_size}")
     #training dataset configure with shuffle,augmentation,and prefetch
     train_dataset=dataset.get_train_dataset()
-    parts,limbs,data_format=train_model.parts,train_model.limbs,train_model.data_format
-    paramed_map_fn=get_paramed_map_fn(hin,win,hout,wout,hnei,wnei,parts,limbs,data_format)
+    augmentor=Augmentor(hin=hin,win=win,angle_min=-30,angle_max=30,zoom_min=0.5,zoom_max=0.8)
+    preprocessor=PreProcessor(parts=parts,limbs=limbs,hin=hin,win=win,hout=hout,wout=wout,hneo=hnei,wnei=wnei,colors=colors,data_format=data_format)
+    paramed_map_fn=get_paramed_map_fn(augmentor=augmentor,preprocessor=preprocessor,data_format=data_format)
     train_dataset = train_dataset.shuffle(buffer_size=4096)
     train_dataset = train_dataset.shard(num_shards=current_cluster_size(),index=current_rank())
     train_dataset = train_dataset.repeat()

@@ -36,17 +36,17 @@ def _data_aug_fn(image, ground_truth, augmentor, preprocessor, data_format="chan
 
     # decode mask
     h_mask, w_mask, _ = np.shape(image)
-    mask_miss = np.ones((h_mask, w_mask), dtype=np.uint8)
+    mask_valid = np.ones((h_mask, w_mask), dtype=np.uint8)
     if(mask!=None):
         for seg in mask:
             bin_mask = maskUtils.decode(seg)
             bin_mask = np.logical_not(bin_mask)
-            if(bin_mask.shape!=mask_miss.shape):
-                print(f"test error mask shape mask_miss:{mask_miss.shape} bin_mask:{bin_mask.shape}")
+            if(bin_mask.shape!=mask_valid.shape):
+                print(f"test error mask shape mask_valid:{mask_valid.shape} bin_mask:{bin_mask.shape}")
             else:
-                mask_miss = np.bitwise_and(mask_miss, bin_mask)
+                mask_valid = np.bitwise_and(mask_valid, bin_mask)
     
-    #get transform matrix
+    #general augmentaton process
     image,annos,mask_valid=augmentor.process(image=image,annos=annos,mask_valid=mask_valid)
 
     # generate result including heatmap and vectormap
@@ -54,15 +54,15 @@ def _data_aug_fn(image, ground_truth, augmentor, preprocessor, data_format="chan
     resultmap = np.concatenate((heatmap, vectormap), axis=concat_dim)
     
     #generate output masked image, result map and maskes
-    image_mask = mask_miss.reshape(hin, win, 1)
+    image_mask = mask_valid.reshape(hin, win, 1)
     image = image * np.repeat(image_mask, 3, 2)
     resultmap = np.array(resultmap, dtype=np.float32)
-    mask_miss = np.array(cv2.resize(mask_miss, (wout, hout), interpolation=cv2.INTER_AREA),dtype=np.float32)[:,:,np.newaxis]
+    mask_valid = np.array(cv2.resize(mask_valid, (wout, hout), interpolation=cv2.INTER_AREA),dtype=np.float32)[:,:,np.newaxis]
     if(data_format=="channels_first"):
         image=np.transpose(image,[2,0,1])
-        mask_miss=np.transpose(mask_miss,[2,0,1])
+        mask_valid=np.transpose(mask_valid,[2,0,1])
     labeled=np.float32(labeled)
-    return image, resultmap, mask_miss, labeled
+    return image, resultmap, mask_valid, labeled
 
 
 def _map_fn(img_list, annos ,data_aug_fn):
