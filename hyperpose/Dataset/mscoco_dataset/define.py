@@ -115,15 +115,8 @@ def pifpaf_output_converter(kpt_list):
             model_idx=to_pifpaf_converter[coco_idx]
             x,y=kpt_list[model_idx]
             if(x>=0 and y>=0):
-<<<<<<< HEAD
                 kpts+=[x,y,1.0]
                 flag=True
         if(not flag):
             kpts+=[0.0,0.0,0.0]
-=======
-                kpts==[x,y,1.0]
-                flag=True
-        if(not flag):
-            kpts+=[0.0,0.0,0.0]            
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
     return kpts
