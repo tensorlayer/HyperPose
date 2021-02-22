@@ -25,7 +25,7 @@ class PreProcessor:
     def process(self,annos,mask_valid):
         mask_out=cv2.resize(mask_valid,(self.wout,self.hout))
         pif_conf,pif_vec,pif_scale = get_pifmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
-        paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale = get_pafmap(annos, mask_out, height, width, hout, wout, parts, limbs, data_format=self.data_format)
+        paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale = get_pafmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
         pif_maps=[pif_conf,pif_vec,pif_scale]
         paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale]
         return pif_maps,paf_maps
@@ -42,6 +42,7 @@ class PostProcessor:
         self.win=win
         self.hout=hout
         self.wout=wout
+        self.stride=int(self.hin/self.hout)
         self.thresh_pif=thresh_pif
         self.thresh_paf=thresh_paf
         self.thresh_ref_pif=thresh_ref_pif
@@ -88,9 +89,9 @@ class PostProcessor:
             for ref_c,x,y,scale in zip(ref_cs[mask_ref_conf],xs[mask_ref_conf],ys[mask_ref_conf],scales[mask_ref_conf]):
                 seeds.append((ref_c,pos_idx,x,y,scale))
                 self.debug_print(f"seed gen pos_idx:{pos_idx} ref_c:{ref_c} x:{x} y:{y} scale:{scale}")
-        print(f"test before sort len_seeds:{len(seeds)}")
+        self.debug_print(f"test before sort len_seeds:{len(seeds)}")
         seeds=sorted(seeds,reverse=True)
-        print(f"test after sort len_seeds:{len(seeds)}")
+        self.debug_print(f"test after sort len_seeds:{len(seeds)}")
         #generate connection seeds according to paf_map
         cif_floor=0.1
         forward_list=[]
@@ -125,10 +126,9 @@ class PostProcessor:
         #greedy assemble
         occupied=np.zeros(shape=(self.n_pos,int(pif_hr_conf.shape[1]/self.reduction),int(pif_hr_conf.shape[2]/self.reduction)))
         annotations=[]
-        print(f"test seeds_num:{len(seeds)}")
+        self.debug_print(f"test seeds_num:{len(seeds)}")
         for c,pos_idx,x,y,scale in seeds:
             check_occupy=self.check_occupy(occupied,pos_idx,x,y,reduction=self.reduction)
-            #print(f"test shape part: pos_idx:{pos_idx} c:{c} x:{x} y:{y} scale:{scale} {np.array([c,x,y,scale]).shape} check_occupy:{check_occupy}")
             if(check_occupy):
                 continue
             #ann meaning: ann[0]=conf ann[1]=x ann[2]=y ann[3]=scale
@@ -230,7 +230,6 @@ class PostProcessor:
         second_idx,second_score=-1,0.0
         #traverse connections to find the highest score connection weighted by distance
         score_f,src_x,src_y,src_scale,dst_x,dst_y,dst_scale=connections
-        #print(f"test find_connection shape: score_f:{score_f.shape} src_x:{src_x.shape} src_y:{src_y.shape}")
         con_num=score_f.shape[0]
         for con_idx in range(0,con_num):
             con_score=score_f[con_idx]
@@ -314,7 +313,7 @@ class PostProcessor:
                 if((src_idx,dst_idx) in in_frontier):
                     continue
                 #otherwise put it into frontier
-                print(f"test adding frontier {self.parts(src_idx)}-{self.parts(dst_idx)} src_score:{ann[src_idx,0]} dst_score:{ann[dst_idx,0]}")
+                self.debug_print(f"test adding frontier {self.parts(src_idx)}-{self.parts(dst_idx)} src_score:{ann[src_idx,0]} dst_score:{ann[dst_idx,0]}")
                 max_possible_score=np.sqrt(ann[src_idx,0])
                 heapq.heappush(frontier,(-max_possible_score,src_idx,dst_idx))
                 in_frontier.add((src_idx,dst_idx))

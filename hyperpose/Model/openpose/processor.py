@@ -25,8 +25,8 @@ class PreProcessor:
 
 
 class PostProcessor:
-    def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,thresh_conf=0.05,thresh_vec=0.05,thresh_vec_cnt=6,
-                    \step_paf=10,thresh_criterion2=0,thresh_part_cnt=4,thresh_human_score=0.3,data_format="channels_first"):
+    def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,thresh_conf=0.05,thresh_vec=0.05,thresh_vec_cnt=6,\
+                    step_paf=10,thresh_criterion2=0,thresh_part_cnt=4,thresh_human_score=0.3,data_format="channels_first",debug=False):
         self.cur_id=0
         self.parts=parts
         self.limbs=limbs
@@ -40,6 +40,7 @@ class PostProcessor:
         self.thresh_criterion2=thresh_criterion2
         self.thresh_part_cnt=thresh_part_cnt
         self.thresh_human_score=thresh_human_score
+        self.data_format=data_format
         self.debug=debug
     
     def process(self,conf_map,paf_map,img_h,img_w,data_format="channels_first"):

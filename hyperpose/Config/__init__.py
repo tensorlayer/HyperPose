@@ -6,7 +6,7 @@ from copy import deepcopy
 from easydict import EasyDict as edict
 from .define import *
 from .config_pretrain import pretrain
-update_config,update_train,update_eval,update_model,update_data,update_log=edict(),edict(),edict(),edict(),edict(),edict()
+update_config,update_train,update_eval,update_test,update_model,update_data,update_log=edict(),edict(),edict(),edict(),edict(),edict(),edict()
 
 #default train
 update_train.optim_type=OPTIM.Adam
@@ -58,19 +58,20 @@ def get_config():
     '''
     #import basic configurations
     if(update_model.model_type==MODEL.Openpose):
-        from .config_opps import model,train,eval,data,log
+        from .config_opps import model,train,eval,test,data,log
     elif(update_model.model_type==MODEL.LightweightOpenpose):
-        from .config_lopps import model,train,eval,data,log
+        from .config_lopps import model,train,eval,test,data,log
     elif(update_model.model_type==MODEL.MobilenetThinOpenpose):
-        from .config_mbtopps import model,train,eval,data,log
+        from .config_mbtopps import model,train,eval,test,data,log
     elif(update_model.model_type==MODEL.PoseProposal):
-        from .config_ppn import model,train,eval,data,log
+        from .config_ppn import model,train,eval,test,data,log
     elif(update_model.model_type==MODEL.Pifpaf):
-        from .config_pifpaf import model,train,eval,data,log
+        from .config_pifpaf import model,train,eval,test,data,log
     #merge settings with basic configurations
     model.update(update_model)
     train.update(update_train)
     eval.update(update_eval)
+    test.update(update_test)
     data.update(update_data)
     log.update(update_log)
     pretrain.update(update_pretrain)
@@ -79,6 +80,7 @@ def get_config():
     config.model=model
     config.train=train
     config.eval=eval
+    config.test=test
     config.data=data
     config.log=log
     config.pretrain=pretrain
@@ -88,6 +90,7 @@ def get_config():
     tl.files.exists_or_mkdir(config.model.model_dir, verbose=True)  # to save model files 
     tl.files.exists_or_mkdir(config.train.vis_dir, verbose=True)  # to save visualization results
     tl.files.exists_or_mkdir(config.eval.vis_dir, verbose=True)  # to save visualization results
+    tl.files.exists_or_mkdir(config.test.vis_dir, verbose=True)  # to save visualization results
     tl.files.exists_or_mkdir(config.data.vis_dir, verbose=True)  # to save visualization results
     tl.files.exists_or_mkdir(config.pretrain.pretrain_model_dir,verbose=True)
     #device configure
@@ -228,6 +231,7 @@ def set_model_name(model_name):
     update_model.model_dir = f"./save_dir/{update_model.model_name}/model_dir"
     update_train.vis_dir = f"./save_dir/{update_model.model_name}/train_vis_dir"
     update_eval.vis_dir=f"./save_dir/{update_model.model_name}/eval_vis_dir"
+    update_test.vis_dir=f"./save_dir/{update_model.model_name}/test_vis_dir"
     update_data.vis_dir=f"./save_dir/{update_model.model_name}/data_vis_dir"
     update_log.log_path= f"./save_dir/{update_model.model_name}/log.txt"
 

@@ -13,7 +13,7 @@ class Augmentor:
         self.zoom_max=zoom_max
         self.flip_list=flip_list
     
-    def process(image,annos,mask_valid):
+    def process(self,image,annos,mask_valid):
         #get transform matrix
         image_h,image_w,_=image.shape
         M_rotate = tl.prepro.affine_rotation_matrix(angle=(-30, 30))  # original paper: -40~40
@@ -25,7 +25,7 @@ class Augmentor:
         annos = tl.prepro.affine_transform_keypoints(annos, transform_matrix)
         mask_valid = tl.prepro.affine_transform_cv2(mask_valid, transform_matrix, border_mode='replicate')
         if(self.flip_list!=None):
-            image, annos, mask_valid = tl.prepro.keypoint_random_flip(image, annos, mask_valid, prob=0.5, flip_list=flip_list)
+            image, annos, mask_valid = tl.prepro.keypoint_random_flip(image, annos, mask_valid, prob=0.5, flip_list=self.flip_list)
         image, annos, mask_valid = tl.prepro.keypoint_resize_random_crop(image, annos, mask_valid, size=(self.hin, self.win))
         return image,annos,mask_valid
     
