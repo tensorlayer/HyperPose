@@ -142,7 +142,6 @@ class Pifpaf(Model):
     
     class PifHead(Model):
         def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,hout=8,wout=8,stride=8,mesh_grid=None,data_format="channels_first"):
-
             super().__init__()
             self.input_features=input_features
             self.n_pos=n_pos

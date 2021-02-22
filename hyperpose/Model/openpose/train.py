@@ -36,17 +36,17 @@ def _data_aug_fn(image, ground_truth, augmentor, preprocessor, data_format="chan
 
     # decode mask
     h_mask, w_mask, _ = np.shape(image)
-    mask_miss = np.ones((h_mask, w_mask), dtype=np.uint8)
+    mask_valid = np.ones((h_mask, w_mask), dtype=np.uint8)
     if(mask!=None):
         for seg in mask:
             bin_mask = maskUtils.decode(seg)
             bin_mask = np.logical_not(bin_mask)
-            if(bin_mask.shape!=mask_miss.shape):
-                print(f"test error mask shape mask_miss:{mask_miss.shape} bin_mask:{bin_mask.shape}")
+            if(bin_mask.shape!=mask_valid.shape):
+                print(f"test error mask shape mask_miss:{mask_valid.shape} bin_mask:{bin_mask.shape}")
             else:
                 mask_miss = np.bitwise_and(mask_miss, bin_mask)
     
-    #get transform matrix
+    #general augmentaton process
     image,annos,mask_valid=augmentor.process(image=image,annos=annos,mask_valid=mask_valid)
 
     # generate result including heatmap and vectormap
