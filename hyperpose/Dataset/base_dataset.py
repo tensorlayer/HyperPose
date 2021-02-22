@@ -61,7 +61,7 @@ class Base_dataset:
         #make sure cal this API to get datasize after calling get_test_dataset
         return self.test_datasize
 
-    def get_train_dataset(self,in_list=False,need_total_num=False):
+    def get_train_dataset(self,in_list=False):
         '''provide uniform tensorflow dataset for training
 
         return a tensorflow dataset based on MPII dataset, each iter contains two following object
