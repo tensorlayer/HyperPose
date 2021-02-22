@@ -47,15 +47,9 @@ class Pifpaf(Model):
         self.mesh_grid=np.stack([mesh_x,mesh_y])
         #construct head
         self.pif_head=self.PifHead(input_features=self.backbone.out_channels,n_pos=self.n_pos,n_limbs=self.n_limbs,\
-<<<<<<< HEAD
             quad_size=self.quad_size,hout=self.hout,wout=self.wout,stride=self.stride,mesh_grid=self.mesh_grid,data_format=self.data_format)
         self.paf_head=self.PafHead(input_features=self.backbone.out_channels,n_pos=self.n_pos,n_limbs=self.n_limbs,\
             quad_size=self.quad_size,hout=self.hout,wout=self.wout,stride=self.stride,mesh_grid=self.mesh_grid,data_format=self.data_format)
-=======
-            quad_size=self.quad_size,stride=self.stride,mesh_grid=self.mesh_grid,data_format=self.data_format)
-        self.paf_head=self.PafHead(input_features=self.backbone.out_channels,n_pos=self.n_pos,n_limbs=self.n_limbs,\
-            quad_size=self.quad_size,stride=self.stride,mesh_grid=self.mesh_grid,data_format=self.data_format)
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
     
     @tf.function(experimental_relax_shapes=True)
     def forward(self,x,is_train=False):
@@ -147,20 +141,14 @@ class Pifpaf(Model):
         return loss_pif_maps,loss_paf_maps,total_loss
     
     class PifHead(Model):
-<<<<<<< HEAD
         def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,hout=8,wout=8,stride=8,mesh_grid=None,data_format="channels_first"):
-=======
-        def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,stride=8,mesh_grid=None,data_format="channels_first"):
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
+
             super().__init__()
             self.input_features=input_features
             self.n_pos=n_pos
             self.n_limbs=n_limbs
-<<<<<<< HEAD
             self.hout=hout
             self.wout=wout
-=======
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
             self.stride=stride
             self.quad_size=quad_size
             self.out_features=self.n_pos*5*(self.quad_size**2)
@@ -172,11 +160,7 @@ class Pifpaf(Model):
         def forward(self,x,is_train=False):
             x=self.main_block.forward(x)
             x=tf.nn.depth_to_space(x,block_size=self.quad_size,data_format=self.tf_data_format)
-<<<<<<< HEAD
             x=tf.reshape(x,[-1,self.n_pos,5,self.hout,self.wout])
-=======
-            x=tf.reshape(x,[x.shape[0],self.n_pos,5,x.shape[2],x.shape[3]])
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
             pif_conf=x[:,:,0,:,:]
             pif_vec=x[:,:,1:3,:,:]
             pif_logb=x[:,:,3,:,:]
@@ -190,21 +174,14 @@ class Pifpaf(Model):
             return pif_conf,pif_vec,pif_logb,pif_scale
         
     class PafHead(Model):
-<<<<<<< HEAD
         def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,hout=46,wout=46,stride=8,mesh_grid=None,data_format="channels_first"):
-=======
-        def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,stride=8,mesh_grid=None,data_format="channels_first"):
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
             super().__init__()
             self.input_features=input_features
             self.n_pos=n_pos
             self.n_limbs=n_limbs
             self.quad_size=quad_size
-<<<<<<< HEAD
             self.hout=hout
             self.wout=wout
-=======
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
             self.stride=stride
             self.out_features=self.n_limbs*9*(self.quad_size**2)
             self.mesh_grid=mesh_grid
@@ -215,11 +192,7 @@ class Pifpaf(Model):
         def forward(self,x,is_train=False):
             x=self.main_block.forward(x)
             x=tf.nn.depth_to_space(x,block_size=self.quad_size,data_format=self.tf_data_format)
-<<<<<<< HEAD
             x=tf.reshape(x,[-1,self.n_limbs,9,self.hout,self.wout])
-=======
-            x=tf.reshape(x,[x.shape[0],self.n_limbs,9,x.shape[2],x.shape[3]])
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
             paf_conf=x[:,:,0,:,:]
             paf_src_vec=x[:,:,1:3,:,:]
             paf_dst_vec=x[:,:,3:5,:,:]
