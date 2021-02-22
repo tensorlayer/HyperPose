@@ -15,6 +15,7 @@ import tensorlayer as tl
 from pycocotools.coco import maskUtils
 import _pickle as cPickle
 from functools import partial
+<<<<<<< HEAD
 from .processor import PreProcessor
 from .utils import tf_repeat, draw_results
 from .utils import get_parts,get_limbs,get_flip_list
@@ -23,6 +24,14 @@ from ..common import log,KUNGFU,MODEL,get_optim,init_log,regulize_loss
 from ..domainadapt import get_discriminator
 
 def _data_aug_fn(image, ground_truth, augmentor, preprocessor, data_format="channels_first"):
+=======
+from .utils import tf_repeat, get_heatmap, get_vectormap, draw_results
+from .utils import get_parts,get_limbs,get_flip_list
+from ..common import log,KUNGFU,MODEL,get_optim,init_log,regulize_loss
+from ..domainadapt import get_discriminator
+
+def _data_aug_fn(image, ground_truth, hin, hout, win, wout, parts, limbs ,flip_list=None, data_format="channels_first"):
+>>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
     """Data augmentation function."""
     #restore data
     concat_dim=0 if data_format=="channels_first" else -1

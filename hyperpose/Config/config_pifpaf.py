@@ -42,10 +42,13 @@ eval =edict()
 eval.batch_size=8
 eval.vis_dir= f"./save_dir/{model.model_name}/eval_vis_dir"
 
+<<<<<<< HEAD
 #test configuration
 test =edict()
 test.vis_dir=f"./save_dir/{model.model_name}/test_vis_dir"
 
+=======
+>>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
 #data configuration
 data = edict()
 data.dataset_type = DATA.MSCOCO  # coco, custom, coco_and_custom

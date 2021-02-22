@@ -57,10 +57,13 @@ class Human:
             body_part=self.body_parts[part_idx]
             body_part.x=body_part.x+bias_w
             body_part.y=body_part.y+bias_h
+<<<<<<< HEAD
             if(body_part.x<0):
                 body_part.x=-1000.0
             if(body_part.y<0):
                 body_part.y=-1000.0
+=======
+>>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
     
     def scale(self,scale_w,scale_h):
         for part_idx in self.body_parts.keys():
