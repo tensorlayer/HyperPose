@@ -64,15 +64,9 @@ def get_config():
     elif(update_model.model_type==MODEL.MobilenetThinOpenpose):
         from .config_mbtopps import model,train,eval,test,data,log
     elif(update_model.model_type==MODEL.PoseProposal):
-<<<<<<< HEAD
         from .config_ppn import model,train,eval,test,data,log
     elif(update_model.model_type==MODEL.Pifpaf):
         from .config_pifpaf import model,train,eval,test,data,log
-=======
-        from .config_ppn import model,train,eval,data,log
-    elif(update_model.model_type==MODEL.Pifpaf):
-        from .config_pifpaf import model,train,eval,data,log
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
     #merge settings with basic configurations
     model.update(update_model)
     train.update(update_train)
