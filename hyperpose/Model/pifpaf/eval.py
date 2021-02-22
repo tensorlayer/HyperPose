@@ -1,6 +1,5 @@
 import os
 import cv2
-<<<<<<< HEAD
 import numpy as np
 import tensorflow as tf
 from functools import partial
@@ -15,24 +14,6 @@ def infer_one_img(model,postprocessor,img,img_id=-1,is_visual=False,save_dir="./
     if(debug):
         print(f"infer image id:{img_id}")
         print(f"infer image shape:{img.shape}")
-=======
-import json
-import numpy as np
-import tensorflow as tf
-import scipy.stats as st
-from functools import partial
-import multiprocessing
-import matplotlib.pyplot as plt
-from .infer import Post_Processor
-from .utils import get_hr_conf,get_arrow_map,maps_to_numpy
-from ..common import pad_image_shape
-
-def infer_one_img(model,post_processor,img,img_id=-1,is_visual=False,save_dir="./save_dir",enable_multiscale_search=False,debug=True):
-    img=img.numpy().astype(np.float32)
-    img_id=img_id.numpy()
-    if(debug):
-        print(f"infer image id:{img_id}")
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
     #TODO: use padded-scale that wouldn't casue deformation
     img_h,img_w,_=img.shape
     hin,win=model.hin,model.win
@@ -45,20 +26,12 @@ def infer_one_img(model,post_processor,img,img_id=-1,is_visual=False,save_dir=".
     pif_maps,paf_maps=model.forward(input_image,is_train=False)
     pif_maps=maps_to_numpy([pif_map[0] for pif_map in pif_maps])
     paf_maps=maps_to_numpy([paf_map[0] for paf_map in paf_maps])
-<<<<<<< HEAD
     ret_humans=postprocessor.process(pif_maps,paf_maps)
-=======
-    ret_humans=post_processor.process(pif_maps,paf_maps)
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
     for ret_human in ret_humans:
         ret_human.bias(bias_w=-pad[2],bias_h=-pad[0])
         ret_human.scale(scale_w=1/scale_rate,scale_h=1/scale_rate)
     if(is_visual):
-<<<<<<< HEAD
         visualize(img,img_id,padded_image,pif_maps,paf_maps,ret_humans,stride=postprocessor.stride,save_dir=save_dir)
-=======
-        visualize(img,img_id,padded_image,pif_maps,paf_maps,ret_humans,stride=post_processor.stride,save_dir=save_dir)
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
     return ret_humans
 
 def visualize(img,img_id,processed_img,pd_pif_maps,pd_paf_maps,humans,stride=8,save_dir="./save_dir"):
@@ -70,18 +43,10 @@ def visualize(img,img_id,processed_img,pd_pif_maps,pd_paf_maps,humans,stride=8,s
     #get ouput_result
     vis_img=ori_img.copy()
     for human in humans:
-<<<<<<< HEAD
         vis_img=human.draw_human(vis_img)
     #decode result_maps
     pd_pif_conf,pd_pif_vec,_,pd_pif_scale=pd_pif_maps
     pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,_,_,_,_,=pd_paf_maps
-=======
-        human.print()
-        vis_img=human.draw_human(vis_img)
-    #decode result_maps
-    pd_pif_conf,pd_pif_vec,_,pd_pif_scale=pd_pif_maps
-    pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,_,_,_,_=pd_paf_maps
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
     pd_pif_conf_show=np.amax(pd_pif_conf,axis=0)
     pd_pif_hr_conf_show=np.amax(get_hr_conf(pd_pif_conf,pd_pif_vec,pd_pif_scale,stride=stride,thresh=0.1),axis=0)
     pd_paf_conf_show=np.amax(pd_paf_conf,axis=0)
@@ -171,7 +136,6 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
     pd_anns=[]
     vis_dir=config.eval.vis_dir
     kpt_converter=dataset.get_output_kpt_cvter()
-<<<<<<< HEAD
     postprocessor=PostProcessor(parts=model.parts,limbs=model.limbs,colors=model.colors,hin=model.hin,win=model.win,\
         hout=model.hout,wout=model.wout,debug=False)
     
@@ -189,41 +153,18 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
             ann={}
             ann["category_id"]=1
             ann["image_id"]=int(img_id)
-=======
-    post_processor=Post_Processor(parts=model.parts,limbs=model.limbs,colors=model.colors,stride=model.stride)
-    
-    eval_dataset=dataset.get_eval_dataset()
-    paramed_map_fn=partial(_map_fn,hin=model.hin,win=model.win)
-    eval_dataset=eval_dataset.map(paramed_map_fn,num_parallel_calls=max(multiprocessing.cpu_count()//2,1))
-    for eval_num,(img,img_id) in enumerate(eval_dataset):
-        if(eval_num>=total_eval_num):
-            break
-        if(eval_num<=vis_num):
-            humans=infer_one_img(model,post_processor,img,img_id=img_id,is_visual=True,save_dir=vis_dir,enable_multiscale_search=enable_multiscale_search)
-        else:
-            humans=infer_one_img(model,post_processor,img,img_id=img_id,is_visual=False,save_dir=vis_dir,enable_multiscale_search=enable_multiscale_search)
-        for human in humans:
-            ann={}
-            ann["category_id"]=1
-            ann["image_id"]=int(img_id.numpy())
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
             ann["id"]=human.get_global_id()
             ann["area"]=human.get_area()
             ann["score"]=human.get_score()
             kpt_list=[]
             for part_idx in range(0,model.n_pos):
                 if(part_idx not in human.body_parts):
-<<<<<<< HEAD
                     kpt_list.append([-1000.0,-1000.0])
-=======
-                    kpt_list.append([-1000,-1000])
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
                 else:
                     body_part=human.body_parts[part_idx]
                     kpt_list.append([body_part.get_x(),body_part.get_y()])
             ann["keypoints"]=kpt_converter(kpt_list)
             pd_anns.append(ann)   
-<<<<<<< HEAD
         if(eval_num%100==0):
             print(f"evaluating {eval_num}/{dataset_size} ...")
     
@@ -296,12 +237,3 @@ def test(model,dataset,config,vis_num=30,total_test_num=10000,enable_multiscale_
             print(f"testing {test_num}/{dataset_size} ...")
     
     dataset.official_test(pd_anns,vis_dir)
-=======
-        print(f"test end_eval_{img_id}")
-        if(eval_num%100==0):
-            print(f"? len:{len(list(eval_dataset))}")
-            print(f"evaluating {eval_num}/{len(list(eval_dataset))}")
-    
-    result_dic={"annotations":pd_anns}
-    dataset.official_eval(result_dic,vis_dir)
->>>>>>> bb67205d35a73ca70a09996a24e7992c77d29409
