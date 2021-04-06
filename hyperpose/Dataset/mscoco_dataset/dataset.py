@@ -152,7 +152,7 @@ class MSCOCO_dataset(Base_dataset):
         json.dump(gt_json,gt_json_file)
         gt_json_file.close()
 
-        pd_json_path=f"{eval_dir}/pd_ann.json"
+        pd_json_path=f"{eval_dir}/person_keypoints_val2017_hyperpose_results.json"
         pd_json_file=open(pd_json_path,"w")
         json.dump(pd_anns,pd_json_file)
         pd_json_file.close()
@@ -186,7 +186,7 @@ class MSCOCO_dataset(Base_dataset):
     
     def official_test(self,pd_anns,test_dir="./test_dir"):
         server_url="https://competitions.codalab.org/competitions/12061"
-        pd_json_path=f"{test_dir}/pd_ann.json"
+        pd_json_path=f"{test_dir}/person_keypoints_test-dev2017_hyperpose_results.json"
         pd_json_file=open(pd_json_path,mode="w")
         json.dump(pd_anns,pd_json_file)
         pd_json_file.close()

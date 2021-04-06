@@ -50,7 +50,7 @@ if __name__ == '__main__':
                         help='kung fu parallel optimizor,available options: Sync_sgd, Sync_avg, Pair_avg')
     parser.add_argument('--test_num',
                         type=int,
-                        default=10000,
+                        default=100000,
                         help='number of test')
     parser.add_argument('--vis_num',
                         type=int,

@@ -8,8 +8,8 @@ import tensorflow as tf
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from .define import COCO_SIGMA,COCO_UPRIGHT_POSE,COCO_UPRIGHT_POSE_45
 from .define import area_ref,area_ref_45
+from .define import COCO_SIGMA,COCO_UPRIGHT_POSE,COCO_UPRIGHT_POSE_45
 
 def nan2zero(x):
     x=np.where(x!=x,0,x)
@@ -73,51 +73,45 @@ def get_scale(keypoints):
     scale=max(scale,0.1)
     return scale
 
-def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,dist_thresh=1.0,patch_size=4,padding=10, data_format="channels_first"):
+def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,bmin=0.1,dist_thresh=1.0,patch_size=4,padding=10, data_format="channels_first"):
     stride=height/hout
+    strided_bmin=bmin/stride
     n_pos,n_limbs=len(parts),len(limbs)
     padded_h,padded_w=hout+2*padding,wout+2*padding
     #init fields
     pif_conf=np.full(shape=(n_pos,padded_h,padded_w),fill_value=0.0,dtype=np.float32)
     pif_vec=np.full(shape=(n_pos,2,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    pif_bmin=np.full(shape=(n_pos,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     pif_scale=np.full(shape=(n_pos,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     pif_vec_norm=np.full(shape=(n_pos,padded_h,padded_w),fill_value=np.inf,dtype=np.float32)
     pif_vec_norm[:,padding:-padding,padding:-padding][:,mask==0]=dist_thresh
     pif_conf[:,padding:-padding,padding:-padding][:,mask==0]=np.nan
     #generate fields
     for anno_id,anno in enumerate(annos):
-        other_annos=[other_anno for other_id,other_anno in enumerate(annos) if other_id!=anno_id]
         anno_scale=get_scale(np.array(anno)/stride)
         if(anno_scale==None):
             continue
         for part_idx,kpt in enumerate(anno):
             if(kpt[0]<0 or kpt[0]>width or kpt[1]<0 or kpt[1]>height):
                 continue
-            other_kpts=[]
-            for other_anno in other_annos:
-                other_kpt=other_anno[part_idx]
-                if(other_kpt[0]<0 or other_kpt[0]>=width or other_kpt[1]<0 or other_kpt[1]>=height):
-                    continue
-                other_kpts.append(other_kpt)
-            #calculate max_r and scale
+            #calculate scale
             kpt=np.array(kpt)/stride
-            other_kpts=np.array(other_kpts)/stride
-            max_r=get_max_r(kpt,other_kpts)
-            kpt_scale=min(anno_scale*COCO_SIGMA[part_idx],np.min(max_r)*0.25)
-            #print(f"test gt label anno_id:{anno_id} part:{parts(part_idx)} anno_scale:{anno_scale} COCO_SIGMA:{COCO_SIGMA[part_idx]} "+\
-            #    f"sigmaed_scale:{anno_scale*COCO_SIGMA[part_idx]} max_r:{np.min(max_r)*0.25} kpt_scale:{kpt_scale}\n")
+            kpt_scale=anno_scale*COCO_SIGMA[part_idx]
+            #print(f"test pif scale:")
+            #print(f"kpt_idx:{part_idx} kpt_scale:{kpt_scale}")
             #generate pif_maps for single point
-            pif_maps=[pif_conf,pif_vec,pif_scale,pif_vec_norm]
-            pif_conf,pif_vec,pif_scale,pif_vec_norm=put_pifmap(pif_maps,\
-                part_idx,kpt,kpt_scale=kpt_scale,dist_thresh=dist_thresh,patch_size=patch_size,padding=padding)
+            pif_maps=[pif_conf,pif_vec,pif_bmin,pif_scale,pif_vec_norm]
+            pif_conf,pif_vec,pif_bmin,pif_scale,pif_vec_norm=put_pifmap(pif_maps,part_idx,kpt,\
+                kpt_scale=kpt_scale,strided_bmin=strided_bmin,dist_thresh=dist_thresh,patch_size=patch_size,padding=padding)
     #get field without padding (TODO: valid area?)
     pif_conf=pif_conf[:,padding:-padding,padding:-padding]
     pif_vec=pif_vec[:,:,padding:-padding,padding:-padding]
+    pif_bmin=pif_bmin[:,padding:-padding,padding:-padding]
     pif_scale=pif_scale[:,padding:-padding,padding:-padding]
-    return pif_conf,pif_vec,pif_scale
+    return pif_conf,pif_vec,pif_bmin,pif_scale
 
-def put_pifmap(pif_maps,part_idx,kpt,kpt_scale,dist_thresh=1.0,patch_size=4,padding=10):
-    pif_conf,pif_vec,pif_scale,pif_vec_norm=pif_maps
+def put_pifmap(pif_maps,part_idx,kpt,kpt_scale,strided_bmin=0.0125,dist_thresh=1.0,patch_size=4,padding=10):
+    pif_conf,pif_vec,pif_bmin,pif_scale,pif_vec_norm=pif_maps
     padded_h,padded_w=pif_conf.shape[1],pif_conf.shape[2]
     #calculate patch grid coordinate range in padded map
     patch_offset=(patch_size-1)/2
@@ -125,7 +119,7 @@ def put_pifmap(pif_maps,part_idx,kpt,kpt_scale,dist_thresh=1.0,patch_size=4,padd
     min_x,min_y=left_top[0],left_top[1]
     max_x,max_y=min_x+patch_size,min_y+patch_size
     if(min_x<0 or min_x>=padded_w or max_y<0 or max_y>=padded_h):
-        return pif_conf,pif_vec,pif_scale,pif_vec_norm
+        return pif_conf,pif_vec,pif_bmin,pif_scale,pif_vec_norm
     #calculate mesh center to kpt offset
     patch_center_offset=kpt-(left_top+patch_offset-padding)
     #calculate mesh grid to mesh center offset
@@ -142,18 +136,23 @@ def put_pifmap(pif_maps,part_idx,kpt,kpt_scale,dist_thresh=1.0,patch_size=4,padd
     pif_conf[part_idx,min_y:max_y,min_x:max_x][grid_mask]=1.0
     #update pif_vec (to patch_grid to kpt offset)
     pif_vec[part_idx,:,min_y:max_y,min_x:max_x][:,grid_mask]=patch_grid_offset[:,grid_mask]
+    #update pif_bmin
+    pif_bmin[part_idx,min_y:max_y,min_x:max_x][grid_mask]=strided_bmin
     #update pif_scale (to kpt scale)
     pif_scale[part_idx,min_y:max_y,min_x:max_x][grid_mask]=kpt_scale
-    return pif_conf,pif_vec,pif_scale,pif_vec_norm
+    return pif_conf,pif_vec,pif_bmin,pif_scale,pif_vec_norm
 
-def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.0,patch_size=3,padding=10, data_format="channels_first"):
+def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,bmin=0.1,dist_thresh=1.0,patch_size=3,padding=10, data_format="channels_first"):
     stride=height/hout
+    strided_bmin=bmin/stride
     n_pos,n_limbs=len(parts),len(limbs)
     padded_h,padded_w=hout+2*padding,wout+2*padding
     #init fields
     paf_conf=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=0.0,dtype=np.float32)
     paf_src_vec=np.full(shape=(n_limbs,2,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     paf_dst_vec=np.full(shape=(n_limbs,2,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    paf_src_bmin=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
+    paf_dst_bmin=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     paf_src_scale=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     paf_dst_scale=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     paf_vec_norm=np.full(shape=(n_limbs,padded_h,padded_w),fill_value=np.inf,dtype=np.float32)
@@ -161,7 +160,6 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
     paf_conf[:,padding:-padding,padding:-padding][:,mask==0]=np.nan
     #generate fields
     for anno_id,anno in enumerate(annos):
-        other_annos=[other_anno for other_id,other_anno in enumerate(annos) if other_id!=anno_id]
         anno_scale=get_scale(np.array(anno)/stride)
         if(anno_scale==None):
             continue
@@ -172,77 +170,73 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,dist_thresh=1.
             out_of_field_dst=(dst_kpt[0]<0 or dst_kpt[1]>=wout or dst_kpt[1]<0 or dst_kpt[1]>=hout)
             if(out_of_field_src or out_of_field_dst):
                 continue
-            other_src_kpts,other_dst_kpts=[],[]
-            for other_anno in other_annos:
-                #stride kpts into output_map size
-                other_src_kpt=np.array(other_anno[src_idx])/stride
-                other_dst_kpt=np.array(other_anno[dst_idx])/stride
-                if(not (other_src_kpt[0]<0 or other_src_kpt[0]>=wout or other_src_kpt[1]<0 or other_src_kpt[1]>=hout)):
-                    other_src_kpts.append(other_dst_kpt)
-                if(not (other_dst_kpt[0]<0 or other_dst_kpt[0]>=wout or other_dst_kpt[1]<0 or other_dst_kpt[1]>=hout)):
-                    other_dst_kpts.append(other_dst_kpt)
-            other_src_kpts=np.array(other_src_kpts)
-            other_dst_kpts=np.array(other_dst_kpts)
-            #calculate src max_r and scale
-            src_max_r=get_max_r(src_kpt,other_src_kpts)
-            src_scale=min(anno_scale*COCO_SIGMA[src_idx],np.min(src_max_r)*0.25)
-            #calculate dst max_r and scale
-            dst_max_r=get_max_r(dst_kpt,other_dst_kpts)
-            dst_scale=min(anno_scale*COCO_SIGMA[dst_idx],np.min(dst_max_r)*0.25)
+            #calculate src scale
+            src_scale=anno_scale*COCO_SIGMA[src_idx]
+            #calculate dst scale
+            dst_scale=anno_scale*COCO_SIGMA[dst_idx]
+            #print(f"test paf scale:")
+            #print(f"src_kpt_idx:{src_idx} src_kpt_scale:{src_scale}")
+            #print(f"dst_kpt_idx:{dst_idx} dst_kpt_scale:{dst_scale}")
             #generate paf_maps for single point
-            paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm]
-            paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm=put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,\
-                padding=padding,patch_size=patch_size,data_format=data_format)
+            paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale,paf_vec_norm]
+            paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale,paf_vec_norm=put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,\
+                strided_bmin=strided_bmin,padding=padding,patch_size=patch_size,data_format=data_format)
     #get field without padding (TODO: valid area?)
     paf_conf=paf_conf[:,padding:-padding,padding:-padding]
     paf_src_vec=paf_src_vec[:,:,padding:-padding,padding:-padding]
     paf_dst_vec=paf_dst_vec[:,:,padding:-padding,padding:-padding]
+    paf_src_bmin=paf_src_bmin[:,padding:-padding,padding:-padding]
+    paf_dst_bmin=paf_dst_bmin[:,padding:-padding,padding:-padding]
     paf_src_scale=paf_src_scale[:,padding:-padding,padding:-padding]
     paf_dst_scale=paf_dst_scale[:,padding:-padding,padding:-padding]
-    return paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale
+    return paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale
 
-def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=3,padding=10,data_format="channels_first"):
-    paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm=paf_maps
+def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=3,strided_bmin=0.0125,padding=10,data_format="channels_first"):
+    paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale,paf_vec_norm=paf_maps
     padded_h,padded_w=paf_conf.shape[1],paf_conf.shape[2]
     patch_offset=(patch_size-1)/2
     limb_vec=dst_kpt-src_kpt
     limb_vec_norm=np.linalg.norm(limb_vec)
-    patch_meshgrid=get_patch_meshgrid(patch_size=patch_size)
+    meshgrid_offsets=np.stack(np.meshgrid(
+            np.linspace(-0.5 * (patch_size - 1), 0.5 * (patch_size - 1), patch_size),
+            np.linspace(-0.5 * (patch_size - 1), 0.5 * (patch_size - 1), patch_size),
+        ), axis=-1).reshape(-1, 2)
     #split the limb vec into line segmentations to fill the field
     sample_num=max(2,int(np.ceil(limb_vec_norm)))
-    fmargin=(patch_offset+1)/(limb_vec_norm+np.spacing(1))
+    fmargin=(patch_size/2)/(limb_vec_norm+np.spacing(1))
     fmargin=np.clip(fmargin,0.25,0.4)
     frange=np.linspace(fmargin,1.0-fmargin,num=sample_num)
+    filled_points=set()
     for lmbda in frange:
-        left_top=np.round(src_kpt+lmbda*limb_vec-patch_offset)+padding
-        min_x,min_y=int(left_top[0]),int(left_top[1])
-        max_x,max_y=min_x+patch_size,min_y+patch_size
-        if(min_x<0 or max_x>=padded_w or min_y<0 or max_y>=padded_h):
-            continue
-        patch_center=left_top+patch_offset-padding
-        #calculate mesh grid offset towards src kpt
-        patch_center_offset_src=src_kpt-patch_center
-        patch_grid_offset_src=patch_meshgrid+patch_center_offset_src[:,np.newaxis,np.newaxis]
-        #calculate mesh grid offset toward dst kpt
-        patch_center_offset_dst=dst_kpt-patch_center
-        patch_grid_offset_dst=patch_meshgrid+patch_center_offset_dst[:,np.newaxis,np.newaxis]
-        #calculate mesh mask according to the src mesh grid's vertical distance to the limb vector
-        patch_grid_norm=np.fabs(limb_vec[1]*patch_grid_offset_src[0]-limb_vec[0]*patch_center_offset_src[1])/(limb_vec_norm+0.01)
-        grid_mask=patch_grid_norm<paf_vec_norm[limb_idx,min_y:max_y,min_x:max_x]
-
-        #update paf_vec_norm
-        paf_vec_norm[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=patch_grid_norm[grid_mask]
-        #update paf_conf
-        paf_conf[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=1
-        #update paf_src_vec
-        paf_src_vec[limb_idx,:,min_y:max_y,min_x:max_x][:,grid_mask]=patch_grid_offset_src[:,grid_mask]
-        #update paf_dst_vec
-        paf_dst_vec[limb_idx,:,min_y:max_y,min_x:max_x][:,grid_mask]=patch_grid_offset_dst[:,grid_mask]
-        #update paf_src_scale
-        paf_src_scale[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=src_scale
-        #update paf_dst_scale
-        paf_dst_scale[limb_idx,min_y:max_y,min_x:max_x][grid_mask]=dst_scale
-    return paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,paf_vec_norm
+        for meshgrid_offset in meshgrid_offsets:
+            mesh_x,mesh_y=np.round(src_kpt+lmbda*limb_vec+meshgrid_offset).astype(np.int)+padding
+            if(mesh_x<0 or mesh_x>=padded_w or mesh_y<0 or mesh_y>=padded_h):
+                continue
+            #check for repeatly filling the same point
+            mesh_coordinate=(int(mesh_x),int(mesh_y))
+            if(mesh_coordinate in filled_points):
+                continue
+            filled_points.add(mesh_coordinate)
+            offset=np.array([mesh_x,mesh_y])-padding-src_kpt
+            distline=np.fabs(limb_vec[1]*offset[0]-limb_vec[0]*offset[1])/(limb_vec_norm+0.01)
+            if(distline<paf_vec_norm[limb_idx,mesh_y,mesh_x]):
+                #update paf_vec_norm
+                paf_vec_norm[limb_idx,mesh_y,mesh_x]=distline
+                #update paf_conf
+                paf_conf[limb_idx,mesh_y,mesh_x]=1.0
+                #update paf_src_vec
+                paf_src_vec[limb_idx,:,mesh_y,mesh_x]=src_kpt-(np.array([mesh_x,mesh_y])-padding)
+                #update paf_dst_vec
+                paf_dst_vec[limb_idx,:,mesh_y,mesh_x]=dst_kpt-(np.array([mesh_x,mesh_y])-padding)
+                #update paf_src_bmin
+                paf_src_bmin[limb_idx,mesh_y,mesh_x]=strided_bmin
+                #update paf_dst_bmin
+                paf_dst_bmin[limb_idx,mesh_y,mesh_x]=strided_bmin
+                #update src_scale
+                paf_src_scale[limb_idx,mesh_y,mesh_x]=src_scale
+                #update dst_scale
+                paf_dst_scale[limb_idx,mesh_y,mesh_x]=dst_scale
+    return paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale,paf_vec_norm
 
 def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0,neighbor_num=9,debug=False):
     if(debug):
@@ -334,13 +328,14 @@ def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,par
     #scale [batch_size,field_num,hout,wout]
     #decode pif_maps
     pd_pif_conf,pd_pif_vec,_,pd_pif_scale=pd_pif_maps
-    gt_pif_conf,gt_pif_vec,gt_pif_scale=gt_pif_maps
+    gt_pif_conf,gt_pif_vec,_,gt_pif_scale=gt_pif_maps
     #decode paf_maps
     pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,_,_,_,_=pd_paf_maps
-    gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,_,_=gt_paf_maps
+    gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,_,_,_,_=gt_paf_maps
     #restore conf_maps
     pd_pif_conf=tf.nn.sigmoid(pd_pif_conf).numpy()
     pd_paf_conf=tf.nn.sigmoid(pd_paf_conf).numpy()
+    pd_pif_scale=tf.math.softplus(pd_pif_scale)
     #restore nan in gt_maps
     gt_pif_conf=nan2zero(gt_pif_conf)
     gt_pif_vec=nan2zero(gt_pif_vec)

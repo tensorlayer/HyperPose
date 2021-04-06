@@ -28,18 +28,17 @@ train.save_interval = 2000
 train.n_step = 1000000
 # initial learning rate  
 train.lr_init = 1e-4
-# evey number of step to decay lr
-train.lr_decay_every_step = 136120  
 # decay lr factor
 train.lr_decay_factor = 0.2
-train.lr_decay_steps=[420000,630000]
-train.weight_decay_factor = 0.0
+train.lr_decay_steps=[777920,848640]
+train.lr_decay_duration=35360
+train.weight_decay_factor = 1e-5
 train.train_type=TRAIN.Single_train
 train.vis_dir=f"./save_dir/{model.model_name}/train_vis_dir"
 
 #eval configuration
 eval =edict()
-eval.batch_size=8
+eval.batch_size=4
 eval.vis_dir= f"./save_dir/{model.model_name}/eval_vis_dir"
 
 #test configuration
