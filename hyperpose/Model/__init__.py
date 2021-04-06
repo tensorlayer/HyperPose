@@ -256,14 +256,14 @@ def get_test(config):
     print(f"testing {model_type.name} model...")
     return test
 
-def get_preprocess(model_type):
-    '''get preprocess function based model_type
+def get_preprocessor(model_type):
+    '''get a preprocessor class based on the specified model_type
 
-    get the preprocess function of the specified kind of model to help user construct thier own train
-    and evaluate pipeline rather than using the integrated train or evaluate pipeline directly when in need.
+    get the preprocessor class of the specified kind of model to help user directly construct their own 
+    train pipeline(rather than using the integrated train pipeline) when in need.
 
-    the preprocess function is able to convert the image and annotation to the model output format for training
-    or evaluation.
+    the preprocessor class is able to construct a preprocessor object that could convert the image and annotation to 
+    the model output format for training.
 
     Parameters
     ----------
@@ -272,23 +272,26 @@ def get_preprocess(model_type):
     
     Returns
     -------
-    function
-        a preprocess function of the specified kind of model
+    class
+        a preprocessor class of the specified kind of model
     '''
 
     if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
-        from .openpose.utils import preprocess
+        from .openpose import PreProcessor
     elif model_type == MODEL.PoseProposal:
-        from .pose_proposal.utils import preprocess
-    return preprocess
+        from .pose_proposal import PreProcessor
+    elif model_type == MODEL.Pifpaf:
+        from .pifpaf import PreProcessor
+    return PreProcessor
 
-def get_postprocess(model_type):
-    '''get postprocess function based model_type
+def get_postprocessor(model_type):
+    '''get a postprocessor class based on the specified model_type
 
-    get the postprocess function of the specified kind of model to help user construct thier own 
-    evaluate pipeline rather than using the integrated train or evaluate pipeline directly when in need
+    get the postprocessor class of the specified kind of model to help user directly construct their own 
+    evaluate pipeline(rather than using the integrated evaluate pipeline) or infer pipeline(to check the model utility) 
+    when in need.
 
-    the postprocess function is able to parse the model output feature map and output parsed human objects of Human class,
+    the postprocessor is able to parse the model output feature map and output parsed human objects of Human class,
     which contains all dectected keypoints.
 
     Parameters
@@ -299,13 +302,15 @@ def get_postprocess(model_type):
     Returns
     -------
     function
-        a postprocess function of the specified kind of model
+        a postprocessor class of the specified kind of model
     '''
     if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
-        from .openpose.utils import postprocess
+        from .openpose import PostProcessor
     elif model_type == MODEL.PoseProposal:
-        from .pose_proposal.utils import postprocess
-    return postprocess
+        from .pose_proposal import PostProcessor
+    elif model_type == MODEL.Pifpaf:
+        from .pifpaf import PostProcessor
+    return PostProcessor
 
 def get_visualize(model_type):
     '''get visualize function based model_type

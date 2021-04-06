@@ -24,10 +24,10 @@ class PreProcessor:
     
     def process(self,annos,mask_valid):
         mask_out=cv2.resize(mask_valid,(self.wout,self.hout))
-        pif_conf,pif_vec,pif_scale = get_pifmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
-        paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale = get_pafmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
-        pif_maps=[pif_conf,pif_vec,pif_scale]
-        paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale]
+        pif_conf,pif_vec,pif_bmin,pif_scale = get_pifmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
+        paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale = get_pafmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
+        pif_maps=[pif_conf,pif_vec,pif_bmin,pif_scale]
+        paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale]
         return pif_maps,paf_maps
 
 class PostProcessor:
