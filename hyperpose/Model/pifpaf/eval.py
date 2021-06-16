@@ -95,7 +95,7 @@ def visualize(img,img_id,processed_img,pd_pif_maps,pd_paf_maps,humans,stride=8,s
     plt.savefig(os.path.join(save_dir,f"{img_id}_visualize.png"))
     plt.close()
 
-def _map_fn(image_file,image_id,hin,win):
+def _map_fn(image_file,image_id):
     #load data
     image = tf.io.read_file(image_file)
     image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
