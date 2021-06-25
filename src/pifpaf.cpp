@@ -102,10 +102,8 @@ std::vector<human_t> pifpaf::process(const feature_map_t& paf, const feature_map
                                      pif_conf.data(), pif_xy.data(), pif_s.data(),
                                      paf_conf.data(), paf_xy1.data(), paf_xy2.data(), paf_b1.data(), paf_b2.data());
 
-//    std::cout << "Check pif[0]\t" << pif.view<float>()[0] << std::endl;
     std::vector<human_t> ret{};
     ret.reserve(apires.items.size());
-//    std::cout << apires.items.size() << "...size\n";
 
     /*
      *
@@ -125,7 +123,6 @@ HyperPose: Unified Topology
                 dst.score = 1;// src.confidence; FIXME
                 dst.x = src.position.x / 10000.;
                 dst.y = src.position.y / 10000.;
-//                std::cout << dst.x << ' ' << dst.y << '\n';
                 dst.has_value = true;
             }
         };

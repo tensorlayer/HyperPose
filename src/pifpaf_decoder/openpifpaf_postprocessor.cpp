@@ -489,11 +489,6 @@ OpenPifPafPostprocessor::scorePafTarget(const std::vector<float>& pafvec,
             if (scores_b[i] > score_th) { mask_b.push_back(i); }
         }
 
-        // scored_backward.append(np.concatenate((
-        //     np.expand_dims(scores_b[mask_b], 0),
-        //     fourds[1, 1:4][:, mask_b],
-        //     fourds[0, 1:4][:, mask_b],
-        // )))
         const size_t mask_b_size = mask_b.size();
         std::vector<float> result_b(7 * mask_b_size);
         for (size_t i = 0; i < mask_b_size; ++i) {
