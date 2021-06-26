@@ -87,7 +87,7 @@ To export a model trained by Hyperpose, one should follow two step:
     one can also export by loading model and using *get_concrete_function* by himself, please refer the [tutorial](../tutorial/training.md) for more details.
 * (2)convert the frozen .pb format model into .onnx format
     We use *tf2onnx* library to convert the .pb format model into .onnx format.
-    Make sure you have installed the extra requirements for exporting models from [training installation](../install/training.md)<br>
+    Make sure you have installed the extra requirements for exporting models from [training installation](../install/training.md).<br>
     if you don't know the input and output node names of the pb model,you should use the function *summarize_graph* function 
     of *graph_transforms* from tensorflow. (see [tensorflow tools](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/tools/graph_transforms#using-the-graph-transform-tool) for more details.)
 
