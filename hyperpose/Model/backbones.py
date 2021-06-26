@@ -508,15 +508,15 @@ class Resnet50_backbone(Model):
                 self.downsample=LayerList([
                     Conv2d(n_filter=4*self.n_filter,in_channels=self.in_channels,filter_size=(1,1),strides=self.strides,b_init=None,\
                         data_format=self.data_format,name=f"{name}_ds_conv1"),
-                    BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=4*self.n_filter,data_format=self.data_format,name=f"{name}_ds_bn1")
+                    BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=4*self.n_filter,act=None,data_format=self.data_format,name=f"{name}_ds_bn1")
                     ])
             self.main_block=LayerList([
                 Conv2d(n_filter=self.n_filter,in_channels=self.in_channels,filter_size=(1,1),strides=(1,1),b_init=None,data_format=self.data_format,name=f"{name}_conv1"),
-                BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=self.n_filter,act=None,data_format=self.data_format,name=f"{name}_bn1"),
+                BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=self.n_filter,act=tf.nn.relu,data_format=self.data_format,name=f"{name}_bn1"),
                 Conv2d(n_filter=self.n_filter,in_channels=self.n_filter,filter_size=(3,3),strides=self.strides,b_init=None,data_format=self.data_format,name=f"{name}_conv2"),
-                BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=self.n_filter,act=None,data_format=self.data_format,name=f"{name}_bn2"),
+                BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=self.n_filter,act=tf.nn.relu,data_format=self.data_format,name=f"{name}_bn2"),
                 Conv2d(n_filter=4*self.n_filter,in_channels=self.n_filter,filter_size=(1,1),strides=(1,1),b_init=None,data_format=self.data_format,name=f"{name}_conv3"),
-                BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=4*self.n_filter,act=tf.nn.relu,data_format=self.data_format,name=f"{name}_bn3")
+                BatchNorm2d(decay=self.decay,epsilon=self.eps,is_train=True,num_features=4*self.n_filter,act=None,data_format=self.data_format,name=f"{name}_bn3")
             ])
         
         def forward(self,x):

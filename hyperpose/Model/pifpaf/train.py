@@ -39,6 +39,10 @@ def _data_aug_fn(image, ground_truth, augmentor, preprocessor, data_format="chan
     mask = ground_truth["mask"]
     hin,win=preprocessor.hin,preprocessor.win
     hout,wout=preprocessor.hout,preprocessor.wout
+    #normalize
+    mean=np.array([0.485, 0.456, 0.406])[np.newaxis,np.newaxis,:]
+    std=np.array([0.229, 0.224, 0.225])[np.newaxis,np.newaxis,:]
+    image=(image-mean)/std
 
     # decode mask
     h_mask, w_mask, _ = np.shape(image)
@@ -181,7 +185,7 @@ def single_train(train_model,dataset,config):
     #load model weights
     log("loading saved training model weights...")
     try:
-        train_model.load_weights(os.path.join(model_dir,"newest_model.npz"))
+        train_model.load_weights(os.path.join(model_dir,"newest_model.npz"),format="npz_dict")
         log("saved training model weights loaded successfully")
     except:
         log("model_path doesn't exist, model parameters are initialized")
@@ -280,7 +284,7 @@ def single_train(train_model,dataset,config):
             log(f"ckpt save_path:{ckpt_save_path} saved!\n")
             #save train model
             model_save_path=os.path.join(model_dir,"newest_model.npz")
-            train_model.save_weights(model_save_path)
+            train_model.save_weights(model_save_path,format="npz_dict")
             log(f"model save_path:{model_save_path} saved!\n")
             #draw result
             stride=train_model.stride

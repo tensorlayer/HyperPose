@@ -95,11 +95,20 @@ def visualize(img,img_id,processed_img,pd_pif_maps,pd_paf_maps,humans,stride=8,s
     plt.savefig(os.path.join(save_dir,f"{img_id}_visualize.png"))
     plt.close()
 
-def _map_fn(image_file,image_id,hin,win):
+def normalize(image):
+    #normalize
+    mean=np.array([0.485, 0.456, 0.406])[np.newaxis,np.newaxis,:]
+    std=np.array([0.229, 0.224, 0.225])[np.newaxis,np.newaxis,:]
+    image=(image-mean)/std
+    return image
+
+def _map_fn(image_file,image_id):
     #load data
     image = tf.io.read_file(image_file)
     image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+    #normalize
+    image=tf.py_function(normalize,[image],tf.float32)
     return image,image_id
 
 def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multiscale_search=False):
@@ -131,7 +140,7 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
     None
     '''
     print(f"enable multiscale_search:{enable_multiscale_search}")
-    model.load_weights(os.path.join(config.model.model_dir,"newest_model.npz"))
+    model.load_weights(os.path.join(config.model.model_dir,"newest_model.npz"),format="npz_dict")
     model.eval()
     pd_anns=[]
     vis_dir=config.eval.vis_dir
@@ -141,7 +150,7 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
     
     eval_dataset=dataset.get_eval_dataset()
     dataset_size=dataset.get_eval_datasize()
-    paramed_map_fn=partial(_map_fn,hin=model.hin,win=model.win)
+    paramed_map_fn=_map_fn
     eval_dataset=eval_dataset.map(paramed_map_fn,num_parallel_calls=max(multiprocessing.cpu_count()//2,1))
     for eval_num,(img,img_id) in enumerate(eval_dataset):
         img_id=img_id.numpy()
@@ -199,7 +208,7 @@ def test(model,dataset,config,vis_num=30,total_test_num=10000,enable_multiscale_
     None
     '''
     print(f"enable multiscale_search:{enable_multiscale_search}")
-    model.load_weights(os.path.join(config.model.model_dir,"newest_model.npz"))
+    model.load_weights(os.path.join(config.model.model_dir,"newest_model.npz"),format="npz_dict")
     model.eval()
     pd_anns=[]
     vis_dir=config.test.vis_dir
@@ -209,7 +218,7 @@ def test(model,dataset,config,vis_num=30,total_test_num=10000,enable_multiscale_
     
     test_dataset=dataset.get_test_dataset()
     dataset_size=dataset.get_test_datasize()
-    paramed_map_fn=partial(_map_fn,hin=model.hin,win=model.win)
+    paramed_map_fn=_map_fn
     test_dataset=test_dataset.map(paramed_map_fn,num_parallel_calls=max(multiprocessing.cpu_count()//2,1))
     for test_num,(img,img_id) in enumerate(test_dataset):
         img_id=img_id.numpy()

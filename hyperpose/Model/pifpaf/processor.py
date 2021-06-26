@@ -1,4 +1,5 @@
 
+from operator import pos
 import os
 import cv2
 import json
@@ -31,8 +32,8 @@ class PreProcessor:
         return pif_maps,paf_maps
 
 class PostProcessor:
-    def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,thresh_pif=0.1,thresh_paf=0.1,thresh_ref_pif=0.1,thresh_ref_paf=0.1,\
-        part_num_thresh=4,score_thresh=0.1,reduction=2,min_scale=4,greedy_match=True,reverse_match=True,data_format="channels_first",debug=False):
+    def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,thresh_pif=0.3,thresh_paf=0.1,thresh_ref_pif=0.3,thresh_ref_paf=0.1,\
+        thresh_gen_ref_pif=0.1,part_num_thresh=4,score_thresh=0.1,reduction=2,min_scale=4,greedy_match=True,reverse_match=True,data_format="channels_first",debug=False):
         self.parts=parts
         self.limbs=limbs
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
@@ -47,6 +48,7 @@ class PostProcessor:
         self.thresh_paf=thresh_paf
         self.thresh_ref_pif=thresh_ref_pif
         self.thresh_ref_paf=thresh_ref_paf
+        self.thresh_gen_ref_pif=thresh_gen_ref_pif
         self.part_num_thresh=part_num_thresh
         self.score_thresh=score_thresh
         self.reduction=reduction
@@ -71,7 +73,7 @@ class PostProcessor:
         pif_conf,pif_vec,_,pif_scale=pif_maps
         paf_conf,paf_src_vec,paf_dst_vec,_,_,paf_src_scale,paf_dst_scale=paf_maps
         #get pif_hr_conf
-        pif_hr_conf=get_hr_conf(pif_conf,pif_vec,pif_scale,stride=self.stride,thresh=self.thresh_pif,debug=False)
+        pif_hr_conf=get_hr_conf(pif_conf,pif_vec,pif_scale,stride=self.stride,thresh=self.thresh_gen_ref_pif,debug=False)
         self.debug_print(f"test hr_conf")
         for pos_idx in range(0,self.n_pos):
             self.debug_print(f"test hr_conf idx:{pos_idx} max_conf:{np.max(pif_conf[pos_idx])} max_hr_conf:{np.max(pif_hr_conf[pos_idx])}")
@@ -88,7 +90,7 @@ class PostProcessor:
             mask_ref_conf=ref_cs>self.thresh_ref_pif
             for ref_c,x,y,scale in zip(ref_cs[mask_ref_conf],xs[mask_ref_conf],ys[mask_ref_conf],scales[mask_ref_conf]):
                 seeds.append((ref_c,pos_idx,x,y,scale))
-                self.debug_print(f"seed gen pos_idx:{pos_idx} ref_c:{ref_c} x:{x} y:{y} scale:{scale}")
+                #print(f"seed gen pos_idx:{pos_idx} ref_c:{ref_c} x:{x} y:{y} scale:{scale}")
         self.debug_print(f"test before sort len_seeds:{len(seeds)}")
         seeds=sorted(seeds,reverse=True)
         self.debug_print(f"test after sort len_seeds:{len(seeds)}")
@@ -124,6 +126,7 @@ class PostProcessor:
                 self.debug_print(f"test fw_list_gen: limb_idx:{limb_idx} max_score:{np.max(score)} max_cifhr_f:{np.max(cifhr_f)} max_score_f:{np.max(score_f)} mask_num_f:{np.sum(mask_f)}")
             self.debug_print("")
         #greedy assemble
+        #TODO: further check!
         occupied=np.zeros(shape=(self.n_pos,int(pif_hr_conf.shape[1]/self.reduction),int(pif_hr_conf.shape[2]/self.reduction)))
         annotations=[]
         self.debug_print(f"test seeds_num:{len(seeds)}")
@@ -302,7 +305,7 @@ class PostProcessor:
     def grow(self,ann,forward_list,backward_list,reverse_match=True):
         frontier = []
         in_frontier = set()
-        #add the point to assemble frontierby_source
+        #add the point to assemble frontier by_source
         def add_frontier(ann,src_idx):
             #traverse all the part that the current part connect to
             for dst_idx,(_,_) in self.by_source[src_idx].items():
