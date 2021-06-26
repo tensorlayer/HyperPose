@@ -461,11 +461,7 @@ namespace aiapp_impl {
         // frontierActive = true;
         // blockFrontier.clear();
         std::set<std::pair<int, int>> in_frontier{};
-<<<<<<< HEAD
         std::priority_queue<queue_item, std::deque<queue_item>, std::greater<>> frontier;
-=======
-        std::priority_queue<queue_item, std::deque<queue_item>, std::greater<queue_item>> frontier;
->>>>>>> master
 
         const auto add_to_frontier = [&](size_t start_i) {
             for (const auto& [end_i, to_p] : BY_SOURCE_MAP[start_i]) {
