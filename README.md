@@ -32,11 +32,11 @@ HyperPose is a library for building high-performance custom pose estimation syst
 
 HyperPose has two key features:
 
-- **High-performance pose estimation wth CPUs/GPUs**: HyperPose achieves real-time pose estimation though a high-performance pose estimation engine. This engine implements numerous system optimizations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. This allows HyperPose to **run 4x FASTER than OpenPose and 10x FASTER than TF-Pose**.
-- **Expressive Python APIs for developing custom pose estimation models**: HyperPose provides flexible Python APIs to provide a customise pipeline for developing various pose estimation models. HyperPose users can:
-* Make use of uniform pipelines for train,evaluation,visualization,pre-processing and post-processing across various models (e.g., OpenPose,Pifpaf,PoseProposal Network)
-* Customise model and dataset for their own use(e.g. user-defined model,user-defined dataset,mitiple dataset combination)
-* Parallel training using multiple GPUs(using *Kungfu* adaptive distribute training library)
+- **High-performance pose estimation wth CPUs/GPUs**: HyperPose achieves real-time pose estimation though a high-performance pose estimation engine. This engine implements numerous system optimizations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. This allows HyperPose to run 4x FASTER than OpenPose and 10x FASTER than TF-Pose.
+- **Flexibility for developing custom pose estimation models**: HyperPose provides flexible Python APIs to provide a customise pipeline for developing various pose estimation models. HyperPose users can:
+    * Make use of uniform pipelines for train,evaluation,visualization,pre-processing and post-processing across various models (e.g., OpenPose,Pifpaf,PoseProposal Network)
+    * Customise model and dataset for their own use(e.g. user-defined model,user-defined dataset,mitiple dataset combination)
+    * Parallel training using multiple GPUs(using *Kungfu* adaptive distribute training library)
 thus building models specific to their real-world scenarios.
 
 ## Quick Start
