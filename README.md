@@ -10,7 +10,7 @@
     <a href="https://drive.google.com/drive/folders/1w9EjMkrjxOmMw3Rf6fXXkiv_ge7M99jR?usp=sharing" title="PreTrainedModels"><img src="https://img.shields.io/badge/trained%20models-GoogleDrive-brightgreen.svg"></a>
     <a href="https://en.cppreference.com/w/cpp/17" title="CppStandard"><img src="https://img.shields.io/badge/C++-17-blue.svg?style=flat&logo=c%2B%2B"></a>
     <a href="https://github.com/tensorlayer/hyperpose/graphs/commit-activity" title="Maintenance"><img src="https://img.shields.io/badge/maintained%3F-YES-brightgreen.svg"></a>
-    <a href="https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst" title="TensorLayer"><img src="https://img.shields.io/github/license/tensorlayer/tensorlayer">
+    <a href="https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst" title="TensorLayer"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg">
 </p>
 
 ---
