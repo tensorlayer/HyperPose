@@ -5,6 +5,7 @@ from tensorlayer import layers
 from tensorlayer.models import Model
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d
 from .define import CocoColor
+from .utils import pixel_shuffle,get_meshgrid
 from ..backbones import Resnet50_backbone
 
 
@@ -40,30 +41,27 @@ class Pifpaf(Model):
             self.backbone=backbone(data_format=data_format,scale_size=self.scale_size)
         self.hout=int(hin/self.stride)
         self.wout=int(win/self.stride)
-        #generate mesh grid
-        x_range=np.linspace(start=0,stop=self.wout-1,num=self.wout)
-        y_range=np.linspace(start=0,stop=self.hout-1,num=self.hout)
-        mesh_x,mesh_y=np.meshgrid(x_range,y_range)
-        self.mesh_grid=np.stack([mesh_x,mesh_y])
         #construct head
         self.pif_head=self.PifHead(input_features=self.backbone.out_channels,n_pos=self.n_pos,n_limbs=self.n_limbs,\
-            quad_size=self.quad_size,hout=self.hout,wout=self.wout,stride=self.stride,mesh_grid=self.mesh_grid,data_format=self.data_format)
+            quad_size=self.quad_size,hout=self.hout,wout=self.wout,stride=self.stride,data_format=self.data_format)
         self.paf_head=self.PafHead(input_features=self.backbone.out_channels,n_pos=self.n_pos,n_limbs=self.n_limbs,\
-            quad_size=self.quad_size,hout=self.hout,wout=self.wout,stride=self.stride,mesh_grid=self.mesh_grid,data_format=self.data_format)
+            quad_size=self.quad_size,hout=self.hout,wout=self.wout,stride=self.stride,data_format=self.data_format)
     
-    @tf.function(experimental_relax_shapes=True)
-    def forward(self,x,is_train=False):
-        x=self.backbone.forward(x)
-        pif_maps=self.pif_head.forward(x,is_train=is_train)
-        paf_maps=self.paf_head.forward(x,is_train=is_train)
+#    @tf.function(experimental_relax_shapes=True)
+    def forward(self,x,is_train=False,ret_backbone=False):
+        backbone_x=self.backbone.forward(x)
+        pif_maps=self.pif_head.forward(backbone_x,is_train=is_train)
+        paf_maps=self.paf_head.forward(backbone_x,is_train=is_train)
+        if(ret_backbone):
+            return pif_maps,paf_maps,backbone_x
         return pif_maps,paf_maps
     
-    @tf.function(experimental_relax_shapes=True)
+#    @tf.function(experimental_relax_shapes=True)
     def infer(self,x):
-        pif_maps,paf_maps=self.forward(x,is_train=False)
+        pif_maps,paf_maps,backbone_x=self.forward(x,is_train=False,ret_backbone=True)
         pif_conf,pif_vec,_,pif_scale=pif_maps
         paf_conf,paf_src_vec,paf_dst_vec,_,_,paf_src_scale,paf_dst_scale=paf_maps
-        return pif_conf,pif_vec,pif_scale,paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale
+        return pif_conf,pif_vec,pif_scale,paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,backbone_x
     
     def soft_clamp(self,x,max_value=5.0):
         above_mask=tf.where(x>=max_value,1.0,0.0)
@@ -157,7 +155,7 @@ class Pifpaf(Model):
         return loss_pif_maps,loss_paf_maps,total_loss
     
     class PifHead(Model):
-        def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,hout=8,wout=8,stride=8,mesh_grid=None,data_format="channels_first"):
+        def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,hout=8,wout=8,stride=8,data_format="channels_first"):
             super().__init__()
             self.input_features=input_features
             self.n_pos=n_pos
@@ -167,29 +165,32 @@ class Pifpaf(Model):
             self.stride=stride
             self.quad_size=quad_size
             self.out_features=self.n_pos*5*(self.quad_size**2)
-            self.mesh_grid=mesh_grid
             self.data_format=data_format
             self.tf_data_format="NCHW" if self.data_format=="channels_first" else "NHWC"
             self.main_block=Conv2d(n_filter=self.out_features,in_channels=self.input_features,filter_size=(1,1),data_format=self.data_format)
 
         def forward(self,x,is_train=False):
             x=self.main_block.forward(x)
-            x=tf.nn.depth_to_space(x,block_size=self.quad_size,data_format=self.tf_data_format)
-            x=tf.reshape(x,[-1,self.n_pos,5,self.hout,self.wout])
+            x=pixel_shuffle(x,scale=2)
+            low_cut=int((self.quad_size-1)//2)
+            high_cut=int(tf.math.ceil((self.quad_size-1)/2.0))
+            hout,wout=x.shape[2],x.shape[3]
+            x=tf.reshape(x,[-1,self.n_pos,5,hout,wout])
             pif_conf=x[:,:,0,:,:]
             pif_vec=x[:,:,1:3,:,:]
             pif_logb=x[:,:,3,:,:]
-            pif_scale=tf.exp(x[:,:,4,:,:])
+            pif_scale=x[:,:,4,:,:]
             #restore vec_maps in inference
             if(is_train==False):
+                mesh_grid=get_meshgrid(mesh_h=hout,mesh_w=wout)+np.array([1.5,1.5])[:,np.newaxis,np.newaxis]
                 infer_pif_conf=tf.nn.sigmoid(pif_conf)
-                infer_pif_vec=(pif_vec[:,:]+self.mesh_grid)*self.stride
+                infer_pif_vec=(pif_vec[:,:]+mesh_grid)*self.stride
                 infer_pif_scale=tf.math.softplus(pif_scale)*self.stride
                 return infer_pif_conf,infer_pif_vec,pif_logb,infer_pif_scale
             return pif_conf,pif_vec,pif_logb,pif_scale
         
     class PafHead(Model):
-        def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,hout=46,wout=46,stride=8,mesh_grid=None,data_format="channels_first"):
+        def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,hout=46,wout=46,stride=8,data_format="channels_first"):
             super().__init__()
             self.input_features=input_features
             self.n_pos=n_pos
@@ -199,27 +200,30 @@ class Pifpaf(Model):
             self.wout=wout
             self.stride=stride
             self.out_features=self.n_limbs*9*(self.quad_size**2)
-            self.mesh_grid=mesh_grid
             self.data_format=data_format
             self.tf_data_format="NCHW" if self.data_format=="channels_first" else "NHWC"
             self.main_block=Conv2d(n_filter=self.out_features,in_channels=self.input_features,filter_size=(1,1),data_format=self.data_format)
         
         def forward(self,x,is_train=False):
             x=self.main_block.forward(x)
-            x=tf.nn.depth_to_space(x,block_size=self.quad_size,data_format=self.tf_data_format)
-            x=tf.reshape(x,[-1,self.n_limbs,9,self.hout,self.wout])
+            x=pixel_shuffle(x,scale=2)
+            low_cut=int((self.quad_size-1)//2)
+            high_cut=int(tf.math.ceil((self.quad_size-1)/2.0))
+            hout,wout=x.shape[2],x.shape[3]
+            x=tf.reshape(x,[-1,self.n_limbs,9,hout,wout])
             paf_conf=x[:,:,0,:,:]
             paf_src_vec=x[:,:,1:3,:,:]
             paf_dst_vec=x[:,:,3:5,:,:]
             paf_src_logb=x[:,:,5,:,:]
             paf_dst_logb=x[:,:,6,:,:]
-            paf_src_scale=tf.exp(x[:,:,7,:,:])
-            paf_dst_scale=tf.exp(x[:,:,8,:,:])
+            paf_src_scale=x[:,:,7,:,:]
+            paf_dst_scale=x[:,:,8,:,:]
             #restore vec_maps in inference
             if(is_train==False):
+                mesh_grid=get_meshgrid(mesh_h=hout,mesh_w=wout)+np.array([1.5,1.5])[:,np.newaxis,np.newaxis]
                 infer_paf_conf=tf.nn.sigmoid(paf_conf)
-                infer_paf_src_vec=(paf_src_vec[:,:]+self.mesh_grid)*self.stride
-                infer_paf_dst_vec=(paf_dst_vec[:,:]+self.mesh_grid)*self.stride
+                infer_paf_src_vec=(paf_src_vec[:,:]+mesh_grid)*self.stride
+                infer_paf_dst_vec=(paf_dst_vec[:,:]+mesh_grid)*self.stride
                 infer_paf_src_scale=tf.math.softplus(paf_src_scale)*self.stride
                 infer_paf_dst_scale=tf.math.softplus(paf_dst_scale)*self.stride
                 return infer_paf_conf,infer_paf_src_vec,infer_paf_dst_vec,paf_src_logb,paf_dst_logb,infer_paf_src_scale,infer_paf_dst_scale

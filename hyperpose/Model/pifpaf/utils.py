@@ -1,7 +1,5 @@
 import os
 import cv2
-import math
-import logging
 import functools
 import numpy as np
 import tensorflow as tf
@@ -174,9 +172,6 @@ def get_pafmap(annos,mask,height, width, hout, wout, parts, limbs,bmin=0.1,dist_
             src_scale=anno_scale*COCO_SIGMA[src_idx]
             #calculate dst scale
             dst_scale=anno_scale*COCO_SIGMA[dst_idx]
-            #print(f"test paf scale:")
-            #print(f"src_kpt_idx:{src_idx} src_kpt_scale:{src_scale}")
-            #print(f"dst_kpt_idx:{dst_idx} dst_kpt_scale:{dst_scale}")
             #generate paf_maps for single point
             paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale,paf_vec_norm]
             paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale,paf_vec_norm=put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,\
@@ -238,11 +233,11 @@ def put_pafmap(paf_maps,limb_idx,src_kpt,src_scale,dst_kpt,dst_scale,patch_size=
                 paf_dst_scale[limb_idx,mesh_y,mesh_x]=dst_scale
     return paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale,paf_vec_norm
 
-def add_gaussian(hr_conf,confs,vecs,scales,truncate=1.0,max_value=1.0,neighbor_num=9,debug=False):
+def add_gaussian(hr_conf,confs,vecs,sigmas,truncate=1.0,max_value=1.0,neighbor_num=16,debug=False):
     if(debug):
         print()
     field_h,field_w=hr_conf.shape
-    for conf,vec,scale in zip(confs,vecs,scales):
+    for conf,vec,scale in zip(confs,vecs,sigmas):
         x,y=vec
         #calculate mesh range
         min_x=np.clip(x-truncate*scale,0,field_w-1).astype(np.int)
@@ -277,7 +272,7 @@ def get_hr_conf(conf_map,vec_map,scale_map,stride=8,thresh=0.1,debug=False):
     #vec [field_num,2,hout,wout]
     #scale [field_num,hout,wout]
     field_num,hout,wout=conf_map.shape
-    hr_conf=np.zeros(shape=(field_num,hout*stride,wout*stride))
+    hr_conf=np.zeros(shape=(field_num,(hout-1)*stride+1,(wout-1)*stride+1))
     for field_idx in range(0,field_num):
         #filter by thresh
         if(debug):
@@ -285,7 +280,10 @@ def get_hr_conf(conf_map,vec_map,scale_map,stride=8,thresh=0.1,debug=False):
         thresh_mask=conf_map[field_idx]>thresh
         confs=conf_map[field_idx][thresh_mask]
         vecs=vec_map[field_idx,:,thresh_mask]
-        scales=np.maximum(1.0,0.75*scale_map[field_idx][thresh_mask])
+        scales=scale_map[field_idx][thresh_mask]
+        if(debug):
+            print(f"test filed_idx:{field_idx} scale_mean:{np.mean(scales/stride)} scale_var:{np.var(scales/stride)}")
+        sigmas=np.maximum(1.0,0.5*scales)
         hr_conf[field_idx]=add_gaussian(hr_conf[field_idx],confs,vecs,scales,debug=debug)
     return hr_conf
 
@@ -483,7 +481,23 @@ def get_colors(dataset_type):
     else:
         return dataset_type.get_colors()
 
-        
+def pixel_shuffle(x,scale):
+    b,c,h,w=x.shape
+    new_c=c//(scale**2)
+    new_h=h*scale
+    new_w=w*scale
+    ta=tf.reshape(x,[b,new_c,scale,scale,h,w])
+    tb=tf.transpose(ta,[0, 1, 4, 2, 5, 3])
+    tc=tf.reshape(tb,[b,new_c,new_h,new_w])
+    return tc
+
+@functools.lru_cache(maxsize=16)
+def get_meshgrid(mesh_h,mesh_w):
+    x_range=np.linspace(start=0,stop=mesh_w-1,num=mesh_w)
+    y_range=np.linspace(start=0,stop=mesh_h-1,num=mesh_h)
+    mesh_x,mesh_y=np.meshgrid(x_range,y_range)
+    mesh_grid=np.stack([mesh_x,mesh_y])
+    return mesh_grid
 
 
 

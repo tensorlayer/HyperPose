@@ -275,6 +275,15 @@ def pad_image_shape(img,shape,pad_value=0.0):
     padded_image[pad[0]:img_h+pad[0],pad[2]:img_w+pad[2],:]=img
     return padded_image,pad
 
+def scale_image(image,hin,win,scale_rate=0.95):
+    #scale a image into the size of scale_rate*hin and scale_rate*win
+    #used for model inferecne
+    image_h,image_w,_=image.shape
+    scale_h,scale_w=int(scale_rate*image_h),int(scale_rate*image_w)
+    scale_image=cv2.resize(image,(scale_w,scale_h),interpolation=cv2.INTER_CUBIC)
+    padded_image,pad=pad_image_shape(scale_image,shape=(hin,win),pad_value=0.0)
+    return padded_image,pad
+
 def get_optim(optim_type):
     if(optim_type==OPTIM.Adam):
         print("using optimizer Adam!")
