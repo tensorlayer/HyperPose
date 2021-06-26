@@ -9,16 +9,17 @@
 #define kSTREAM "stream"
 #define kPAF "paf"
 #define kPPN "ppn"
+#define kPIFPAF "pifpaf"
 
 // Model Configuration.
 DEFINE_string(model, "../data/models/TinyVGG-V1-HW=256x384.uff", "Path to the model.");
 DEFINE_string(
     post,
     kPAF,
-    "Post-processing method. (`" kPAF "` -> [Part Affine Field] or `" kPPN "` -> [Pose Proposal Network])");
+    "Post-processing method. (`" kPAF "` -> [Part Affine Field] or `" kPPN "` -> [Pose Proposal Network]) or `" kPIFPAF "` -> [Pif Paf]");
 DEFINE_int32(w, 384, "Width of input image.");
 DEFINE_int32(h, 256, "Height of input image.");
-DEFINE_int32(max_batch_size, 8, "Max batch size for inference engine to execute.");
+DEFINE_int32(max_batch_size, 4, "Max batch size for inference engine to execute.");
 
 // Execution Mode
 DEFINE_bool(imshow, true, "Whether to open an imshow window.");
@@ -37,18 +38,19 @@ namespace hp = hyperpose;
 
 class parser_variant {
 public:
+    using var_t = std::variant<hp::parser::pose_proposal, hp::parser::paf, hp::parser::pifpaf>;
     template <typename Container>
     std::vector<hp::human_t> process(Container&& feature_map_containers)
     {
         return std::visit([&feature_map_containers](auto& arg) { return arg.process(feature_map_containers); }, m_parser);
     }
-    parser_variant(std::variant<hp::parser::pose_proposal, hp::parser::paf> v)
+    parser_variant(var_t v)
         : m_parser(std::move(v))
     {
     }
 
 private:
-    std::variant<hp::parser::pose_proposal, hp::parser::paf> m_parser;
+    var_t m_parser;
 };
 //parser_variant parser{parser};
 
@@ -142,14 +144,17 @@ int main(int argc, char** argv)
     }();
     cli_log() << "DNN engine is built.\n";
 
-    auto parser = parser_variant{ [&engine]() -> std::variant<hp::parser::pose_proposal, hp::parser::paf> {
+    auto parser = parser_variant{ [&engine]() -> parser_variant::var_t {
         if (FLAGS_post == kPAF)
             return hp::parser::paf{};
 
         if (FLAGS_post == kPPN)
             return hp::parser::pose_proposal(engine.input_size());
 
-        cli_log() << "ERROR: Unknown post-processing flag: `" << FLAGS_post << "`. Use `paf` or `ppn` please.\n";
+        if (FLAGS_post == kPIFPAF)
+            return hp::parser::pifpaf(engine.input_size().height, engine.input_size().width);
+
+        cli_log() << "ERROR: Unknown post-processing flag: `" << FLAGS_post << "`. Use `paf`, `ppn` or `pifpaf` please.\n";
         std::exit(-1);
     }() };
 
@@ -179,6 +184,7 @@ int main(int argc, char** argv)
     if (FLAGS_runtime == kOPERATOR) {
         if (images.empty()) { // For CAP.
 
+            auto beg = clk_t::now();
             auto writer = make_writer();
             while (cap.isOpened()) {
                 cv::Mat mat;
@@ -222,6 +228,9 @@ int main(int argc, char** argv)
                         break;
                 }
             }
+            auto inference_time = std::chrono::duration<double, std::milli>(clk_t::now() - beg).count();
+            std::cout << cap.get(cv::CAP_PROP_FRAME_COUNT) << " images got processed in " << inference_time << " ms, FPS = "
+                      << 1000. * cap.get(cv::CAP_PROP_FRAME_COUNT) / inference_time << '\n';
         } else { // For Vec<Image>.
             auto beg = clk_t::now();
             // * TensorRT Inference.

@@ -5,10 +5,15 @@ set(POSE_LIB_NAME hyperpose)
 INCLUDE(cmake/cuda.cmake)
 FIND_PACKAGE(OpenCV REQUIRED)
 
+FILE(GLOB PIFPAF_DECODER
+        src/pifpaf_decoder/*.cpp)
+
 ADD_LIBRARY(
         ${POSE_LIB_NAME} # SHARED
         src/logging.cpp
         src/tensorrt.cpp
+        src/pifpaf.cpp
+        ${PIFPAF_DECODER}
         src/paf.cpp
         src/data.cpp
         src/stream.cpp

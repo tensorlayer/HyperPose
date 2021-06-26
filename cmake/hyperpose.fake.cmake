@@ -12,7 +12,11 @@ ADD_LIBRARY(
         src/stream.cpp
         src/thread_pool.cpp
         src/pose_proposal.cpp
-        src/human.cpp)
+        src/human.cpp
+        src/pifpaf.cpp
+        src/pifpaf_decoder/math_helpers.cpp
+        src/pifpaf_decoder/openpifpaf_postprocessor.cpp
+)
 
 TARGET_LINK_LIBRARIES(
         ${POSE_LIB_NAME}

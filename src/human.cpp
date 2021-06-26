@@ -7,7 +7,7 @@ namespace hyperpose {
 void draw_human(cv::Mat& img, const human_t& human)
 {
     float n = 1, s = 0, w = 1, e = 0;
-    for(const auto& p : human.parts)
+    for (const auto& p : human.parts)
         if (p.has_value) {
             n = std::min(n, p.y);
             s = std::max(s, p.y);

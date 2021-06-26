@@ -84,6 +84,7 @@ We compare the prediction performance of HyperPose with [OpenPose 1.6](https://g
 | OpenPose (TinyVGG)  | 34.7 MB       | 384 x 256          | **124.925 FPS**         | N/A                   |
 | OpenPose (MobileNet) | 17.9 MB       | 432 x 368          | **84.32 FPS**           | 8.5 FPS (TF-Pose)         |
 | OpenPose (ResNet18)  | 45.0 MB       | 432 x 368          | **62.52 FPS**           | N/A                  |
+| OpenPifPaf (ResNet50)  | 97.6 MB       | 97 x 129          | **178.6 FPS**           | 35.3                  |
 
 ## Accuracy
 We evaluate accuracy of pose estimation models developed by hyperpose (mainly over Mscoco2017 dataset). the development environment is Ubuntu16.04, with 4 V100-DGXs and 24 Intel Xeon CPU. The training procedure takes 1~2 weeks using 1 V100-DGX for each model. (If you want to train from strach, loading the pretrained backbone weight is recommended.)

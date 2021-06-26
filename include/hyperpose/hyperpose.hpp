@@ -9,6 +9,7 @@
 
 #include "operator/dnn/tensorrt.hpp"
 #include "operator/parser/paf.hpp"
+#include "operator/parser/pifpaf.hpp"
 #include "operator/parser/proposal_network.hpp"
 
 #include "stream/stream.hpp"
