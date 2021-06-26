@@ -8,7 +8,6 @@ import math
 import logging
 import numpy as np
 import tensorflow as tf
-from tensorlayer import logging
 from tensorlayer.files.utils import (del_file, folder_exists, maybe_download_and_extract)
 
 import matplotlib
@@ -16,7 +15,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from distutils.dir_util import mkpath
 from scipy.spatial.distance import cdist
-from .infer import Post_Processor
 from ..human import Human
 from ..common import tf_repeat,TRAIN,MODEL,DATA
 
@@ -96,6 +94,7 @@ def postprocess(conf_map,paf_map,img_h,img_w,parts,limbs,data_format="channels_f
     list
         contain object of humans,see Model.Human for detail information of Human object
     '''
+    from .processor import PostProcessor
     if(type(conf_map)!=np.ndarray):
         conf_map=conf_map.numpy()
     if(type(paf_map)!=np.ndarray):
@@ -103,7 +102,7 @@ def postprocess(conf_map,paf_map,img_h,img_w,parts,limbs,data_format="channels_f
 
     if(colors==None):
         colors=[[255,0,0]]*len(parts)
-    post_processor=Post_Processor(parts,limbs,colors)
+    post_processor=PostProcessor(parts,limbs,colors)
     humans=post_processor.process(conf_map,paf_map,img_h,img_w,data_format=data_format)
     return humans
 
@@ -455,8 +454,7 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
                 heatmap = heat_result
             tmp = heatmap
             tmp = np.amax(heatmap[:-1, :, :], axis=0)
-            #cv2.imwrite(f"./test_dir/test_heatmap_{name}_{i}_rs.jpg",np.clip(cv2.resize(tmp,(img_w,img_h))*255.0,0.,255.).astype(np.uint8))
-
+            
             plt.imshow(tmp, alpha=0.8)
             plt.colorbar()
 
@@ -469,19 +467,16 @@ def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, m
                 heatmap = heat_ground
             tmp = heatmap
             tmp = np.amax(heatmap[:-1, :, :], axis=0)
-            #cv2.imwrite(f"./test_dir/test_heatmap_{name}_{i}_gt.jpg",np.clip(cv2.resize(tmp,(img_w,img_h))*255.0,0.,255.).astype(np.uint8))
-
+            
             plt.imshow(tmp, alpha=0.8)
             plt.colorbar()
 
         if masks is not None:
             a = fig.add_subplot(2, 3, 6)
             a.set_title('Mask')
-            # print(mask.shape, tmp.shape)
             plt.imshow(mask[0, :, :], alpha=0.8)
             plt.colorbar()
-        # plt.savefig(str(i)+'.png',dpi=300)
-        # plt.show()
+            
         os.makedirs(save_dir,exist_ok=True)
         plt.savefig(os.path.join(save_dir, '%s_%d.png' % (name, i)), dpi=300)
         plt.close()

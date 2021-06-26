@@ -84,6 +84,9 @@ class MPII_dataset(Base_dataset):
     def generate_eval_data(self):
         return generate_eval_data(self.images_path,self.val_annos_path,self.dataset_filter)
     
+    def generate_test_data(self):
+        raise NotImplementedError("MPII test dataset generation has not implemented!")
+    
     def set_input_kpt_cvter(self,input_kpt_cvter):
         self.input_kpt_cvter=input_kpt_cvter
     
@@ -96,7 +99,7 @@ class MPII_dataset(Base_dataset):
     def get_output_kpt_cvter(self):
         return self.output_kpt_cvter
         
-    def official_eval(self,pd_json,eval_dir=f"./eval_dir"):
+    def official_eval(self,pd_anns,eval_dir=f"./eval_dir"):
         '''providing official evaluation of MPII dataset
 
         output model metrics of PCHs on mpii evaluation dataset(split automaticly)
@@ -114,7 +117,6 @@ class MPII_dataset(Base_dataset):
         None
         '''
         #format predict result in dict
-        pd_anns=pd_json["annotations"]
         pd_dict={}
         for pd_ann in pd_anns:
             image_id=pd_ann["image_id"]
@@ -233,6 +235,6 @@ class MPII_dataset(Base_dataset):
         json.dump(result_dict,open(result_path,"w"))
         return result_dict
 
-
-
+    def official_test(self,pd_anns,test_dir="./test_dir"):
+        raise NotImplementedError("test over MPII dataset haven't implemented yet!")
     

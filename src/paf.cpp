@@ -197,7 +197,12 @@ namespace parser {
                         hr1.score += hr2.score;
                         hr1.score += conn.score;
 
-                        human_refs.erase(human_refs.begin() + hr_ids[1]);
+                        // @ Thanks to @korejan.
+                        size_t delete_id = hr_ids[1];
+                        human_refs.erase(human_refs.begin() + delete_id);
+                        for (auto& hr_ref : human_refs)
+                            if (hr_ref.id > delete_id)
+                                --hr_ref.id;
                     } else {
                         hr1.parts[part_id2].id = conn.cid2;
                         hr1.n_parts += 1;

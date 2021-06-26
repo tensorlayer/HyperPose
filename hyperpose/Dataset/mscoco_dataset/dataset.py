@@ -12,7 +12,7 @@ from ..common import unzip,visualize
 from .prepare import prepare_dataset
 from .format import CocoMeta,PoseInfo
 from .define import CocoPart,CocoColor
-from .generate import generate_train_data,generate_eval_data
+from .generate import generate_train_data,generate_eval_data,generate_test_data
 
 def init_dataset(config):
     dataset=MSCOCO_dataset(config)
@@ -58,7 +58,7 @@ class MSCOCO_dataset(Base_dataset):
         '''
         
         train_dataset=self.get_train_dataset()
-        visualize(self.vis_dir,vis_num,train_dataset,self.parts,self.colors,dataset_name="mpii")
+        visualize(self.vis_dir,vis_num,train_dataset,self.parts,self.colors,dataset_name="mscoco")
 
     def get_parts(self):
         return self.parts
@@ -91,6 +91,9 @@ class MSCOCO_dataset(Base_dataset):
     def generate_eval_data(self):
         return generate_eval_data(self.val_imgs_path,self.val_anns_path,self.dataset_filter)
     
+    def generate_test_data(self):
+        return generate_test_data(self.test_imgs_path,self.test_anns_path)
+    
     def set_input_kpt_cvter(self,input_kpt_cvter):
         self.input_kpt_cvter=input_kpt_cvter
     
@@ -103,7 +106,7 @@ class MSCOCO_dataset(Base_dataset):
     def get_output_kpt_cvter(self):
         return self.output_kpt_cvter
 
-    def official_eval(self,pd_json,eval_dir=f"./eval_dir"):
+    def official_eval(self,pd_anns,eval_dir=f"./eval_dir"):
         '''providing official evaluation of COCO dataset
 
         using pycocotool.cocoeval class to perform official evaluation.
@@ -130,8 +133,7 @@ class MSCOCO_dataset(Base_dataset):
         #filter the gt annos
         image_ids=[]
         category_ids=[]
-        pd_anns=pd_json["annotations"]
-        for pd_ann in pd_anns:
+        for pd_idx,pd_ann in enumerate(pd_anns):
             image_ids.append(pd_ann["image_id"])
             category_ids.append(pd_ann["category_id"])
         image_ids=list(np.unique(image_ids))
@@ -150,12 +152,13 @@ class MSCOCO_dataset(Base_dataset):
         json.dump(gt_json,gt_json_file)
         gt_json_file.close()
 
-        pd_json_path=f"{eval_dir}/pd_ann.json"
+        pd_json_path=f"{eval_dir}/person_keypoints_val2017_hyperpose_results.json"
         pd_json_file=open(pd_json_path,"w")
         json.dump(pd_anns,pd_json_file)
         pd_json_file.close()
         #evaluating 
-        print(f"evluating on total {len(image_ids)} images...")
+        print(f"model predicted evaluation result saved at {pd_json_path}!")
+        print(f"evaluating on total {len(image_ids)} images...")
         gt_coco=COCO(gt_json_path)
         pd_coco=gt_coco.loadRes(pd_json_path)
 
@@ -171,7 +174,7 @@ class MSCOCO_dataset(Base_dataset):
             
             print(f"test all_info_gt:")
             for gt_ann in gt_anns:
-                print(f"kpst:{gt_ann['keypoints']}")
+                print(f"kpts:{gt_ann['keypoints']}")
                 print(f"bbxs:{gt_ann['bbox']}")
                 print()
         '''
@@ -180,3 +183,12 @@ class MSCOCO_dataset(Base_dataset):
         std_eval.evaluate()
         std_eval.accumulate()
         std_eval.summarize()
+    
+    def official_test(self,pd_anns,test_dir="./test_dir"):
+        server_url="https://competitions.codalab.org/competitions/12061"
+        pd_json_path=f"{test_dir}/person_keypoints_test-dev2017_hyperpose_results.json"
+        pd_json_file=open(pd_json_path,mode="w")
+        json.dump(pd_anns,pd_json_file)
+        pd_json_file.close()
+        print(f"model predicted test result saved at {pd_json_path}!")
+        print(f"please upload the result file to MScoco official server at {server_url} to get official test metrics")

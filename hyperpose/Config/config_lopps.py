@@ -39,7 +39,11 @@ train.vis_dir=f"./save_dir/{model.model_name}/train_vis_dir"
 #eval configuration
 eval =edict()
 eval.batch_size=22
-eval.vis_dir= f"./save_dir/{model.model_name}/eval_vis_dir"
+eval.vis_dir=f"./save_dir/{model.model_name}/eval_vis_dir"
+
+#test configuration
+test =edict()
+test.vis_dir=f"./save_dir/{model.model_name}/test_vis_dir"
 
 #data configuration
 data = edict()

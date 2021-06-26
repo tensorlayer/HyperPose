@@ -29,7 +29,11 @@ HyperPose is a library for building human pose estimation systems that can effic
 
 HyperPose has two key features, which are not available in existing libraries:
 
-- **Flexible training platform**: HyperPose provides flexible Python APIs to build many useful pose estimation models (e.g., OpenPose and PoseProposalNetwork). HyperPose users can, for example, customize data augmentation, use parallel GPUs for training, and replace deep neural networks (e.g., changing from ResNet to MobileNet), thus building models specific to their real-world scenarios.
+- **Flexible training platform**: HyperPose provides flexible Python APIs to provide a customise pipeline for developing various pose estimation models. HyperPose users can:
+* make use of uniform pipelines for train,evaluation,visualization,pre-processing and post-processing across various models (e.g., OpenPose,Pifpaf,PoseProposal Network)
+* customise model and dataset for their own use(e.g. user-defined model,user-defined dataset,mitiple dataset combination)
+* parallel training using multiple GPUs(using *Kungfu* adaptive distribute training library)
+thus building models specific to their real-world scenarios.
 - **High-performance pose estimation**: HyperPose achieves real-time pose estimation though a high-performance pose estimation engine. This engine implements numerous system optimizations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. This allows HyperPose to **run 4x FASTER than OpenPose and 10x FASTER than TF-Pose**.
 
 ## Documentation
@@ -74,13 +78,28 @@ xhost +; docker run --rm --gpus all -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/t
 
 We compare the prediction performance of HyperPose with [OpenPose 1.6](https://github.com/CMU-Perceptual-Computing-Lab/openpose) and [TF-Pose](https://github.com/ildoonet/tf-pose-estimation). We implement the OpenPose algorithms with different configurations in HyperPose. The test-bed has Ubuntu18.04, 1070Ti GPU, Intel i7 CPU (12 logic cores). 
 
-| HyperPose Configuration  | DNN Size | Input Size | HyerPose | Baseline |
+| HyperPose Configuration  | DNN Size | Input Size | HyperPose | Baseline |
 | --------------- | ------------- | ------------------ | ------------------ | --------------------- |
 | OpenPose (VGG)   | 209.3MB       | 656 x 368            | **27.32 FPS**           | 8 FPS (OpenPose)          |
 | OpenPose (TinyVGG)  | 34.7 MB       | 384 x 256          | **124.925 FPS**         | N/A                   |
 | OpenPose (MobileNet) | 17.9 MB       | 432 x 368          | **84.32 FPS**           | 8.5 FPS (TF-Pose)         |
 | OpenPose (ResNet18)  | 45.0 MB       | 432 x 368          | **62.52 FPS**           | N/A                  |
 | OpenPifPaf (ResNet50)  | 97.6 MB       | 97 x 129          | **178.6 FPS**           | 35.3                  |
+<<<<<<< HEAD
+=======
+
+## Accuracy
+We evaluate accuracy of pose estimation models developed by hyperpose (mainly over Mscoco2017 dataset). the development environment is Ubuntu16.04, with 4 V100-DGXs and 24 Intel Xeon CPU. The training procedure takes 1~2 weeks using 1 V100-DGX for each model. (If you want to train from strach, loading the pretrained backbone weight is recommended.)
+
+| HyperPose Configuration | DNN Size | Input Size | Evaluate Dataset | Accuracy-hyperpose (Iou=0.50:0.95) | Accuracy-original (Iou=0.50:0.95) |
+| -------------------- | ---------- | ------------- | ---------------- | --------------------- | ----------------------- |
+| Openpose (vgg19)   | 199 MB | 432 x 368 | Mscoco2014(random 1160 images) | 57.0 map | 58.4 map  |
+| LightweightOpenpose (dailated mobilenet)   | 17.7 MB | 432 x 368 | Mscoco2017(all 5000 images) | 46.1 map | 42.8 map |
+| LightweightOpenpose (mobilenet-thin)   | 17.4 MB | 432 x 368 | Mscoco2017(all 5000 images) | 44.2 map | 28.06 map (Mscoco2014) |
+| LightweightOpenpose (tinyvgg)   | 23.6 MB | 432 x 368 | Mscoco2017(all 5000 images) | 47.3 map | - |
+| LightweightOpenpose (resnet50)   | 42.7 MB | 432 x 368 | Mscoco2017(all 5000 images) | 48.2 map | - |
+| PoseProposal (resnet18)   | 45.2 MB | 384 x 384 | MPII(all 2729 images) | 54.9 map (Pckh) | 72.8 map (Pckh)|
+>>>>>>> master
 
 </a>
 <p align="center">

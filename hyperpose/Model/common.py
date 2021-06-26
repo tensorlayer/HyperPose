@@ -265,6 +265,25 @@ def pad_image(img,stride,pad_value=0.0):
     padded_image[pad[0]:img_h+pad[0],pad[2]:img_w+pad[2],:]=img
     return padded_image,pad
 
+def pad_image_shape(img,shape,pad_value=0.0):
+    img_h,img_w,img_c=img.shape
+    dst_h,dst_w=shape
+    pad_h=dst_h-img_h
+    pad_w=dst_w-img_w
+    pad=[pad_h//2,pad_h-pad_h//2,pad_w//2,pad_w-pad_w//2]
+    padded_image=np.zeros(shape=(img_h+pad_h,img_w+pad_w,img_c))+pad_value
+    padded_image[pad[0]:img_h+pad[0],pad[2]:img_w+pad[2],:]=img
+    return padded_image,pad
+
+def scale_image(image,hin,win,scale_rate=0.95):
+    #scale a image into the size of scale_rate*hin and scale_rate*win
+    #used for model inferecne
+    image_h,image_w,_=image.shape
+    scale_h,scale_w=int(scale_rate*image_h),int(scale_rate*image_w)
+    scale_image=cv2.resize(image,(scale_w,scale_h),interpolation=cv2.INTER_CUBIC)
+    padded_image,pad=pad_image_shape(scale_image,shape=(hin,win),pad_value=0.0)
+    return padded_image,pad
+
 def get_optim(optim_type):
     if(optim_type==OPTIM.Adam):
         print("using optimizer Adam!")
@@ -278,6 +297,12 @@ def get_optim(optim_type):
     else:
         raise NotImplementedError("invalid optim type")
 
+def regulize_loss(target_model,weight_decay_factor):
+    re_loss=0
+    regularizer=tf.keras.regularizers.l2(l=weight_decay_factor)
+    for weight in target_model.trainable_weights:
+        re_loss+=regularizer(weight)
+    return re_loss
 
 def init_log(config):
     logger=logging.getLogger(name="hyperpose")

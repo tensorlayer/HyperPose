@@ -9,6 +9,10 @@ from .backbones import MobilenetV1_backbone,MobilenetV2_backbone,vgg16_backbone,
 from .backbones import Resnet18_backbone,Resnet50_backbone
 from .pretrain import single_pretrain
 
+#claim:
+#all the model preprocessor,postprocessor,and visualizer processing logic are written in 'channels_first' data_format
+#input data in "channels_last" data_format will be converted to "channels_first" format first and then handled
+
 def get_model(config):
     '''get model based on config object
 
@@ -77,6 +81,12 @@ def get_model(config):
             from .pose_proposal.utils import get_limbs
             model.parts=get_parts(dataset_type)
             model.limbs=get_limbs(dataset_type)
+        elif(model_type == MODEL.Pifpaf):
+            from  .pifpaf.utils import get_parts
+            from  .pifpaf.utils import get_limbs
+            model.parts=get_parts(dataset_type)
+            model.limbs=get_limbs(dataset_type)
+
         userdef_parts=config.model.userdef_parts
         userdef_limbs=config.model.userdef_limbs
         if(userdef_parts!=None):
@@ -93,22 +103,28 @@ def get_model(config):
                 hin=model.hin,win=model.win,hout=model.hout,wout=model.wout,backbone=backbone,pretraining=pretraining,data_format=model.data_format)
         elif model_type == MODEL.LightweightOpenpose:
             from .openpose import LightWeightOpenPose as model_arch
-            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),num_channels=model.num_channels,hin=model.hin,win=model.win,\
-                hout=model.hout,wout=model.wout,backbone=backbone,pretraining=pretraining,data_format=model.data_format)
+            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),num_channels=model.num_channels,\
+                hin=model.hin,win=model.win,hout=model.hout,wout=model.wout,backbone=backbone,pretraining=pretraining,data_format=model.data_format)
         elif model_type == MODEL.MobilenetThinOpenpose:
             from .openpose import MobilenetThinOpenpose as model_arch
-            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),num_channels=model.num_channels,hin=model.hin,win=model.win,\
-                hout=model.hout,wout=model.wout,backbone=backbone,pretraining=pretraining,data_format=model.data_format)
+            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),num_channels=model.num_channels,\
+                hin=model.hin,win=model.win,hout=model.hout,wout=model.wout,backbone=backbone,pretraining=pretraining,data_format=model.data_format)
         elif model_type == MODEL.PoseProposal:
             from .pose_proposal import PoseProposal as model_arch
             ret_model=model_arch(parts=model.parts,K_size=len(model.parts),limbs=model.limbs,L_size=len(model.limbs),hnei=model.hnei,wnei=model.wnei,lmd_rsp=model.lmd_rsp,\
                 lmd_iou=model.lmd_iou,lmd_coor=model.lmd_coor,lmd_size=model.lmd_size,lmd_limb=model.lmd_limb,backbone=backbone,\
                 pretraining=pretraining,data_format=model.data_format)
-            #print(f"\n!!!test in get_model: parts:{model.parts} limbs:{model.limbs}\n\n")
+        elif model_type == MODEL.Pifpaf:
+            from .pifpaf import Pifpaf as model_arch
+            ret_model=model_arch(parts=model.parts,n_pos=len(model.parts),limbs=model.limbs,n_limbs=len(model.limbs),hin=model.hin,win=model.win,\
+                scale_size=32,pretraining=pretraining,data_format=model.data_format)
         else:
             raise RuntimeError(f'unknown model type {model_type}')
         print(f"using {model_type.name} model arch!")
     return ret_model
+
+def get_pretrain(config):
+    return partial(single_pretrain,config=config)
 
 def get_train(config):
     '''get train pipeline based on config object
@@ -143,6 +159,8 @@ def get_train(config):
         from .openpose import single_train,parallel_train
     elif model_type == MODEL.PoseProposal:
         from .pose_proposal import single_train,parallel_train
+    elif model_type == MODEL.Pifpaf:
+        from .pifpaf import single_train,parallel_train
     else:
         raise RuntimeError(f'unknown model type {model_type}')
     print(f"training {model_type.name} model...")
@@ -158,9 +176,6 @@ def get_train(config):
         train=partial(parallel_train,config=config)
     print(f"using {train_type.name}...")
     return train
-
-def get_pretrain(config):
-    return partial(single_pretrain,config=config)
 
 def get_evaluate(config):
     '''get evaluate pipeline based on config object
@@ -193,20 +208,62 @@ def get_evaluate(config):
         from .openpose import evaluate
     elif model_type == MODEL.PoseProposal:
         from .pose_proposal import evaluate
+    elif model_type == MODEL.Pifpaf:
+        from .pifpaf import evaluate
     else:
         raise RuntimeError(f'unknown model type {model_type}')
     evaluate=partial(evaluate,config=config)
     print(f"evaluating {model_type.name} model...")
     return evaluate
 
-def get_preprocess(model_type):
-    '''get preprocess function based model_type
+def get_test(config):
+    '''get test pipeline based on config object
 
-    get the preprocess function of the specified kind of model to help user construct thier own train
-    and evaluate pipeline rather than using the integrated train or evaluate pipeline directly when in need.
+    construct test pipeline based on the chosen model_type and dataset_type,
+    the test metric fellows the official metrics of the chosen dataset.
 
-    the preprocess function is able to convert the image and annotation to the model output format for training
-    or evaluation.
+    the returned test pipeline can be easily used by test(model,dataset),
+    where model is obtained by Model.get_model(), dataset is obtained by Dataset.get_dataset()
+
+    the test pipeline will:
+    1.loading newest model at path ./save_dir/model_name/model_dir/newest_model.npz
+    2.perform inference and parsing over the chosen test dataset
+    3.visualize model output in test in directory ./save_dir/model_name/test_vis_dir
+    4.output model test result file at path ./save_dir/model_name/test_vis_dir/pd_ann.json
+    5.the test dataset ground truth is often preserved by the dataset creator, you may need to upload the test result file to the official server to get model test metrics
+
+    Parameters
+    ----------
+    arg1 : config object
+        the config object return by Config.get_config() function, which includes all the configuration information.
+    
+    Returns
+    -------
+    function
+        a test pipeline function which takes model and dataset as input, and output model metrics
+    
+    '''
+    model_type=config.model.model_type
+    if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
+        from .openpose import test
+    elif model_type == MODEL.PoseProposal:
+        from .pose_proposal import test
+    elif model_type == MODEL.Pifpaf:
+        from .pifpaf import test
+    else:
+        raise RuntimeError(f'unknown model type {model_type}')
+    test=partial(test,config=config)
+    print(f"testing {model_type.name} model...")
+    return test
+
+def get_preprocessor(model_type):
+    '''get a preprocessor class based on the specified model_type
+
+    get the preprocessor class of the specified kind of model to help user directly construct their own 
+    train pipeline(rather than using the integrated train pipeline) when in need.
+
+    the preprocessor class is able to construct a preprocessor object that could convert the image and annotation to 
+    the model output format for training.
 
     Parameters
     ----------
@@ -215,23 +272,26 @@ def get_preprocess(model_type):
     
     Returns
     -------
-    function
-        a preprocess function of the specified kind of model
+    class
+        a preprocessor class of the specified kind of model
     '''
 
     if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
-        from .openpose.utils import preprocess
+        from .openpose import PreProcessor
     elif model_type == MODEL.PoseProposal:
-        from .pose_proposal.utils import preprocess
-    return preprocess
+        from .pose_proposal import PreProcessor
+    elif model_type == MODEL.Pifpaf:
+        from .pifpaf import PreProcessor
+    return PreProcessor
 
-def get_postprocess(model_type):
-    '''get postprocess function based model_type
+def get_postprocessor(model_type):
+    '''get a postprocessor class based on the specified model_type
 
-    get the postprocess function of the specified kind of model to help user construct thier own 
-    evaluate pipeline rather than using the integrated train or evaluate pipeline directly when in need
+    get the postprocessor class of the specified kind of model to help user directly construct their own 
+    evaluate pipeline(rather than using the integrated evaluate pipeline) or infer pipeline(to check the model utility) 
+    when in need.
 
-    the postprocess function is able to parse the model output feature map and output parsed human objects of Human class,
+    the postprocessor is able to parse the model output feature map and output parsed human objects of Human class,
     which contains all dectected keypoints.
 
     Parameters
@@ -242,13 +302,15 @@ def get_postprocess(model_type):
     Returns
     -------
     function
-        a postprocess function of the specified kind of model
+        a postprocessor class of the specified kind of model
     '''
     if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
-        from .openpose.utils import postprocess
+        from .openpose import PostProcessor
     elif model_type == MODEL.PoseProposal:
-        from .pose_proposal.utils import postprocess
-    return postprocess
+        from .pose_proposal import PostProcessor
+    elif model_type == MODEL.Pifpaf:
+        from .pifpaf import PostProcessor
+    return PostProcessor
 
 def get_visualize(model_type):
     '''get visualize function based model_type

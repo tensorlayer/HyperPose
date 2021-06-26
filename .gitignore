@@ -38,6 +38,14 @@ libstdtensor-prefix
 libstdtracer-prefix
 Makefile
 test.py
+temp.py
+save_dir
+test_dir
+README.rst
+dist
+build
+*.egg*
+*whl*
 Testing
 third_party
 venv
