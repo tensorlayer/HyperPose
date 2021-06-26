@@ -20,7 +20,7 @@ The official image is on [DockerHub](https://hub.docker.com/r/tensorlayer/hyperp
 docker pull tensorlayer/hyperpose
 
 # Dive into the image. (Connect local camera and imshow window)
-xhost +; docker run --gpus all -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --device=/dev/video0:/dev/video0 --entrypoint /bin/bash tensorlayer/hyperpose
+xhost +; docker run --rm --gpus all -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --device=/dev/video0:/dev/video0 --entrypoint /bin/bash tensorlayer/hyperpose
 # For users that cannot access a camera or X11 server. You may also use:
 # docker run --rm --gpus all -it --entrypoint /bin/bash tensorlayer/hyperpose
 ```
@@ -33,7 +33,7 @@ Note that the entry point is the [`hyperpose-cli`](https://hyperpose.readthedocs
 # Enter the repository folder.
 USER_DEF_NAME=my_hyperpose
 docker build -t $(USER_DEF_NAME) .
-docker run --gpus all $(USER_DEF_NAME)
+docker run --rm --gpus all $(USER_DEF_NAME)
 ```
 
 ## Build From Source
