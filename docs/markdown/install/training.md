@@ -29,14 +29,14 @@ conda install cudnn=7.6.0
 
 After configuring and activating conda enviroment, we can then begin to install the hyperpose.<br>
 (I)The first method to install is to put hyperpose python module in the working directory.(recommand)<br>
-After git-cloning the source [repository](https://github.com/tensorlayer/hyperpose.git), you can directly import hyperpose python library under the root directory of the cloned repository.<br>
-To make importion available, you should install the prerequist dependencies as followed:<br>
-you can either install according to the requirements.txt in the [repository](https://github.com/tensorlayer/hyperpose.git)
+    After git-cloning the source [repository](https://github.com/tensorlayer/hyperpose.git), you can directly import hyperpose python library under the root directory of the cloned repository.<br>
+    To make importion available, you should install the prerequist dependencies as followed:<br>
+    you can either install according to the requirements.txt in the [repository](https://github.com/tensorlayer/hyperpose.git)
 ```bash
     # install according to the requirements.txt
     pip install -r requirements.txt
 ```
-or install libraries one by one
+    or install libraries one by one
 ```bash
     # >>> install tensorflow of version 2.3.1
     pip install tensorflow-gpu==2.3.1
@@ -48,24 +48,24 @@ or install libraries one by one
     pip install pycocotools
     pip install matplotlib
 ``` 
-This method of installation use the latest source code and thus is less likely to meet compatibility problems.<br>
+    This method of installation use the latest source code and thus is less likely to meet compatibility problems.<br><br>
 (II)The second method to install is to use pypi repositories.<br>
-We have already upload hyperpose python library to pypi website so you can install it using pip, which gives you the last stable version.
-```bash
-    pip install hyperpose
-```
-This will download and install all dependencies automatically.
+    We have already upload hyperpose python library to pypi website so you can install it using pip, which gives you the last stable version.
+    ```bash
+        pip install hyperpose
+    ```
+    This will download and install all dependencies automatically.
 
 Now after installing dependent libraries and hyperpose itself, let's check whether the installation successes.
 run following command in bash:
 ```bash
-    # >>> now the configuration is done, check whether the GPU is avaliable.
-    python
-    >>> import tensorflow as tf
-    >>> import tensorlayer as tl
-    >>> tf.test.is_gpu_available()
-    # >>> if the output is True, congratulation! you can import and run hyperpose now
-    >>> from hyperpose import Config,Model,Dataset
+# >>> now the configuration is done, check whether the GPU is avaliable.
+python
+>>> import tensorflow as tf
+>>> import tensorlayer as tl
+>>> tf.test.is_gpu_available()
+# >>> if the output is True, congratulation! you can import and run hyperpose now
+>>> from hyperpose import Config,Model,Dataset
 ```
 
 ## Extra configuration for exporting model
