@@ -19,7 +19,7 @@ DEFINE_string(
     "Post-processing method. (`" kPAF "` -> [Part Affine Field] or `" kPPN "` -> [Pose Proposal Network]) or `" kPIFPAF "` -> [Pif Paf]");
 DEFINE_int32(w, 384, "Width of input image.");
 DEFINE_int32(h, 256, "Height of input image.");
-DEFINE_int32(max_batch_size, 8, "Max batch size for inference engine to execute.");
+DEFINE_int32(max_batch_size, 4, "Max batch size for inference engine to execute.");
 
 // Execution Mode
 DEFINE_bool(imshow, true, "Whether to open an imshow window.");
@@ -152,7 +152,7 @@ int main(int argc, char** argv)
             return hp::parser::pose_proposal(engine.input_size());
 
         if (FLAGS_post == kPIFPAF)
-            return hp::parser::pifpaf{};
+            return hp::parser::pifpaf(engine.input_size().height, engine.input_size().width);
 
         cli_log() << "ERROR: Unknown post-processing flag: `" << FLAGS_post << "`. Use `paf`, `ppn` or `pifpaf` please.\n";
         std::exit(-1);
@@ -184,6 +184,7 @@ int main(int argc, char** argv)
     if (FLAGS_runtime == kOPERATOR) {
         if (images.empty()) { // For CAP.
 
+            auto beg = clk_t::now();
             auto writer = make_writer();
             while (cap.isOpened()) {
                 cv::Mat mat;
@@ -227,6 +228,9 @@ int main(int argc, char** argv)
                         break;
                 }
             }
+            auto inference_time = std::chrono::duration<double, std::milli>(clk_t::now() - beg).count();
+            std::cout << cap.get(cv::CAP_PROP_FRAME_COUNT) << " images got processed in " << inference_time << " ms, FPS = "
+                      << 1000. * cap.get(cv::CAP_PROP_FRAME_COUNT) / inference_time << '\n';
         } else { // For Vec<Image>.
             auto beg = clk_t::now();
             // * TensorRT Inference.

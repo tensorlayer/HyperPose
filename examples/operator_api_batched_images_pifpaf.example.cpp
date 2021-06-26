@@ -45,7 +45,7 @@ int main(int argc, char** argv)
         return tensorrt(tensorrt_serialized{ FLAGS_model_file }, { FLAGS_input_width, FLAGS_input_height }, batch.size());
     }();
 
-    hp::parser::pifpaf parser{};
+    hp::parser::pifpaf parser(engine.input_size().height, engine.input_size().width);
 
     using clk_t = std::chrono::high_resolution_clock;
     auto beg = clk_t::now();

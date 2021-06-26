@@ -12,7 +12,7 @@ DEFINE_string(output_name_list, "outputs/conf,outputs/paf", "The output node nam
 
 DEFINE_int32(input_height, 256, "Height of input image.");
 DEFINE_int32(input_width, 384, "Width of input image.");
-DEFINE_int32(max_batch_size, 32, "The max batch size for the exported serialized model.");
+DEFINE_int32(max_batch_size, 1, "The max batch size for the exported serialized model.");
 
 DEFINE_string(output_model, "", "Path to output serialized model.");
 

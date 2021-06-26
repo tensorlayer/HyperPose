@@ -1,11 +1,12 @@
-#include <hyperpose/operator/parser/pifpaf.hpp>
 #include "pifpaf_decoder/openpifpaf_postprocessor.hpp"
+#include <hyperpose/operator/parser/pifpaf.hpp>
 
 namespace hyperpose::parser {
 
 // TODO: Name ORDER!
-std::vector<human_t> pifpaf::process(const feature_map_t& paf, const feature_map_t& pif) {
-    // Helpful links (Chinese):
+std::vector<human_t> pifpaf::process(const feature_map_t& paf, const feature_map_t& pif)
+{
+    // Helpful links (Chinese)::
     // https://zhuanlan.zhihu.com/p/93896207
     // https://zhuanlan.zhihu.com/p/68073113
     // pif: [17, 5, h, w] => KEY POINTS;
@@ -18,99 +19,35 @@ std::vector<human_t> pifpaf::process(const feature_map_t& paf, const feature_map
     // TODO: OPTIMIZE THIS.
 
     lpdnn::aiapp_impl::OpenPifPafPostprocessor pp;
+    pp.keypointThreshold = m_keypoint_thresh;
     size_t h = pif.shape()[pif.shape().size() - 2];
     size_t w = pif.shape().back();
-    std::vector<float> pif_conf, pif_xy, pif_s, paf_conf, paf_xy1, paf_xy2, paf_b1, paf_b2;
 
-    const auto tensor_sharding_to_vector = [](const feature_map_t& tensor, std::vector<float>& vec, size_t dim2) {
+    std::vector<float> pif_vec{}, paf_vec{};
+
+    const auto raw_copy = [](const feature_map_t& tensor, std::vector<float>& vec) {
         size_t d0 = tensor.shape()[0];
         size_t d1 = tensor.shape()[1];
         size_t h = tensor.shape()[2];
         size_t w = tensor.shape()[3];
-        for (int i = 0; i < d0; ++i) {
-            for (int j = 0; j < h; ++j) {
-                for (int k = 0; k < w; ++k) {
-                    vec.push_back(tensor.view<float>()[
-                                      i * d1 * w * h +
-                                      dim2 * h * w +
-                                      j * w +
-                                      k
-                                  ]);
-                }
-            }
+        const size_t total_size = d0 * d1 * h * w;
+        vec.reserve(total_size);
+        for (size_t i = 0; i < total_size; ++i) {
+            vec.push_back(tensor.view<float>()[i]);
         }
     };
 
-    const auto tensor_sharding_to_offset_vector = [](const feature_map_t& tensor, std::vector<float>& vec, size_t dimx, size_t dimy) {
-        size_t d0 = tensor.shape()[0];
-        size_t d1 = tensor.shape()[1];
-        size_t h = tensor.shape()[2];
-        size_t w = tensor.shape()[3];
-        for (int i = 0; i < d0; ++i) {
-            // X first & Then Y
-            for (int j = 0; j < h; ++j) {
-                for (int k = 0; k < w; ++k) {
-                    vec.push_back(tensor.view<float>()[
-                                      i * d1 * w * h +
-                                      dimx * h * w +
-                                      j * w +
-                                      k
-                                  ]);
-                }
-            }
-
-            for (int j = 0; j < h; ++j) {
-                for (int k = 0; k < w; ++k) {
-                    vec.push_back(tensor.view<float>()[
-                                      i * d1 * w * h +
-                                      dimy * h * w +
-                                      j * w +
-                                      k
-                                  ]);
-                }
-            }
-        }
-    };
-
-    pif_conf.reserve(17 * h * w);
-    tensor_sharding_to_vector(pif, pif_conf, 0);
-
-    pif_xy.reserve(17 * 2 * h * w);
-    tensor_sharding_to_offset_vector(pif, pif_xy, 1, 2);
-
-    pif_s.reserve(17 * h * w);
-    tensor_sharding_to_vector(pif, pif_s, 4);
-
-    // [19, 9, h, w] -> [conf, p1, p2, b1, b2, ...]
-    paf_conf.reserve(19 * h * w);
-    tensor_sharding_to_vector(paf, paf_conf, 0);
-
-    paf_xy1.reserve(2 * 19 * h * w);
-    tensor_sharding_to_offset_vector(paf, paf_xy1, 1, 2);
-
-    paf_xy2.reserve(2 * 19 * h * w);
-    tensor_sharding_to_offset_vector(paf, paf_xy2, 3, 4);
-
-    paf_b1.reserve(19 * h * w);
-    tensor_sharding_to_vector(paf, paf_b1, 5);
-
-    paf_b2.reserve(19 * h * w);
-    tensor_sharding_to_vector(paf, paf_b2, 6);
+    raw_copy(pif, pif_vec);
+    raw_copy(paf, paf_vec);
 
     // TODO: RECOVER THE INP{W, H};
-    auto apires = pp.postprocess_0_8(640, 427, w, h,
-                                     pif_conf.data(), pif_xy.data(), pif_s.data(),
-                                     paf_conf.data(), paf_xy1.data(), paf_xy2.data(), paf_b1.data(), paf_b2.data());
+    auto apires = pp.postprocess(m_net_w, m_net_h, w, h, pif_vec, paf_vec);
 
     std::vector<human_t> ret{};
     ret.reserve(apires.items.size());
-
-    /*
-     *
- OpenPifPaf COCO Topology: https://miro.medium.com/max/366/0*KFrFQVj3OoGAtt6o.png
-HyperPose: Unified Topology
-     *
-     */
+    // OpenPifPaf COCO Topology: https://miro.medium.com/max/366/0*KFrFQVj3OoGAtt6o.png
+    // HyperPose: Unified Topology
+    // NOTE: This step is to convert pifpaf topology to hyperpose topology.
 
     for (auto&& item : apires.items) {
         if (item.landmarks.points.empty())
@@ -120,9 +57,9 @@ HyperPose: Unified Topology
 
         auto p2p = [this](const auto& src, auto& dst) {
             if (src.confidence > 0.) {
-                dst.score = 1;// src.confidence; FIXME
-                dst.x = src.position.x / 10000.;
-                dst.y = src.position.y / 10000.;
+                dst.score = 1; // src.confidence; FIXME
+                dst.x = src.position.x / (float)m_net_w;
+                dst.y = src.position.y / (float)m_net_h;
                 dst.has_value = true;
             }
         };
@@ -139,12 +76,14 @@ HyperPose: Unified Topology
         };
 
         for (size_t i = 0; i < from_index.size(); ++i) {
-            p2p(from[from_index[i]], to[i+2]);
+            p2p(from[from_index[i]], to[i + 2]);
         }
 
         if (to[2].has_value && to[5].has_value) {
-            to[1].x = (to[2].x + to[5].x) / 2;;
-            to[1].y = (to[2].y + to[5].y) / 2;;
+            to[1].x = (to[2].x + to[5].x) / 2;
+            ;
+            to[1].y = (to[2].y + to[5].y) / 2;
+            ;
             to[1].has_value = true;
             to[1].score = (to[2].score + to[5].score) / 2;
         }
