@@ -51,7 +51,7 @@ Make sure you have [docker](https://docs.docker.com/get-docker/) with [nvidia-do
 
 ```bash
 # [Example 1]: Doing inference on given video, copy the output.avi to the local path. 
-docker run --rm --name quick-start --gpus all tensorlayer/hyperpose --runtime=stream
+docker run --name quick-start --gpus all tensorlayer/hyperpose --runtime=stream
 docker cp quick-start:/hyperpose/build/output.avi .
 docker rm quick-start
 
