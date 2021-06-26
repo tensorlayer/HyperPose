@@ -439,9 +439,8 @@ namespace aiapp_impl {
     using xysv = std::optional<std::tuple<float, float, float, float>>;
 
     struct queue_item { // -score, xyv, start_i, end_i
-        template <typename... Args>
-        queue_item(Args&&... args)
-            : data(std::make_tuple(std::forward<Args>(args)...))
+        explicit queue_item(float f, xysv xysv_, int s, int e)
+            : data(std::make_tuple(f, std::move(xysv_), s, e))
         {
         }
         std::tuple<float, xysv, int, int> data;
@@ -462,7 +461,11 @@ namespace aiapp_impl {
         // frontierActive = true;
         // blockFrontier.clear();
         std::set<std::pair<int, int>> in_frontier{};
+<<<<<<< HEAD
+        std::priority_queue<queue_item, std::deque<queue_item>, std::greater<>> frontier;
+=======
         std::priority_queue<queue_item, std::deque<queue_item>, std::greater<queue_item>> frontier;
+>>>>>>> master
 
         const auto add_to_frontier = [&](size_t start_i) {
             for (const auto& [end_i, to_p] : BY_SOURCE_MAP[start_i]) {

@@ -10,7 +10,7 @@
     <a href="https://drive.google.com/drive/folders/1w9EjMkrjxOmMw3Rf6fXXkiv_ge7M99jR?usp=sharing" title="PreTrainedModels"><img src="https://img.shields.io/badge/trained%20models-GoogleDrive-brightgreen.svg"></a>
     <a href="https://en.cppreference.com/w/cpp/17" title="CppStandard"><img src="https://img.shields.io/badge/C++-17-blue.svg?style=flat&logo=c%2B%2B"></a>
     <a href="https://github.com/tensorlayer/hyperpose/graphs/commit-activity" title="Maintenance"><img src="https://img.shields.io/badge/maintained%3F-YES-brightgreen.svg"></a>
-    <a href="https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst" title="TensorLayer"><img src="https://img.shields.io/github/license/tensorlayer/tensorlayer">
+    <a href="https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst" title="TensorLayer"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg">
 </p>
 
 ---
@@ -85,6 +85,8 @@ We compare the prediction performance of HyperPose with [OpenPose 1.6](https://g
 | OpenPose (MobileNet) | 17.9 MB       | 432 x 368          | **84.32 FPS**           | 8.5 FPS (TF-Pose)         |
 | OpenPose (ResNet18)  | 45.0 MB       | 432 x 368          | **62.52 FPS**           | N/A                  |
 | OpenPifPaf (ResNet50)  | 97.6 MB       | 97 x 129          | **178.6 FPS**           | 35.3                  |
+<<<<<<< HEAD
+=======
 
 ## Accuracy
 We evaluate accuracy of pose estimation models developed by hyperpose (mainly over Mscoco2017 dataset). the development environment is Ubuntu16.04, with 4 V100-DGXs and 24 Intel Xeon CPU. The training procedure takes 1~2 weeks using 1 V100-DGX for each model. (If you want to train from strach, loading the pretrained backbone weight is recommended.)
@@ -97,6 +99,7 @@ We evaluate accuracy of pose estimation models developed by hyperpose (mainly ov
 | LightweightOpenpose (tinyvgg)   | 23.6 MB | 432 x 368 | Mscoco2017(all 5000 images) | 47.3 map | - |
 | LightweightOpenpose (resnet50)   | 42.7 MB | 432 x 368 | Mscoco2017(all 5000 images) | 48.2 map | - |
 | PoseProposal (resnet18)   | 45.2 MB | 384 x 384 | MPII(all 2729 images) | 54.9 map (Pckh) | 72.8 map (Pckh)|
+>>>>>>> master
 
 </a>
 <p align="center">
