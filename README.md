@@ -20,6 +20,7 @@
     <a href="#Documentation">Documentation</a> •
     <a href="#Quick-Start-with-Docker">Quick-Start with Docker</a> •
     <a href="#Performance">Performance</a> •
+    <a href="#Accuracy">Accuracy</a> •
     <a href="#License">License</a>
 </p>
 
@@ -87,16 +88,17 @@ We compare the prediction performance of HyperPose with [OpenPose 1.6](https://g
 | OpenPifPaf (ResNet50)  | 97.6 MB       | 432 x 368          | **44.16 FPS**           | 14.5 FPS (OpenPifPaf)    |
 
 ## Accuracy
+
 We evaluate accuracy of pose estimation models developed by hyperpose (mainly over Mscoco2017 dataset). the development environment is Ubuntu16.04, with 4 V100-DGXs and 24 Intel Xeon CPU. The training procedure takes 1~2 weeks using 1 V100-DGX for each model. (If you want to train from strach, loading the pretrained backbone weight is recommended.)
 
 | HyperPose Configuration | DNN Size | Input Size | Evaluate Dataset | Accuracy-hyperpose (Iou=0.50:0.95) | Accuracy-original (Iou=0.50:0.95) |
 | -------------------- | ---------- | ------------- | ---------------- | --------------------- | ----------------------- |
-| Openpose (vgg19)   | 199 MB | 432 x 368 | Mscoco2014(random 1160 images) | 57.0 map | 58.4 map  |
-| LightweightOpenpose (dailated mobilenet)   | 17.7 MB | 432 x 368 | Mscoco2017(all 5000 images) | 46.1 map | 42.8 map |
-| LightweightOpenpose (mobilenet-thin)   | 17.4 MB | 432 x 368 | Mscoco2017(all 5000 images) | 44.2 map | 28.06 map (Mscoco2014) |
-| LightweightOpenpose (tinyvgg)   | 23.6 MB | 432 x 368 | Mscoco2017(all 5000 images) | 47.3 map | - |
-| LightweightOpenpose (resnet50)   | 42.7 MB | 432 x 368 | Mscoco2017(all 5000 images) | 48.2 map | - |
-| PoseProposal (resnet18)   | 45.2 MB | 384 x 384 | MPII(all 2729 images) | 54.9 map (Pckh) | 72.8 map (Pckh)|
+| OpenPose (VGG19)   | 199 MB | 432 x 368 | MSCOCO2014 (random 1160 images) | 57.0 map | 58.4 map  |
+| LightweightOpenPose (Dilated MobileNet)   | 17.7 MB | 432 x 368 | MSCOCO2017(all 5000 img.) | 46.1 map | 42.8 map |
+| LightweightOpenPose (MobileNet-Thin)   | 17.4 MB | 432 x 368 | MSCOCO2017 (all 5000 img.) | 44.2 map | 28.06 map (MSCOCO2014) |
+| LightweightOpenPose (tiny VGG)   | 23.6 MB | 432 x 368 | MSCOCO2017 (all 5000 img.) | 47.3 map | - |
+| LightweightOpenPose (ResNet50)   | 42.7 MB | 432 x 368 | MSCOCO2017 (all 5000 img.) | 48.2 map | - |
+| PoseProposal (ResNet18)   | 45.2 MB | 384 x 384 | MPII (all 2729 img.) | 54.9 map (PCKh) | 72.8 map (PCKh)|
 
 
 </a>

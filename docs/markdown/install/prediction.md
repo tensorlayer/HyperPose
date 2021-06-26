@@ -1,9 +1,7 @@
 # C++ Prediction Library Installation
 
 Note that C++ prediction library requires NVidia GPU acceleration.
- 
-Thought it is built to be platform-independent, the C++ library is mostly tested on Linux Platforms.
-So we recommend you to build it on Linux platforms. 
+HyperPose is developed and frequently tested on Linux platforms. Hence, we recommend you to build HyperPose on Linux.
 
 ## Docker Environment Installation (RECOMMENDED)
 
@@ -40,14 +38,14 @@ docker run --rm --gpus all $(USER_DEF_NAME)
 
 ### Prerequisites
 
-* C++ 17 Compiler. (g++7, clang++4.0, MSVC19.0 or newer)
+* C++ 17 Compiler. (g++7, clang++5.0, MSVC19.0 or newer)
 * CMake 3.5+ 
 * Third-Party
     * OpenCV3.2+. (**[OpenCV 4+](https://docs.opencv.org/trunk/d7/d9f/tutorial_linux_install.html) is highly recommended**)
     * [CUDA 10.2](https://developer.nvidia.com/cuda-downloads), [CuDNN 7.6.5](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html), [TensorRT 7.0](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html).
     * gFlags(for command-line tool/examples/tests)
 
-> Other versions of the packages may also work but not tested.
+> Packages of other versions might also work but not tested.
 
 > **About TensorRT installation**
 >
