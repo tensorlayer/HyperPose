@@ -5,8 +5,11 @@
 # Based on CUDA11.0 & CuDNN8
 FROM nvidia/cuda:10.2-devel-ubuntu18.04
 
+# Test connection
+RUN apt update --allow-unauthenticated && apt install -y wget && wget www.google.com
+
 # Install Non-GPU Dependencies.
-RUN apt update --allow-unauthenticated && version="7.0.0-1+cuda10.2" ; \
+RUN version="7.0.0-1+cuda10.2" ; \
     apt install -y \
     libnvinfer7=${version} libnvonnxparsers7=${version} libnvparsers7=${version} \
     libnvinfer-plugin7=${version} libnvinfer-dev=${version} libnvonnxparsers-dev=${version} \
@@ -14,6 +17,9 @@ RUN apt update --allow-unauthenticated && version="7.0.0-1+cuda10.2" ; \
     python3-libnvinfer=${version} && \
     apt-mark hold \
     libnvinfer7 libnvonnxparsers7 libnvparsers7 libnvinfer-plugin7 libnvinfer-dev libnvonnxparsers-dev libnvparsers-dev libnvinfer-plugin-dev python-libnvinfer python3-libnvinfer
+
+# Set apt-get to automatically retry if a package download fails
+RUN echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/99AcquireRetries
 
 # Install OpenCV Dependencies
 RUN apt install -y software-properties-common || apt install -y software-properties-common && \
@@ -23,8 +29,8 @@ RUN apt install -y software-properties-common || apt install -y software-propert
     python3 -m pip install numpy
 
 # Compile OpenCV
-RUN git clone --branch 4.4.0 https://github.com/opencv/opencv.git && \
-    cd opencv && mkdir build && cd build && \
+RUN apt install -y zip && wget https://github.com/opencv/opencv/archive/refs/tags/4.4.0.zip && unzip 4.4.0.zip && \
+    cd opencv-4.4.0 && mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release \
              -DCMAKE_INSTALL_PREFIX=/usr/local \
              -DWITH_TBB=ON \
@@ -38,7 +44,12 @@ RUN apt install -y python3-dev python3-pip subversion libgflags-dev
 
 COPY . /hyperpose
 
-# Download related data
+# Get models
+# NOTE: if you cannot install the models due to network issues:
+#   1    Manually install ONNX and UFF models through: https://drive.google.com/drive/folders/1w9EjMkrjxOmMw3Rf6fXXkiv_ge7M99jR
+#   2    Put all models into `${GIT_DIR}/pre_installed_models`
+#   3.1  `RUN /hyperpose/scripts/download-test-data.sh`
+#   3.2  `RUN mv /hyperpose/pre_installed_models /hyperpose/data/models`
 RUN for file in $(find /hyperpose/scripts -type f -iname 'download*.sh'); do sh $file; done
 
 # Build Repo

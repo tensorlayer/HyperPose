@@ -57,7 +57,7 @@ using namespace hyperpose;
 
 // To use a Uff model, users needs to specify the input/output nodes.
 // Here, `image` is the input node name, and `outputs/conf` and `outputs/paf` are the output feature maps. (related to the PAF algorithm)
-const dnn::uff uff_model{ "../data/models/hao28-600000-256x384.uff", "image", {"outputs/conf", "outputs/paf"} };
+const dnn::uff uff_model{ "../data/models/TinyVGG-V1-HW=256x384.uff", "image", {"outputs/conf", "outputs/paf"} };
 ```
 
 ### Create Input / Output Stream
