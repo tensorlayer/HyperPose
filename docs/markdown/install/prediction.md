@@ -1,6 +1,11 @@
 # C++ Prediction Library Installation
 
-## Docker Environment Installation
+Note that C++ prediction library requires NVidia GPU acceleration.
+ 
+Thought it is built to be platform-independent, the C++ library is mostly tested on Linux Platforms.
+So we recommend you to build it on Linux platforms. 
+
+## Docker Environment Installation (RECOMMENDED)
 
 To ease the installation, you can use HyperPose library in our docker image where the environment is pre-installed.
 
@@ -46,7 +51,7 @@ docker run --gpus all $(USER_DEF_NAME)
 
 > **About TensorRT installation**
 >
-> - For Linux users, you highly recommended to install it in a system-wide setting. You can install TensorRT7 via the [debian distributions](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#installing-debian) or [NVIDIA network repo](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#maclearn-net-repo-install)(CUDA and CuDNN dependency will be automatically installed).
+> - For Linux users, you are highly recommended to install it in a system-wide setting. You can install TensorRT7 via the [debian distributions](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#installing-debian) or [NVIDIA network repo](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#maclearn-net-repo-install)(CUDA and CuDNN dependency will be automatically installed).
 > - Different TensorRT version requires specific CUDA and CuDNN version. For specific CUDA and CuDNN requirements of TensorRT7, please refer to [this](https://docs.nvidia.com/deeplearning/tensorrt/support-matrix/index.html#platform-matrix).
 > - Also, for Ubuntu 18.04 users, this [3rd party blog](https://ddkang.github.io/2020/01/02/installing-tensorrt.html) may help you. 
 

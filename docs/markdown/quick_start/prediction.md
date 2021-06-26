@@ -27,10 +27,14 @@ sh scripts/download-test-data.sh
 # cd to the git repo. And download pre-trained models you want. 
 
 sh scripts/download-openpose-thin-model.sh      # ~20  MB
-sh scripts/download-tinyvgg-model.sh            # ~30  MB
+sh scripts/download-tinyvgg-model.sh            # ~30  MB (UFF model)
 sh scripts/download-openpose-res50-model.sh     # ~45  MB
 sh scripts/download-openpose-coco-model.sh      # ~200 MB
-sh scripts/download-ppn-res50-model.sh          # ~50  MB (PoseProposal Algorithm)
+sh scripts/download-openpose-mobile-model.sh
+sh scripts/download-tinyvgg-v2-model.sh
+sh scripts/download-openpose-mobile-model.sh
+sh scripts/download-openpifpaf-model.sh         # ~98  MB (OpenPifPaf)
+sh scripts/download-ppn-res50-model.sh          # ~50  MB (PoseProposal)
 ```
 
 > You can download them manually to `${HyperPose}/data/models/` via [LINK](https://drive.google.com/drive/folders/1w9EjMkrjxOmMw3Rf6fXXkiv_ge7M99jR?usp=sharing) **if the network is not working**.
@@ -77,20 +81,20 @@ Note that the entry point of our official docker image is also `hyperpose-cli` i
 ```bash
 ./hyperpose-cli --model ../data/models/openpose-thin-V2-HW=368x432.onnx --w 432 --h 368 
 
-./hyperpose-cli --model ../data/models/openpose-coco-V2-HW=368x656.onnx --w 656 --h 368 
+./hyperpose-cli --model ../data/models/openpose-coco-V2-HW=368x656.onnx --w 656 --h 368  
 ```
 
-### Use PoseProposal model
+### Use PifPaf model
 
 ```bash
-./hyperpose-cli --model ../data/models/ppn-resnet50-V2-HW=384x384.onnx --w 384 --h 384 --post=ppn
+./hyperpose-cli --model ../data/models/openpifpaf-resnet50-HW=368x432.onnx --w 368 --h 432 --post pifpaf
 ```
 
 ### Convert models into TensorRT Engine Protobuf format
 
 You may find that it takes one or two minutes before the real prediction starts. This is because TensorRT will try to profile the model to get a optimized runtime model. 
 
-To save the model conversion time, you can convert it in advance.
+To save the model conversion time, you can pre-compile it in advance.
 
 ```bash
 ./example.gen_serialized_engine --model_file ../data/models/openpose-coco-V2-HW=368x656.onnx --input_width 656 --input_height 368 --max_batch_size 20
@@ -124,4 +128,3 @@ The output video will be in the building folder.
 ./hyperpose-cli --source=camera
 # Note that camera mode is not compatible with Stream API. If you want to do inference on your camera in real time, the Operator API is designed for it.
 ```
-
