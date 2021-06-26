@@ -1,7 +1,7 @@
 # Python Training Library Installation
 
 ## Prerequisites
-* [anaconda3](https://www.anaconda.com/products/individual):<br>
+* [Anaconda3](https://www.anaconda.com/products/individual):<br>
     Anaconda is used to create virtual environment that facilitates building the running environment and ease the complexity of library depedencies. Here we mainly use it to create virtual python environment and install cuda run-time libraries.
 * [CUDA](https://developer.nvidia.com/cuda-downloads):<br>
     CUDA enviroment is essential to run deep learning neural networks on GPUs. The CUDA installation packages to download should match your system and your NVIDIA Driver version. 
