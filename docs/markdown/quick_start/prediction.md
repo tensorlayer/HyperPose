@@ -30,6 +30,7 @@ sh scripts/download-openpose-thin-model.sh      # ~20  MB
 sh scripts/download-tinyvgg-model.sh            # ~30  MB
 sh scripts/download-openpose-res50-model.sh     # ~45  MB
 sh scripts/download-openpose-coco-model.sh      # ~200 MB
+sh scripts/download-openpose-coco-model.sh
 sh scripts/download-ppn-res50-model.sh          # ~50  MB (PoseProposal Algorithm)
 ```
 
