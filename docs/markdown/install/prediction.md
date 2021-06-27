@@ -9,7 +9,11 @@ To ease the installation, you can use HyperPose library in our docker image wher
 
 ### Prerequisites
 
-You can simply run `python scripts/check_docker_run.py` to check your environment and get related instructions.
+To test your docker environment compatibility and get related instructions:
+
+```bash
+wget https://raw.githubusercontent.com/tensorlayer/hyperpose/master/scripts/test_docker.py -qO- | python
+```
 
 - [CUDA Driver >= 410.48](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#driver-installation)
 - [NVidia Docker >= 2.0](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#pre-requisites)
