@@ -7,6 +7,14 @@ HyperPose is developed and frequently tested on Linux platforms. Hence, we recom
 
 To ease the installation, you can use HyperPose library in our docker image where the environment is pre-installed.
 
+### Prerequisites
+
+You can simply run `python scripts/check_docker_run.py` to check your environment and get related instructions.
+
+- [CUDA Driver >= 410.48](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#driver-installation)
+- [NVidia Docker >= 2.0](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#pre-requisites)
+- [Docker >= 19.03](https://docs.docker.com/engine/install/)
+
 ### Official Docker Image
 
 NVidia docker support is required to execute our docker image. 

@@ -1,4 +1,8 @@
-.git
+.git*
 *build*
 data
 3rdparty
+docs
+.clang-format
+.readthedocs.yml
+Dockerfile
