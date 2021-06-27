@@ -18,7 +18,7 @@ namespace hyperpose {
 class simple_thread_pool
     final { // Simple thread-safe & container-free thread pool.
 public:
-    explicit simple_thread_pool(std::size_t /* suggested size */ = std::thread::hardware_concurrency() + 2);
+    explicit simple_thread_pool(std::size_t /* suggested size */ = std::min(14u, std::thread::hardware_concurrency() + 2));
 
     ~simple_thread_pool();
 
@@ -55,16 +55,8 @@ simple_thread_pool::enqueue(Func&& f, Args&&... args)
 {
     using return_type = typename std::result_of<Func(Args...)>::type;
     using package_t = std::packaged_task<return_type()>;
-    package_t* task_ptr = nullptr;
-
-    try {
-        task_ptr = new package_t(
-            std::bind(std::forward<Func>(f), std::forward<Args>(args)...));
-    } catch (const std::exception& e) {
-        if (task_ptr != nullptr)
-            delete task_ptr;
-        throw e;
-    }
+    auto* task_ptr = new package_t(
+        std::bind(std::forward<Func>(f), std::forward<Args>(args)...));
 
     auto result = task_ptr->get_future();
     {
