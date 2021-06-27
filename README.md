@@ -24,33 +24,46 @@
     <a href="#License">License</a>
 </p>
 
-HyperPose is a library for building human pose estimation systems that can efficiently operate in the wild.
+# HyperPose
+
+HyperPose is a library for building high-performance custom pose estimation systems.
 
 ## Features
 
-HyperPose has two key features, which are not available in existing libraries:
+HyperPose has two key features:
 
-- **Flexible training platform**: HyperPose provides flexible Python APIs to provide a customise pipeline for developing various pose estimation models. HyperPose users can:
-* make use of uniform pipelines for train,evaluation,visualization,pre-processing and post-processing across various models (e.g., OpenPose,Pifpaf,PoseProposal Network)
-* customise model and dataset for their own use(e.g. user-defined model,user-defined dataset,mitiple dataset combination)
-* parallel training using multiple GPUs(using *Kungfu* adaptive distribute training library)
+- **High-performance pose estimation wth CPUs/GPUs**: HyperPose achieves real-time pose estimation though a high-performance pose estimation engine. This engine implements numerous system optimizations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. This allows HyperPose to run 4x FASTER than OpenPose and 10x FASTER than TF-Pose.
+- **Flexibility for developing custom pose estimation models**: HyperPose provides flexible Python APIs to provide a customise pipeline for developing various pose estimation models. HyperPose users can:
+    * Make use of uniform pipelines for train,evaluation,visualization,pre-processing and post-processing across various models (e.g., OpenPose,Pifpaf,PoseProposal Network)
+    * Customise model and dataset for their own use(e.g. user-defined model,user-defined dataset,mitiple dataset combination)
+    * Parallel training using multiple GPUs(using *Kungfu* adaptive distribute training library)
 thus building models specific to their real-world scenarios.
-- **High-performance pose estimation**: HyperPose achieves real-time pose estimation though a high-performance pose estimation engine. This engine implements numerous system optimizations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. This allows HyperPose to **run 4x FASTER than OpenPose and 10x FASTER than TF-Pose**.
 
-## Documentation
+## Quick Start
 
-You can install HyperPose(Python Training Library, C++ inference Library) and learn its APIs through [HyperPose Documentation](https://hyperpose.readthedocs.io/en/latest/).
+The HyperPose library contains two parts:
+* A C++ library for high-performance pose estimation model inference.
+* A Python library for developing custom pose estimation models (e.g., OpenPose, PifPaf, PoseProposal).
 
-## Quick-Start with Docker
+### C++ inference library
 
-The official docker image is on [DockerHub](https://hub.docker.com/r/tensorlayer/hyperpose).
+The best way to try the inference library is using a [Docker image](https://hub.docker.com/r/tensorlayer/hyperpose). Pre-requisites for running this images are:
 
-Make sure you have [docker](https://docs.docker.com/get-docker/) with [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) functionality installed. 
+* [CUDA Driver](https://www.tensorflow.org/install/gpu) (>= 410.48)
+* [NVIDIA docker](https://github.com/NVIDIA/nvidia-docker) (>= 2.0)
+* [Docker](https://docs.docker.com/engine/install/) (>= 19.03)
 
-> Also note that your nvidia driver should be [compatible](https://docs.nvidia.com/deploy/cuda-compatibility/index.html#support-title) with CUDA10.2.
+Once pre-requisites are ready, you can pull
+the HyperPose docker as follows:
 
 ```bash
-# [Example 1]: Doing inference on given video, copy the output.avi to the local path. 
+docker pull tensorlayer/hyperpose
+```
+
+We provide 4 examples to run with this image (The following commands have been tested with Ubuntu 18.04):
+
+```bash
+# [Example 1]: Doing inference on given video, copy the output.avi to the local path.
 docker run --name quick-start --gpus all tensorlayer/hyperpose --runtime=stream
 docker cp quick-start:/hyperpose/build/output.avi .
 docker rm quick-start
@@ -73,11 +86,19 @@ xhost +; docker run --rm --gpus all -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/t
 # docker run --rm --gpus all -it --entrypoint /bin/bash tensorlayer/hyperpose
 ```
 
-> For more details, please check [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/prediction.html#table-of-flags-for-hyperpose-cli).
+More information of the HyperPose Docker image can be found [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/prediction.html#table-of-flags-for-hyperpose-cli).
+
+### Python training library
+
+To install the Python training library, you can follow the steps [here](https://hyperpose.readthedocs.io/en/latest/markdown/install/training.html).
+
+## Documentation
+
+The APIs of the HyperPose training library and the inference library are both described in [Documentation](https://hyperpose.readthedocs.io/en/latest/).
 
 ## Performance
 
-We compare the prediction performance of HyperPose with [OpenPose 1.6](https://github.com/CMU-Perceptual-Computing-Lab/openpose) and [TF-Pose](https://github.com/ildoonet/tf-pose-estimation). We implement the OpenPose algorithms with different configurations in HyperPose. The test-bed has Ubuntu18.04, 1070Ti GPU, Intel i7 CPU (12 logic cores). 
+We compare the prediction performance of HyperPose with [OpenPose 1.6](https://github.com/CMU-Perceptual-Computing-Lab/openpose) and [TF-Pose](https://github.com/ildoonet/tf-pose-estimation). We implement the OpenPose algorithms with different configurations in HyperPose. The test-bed has Ubuntu18.04, 1070Ti GPU, Intel i7 CPU (12 logic cores).
 
 | HyperPose Configuration  | DNN Size | Input Size | HyperPose | Baseline |
 | --------------- | ------------- | ------------------ | ------------------ | --------------------- |
