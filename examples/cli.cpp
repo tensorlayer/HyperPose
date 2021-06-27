@@ -12,18 +12,18 @@
 #define kPIFPAF "pifpaf"
 
 // Model Configuration.
-DEFINE_string(model, "../data/models/TinyVGG-V1-HW=256x384.uff", "Path to the model.");
+DEFINE_string(model, "../data/models/TinyVGG-V2-HW=342x368.onnx", "Path to the model.");
 DEFINE_string(
     post,
     kPAF,
     "Post-processing method. (`" kPAF "` -> [Part Affine Field] or `" kPPN "` -> [Pose Proposal Network]) or `" kPIFPAF "` -> [Pif Paf]");
-DEFINE_int32(w, 384, "Width of input image.");
-DEFINE_int32(h, 256, "Height of input image.");
-DEFINE_int32(max_batch_size, 4, "Max batch size for inference engine to execute.");
+DEFINE_int32(w, 368, "Width of input image.");
+DEFINE_int32(h, 342, "Height of input image.");
+DEFINE_int32(max_batch_size, 6, "Max batch size for inference engine to execute.");
 
 // Execution Mode
 DEFINE_bool(imshow, true, "Whether to open an imshow window.");
-DEFINE_string(source, "../data/media/video.avi", "Path to your source. (the path name or `" kCAMERA "` to open your webcam)");
+DEFINE_string(source, "../data/media/video.avi", "Path to your source. (the path name or `" kCAMERA "` to open your web camera)");
 DEFINE_string(runtime, kOPERATOR, "Runtime setting for hyperpose. (`" kSTREAM "` or `" kOPERATOR "`)");
 DEFINE_bool(keep_ratio, true, "Whether to keep the aspect ration when resizing for inference.");
 DEFINE_double(alpha, 0.5, "The weight of key point visualization. (from 0 to 1)");
