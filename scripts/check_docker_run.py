@@ -24,15 +24,16 @@ class LinuxCheck(unittest.TestCase):
                             break
             self.assertNotEqual(version_code, None, 'NVIDIA version not found...')
             if version_code is not None:
-                self.assertGreaterEqual(StrictVersion(version_code), StrictVersion('410.48'), 'Your CUDA driver is '
-                                                                                              'old. Please upgrade it '
-                                                                                              'to >= 410.48 according '
-                                                                                              'to '
-                                                                                              'https://docs.nvidia'
-                                                                                              '.com/cuda/cuda'
-                                                                                              '-installation-guide'
-                                                                                              '-linux/index.html'
-                                                                                              '#driver-installation')
+                self.assertGreaterEqual(StrictVersion(version_code), StrictVersion('418.81.07'), 'Your CUDA driver is '
+                                                                                                 'old. Please upgrade '
+                                                                                                 'it to >= 418.81.07 '
+                                                                                                 'according '
+                                                                                                 'to '
+                                                                                                 'https://docs.nvidia'
+                                                                                                 '.com/cuda/cuda'
+                                                                                                 '-installation-guide'
+                                                                                                 '-linux/index.html'
+                                                                                                 '#driver-installation')
 
     def test_docker_version(self):
         p = os.popen("docker version --format '{{.Client.Version}}'")

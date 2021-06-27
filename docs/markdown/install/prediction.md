@@ -15,7 +15,7 @@ To test your docker environment compatibility and get related instructions:
 wget https://raw.githubusercontent.com/tensorlayer/hyperpose/master/scripts/test_docker.py -qO- | python
 ```
 
-- [CUDA Driver >= 410.48](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#driver-installation)
+- [CUDA Driver >= 418.81.07 (bounded by NVidia Docker)](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#driver-installation)
 - [NVidia Docker >= 2.0](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#pre-requisites)
 - [Docker >= 19.03](https://docs.docker.com/engine/install/)
 
@@ -54,8 +54,10 @@ docker run --rm --gpus all $(USER_DEF_NAME)
 * CMake 3.5+ 
 * Third-Party
     * OpenCV3.2+. (**[OpenCV 4+](https://docs.opencv.org/trunk/d7/d9f/tutorial_linux_install.html) is highly recommended**)
-    * [CUDA 10.2](https://developer.nvidia.com/cuda-downloads), [CuDNN 7.6.5](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html), [TensorRT 7.0](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html).
-    * gFlags(for command-line tool/examples/tests)
+    * CUDA related:
+        * (suggested) [CUDA 10.2](https://developer.nvidia.com/cuda-downloads), [CuDNN 7.6.5](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html), [TensorRT 7.1](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html).
+        * (minimal) [CUDA 10.0](https://developer.nvidia.com/cuda-downloads), [CuDNN 7.6.5](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html), [TensorRT 7.0](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html).
+    * gFlags (for command-line tool/examples/tests)
 
 > Packages of other versions might also work but not tested.
 
