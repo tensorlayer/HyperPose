@@ -1,10 +1,12 @@
 import gdown
 import argparse
 
+
 class Model:
     def __init__(self, id, md5):
         self.id = id
         self.md5 = md5
+
 
 model_dict = {
     'lopps-resnet50-V2-HW=368x432.onnx': Model('1tb8jnXkoiscfr-ZVydAALg7dtUwAKdEd', 'a6ba26d505c8150d9bf01950143d51d3'),
@@ -12,9 +14,10 @@ model_dict = {
     'openpose-thin-V2-HW=368x432.onnx': Model('1xqXNFPJgsSjgv-AWdqnobcpRmdIu42eh', '65e26d62fd71dc0047c4c319fa3d9096'),
     'ppn-resnet50-V2-HW=384x384.onnx': Model('1qMSipZ5_QMyRuNQ7ux5isNxwr678ctwG', '0d1df2e61c0f550185d562ec67a5f2ca'),
     'TinyVGG-V1-HW=256x384.uff': Model('1KlKjNMaruJnNYEXQKqzHGqECBAmwB92T', '6551931d16e55cc9370c5c13d91383c3'),
-    'openpose-mobile-HW=342x368.onnx': Model('1eDEOC0WBB50bryAbFmhfptyGMoV5wZGn', 'd20e36573a257af450003fd0f17531c1'),
-    'openpifpaf-resnet50-HW=368x432.onnx': Model('1cxT1PCPPdMxEdvSB8Q5ewxyTh_TWgcsi', '6c661ded88a91699a1c0582b403d5873'),
-    'TinyVGG-V2-HW=342x368.onnx': Model('1ax6fTrxItLXshyHUFTHQVKs5eTRB3t6b', 'c5eb483d18a669c4d61a94233dfb24eb')
+    'openpose-mobile-HW=342x368.onnx': Model('1eDEOC0WBB50bryAbFmhfptyGMoV5wZGn', 'a09d901e39c4f4d913c547d614e249f9'),
+    'openpifpaf-resnet50-HW=368x432.onnx': Model('1cxT1PCPPdMxEdvSB8Q5ewxyTh_TWgcsi',
+                                                 '6c661ded88a91699a1c0582b403d5873'),
+    'TinyVGG-V2-HW=342x368.onnx': Model('1ax6fTrxItLXshyHUFTHQVKs5eTRB3t6b', '52933b27c41342c959f4e49499a057ad')
 }
 
 if __name__ == '__main__':

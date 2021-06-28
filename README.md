@@ -49,9 +49,15 @@ The HyperPose library contains two parts:
 
 The best way to try the inference library is using a [Docker image](https://hub.docker.com/r/tensorlayer/hyperpose). Pre-requisites for running this images are:
 
-* [CUDA Driver](https://www.tensorflow.org/install/gpu) (>= 410.48)
+* [CUDA Driver](https://www.tensorflow.org/install/gpu) (>= 418.81.07)
 * [NVIDIA docker](https://github.com/NVIDIA/nvidia-docker) (>= 2.0)
-* [Docker](https://docs.docker.com/engine/install/) (>= 19.03)
+* [Docker CE Engine](https://docs.docker.com/engine/install/) (>= 19.03)
+
+Run this script to check docker environment for HyperPose Inference:
+
+```bash
+wget https://raw.githubusercontent.com/tensorlayer/hyperpose/master/scripts/test_docker.py -qO- | python
+```
 
 Once pre-requisites are ready, you can pull
 the HyperPose docker as follows:
