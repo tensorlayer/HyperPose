@@ -10,11 +10,14 @@
 &emsp;There are two ways to install hyperpose python training library.
 
 &emsp;All the following instructions have been tested on the environments below:<br>
-    * Ubuntu 18.04, Tesla V100-DGXStation, Nvidia Driver Version 440.33.01, CUDA Verison=10.2  
-    * Ubuntu 18.04, Tesla V100-DGXStation, Nvidia Driver Version 410.79, CUDA Verison=10.0  
-    * Ubuntu 18.04, TITAN RTX, Nvidia Driver Version 430.64, CUDA Version=10.1  
-    * Ubuntu 18.04, TITAN Xp, Nvidia Driver Version 430.26, CUDA Version=10.2
-    * Ubuntu 16.04, TITAN Xp, Nvidia Driver Version 430.26, CUDA Version=10.2
+| OS           | NVIDIA Driver | CUDA Toolkit | GPU            |
+| ------------ | ------------- | ------------ | -------------- |
+| Ubuntu 18.04 | 410.79        | 10.0         | Tesla V100-DGX |
+| Ubuntu 18.04 | 440.33.01     | 10.2         | Tesla V100-DGX |
+| Ubuntu 18.04 | 430.64        | 10.1         | TITAN RTX      |
+| Ubuntu 18.04 | 430.26        | 10.2         | TITAN XP       |
+| Ubuntu 16.04 | 430.50        | 10.1         | RTX 2080Ti     |
+
 
 &emsp;Before all, we recommend you to create anaconda virtual environment first, which could handle the possible conflicts between the libraries you already have in your computers and the libraries hyperpose need to install, and also handle the dependencies of the cudatoolkit and cudnn library in a very simple way.<br>
 &emsp;To create the virtual environment, run the following command in bash:
