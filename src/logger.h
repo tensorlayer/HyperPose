@@ -11,12 +11,12 @@
 class Logger : public nvinfer1::ILogger {
     std::fstream fs{"tensorrt.log", std::ios::out};
 
-    void log_with(std::ostream &os, std::string_view prefix, std::string_view msg) const {
+    static void log_with(std::ostream &os, std::string_view prefix, std::string_view msg) {
         os << prefix << msg << std::endl;
     }
 
 public:
-    void log(Severity severity, const char* msg) override {
+    void log(Severity severity, const char* msg) noexcept override {
 
         switch (severity) {
             case Severity::kINTERNAL_ERROR:
