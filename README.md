@@ -60,11 +60,9 @@ The HyperPose library contains two parts:
 
 The easiest way to use the inference library is through a [Docker image](https://hub.docker.com/r/tensorlayer/hyperpose). Pre-requisites for this image:
 
-<p align="center">
-    <a href="https://www.tensorflow.org/install/gpu"> CUDA Driver >= 418.81.07 </a> •
-    <a href="https://github.com/NVIDIA/nvidia-docker"> NVIDIA Docker >= 2.0 </a> •
-    <a href="https://docs.docker.com/engine/install/"> Docker CE Engine >= 19.03 </a>
-</p>
+- [CUDA Driver >= 418.81.07](https://www.tensorflow.org/install/gpu) (For default CUDA 10.0 image)
+- [NVIDIA Docker >= 2.0](https://github.com/NVIDIA/nvidia-docker)
+- [Docker CE Engine >= 19.03](https://docs.docker.com/engine/install/)
 
 Run this command to check if pre-requisites are ready:
 
@@ -110,7 +108,7 @@ For more usage regarding the command line flags, please visit [here](https://hyp
 
 We recommend using the Python training library within an [Anaconda](https://www.anaconda.com/products/individual) environment. The below quick-start has been tested with these environments:
 
-| OS           | NVidia Driver | CUDA Toolkit | GPU            |
+| OS           | NVIDIA Driver | CUDA Toolkit | GPU            |
 | ------------ | ------------- | ------------ | -------------- |
 | Ubuntu 18.04 | 410.79        | 10.0         | Tesla V100-DGX |
 | Ubuntu 18.04 | 440.33.01     | 10.2         | Tesla V100-DGX |
@@ -196,3 +194,4 @@ We evaluate the accuracy of pose estimation models developed by HyperPose. The e
 ## License
 
 HyperPose is open-sourced under the [Apache 2.0 license](https://github.com/tensorlayer/tensorlayer/blob/master/LICENSE.rst).
+
