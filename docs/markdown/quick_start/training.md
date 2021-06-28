@@ -13,7 +13,7 @@ The code for training as simple as following would work.
 # >>> import modules of hyperpose
 from hyperpose import Config,Model,Dataset
 # >>> set model name is necessary to distinguish models (neccesarry)
-Config.set_model_name(args.model_name)
+Config.set_model_name("my_lopps")
 # >>> set model architecture (and set model backbone when in need)
 Config.set_model_type(Config.MODEL.LightweightOpenpose)
 Config.set_model_backbone(Config.BACKBONE.Vggtiny)

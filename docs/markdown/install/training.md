@@ -69,7 +69,9 @@ python
 ```
 
 ## Extra configuration for exporting model
-The hypeprose python training library handles the whole pipelines for developing the pose estimation system, including training, evaluating and testing. Its goal is to produce a .npz file that contains the well-trained model weights. For the training platform, the enviroment configuration above is engough. However, most inference engine only accept .pb format or .onnx format model, such as [TensorRT](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html). Thus, one need to convert the trained model loaded with .npz file weight to .pb format or .onnx format for further deployment, which need extra configuration below:<br>
+The hypeprose python training library handles the whole pipelines for developing the pose estimation system, including training, evaluating and testing. Its goal is to produce a .npz file that contains the well-trained model weights.
+
+For the training platform, the enviroment configuration above is engough. However, most inference engine only accept .pb format or .onnx format model, such as [TensorRT](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html). Thus, one need to convert the trained model loaded with .npz file weight to .pb format or .onnx format for further deployment, which need extra configuration below:<br>
 
 * (I)Convert to .pb format:<br>
     To convert the model into .pb format, we use *@tf.function* to decorate the *infer* function of each model class, so we can use the *get_concrete_function* function from tensorflow to consctruct the frozen model computation graph and then save it in .pb format.
@@ -88,6 +90,10 @@ The hypeprose python training library handles the whole pipelines for developing
     *graph_transform* is used to check the input and output node of the .pb file if one doesn't know. when convert .pb file into .onnx file using tf2onnx, one is required to provide the input node name and output node name of the computation graph stored in .pb file, so he may need to use *graph_transform* to inspect the .pn file to get node names.<br>
     build graph_transforms according to [tensorflow tools](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/tools/graph_transforms#using-the-graph-transform-tool)
 
+## Extra configuration for parallel training
+The hyperpose python training library use the High performance distributed machine learning framework **Kungfu** for parallel training.
+
+Thus to use the parallel training functionality of hyperpose, please install [Kungfu](https://github.com/lsds/KungFu) according to the official instructon it provides.
 
 
 

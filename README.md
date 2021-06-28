@@ -96,7 +96,78 @@ More information of the HyperPose Docker image can be found [here](https://hyper
 
 ### Python training library
 
-To install the Python training library, you can follow the steps [here](https://hyperpose.readthedocs.io/en/latest/markdown/install/training.html).
+We recommend to use [Anaconda](https://www.anaconda.com/products/individual) to create a virtual python environment for hyperpose python training library, so we can avoid the possible package conflicts and handle the *cudatoolkit* and *cudnn* library dependency.
+
+All the following instructions have been tested on the environments below:<br>
+* Ubuntu 18.04, Tesla V100-DGXStation, Nvidia Driver Version 440.33.01, CUDA Verison=10.2  
+* Ubuntu 18.04, Tesla V100-DGXStation, Nvidia Driver Version 410.79, CUDA Verison=10.0  
+* Ubuntu 18.04, TITAN RTX, Nvidia Driver Version 430.64, CUDA Version=10.1  
+* Ubuntu 18.04, TITAN Xp, Nvidia Driver Version 430.26, CUDA Version=10.2
+* Ubuntu 16.04, RTX 2080Ti, Nvidia Driver Version 430.50, CUDA Version=10.1
+
+With Anaconda installed, run the following command to configure the appropriate virtual environment:
+
+```bash
+# >>> create virtual environment (choose yes)
+conda create -n hyperpose python=3.7
+# >>> activate the virtual environment, start installation
+conda activate hyperpose
+# >>> install cudatoolkit and cudnn library using conda
+conda install cudatoolkit=10.0.130
+conda install cudnn=7.6.0
+```
+
+Then we need to using pip to install the python requirements according to the [requirements.txt](https://github.com/tensorlayer/hyperpose/blob/master/requirements.txt):
+
+```bash
+pip install -r requirements.txt
+```
+
+Now all the configuration is down, run the following command under the root directory of the repository to test whether hyperpose can be successfully import:
+
+```bash
+# >>> Check whether the GPU is avaliable.
+python
+>>> import tensorflow as tf
+>>> import tensorlayer as tl
+>>> tf.test.is_gpu_available()
+# >>> if the output is True, we can then import and run hyperpose now
+>>> from hyperpose import Config,Model,Dataset
+```
+
+Congratulations! we can use hyperpose to develop your pose estimation models now!
+
+Hyperpose python training library provides APIs through *Config*, *Model* and *Dataset* modules.
+
+We use the *Config* module to set up the configuration, and use *Model* and *Dataset* module to assemble the train or evaluation pipline, the sample code below shows how to use hyperpose to train a *LightweightOpenpose* model with *Vggtiny* network backbone:
+
+```bash
+# >>> import modules of hyperpose
+from hyperpose import Config,Model,Dataset
+# >>> set model name to distinguish models (neccesarry)
+Config.set_model_name("My_lopps")
+# >>> set model architecture (and set model backbone when in need)
+Config.set_model_type(Config.MODEL.LightweightOpenpose)
+Config.set_model_backbone(Config.BACKBONE.Vggtiny)
+# >>> set dataset to use
+Config.set_dataset_type(Config.DATA.MSCOCO)
+# >>> set training type 
+Config.set_train_type(Config.TRAIN.Single_train)
+# >>> configuration is done, get config object and assemble the system
+config=Config.get_config()
+model=Model.get_model(config)
+dataset=Dataset.get_dataset(config)
+train=Model.get_train(config)
+# >>> train!
+train(model,dataset)
+```
+
+We provide a sample training script with cli located at [train.py](https://github.com/tensorlayer/hyperpose/blob/master/train.py) which demonstrates the usage of hyperpose python training library, you can either directly use the script to train your model or  use it as a template for further modification.
+
+To evaluate a model using hyperpose is similiar to the training procedure, we also provide a sample evaluation script with cli located at [eval.py](https://github.com/tensorlayer/hyperpose/blob/master/eval.py) as an example and a template for modification.  
+
+More information of the Hyperpose training library APIs can be found [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/training.html)
+
 
 ## Documentation
 
