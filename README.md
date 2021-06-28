@@ -32,41 +32,40 @@ HyperPose is a library for building high-performance custom pose estimation syst
 
 HyperPose has two key features:
 
-- **High-performance pose estimation wth CPUs/GPUs**: HyperPose achieves real-time pose estimation though a high-performance pose estimation engine. This engine implements numerous system optimizations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. This allows HyperPose to run 4x FASTER than OpenPose and 10x FASTER than TF-Pose.
-- **Flexibility for developing custom pose estimation models**: HyperPose provides flexible Python APIs to provide a customise pipeline for developing various pose estimation models. HyperPose users can:
-    * Make use of uniform pipelines for train,evaluation,visualization,pre-processing and post-processing across various models (e.g., OpenPose,Pifpaf,PoseProposal Network)
-    * Customise model and dataset for their own use(e.g. user-defined model,user-defined dataset,mitiple dataset combination)
-    * Parallel training using multiple GPUs(using *Kungfu* adaptive distribute training library)
-thus building models specific to their real-world scenarios.
+- **High-performance pose estimation with parallel CPUs/GPUs**: HyperPose achieves real-time pose estimation through a high-performance pose estimation engine. This engine implements numerous system optimisations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. These optimisations contribute to up to 10x higher FPS compared to OpenPose and TF-Pose.
+- **Flexibility for developing custom pose estimation models**: HyperPose provides high-level Python APIs to develop pose estimation models. HyperPose users can:
+    * Customise training, evaluation, visualisation, pre-processing and post-processing in pose estimation models (e.g., OpenPose, Pifpaf, PoseProposal Network).
+    * Customise model architectures and training datasets.
+    * Seamlessly scale-out training to multiple GPUs.
 
 ## Quick Start
 
 The HyperPose library contains two parts:
 * A C++ library for high-performance pose estimation model inference.
-* A Python library for developing custom pose estimation models (e.g., OpenPose, PifPaf, PoseProposal).
+* A Python library for developing custom pose estimation models.
 
 ### C++ inference library
 
-The best way to try the inference library is using a [Docker image](https://hub.docker.com/r/tensorlayer/hyperpose). Pre-requisites for running this images are:
+The easiest way to use the inference library is through a [Docker image](https://hub.docker.com/r/tensorlayer/hyperpose). Pre-requisites for this image:
 
 * [CUDA Driver](https://www.tensorflow.org/install/gpu) (>= 418.81.07)
 * [NVIDIA docker](https://github.com/NVIDIA/nvidia-docker) (>= 2.0)
 * [Docker CE Engine](https://docs.docker.com/engine/install/) (>= 19.03)
 
-Run this script to check docker environment for HyperPose Inference:
+Run this script to check is pre-requisites are ready:
 
 ```bash
 wget https://raw.githubusercontent.com/tensorlayer/hyperpose/master/scripts/test_docker.py -qO- | python
 ```
 
-Once pre-requisites are ready, you can pull
-the HyperPose docker as follows:
+Once pre-requisites are installed, pull
+the HyperPose docker:
 
 ```bash
 docker pull tensorlayer/hyperpose
 ```
 
-We provide 4 examples to run with this image (The following commands have been tested with Ubuntu 18.04):
+We provide 4 examples within this image (The following commands have been tested with Ubuntu 18.04):
 
 ```bash
 # [Example 1]: Doing inference on given video, copy the output.avi to the local path.
@@ -92,19 +91,18 @@ xhost +; docker run --rm --gpus all -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/t
 # docker run --rm --gpus all -it --entrypoint /bin/bash tensorlayer/hyperpose
 ```
 
-More information of the HyperPose Docker image can be found [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/prediction.html#table-of-flags-for-hyperpose-cli).
+More information of the Docker image is [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/prediction.html#table-of-flags-for-hyperpose-cli).
 
 ### Python training library
 
-We recommend to use the Python training library with the [Anaconda](https://www.anaconda.com/products/individual) environment which can come with *cudatoolkit* and *cudnn*.
-
-All the following instructions have been tested on the environments below:<br>
-* Ubuntu 18.04, Tesla V100-DGX, NVIDIA Driver > 410.79, CUDA > 10.0
+We recommend to use the Python training library within an [Anaconda](https://www.anaconda.com/products/individual) environment. Test environments:<br>
+* Ubuntu 18.04, Tesla V100-DGX, NVIDIA Driver 440.33.01, CUDA 10.2
+* Ubuntu 18.04, Tesla V100-DGX, NVIDIA Driver 410.79, CUDA 10.0
 * Ubuntu 18.04, TITAN RTX, NVIDIA Driver 430.64, CUDA 10.1
 * Ubuntu 18.04, TITAN XP, NVIDIA Driver 430.26, CUDA 10.2
 * Ubuntu 16.04, RTX 2080Ti, NVIDIA Driver 430.50, CUDA 10.1
 
-After installing Anaconda, run following Bash commands to create a virtual environment:
+Once Anaconda is installed, run below Bash commands to create a virtual environment:
 
 ```bash
 # Create virtual environment (choose yes)
@@ -116,13 +114,13 @@ conda install cudatoolkit=10.0.130
 conda install cudnn=7.6.0
 ```
 
-We then install the python packages listed in [requirements.txt](https://github.com/tensorlayer/hyperpose/blob/master/requirements.txt):
+We then install the dependencies listed in [requirements.txt](https://github.com/tensorlayer/hyperpose/blob/master/requirements.txt):
 
 ```bash
 pip install -r requirements.txt
 ```
 
-The below sample Python programs shows how to use HyperPose to train a pose estimation model. HyperPose contains three key APIs through *Config*, *Model* and *Dataset* modules. We use the *Config* module to set up the configuration, and use *Model* and *Dataset* module to assemble the train or evaluation pipline:
+We show how to train a custom pose estimation model with HyperPose. HyperPose APIs contain three key modules: *Config*, *Model* and *Dataset*, and their basic usages are shown below.
 
 ```python
 import tensorflow as tf
@@ -146,12 +144,12 @@ train = Model.get_train(config)
 train(model,dataset)
 ```
 
-The full Python training program is [here](https://github.com/tensorlayer/hyperpose/blob/master/train.py). To evaluate the trained model, you can use a Python evaluation program [here](https://github.com/tensorlayer/hyperpose/blob/master/eval.py). More information of the training library is [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/training.html).
+The full training program is [here](https://github.com/tensorlayer/hyperpose/blob/master/train.py). To evaluate the trained model, you can use an evaluation program [here](https://github.com/tensorlayer/hyperpose/blob/master/eval.py). More information about the training library is [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/training.html).
 
 
 ## Documentation
 
-The APIs of the HyperPose training library and the inference library are both described in [Documentation](https://hyperpose.readthedocs.io/en/latest/).
+The APIs of the HyperPose training library and the inference library are described in [Documentation](https://hyperpose.readthedocs.io/en/latest/).
 
 ## Performance
 
@@ -167,7 +165,7 @@ We compare the prediction performance of HyperPose with [OpenPose 1.6](https://g
 
 ## Accuracy
 
-We evaluate accuracy of pose estimation models developed by hyperpose (mainly over Mscoco2017 dataset). the development environment is Ubuntu16.04, with 4 V100-DGXs and 24 Intel Xeon CPU. The training procedure takes 1~2 weeks using 1 V100-DGX for each model. (If you want to train from strach, loading the pretrained backbone weight is recommended.)
+We evaluate the accuracy of pose estimation models developed by HyperPose. The environment is Ubuntu16.04, with 4 V100-DGXs and 24 Intel Xeon CPU. The training procedure takes 1~2 weeks using 1 V100-DGX for each model. (If you don't want to train from scratch, you could use our pre-trained backbone models)
 
 | HyperPose Configuration | DNN Size | Input Size | Evaluate Dataset | Accuracy-hyperpose (Iou=0.50:0.95) | Accuracy-original (Iou=0.50:0.95) |
 | -------------------- | ---------- | ------------- | ---------------- | --------------------- | ----------------------- |
