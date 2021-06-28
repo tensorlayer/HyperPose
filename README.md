@@ -32,11 +32,11 @@ HyperPose is a library for building high-performance custom pose estimation syst
 
 HyperPose has two key features:
 
-- **High-performance pose estimation with parallel CPUs/GPUs**: HyperPose achieves real-time pose estimation through a high-performance pose estimation engine. This engine implements numerous system optimisations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. These optimisations contribute to up to 10x higher FPS compared to OpenPose and TF-Pose.
+- **High-performance pose estimation with CPUs/GPUs**: HyperPose achieves real-time pose estimation through a high-performance pose estimation engine. This engine implements numerous system optimisations: pipeline parallelism, model inference with TensorRT, CPU/GPU hybrid scheduling, and many others. These optimisations contribute to up to 10x higher FPS compared to OpenPose and TF-Pose.
 - **Flexibility for developing custom pose estimation models**: HyperPose provides high-level Python APIs to develop pose estimation models. HyperPose users can:
-    * Customise training, evaluation, visualisation, pre-processing and post-processing in pose estimation models (e.g., OpenPose, Pifpaf, PoseProposal Network).
-    * Customise model architectures and training datasets.
-    * Seamlessly scale-out training to multiple GPUs.
+    * Customise training, evaluation, visualisation, pre-processing and post-processing in pose estimation.
+    * Customise model architectures (e.g., OpenPose, Pifpaf, PoseProposal Network) and training datasets.
+    * Speed up training with multiple GPUs.
 
 ## Quick Start
 
@@ -52,20 +52,20 @@ The easiest way to use the inference library is through a [Docker image](https:/
 * [NVIDIA docker](https://github.com/NVIDIA/nvidia-docker) (>= 2.0)
 * [Docker CE Engine](https://docs.docker.com/engine/install/) (>= 19.03)
 
-Run this script to check is pre-requisites are ready:
+Run this command to check if pre-requisites are ready:
 
 ```bash
 wget https://raw.githubusercontent.com/tensorlayer/hyperpose/master/scripts/test_docker.py -qO- | python
 ```
 
-Once pre-requisites are installed, pull
+Once pre-requisites are ready, pull
 the HyperPose docker:
 
 ```bash
 docker pull tensorlayer/hyperpose
 ```
 
-We provide 4 examples within this image (The following commands have been tested with Ubuntu 18.04):
+We provide 4 examples within this image (The following commands have been tested on Ubuntu 18.04):
 
 ```bash
 # [Example 1]: Doing inference on given video, copy the output.avi to the local path.
@@ -120,7 +120,7 @@ We then install the dependencies listed in [requirements.txt](https://github.com
 pip install -r requirements.txt
 ```
 
-We show how to train a custom pose estimation model with HyperPose. HyperPose APIs contain three key modules: *Config*, *Model* and *Dataset*, and their basic usages are shown below.
+We demonstrate how to train a custom pose estimation model with HyperPose. HyperPose APIs contain three key modules: *Config*, *Model* and *Dataset*, and their basic usages are shown below.
 
 ```python
 import tensorflow as tf
