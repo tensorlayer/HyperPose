@@ -1,11 +1,11 @@
 # C++ Prediction Library Installation
 
-Note that C++ prediction library requires NVidia GPU acceleration.
-HyperPose is developed and frequently tested on Linux platforms. Hence, we recommend you to build HyperPose on Linux.
+Note that C++ prediction library requires NVIDIA GPU acceleration.
+HyperPose is developed and frequently tested on Linux platforms (i.e., Ubuntu 18.04). Hence, we recommend you to build HyperPose on Linux.
 
 ## Docker Environment Installation (RECOMMENDED)
 
-To ease the installation, you can use HyperPose library in our docker image where the environment is pre-installed.
+To ease the installation, you can use HyperPose library in our docker image where the environment is pre-installed (including pretrained models).
 
 ### Prerequisites
 
@@ -29,15 +29,15 @@ The official image is on [DockerHub](https://hub.docker.com/r/tensorlayer/hyperp
 # Pull the latest image.
 docker pull tensorlayer/hyperpose
 
-# Dive into the image. (Connect local camera and imshow window)
+# Dive into the image’s interactive terminal. (Connect local camera and imshow window)
 xhost +; docker run --rm --gpus all -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --device=/dev/video0:/dev/video0 --entrypoint /bin/bash tensorlayer/hyperpose
-# For users that cannot access a camera or X11 server. You may also use:
+# For users without a camera or X11 server. You may simply run without cameras and imshow:
 # docker run --rm --gpus all -it --entrypoint /bin/bash tensorlayer/hyperpose
 ```
 
-Note that the entry point is the [`hyperpose-cli`](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/prediction.html#table-of-flags-for-hyperpose-cli) binary in the build directory.
+Note that the entry point is the [`hyperpose-cli`](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/prediction.html#table-of-flags-for-hyperpose-cli) binary in the build directory (i.e., `/hyperpose/build/hyperpose-cli`).
 
-### Build docker from source
+### Build docker image from source
 
 ```bash
 # Enter the repository folder.
@@ -63,7 +63,7 @@ docker run --rm --gpus all $(USER_DEF_NAME)
 
 > **About TensorRT installation**
 >
-> - For Linux users, you are highly recommended to install it in a system-wide setting. You can install TensorRT7 via the [debian distributions](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#installing-debian) or [NVIDIA network repo](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#maclearn-net-repo-install)(CUDA and CuDNN dependency will be automatically installed).
+> - For Linux users, you are highly recommended to install it in a system-wide setting. You can install TensorRT7 via the [debian distributions](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#installing-debian) or [NVIDIA network repo ](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#maclearn-net-repo-install)(CUDA and CuDNN dependency will be automatically installed).
 > - Different TensorRT version requires specific CUDA and CuDNN version. For specific CUDA and CuDNN requirements of TensorRT7, please refer to [this](https://docs.nvidia.com/deeplearning/tensorrt/support-matrix/index.html#platform-matrix).
 > - Also, for Ubuntu 18.04 users, this [3rd party blog](https://ddkang.github.io/2020/01/02/installing-tensorrt.html) may help you. 
 
@@ -87,7 +87,7 @@ mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release && cmake --build .
 ```
 
-## Build with User Codes
+## Build User Codes
 
 You can directly write codes and execute it under the hyperpose repository.
 
@@ -96,10 +96,10 @@ You can directly write codes and execute it under the hyperpose repository.
 
 ```bash
 mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_USER_CODES=ON   # BUILD_USER_CODES is by default on
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_USER_CODES=ON   # BUILD_USER_CODES is by default "ON"
 cmake --build .
 ```
 
 - **Step 3**: Execute your codes!
 
-Just go to [Quick Start](../quick_start/prediction.md) to test your installation.
+Go to [Quick Start](../quick_start/prediction.md) to test your installation.
