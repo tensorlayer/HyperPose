@@ -22,7 +22,7 @@ RUN version="7.0.0-1+cuda10.0" ; \
 #    && apt install -yt python-libnvinfer=${version} python3-libnvinfer=${version} && apt-mark hold python-libnvinfer python3-libnvinfer
 
 # Install OpenCV Dependencies
-RUN apt install -y software-properties-common || apt install -y software-properties-common && \
+RUN apt install -y software-properties-common && \
     add-apt-repository "deb http://security.ubuntu.com/ubuntu xenial-security main" && \
     APT_DEPS="git cmake wget zip libgtk-3-dev libavcodec-dev libavformat-dev libswscale-dev libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev x264 v4l-utils python3-dev python3-pip libcanberra-gtk-module libcanberra-gtk3-module" && \
     apt install -y $APT_DEPS || apt install -y $APT_DEPS && \
