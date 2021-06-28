@@ -166,7 +166,7 @@ We provide a sample training script with cli located at [train.py](https://githu
 
 To evaluate a model using hyperpose is similiar to the training procedure, we also provide a sample evaluation script with cli located at [eval.py](https://github.com/tensorlayer/hyperpose/blob/master/eval.py) as an example and a template for modification.  
 
-More information of the Hyperpose training library APIs can be found [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/training.html)
+More information of the Hyperpose training library usage can be found [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/training.html).
 
 
 ## Documentation
