@@ -1,10 +1,11 @@
 # Tutorial for Training Library
 Up to now, Hyperpose provides:
-* 4 types of preset model architectures:
+* 5 types of preset model architectures:
 > Openpose 
 > LightweightOpenpos
 > Poseproposal
 > MobilenetThinOpenpose
+> Pifpaf
 * 10 types of common model backbone for backbone replacement:
 > MobilenetV1, MobilenetV2
 > Vggtiny, Vgg16, Vgg19
