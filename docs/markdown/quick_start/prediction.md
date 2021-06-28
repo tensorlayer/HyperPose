@@ -53,7 +53,7 @@ sh scripts/download-ppn-res50-model.sh          # ~50  MB (PoseProposal)
 
 The output images will be in the build folder.
 
-> If you met logging message like `ERROR: Tensor image cannot be both input and output` please just ignore it. 
+> If you are using the `TinyVGG-V1-HW=256x384.uff` (`.uff` models are going to be deprecated by TensorRT), you may meet logging message like `ERROR: Tensor image cannot be both input and output`. This is harmless and please just ignore it. 
 
 ### Table of flags for `hyperpose-cli`
 
@@ -61,22 +61,22 @@ Note that the entry point of our official docker image is also `hyperpose-cli` i
 
 > Also see: `./hyperpose-cli --help`
 
-| Flag           | Meaning                                                      | Default                                  |
-| -------------- | ------------------------------------------------------------ | ---------------------------------------- |
-| model          | Path to your model.                                          | ../data/models/TinyVGG-V1-HW=256x384.uff |
-| source         | Path to your source. <br />The source can be a folder path, a video path, an image path or the key word `camera` to open your camera. | ../data/media/video.avi                  |
-| post           | Post-processing methods. This key can be `paf` or `ppn`.     | paf                                      |
-| keep_ratio     | The DNN takes a fixed input size, where the images must resize to fit that input resolution. However, not hurt the original human scale, we may want to resize by padding. And this is flag enable you to do inference without break original human ratio. (Good for accuracy) | true                                     |
-| w              | The input width of your model. Currently, the trained models we provide all have specific requirements for input resolution. | 384(for your the tiny-vgg model)         |
-| h              | The input height of your model.                              | 256(for your the tiny-vgg model)         |
-| max_batch_size | Maximum batch size for inference engine to execute.          | 8                                        |
-| runtime        | Which runtime type to use. This can be `operator` or `stream`. If you want to open your camera or producing `imshow` window, please use `operator`. For better processing throughput on videos, please use `stream`. | operator                                 |
-| imshow         | true                                                         | Whether to open an `imshow` window.      |
-| saving_prefix  | The output media resource will be named after '$(saving_prefix)_$(ID).$(format) | "output"                                 |
+| Flag           | Meaning                                                      | Default                                   |
+| -------------- | ------------------------------------------------------------ | ----------------------------------------- |
+| model          | Path to your model.                                          | ../data/models/TinyVGG-V2-HW=342x368.onnx |
+| source         | Path to your source. <br />The source can be a folder path, a video path, an image path or the key word `camera` to open your camera. | ../data/media/video.avi                   |
+| post           | Post-processing methods. This key can be `paf` or `ppn`.     | paf                                       |
+| keep_ratio     | The DNN takes a fixed input size, where the images must resize to fit that input resolution. However, not hurt the original human scale, we may want to resize by padding. And this is flag enable you to do inference without break original human ratio. (Good for accuracy) | true                                      |
+| w              | The input width of your model. Currently, the trained models we provide all have specific requirements for input resolution. | 432 (for your the tiny-vgg model)         |
+| h              | The input height of your model.                              | 368 (for your the tiny-vgg model)         |
+| max_batch_size | Maximum batch size for inference engine to execute.          | 8                                         |
+| runtime        | Which runtime type to use. This can be `operator` or `stream`. If you want to open your camera or producing `imshow` window, please use `operator`. For better processing throughput on videos, please use `stream`. | operator                                  |
+| imshow         | true                                                         | Whether to open an `imshow` window.       |
+| saving_prefix  | The output media resource will be named after '$(saving_prefix)_$(ID).$(format) | "output"                                  |
 | alpha          | The weight of key point visualization. (from 0 to 1)         | 0.5   
 | logging        | Print the internal logging information or not.               | false                                    |
 
-### Using a precise model
+### Using OpenPose-based (PAF) models
 
 ```bash
 ./hyperpose-cli --model ../data/models/openpose-thin-V2-HW=368x432.onnx --w 432 --h 368 
@@ -115,7 +115,7 @@ To save the model conversion time, you can pre-compile it in advance.
 
 The output video will be in the building folder.
 
-## Predict a video using Stream API(faster)
+## Predict a video using Stream API (faster)
 
 ```bash
 ./hyperpose-cli --runtime=stream --source=../data/media/video.avi

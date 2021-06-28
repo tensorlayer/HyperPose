@@ -1,40 +1,55 @@
 # Tutorial for Training Library
 Up to now, Hyperpose provides:
 * 4 types of preset model architectures:
-    * Openpose 
-    * LightweightOpenpose
-    * Poseproposal
-    * MobilenetThinOpenpose
-* 7 types of common model backbone for backbone replacement:
-    * MobilenetV1, MobilenetV2
-    * Vggtiny, Vgg16, Vgg19
-    * Resnet18, Resnet50
+> Openpose 
+> LightweightOpenpos
+> Poseproposal
+> MobilenetThinOpenpose
+* 10 types of common model backbone for backbone replacement:
+> MobilenetV1, MobilenetV2
+> Vggtiny, Vgg16, Vgg19
+> Resnet18, Resnet50
+> Mobilenet variants(Dilated Mobilenet,MobilenetThin,MobilenetSmall, located in the preset model architectures)   
 * 2 types of popular dataset
-    * COCO
-    * MPII
+> COCO
+> MPII
+* extensions
+> user-defined dataset
+> user-defined model architecture
+> pre-processors and post-processors 
 
 ## Integrated pipeline
 Hyperpose extract similiar models into a model class. For now, there are two classes: Openpose classes and Poseproposal classes.
 all model architecture can be devided into one of them.  
+
 For each model class, Hyperpose privide a integrated pipeline. 
+
 ### Integrated train pipeline
 The usage of integrated training procedure of Hyperpose can be devided into two parts:  
 setting configuration using APIs of *Config* module, and getting the configured system from the *Model* and *dataset* module.
+
 * setting parts mainly concern:  model_name, model_type, model_backbone, dataset_type and train_type
-    * *set_model_name* will determine what the path the model related file will be put to
-    * *set_model_type* will adopt the chosen preset model architecture  
+> *set_model_name* will determine what the path the model related file will be put to
+> *set_model_type* will adopt the chosen preset model architecture<br>
      (use enum value of enum class **Config.MODEL**)
-    * *set_model_backbone* will replace the backbone of chosen preset model architeture  
+> *set_model_backbone* will replace the backbone of chosen preset model architeture<br>
      (use enum value of enum class **Config.BACKBONE**)
-    * *set_dataset_type* will change the dataset in the training pipeline  
+> *set_dataset_type* will change the dataset in the training pipeline<br>
      (use enum value of enum class **Config.DATA**)
-    * *set_train_type* is to choose whether use single GPU for single training or multiple GPUs for parallel training  
-     (use enum value of enum class **Config.TRAIN**)<br>
-the conbination of different model architectures and model backbones will lead to huge difference of countructed model' computation
-complexity (for example,Openpose architecture with default Vgg19 backbone is 200MB, while MobilenetThinOpenpose with mobilenet-variant backbone is only 18MB), thus it should be carefully considered.  
-    for more detailed information, please refer the API documents. 
+> *set_train_type* is to choose whether use single GPU for single training or multiple GPUs for parallel training<br>
+     (use enum value of enum class **Config.TRAIN**)
+
+The conbination of different model architectures and model backbones will lead to huge difference of countructed model's computation
+complexity.
+
+For example,Openpose architecture with default Vgg19 backbone is 200MB, while MobilenetThinOpenpose with mobilenet-variant backbone is only 18MB.
+
+Thus the available configuraions could cover a great range of possible hardware computation resources at hand.
+
+for more detailed information, please refer the API documents. 
 
 The basic training pipeline configuration is below:
+
 ```bash
 # >>> import modules of hyperpose
 from hyperpose import Config,Model,Dataset
@@ -51,20 +66,23 @@ Config.set_train_type(Config.TRAIN.Single_train)
 # >>> congratulations!, the simplest configuration is done, it's time to assemble the model and training pipeline
 ```
 to use parallel training, one should set train type at first, and then choose kungfu optimizor wrap function, replace the set_train_type function as below, Kungfu also have three option: Sync_sgd,Sync_avg,Pair_avg
+
 ```bash
 Config.set_train_type(Config.TRAIN.Parallel_train)
 Config.set_kungfu_option(Config.KUNGFU.Sync_sgd)
 ```
+
 And when run your program, using the following command(assuming we have 4 GPUs)
+
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 kungfu-run -np 4 python train.py
 ```
 
 * getting parts mainly concern: pass the configuration to *Model* module and *Dataset* module to assemble the system
-    * *Config.get_config* will return a config object which contains all the configuration and is the core of the getting functions 
-    * *Model.get_model* will return a configrued model object which can forward and calcaulate loss
-    * *Datset.get_dataset* will return a configured dataset object which can generate tensorflow dataset object used for train and evaluate, it can also visualize the dataset annotation.
-    * *Model.get_train* will return a training pipeline, which could start running as long as receive the model object and dataset object
+> *Config.get_config* will return a config object which contains all the configuration and is the core of the getting functions 
+> *Model.get_model* will return a configrued model object which can forward and calcaulate loss
+> *Datset.get_dataset* will return a configured dataset object which can generate tensorflow dataset object used for train and evaluate, it can also visualize the dataset annotation.
+> *Model.get_train* will return a training pipeline, which could start running as long as receive the model object and dataset object
 
 The basic training pipeline assembling is below:
 ```bash
