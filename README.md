@@ -38,6 +38,17 @@ HyperPose has two key features:
     * Customise model architectures (e.g., OpenPose, Pifpaf, PoseProposal Network) and training datasets.
     * Speed up training with multiple GPUs.
 
+## Demo
+
+</a>
+<p align="center">
+    <img src="./docs/markdown/images/demo-xbd.gif", width="600">
+</p>
+
+<p align="center">
+    新宝岛 with HyperPose (Lightweight OpenPose model)
+</p>
+
 ## Quick Start
 
 The HyperPose library contains two parts:
@@ -95,7 +106,7 @@ More information of the Docker image is [here](https://hyperpose.readthedocs.io/
 
 ### Python training library
 
-We recommend to use the Python training library within an [Anaconda](https://www.anaconda.com/products/individual) environment. Test environments:<br>
+We recommend to use the Python training library within an [Anaconda](https://www.anaconda.com/products/individual) environment. The below quick-start has been tested with these environments:<br>
 * Ubuntu 18.04, Tesla V100-DGX, NVIDIA Driver 440.33.01, CUDA 10.2
 * Ubuntu 18.04, Tesla V100-DGX, NVIDIA Driver 410.79, CUDA 10.0
 * Ubuntu 18.04, TITAN RTX, NVIDIA Driver 430.64, CUDA 10.1
@@ -141,7 +152,7 @@ model = Model.get_model(config)
 dataset = Dataset.get_dataset(config)
 train = Model.get_train(config)
 # Start the training process
-train(model,dataset)
+train(model, dataset)
 ```
 
 The full training program is [here](https://github.com/tensorlayer/hyperpose/blob/master/train.py). To evaluate the trained model, you can use an evaluation program [here](https://github.com/tensorlayer/hyperpose/blob/master/eval.py). More information about the training library is [here](https://hyperpose.readthedocs.io/en/latest/markdown/quick_start/training.html).
@@ -175,16 +186,6 @@ We evaluate the accuracy of pose estimation models developed by HyperPose. The e
 | LightweightOpenPose (tiny VGG)   | 23.6 MB | 432 x 368 | MSCOCO2017 (all 5000 img.) | 47.3 map | - |
 | LightweightOpenPose (ResNet50)   | 42.7 MB | 432 x 368 | MSCOCO2017 (all 5000 img.) | 48.2 map | - |
 | PoseProposal (ResNet18)   | 45.2 MB | 384 x 384 | MPII (all 2729 img.) | 54.9 map (PCKh) | 72.8 map (PCKh)|
-
-
-</a>
-<p align="center">
-    <img src="./docs/markdown/images/demo-xbd.gif", width="600">
-</p>
-
-<p align="center">
-    新宝岛 with HyperPose(Lightweight OpenPose model)
-</p>
 
 ## License
 
