@@ -20,8 +20,8 @@ setup(
         "pycocotools"
     ],
     #meta data
-    author="Hyperpose community",
-    author_email="1137743903@qq.com",
+    author="TensorLayer Community",
+    author_email="tensorlayer@gmail.com",
     description="HyperPose is a library for building human pose estimation systems that can efficiently operate in the wild.",
     long_description=long_description,
     long_description_content_type="text/markdown",
