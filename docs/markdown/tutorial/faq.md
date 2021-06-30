@@ -12,7 +12,7 @@
 
 ### Build without examples/tests?
 
-```cmake
+```bash
 cmake .. -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF
 ```
 

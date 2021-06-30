@@ -20,4 +20,4 @@
 
 ### Released Prediction Models
 
-We released the models on [Google Drive](TinyVGG-V1-HW=256x384.uff). `.onnx` and `.uff` files are for inference.
+We released the models on [Google Drive](https://drive.google.com/drive/folders/1w9EjMkrjxOmMw3Rf6fXXkiv_ge7M99jR?usp=sharing). `.onnx` and `.uff` files are for inference.
