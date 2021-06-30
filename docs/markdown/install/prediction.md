@@ -3,7 +3,7 @@
 Note that C++ prediction library requires NVIDIA GPU acceleration.
 HyperPose is developed and frequently tested on Linux platforms (i.e., Ubuntu 18.04). Hence, we recommend you to build HyperPose on Linux.
 
-## Docker Environment Installation (RECOMMENDED)
+## Container Installation (RECOMMENDED)
 
 To ease the installation, you can use HyperPose library in our docker image where the environment is pre-installed (including pretrained models).
 
@@ -55,19 +55,25 @@ docker run --rm --gpus all $(USER_DEF_NAME)
 * Third-Party
     * OpenCV3.2+. (**[OpenCV 4+](https://docs.opencv.org/trunk/d7/d9f/tutorial_linux_install.html) is highly recommended**)
     * CUDA related:
-        * (suggested) [CUDA 10.2](https://developer.nvidia.com/cuda-downloads), [CuDNN 7.6.5](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html), [TensorRT 7.1](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html).
+        * (suggested) [CUDA 10.2](https://developer.nvidia.com/cuda-downloads), [CuDNN 8.2.0](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html), [TensorRT >= 7.1, <= 8.0](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html).
         * (minimal) [CUDA 10.0](https://developer.nvidia.com/cuda-downloads), [CuDNN 7.6.5](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html), [TensorRT 7.0](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html).
     * gFlags (for command-line tool/examples/tests)
 
-> Packages of other versions might also work but not tested.
+```{admonition} Note
+Packages of other versions might also work but not tested.
+```
 
-> **About TensorRT installation**
->
-> - For Linux users, you are highly recommended to install it in a system-wide setting. You can install TensorRT7 via the [debian distributions](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#installing-debian) or [NVIDIA network repo ](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#maclearn-net-repo-install)(CUDA and CuDNN dependency will be automatically installed).
-> - Different TensorRT version requires specific CUDA and CuDNN version. For specific CUDA and CuDNN requirements of TensorRT7, please refer to [this](https://docs.nvidia.com/deeplearning/tensorrt/support-matrix/index.html#platform-matrix).
-> - Also, for Ubuntu 18.04 users, this [3rd party blog](https://ddkang.github.io/2020/01/02/installing-tensorrt.html) may help you. 
+```{admonition} TensorRT Tips
+For Linux users, you are highly recommended to install it in a system-wide setting. You can install TensorRT7 via the [debian distributions](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#installing-debian) or [NVIDIA network repo ](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#maclearn-net-repo-install)(CUDA and CuDNN dependency will be automatically installed).
+```
 
-### Build On Ubuntu 18.04
+```{admonition} CUDA-CuDNN-TensorRT Compatibility
+:class: warning
+
+Different TensorRT version requires specific CUDA and CuDNN version. For specific CUDA and CuDNN requirements of TensorRT7, please refer to [this](https://docs.nvidia.com/deeplearning/tensorrt/support-matrix/index.html#platform-matrix).
+```
+
+### Build on Ubuntu 18.04
 
 ```bash
 # >>> Install OpenCV3+ and other dependencies. 
