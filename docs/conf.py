@@ -12,9 +12,10 @@
 #
 import os
 import sys
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.abspath('../'))
-sys.path.insert(0, os.path.abspath('../Hyperpose'))
+sys.path.insert(0, os.path.abspath('../hyperpose'))
 
 # -- Project information -----------------------------------------------------
 
@@ -32,8 +33,8 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.githubpages',
     'sphinx_markdown_tables',
-    'recommonmark',
-    'numpydoc'
+    'myst_parser',
+    'numpydoc',
 ]
 
 autodoc_mock_imports = [
@@ -52,6 +53,7 @@ autodoc_mock_imports = [
     'tensorflow',
     'tqdm',
     'h5py',
+    'tensorlayer',
 
     'tensorlayer.third_party.roi_pooling.roi_pooling.roi_pooling_ops',
 ]
@@ -73,8 +75,7 @@ source_suffix = {
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

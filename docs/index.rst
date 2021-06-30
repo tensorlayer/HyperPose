@@ -7,7 +7,7 @@ Welcome to HyperPose's Documentation!
 =====================================
 
 Installation
------------
+------------
 .. toctree::
    :maxdepth: 1
 
