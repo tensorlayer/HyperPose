@@ -38,6 +38,9 @@ extensions = [
 ]
 
 myst_enable_extensions = ["colon_fence"]
+pygments_style = "sphinx"
+pygments_dark_style = "monokai"
+html_logo = "markdown/images/logo.png"
 
 autodoc_mock_imports = [
     'gridfs',
