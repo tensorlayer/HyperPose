@@ -79,14 +79,14 @@ ls /usr/local/cuda/lib64 | grep libcudnn.so
 To install a stable library from [Python Package Index](https://github.com/tensorlayer/hyperpose):
 
 ```bash
-pip install hyperpose
+pip install -U hyperpose
 ```
 
 Or you can install a specific release of hyperpose from GitHub, for example:
 
 ```bash
 export HYPERPOSE_VERSION="2.2.0-alpha"
-pip install https://github.com/tensorlayer/hyperpose/archive/${HYPERPOSE_VERSION}.zip
+pip install -U https://github.com/tensorlayer/hyperpose/archive/${HYPERPOSE_VERSION}.zip
 ```
 
 More GitHub releases and its version can be found [here](https://github.com/tensorlayer/hyperpose/releases).
@@ -98,7 +98,7 @@ You can also install HyperPose by installing the raw GitHub repository, this is 
 ```bash
 # Install the source codes from GitHub
 git clone https://github.com/tensorlayer/hyperpose.git
-pip install -r hyperpose/requirements.txt
+pip install -U -r hyperpose/requirements.txt
 
 # Add `hyperpose/hyperpose` to `PYTHONPATH` to help python find it.
 export HYPERPOSE_PYTHON_HOME=$(pwd)/hyperpose
@@ -149,7 +149,7 @@ pip install -U tf2onnx
 
 After converting a ProtoBuf file to an ONNX file using tf2onnx, it is usually required to provide the input node name and output node name of the computation graph stored in ProtoBuf file, which is often tedious. Instead, we use `graph_transform` to finding out the input and output node of the ProtoBuf model file automatically. 
 
-build graph_transforms according to [tensorflow tools](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/tools/graph_transforms#using-the-graph-transform-tool).
+To build `graph_transforms`, please refer to [tensorflow tools](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/tools/graph_transforms#using-the-graph-transform-tool).
 
 ### Extra configuration for distributed training with KungFu
 
