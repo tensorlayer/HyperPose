@@ -131,7 +131,7 @@ python export_pb.py --model_name=MyLightweightOpenpose --model_type=LightweightO
 
 Then the ProtoBuf model will be stored at `./save_dir/${MODEL_NAME}/frozen_${MODEL_NAME}.pb`.
 
-## Step 2: convert the frozen ProtoBuf format model into ONNX format
+### Step 2: convert the frozen ProtoBuf format model into ONNX format
 
 :::{note}
 Make sure you have installed the extra dependencies for exporting models according to [training installation](../install/training.md).
