@@ -26,7 +26,7 @@ class LinuxCheck(unittest.TestCase):
                         if m is not None:
                             version_code = m.group(0)
                             break
-            self.assertNotEqual(version_code, None, 'NVIDIA version not found... Have you installed NVidia driver on '
+            self.assertNotEqual(version_code, None, 'NVIDIA version not found... Have you installed NVIDIA driver on '
                                                     'your Linux? If not please refer to '
                                                     'https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index'
                                                     '.html#driver-installation')

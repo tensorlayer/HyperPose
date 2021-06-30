@@ -1,107 +1,175 @@
 # Quick Start of Training Library
 
-## Prerequisites
-* Make sure you have configured 'hyperpose' virtual environment following the training installation guide,(if not, you can refer to [training installation](../install/training.md)).
-* Make sure your GPU is available now(using tf.test.is_gpu_available() and it should return True)
-* Make sure the hyperpose training Library is under the root directory of the project(where you write train.py and eval.py) or you have installed hyperpose through pypi.
+```{admonition} Prerequisites
+1. Make sure you have installed HyperPose Python Training Library ([HowTo](../install/training.md)).
+2. If your are using commandline tools, make sure you are executing scripts under the root directory of the project (to directly call `train.py` and `eval.py`).
+```
 
-## Train a model
-The training procedure of Hyperpose is to set the model architecture, model backbone and dataset.
-User specify these configuration using the set up functions of *Config* module with predefined enum value.
-The code for training as simple as following would work.
-```bash
-# >>> import modules of hyperpose
-from hyperpose import Config,Model,Dataset
-# >>> set model name is necessary to distinguish models (neccesarry)
-Config.set_model_name("my_lopps")
-# >>> set model architecture (and set model backbone when in need)
-Config.set_model_type(Config.MODEL.LightweightOpenpose)
-Config.set_model_backbone(Config.BACKBONE.Vggtiny)
-# >>> set dataset to use
-Config.set_dataset_type(Config.DATA.MSCOCO)
-# >>> set training type 
+## Model training
+
+The training procedure of HypePose is as simple as 3 configuration steps:
+1. choose the pose **algorithm**
+2. set the model **backbone**
+3. select target **dataset**
+
+:::{code-block} python
+:name: train-sample
+:lineno-start: 1
+
+from hyperpose import Config, Model, Dataset
+
+# set model name to distinguish different models
+Config.set_model_name("MyLightweightOpenPose")
+
+Config.set_model_type(Config.MODEL.LightweightOpenpose)  # set pose algorithm
+Config.set_model_backbone(Config.BACKBONE.Vggtiny)       # set model backbone
+Config.set_dataset_type(Config.DATA.MSCOCO)              # set target dataset
+
+# use one GPU for training
 Config.set_train_type(Config.TRAIN.Single_train)
-# >>> configuration is done, get config object and assemble the system
+
+# configuration is done, get config object and assemble the system
+config = Config.get_config()
+model = Model.get_model(config)
+dataset = Dataset.get_dataset(config)
+
+Model.get_train(config)(model, dataset) # start training!
+:::
+
+For each model, HyperPose will save all the related files in the directory:
+`./save_dir/${MODEL_NAME}`, where `${MODEL_NAME}` is set in line 4 of above code sample (i.e., "MyLightweightOpenPose").
+
+The directory regarding training results are listed below:  
+
+```{list-table} Direcories for training results
+:header-rows: 1
+
+* - Folder Name
+  - Path to what
+* - `./save_dir/${MODEL_NAME}/model_dir`
+  - Model checkpoints
+* - `./save_dir/${MODEL_NAME}/train_vis_dir`
+  - Visualized training samples for debugging. See {ref}`debugging sample figure <debug-sample>`.
+* - `./save_dir/${MODEL_NAME}/eval_vis_dir`
+  - Visualized evaluation samples for debugging. See {ref}`debugging sample figure <debug-sample>`.
+* - `./save_dir/${MODEL_NAME}/test_vis_dir`
+  - Visualized testing samples for debugging. See {ref}`debugging sample figure <debug-sample>`.
+* - `./save_dir/${MODEL_NAME}/data_vis_dir`
+  - Visualized annotated dataset samples. See {ref}`annotated sample figure <annotated-sample>`.
+* - `./save_dir/${MODEL_NAME}/log.txt`
+  - Training logs (e.g., loss).
+```
+
+```{figure} ../images/train_vis_dir.png
+---
+width: 40%
+name: debug-sample
+align: center
+---
+Visualized training/evaluation/testing sample.
+```
+
+```{figure} ../images/data_vis_dir.png
+---
+width: 40%
+name: annotated-sample
+align: center
+---
+Visualized annotated dataset sample.
+```
+
+We also provide a helpful training commandline tool ([train.py](https://github.com/tensorlayer/hyperpose/blob/master/train.py)) to quickly train pose esitmation models. For detailed usage, please refer to [this](https://github.com/tensorlayer/hyperpose/blob/master/train.py).
+
+## Model evaluation
+
+The evaluate procedure of HyperPose looks quite alike to training one.
+Given the model name, model checkpoint will be loaded from `./save_dir/${MODEL_NAME}/model_dir/newest_model.npz`.
+
+:::{code-block} python
+from hyperpose import Config, Model, Dataset
+
+Config.set_model_name("MyLightweightOpenPose")
+
+Config.set_model_type(Config.MODEL.LightweightOpenpose)  # set pose algorithm
+Config.set_model_backbone(Config.BACKBONE.Vggtiny)       # set model backbone
+Config.set_dataset_type(Config.DATA.MSCOCO)              # set target dataset
+
+# configuration is done, get config object and assemble the system
 config=Config.get_config()
 model=Model.get_model(config)
 dataset=Dataset.get_dataset(config)
-train=Model.get_train(config)
-# >>> train!
-train(model,dataset)
-```
-Then the integrated training pipeline will start.
-for each model, Hyperpose will save all the related files in the directory:
-*./save_dir/model_name*, where *model_name* is the name user set by using *Config.set_model_name*
-the directory and its contents are below:  
-* directory to save model                      ./save_dir/model_name/model_dir  
-* directory to save train result               ./save_dir/model_name/train_vis_dir  
-* directory to save evaluate result            ./save_dir/model_name/eval_vis_dir  
-* directory to save test result                ./save_dir/model_name/test_vis_dir  
-* directory to save dataset visualize result   ./save_dir/model_name/data_vis_dir  
-* file path to save train log                  ./save_dir/model_name/log.txt  
 
-We provide a helpful training script with cli located at [train.py](https://github.com/tensorlayer/hyperpose/blob/master/train.py) to demonstrate the usage of hyperpose python training library, users can directly use the script to train thier own model or use it as a template for further modification.
+Model.get_eval(config)(model, dataset) # start evaluation!
+:::
 
-## Eval a model
-The evaluate procedure using Hyperpose is almost the same to the training procedure,
-the model will be loaded from the ./save_dir/model_name/model_dir/newest_model.npz,
-The code for evaluating is followed:
-```bash
-# >>> import modules of hyperpose
-from hyperpose import Config,Model,Dataset
-# >>> set model name to be eval
-Config.set_model_name(args.model_name)
-# >>> the model architecture and backbone setting should be the same with the training configuration of the model to be evaluated.
-Config.set_model_type(Config.MODEL.LightweightOpenpose)
-Config.set_model_backbone(Config.BACKBONE.Vggtiny)
-# >>> set dataset to use
-Config.set_dataset_type(Config.DATA.MSCOCO)
-# >>> configuration is done, get config object to assemble the system
-config=Config.get_config()
-model=Model.get_model(config)
-dataset=Dataset.get_dataset(config)
-eval=Model.get_eval(config)
-# >>> eval
-eval(model,dataset)
-```
 Then the integrated evaluation pipeline will start, the final evaluate metrics will be output at last.
-It should be noted that:
-1.the model architecture, model backbone, dataset type should be the same with the configuration under which model was trained.
-2.the evaluation metrics will follow the official evaluation metrics of dataset
 
-We also provide a helpful evaluating script with cli located at [eval.py](https://github.com/tensorlayer/hyperpose/blob/master/eval.py) to demonstrate how to evaluate the model trained by hyperpose, users can directly use the script to evaluate thier own model or use it as a template for further modification.
+:::{note}
+1. For the same model name, the algorithm, backbone, and dataset type are expected to be the consistent in training and evaluation.
+2. The evaluation metric follows the official evaluation metric of give dataset.
+:::
 
-The above code sections show the simplest way to use Hyperpose training library to train and evaluate a model trained by Hyperpose, to make full use of Hyperpose training library, you can refer to [training tutorial](../tutorial/training.md)
+Like the training commandline tool, we also have one for evaluation ([eval.py](https://github.com/tensorlayer/hyperpose/blob/master/eval.py)).
 
-## Export a model
-The trained model weight is saved as a .npz file. For further deployment, one should convert the model loaded with the well-trained weight saved in the .npz file and convert it into the .pb format and .onnx format.
-To export a model trained by Hyperpose, one should follow two step:
-* (1)convert the trained .npz model into .pb format
-    We use the *@tf.function* decorator to produce the static computation graph and save it into the .pb format.
-    We already provide a script with cli to facilitate conversion, which located at [export_pb.py](https://github.com/tensorlayer/hyperpose/blob/master/export_pb.py). 
-    To convert a model with model_type=**your_model_type** and model_name=**your_model_name** developed by hyperpose,one should place the trained model weight **newest_model.npz** file at path *./save_dir/your_model_name/model_dir/newest_model.npz*,and run the command line followed:
-    ```bash
-        python export_pb.py --model_type=your_model_type --model_name=your_model_name
-    ```
-    Then the **frozen_your_model_name.pb** will be produced at path *./save_dir/your_model_name/frozen_your_model_name.pb*.
-    one can also export by loading model and using *get_concrete_function* by himself, please refer the [tutorial](../tutorial/training.md) for more details.
-* (2)convert the frozen .pb format model into .onnx format
-    We use *tf2onnx* library to convert the .pb format model into .onnx format.
-    Make sure you have installed the extra requirements for exporting models from [training installation](../install/training.md).<br>
-    if you don't know the input and output node names of the pb model,you should use the function *summarize_graph* function 
-    of *graph_transforms* from tensorflow. (see [tensorflow tools](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/tools/graph_transforms#using-the-graph-transform-tool) for more details.)
+## Exporting a model
 
-    ```bash
-    bazel-bin/tensorflow/tools/graph_transforms/summarize_graph --in_graph=your_frozen_model.pb
-    ```
-    then, after knowing the input and output nodes of your .pb model,use tf2onnx
-    ```bash
-    python -m tf2onnx.convert --graphdef your_frozen_model.pb --output output_model.onnx --inputs input0:0,input1:0... --outputs output0:0,output1:0,output2:0...
-    ```
-    args follow *--inputs* and *-outputs* are the names of input and output nodes in .pb graph respectively, for example, if the input node name is **x** and output node name is **y1**,**y2**, then the convert bash command line should be:
-    ```
-    python -m tf2onnx.convert --graphdef your_frozen_model.pb --output output_model.onnx --inputs x:0 --outputs y1:0,y2:0
-    ```
+The trained model weight is saved as a NPZ(`.npz`) file. For further deployment, the weight from NPZ can be coverted into [ONNX](https://onnx.ai/) format.
 
-**congratulation! now you are able to use the onnx model for Hyperpose prediction library.**
+To export a model trained by HyperPose, please follow these 2 steps:
 
+### Step 1: convert the trained NPZ model into ProtoBuf format
+
+We first use the `@tf.function` decorator to produce the static computation graph and save it into the ProtoBuf format.
+We already provide a script with cli to facilitate conversion, which located at [export_pb.py](https://github.com/tensorlayer/hyperpose/blob/master/export_pb.py). 
+
+After marking the decorators, we can use [`export_pb.py`](https://github.com/tensorlayer/hyperpose/blob/master/export_pb.py) to start model conversion.
+
+```bash
+# FLAGS: --model_type=${ALGORITHM_TYPE} --model_name=${MODEL_NAME} --model_backbone={BACKBONE_TYPE}
+python export_pb.py --model_name=MyLightweightOpenpose --model_type=LightweightOpenpose --model_backbone=Vggtiny
+```
+
+Then the ProtoBuf model will be stored at `./save_dir/${MODEL_NAME}/frozen_${MODEL_NAME}.pb`.
+
+## Step 2: convert the frozen ProtoBuf format model into ONNX format
+
+:::{note}
+Make sure you have installed the extra dependencies for exporting models according to [training installation](../install/training.md).
+:::
+
+We use `tf2onnx` library to convert the ProtoBuf format model into ONNX format. 
+However, to actually convert a model, we need to know its input/output node names.
+
+After running **Step 1**, we should see output like:
+
+```text
+...
+Exported graph INPUT nodes: ['x']
+Exported graph OUTPUT nodes: ['Identity', 'Identity_1']
+```
+
+In this example, we found the name of input/output nodes, and we need to pass those names as arguments during conversion.
+
+```bash
+# The input/output names of our example.
+export INPUT_NODE_NAME=x
+export INPUT_NODE_NAME0=Identity
+export INPUT_NODE_NAME1=Identity_1
+export OUTPUT_ONNX_MODEL=my_output_model.onnx
+
+python -m tf2onnx.convert --graphdef frozen_${MODEL_NAME}.pb   \
+                          --output   ${OUTPUT_ONNX_MODEL}      \
+                          --inputs   ${INPUT_NODE_NAME}:0      \
+                          --outputs  ${INPUT_NODE_NAME0}:0,${INPUT_NODE_NAME1}:0
+```
+
+We then will see the converted ONNX model named ${OUTPUT_ONNX_MODEL} ('my_output_model.onnx' in our example).
+
+Congratulations! now you are able to use the onnx model for Hyperpose prediction library.
+
+## Next step
+
+:::{Congratulation!}
+:::
+
+For in-depth usage of HyperPose Training Library, please refer to our [training tutorial](../tutorial/training.md).

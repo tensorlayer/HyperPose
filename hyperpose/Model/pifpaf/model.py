@@ -47,7 +47,7 @@ class Pifpaf(Model):
         self.paf_head=self.PafHead(input_features=self.backbone.out_channels,n_pos=self.n_pos,n_limbs=self.n_limbs,\
             quad_size=self.quad_size,hout=self.hout,wout=self.wout,stride=self.stride,data_format=self.data_format)
     
-#    @tf.function(experimental_relax_shapes=True)
+    @tf.function(experimental_relax_shapes=True)
     def forward(self,x,is_train=False,ret_backbone=False):
         backbone_x=self.backbone.forward(x)
         pif_maps=self.pif_head.forward(backbone_x,is_train=is_train)
@@ -56,7 +56,7 @@ class Pifpaf(Model):
             return pif_maps,paf_maps,backbone_x
         return pif_maps,paf_maps
     
-#    @tf.function(experimental_relax_shapes=True)
+    @tf.function(experimental_relax_shapes=True)
     def infer(self,x):
         pif_maps,paf_maps,backbone_x=self.forward(x,is_train=False,ret_backbone=True)
         pif_conf,pif_vec,_,pif_scale=pif_maps

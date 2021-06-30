@@ -141,7 +141,7 @@ We demonstrate how to train a custom pose estimation model with HyperPose. Hyper
 from hyperpose import Config, Model, Dataset
 
 # Set model name to distinguish models (necessary)
-Config.set_model_name("My_lopps")
+Config.set_model_name("MyLightweightOpenPose")
 
 # Set model type, model backbone and dataset
 Config.set_model_type(Config.MODEL.LightweightOpenpose)
