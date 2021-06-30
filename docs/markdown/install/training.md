@@ -34,9 +34,9 @@ conda install cudnn=7.6.0
 ::::
 
 
-### Using system-wise CUDA toolkits
+### Using system-wide CUDA toolkits
 
-Users may also directly depend on the system-wise CUDA and CuDNN libraries.
+Users may also directly depend on the system-wide CUDA and CuDNN libraries.
 
 HyperPose have been tested on the environments below:
 
@@ -62,7 +62,7 @@ nvcc --version
 # Build cuda_11.2.r11.2/compiler.29373293_0
 :::
 
-To check your system-wise CuDNN version **on Linux**: the output (in the comment) shows that we have CuDNN 8.0.5.
+To check your system-wide CuDNN version **on Linux**: the output (in the comment) shows that we have CuDNN 8.0.5.
 :::{code-block} bash
 ls /usr/local/cuda/lib64 | grep libcudnn.so
 # === Valid output looks like ===
@@ -107,38 +107,38 @@ export PYTHONPATH=$HYPERPOSE_PYTHON_HOME/python:${PYTHONPATH}
 
 ## Check the installation
 
-Let's check whether HyperPose is successfully installed by running following commands:
+Let's check whether HyperPose is installed by running following commands:
 
 ```bash
 python -c '
 import tensorflow as tf             # Test TensorFlow installation
 import tensorlayer as tl            # Test TensorLayer installation
-assert tf.test.is_gpu_available()   # Test GPU existence
+assert tf.test.is_gpu_available()   # Test GPU availability
 import hyperpose                    # Test HyperPose import
 '
 ```
 
 ## Optional Setup
 
-### Extra configuration for model exportation
+### Extra configurations for exporting models
 
 The hypeprose python training library handles the whole pipelines for developing the pose estimation system, including training, evaluating and testing. Its goal is to produce a **.npz** file that contains the well-trained model weights.
 
-For the training platform, the enviroment configuration above is engough. However, most inference engine accepts `.pb` or [`.onnx`](https://onnx.ai/) format model. For example, the HyperPose C++ inference engine leverages [TensorRT](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html) as the DNN engine, which takes `.onnx` models as inputs.
+For the training platform, the enviroment configuration above is engough. However, most inference engine accepts ProtoBuf or [ONNX](https://onnx.ai/) format model. For example, the HyperPose C++ inference engine leverages [TensorRT](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html) as the DNN engine, which takes ONNX models as inputs.
 
 Thus, one need to convert the trained model loaded with **.npz** file weight to **.pb** format or **.onnx** format for further deployment, which need extra configuration below:
 
-#### Converting a `.pb` model
+#### Converting a ProtoBuf model
 
-To convert the model into `.pb` format, we use `@tf.function` to decorate the `infer` function for each model class, and we then can use the `get_concrete_function` function from tensorflow to consctruct the frozen model computation graph and then save it with `.pb` format.
+To convert the model into ProtoBuf format, we use `@tf.function` to decorate the `infer` function for each model class, and we then can use the `get_concrete_function` function from tensorflow to consctruct the frozen model computation graph and then save it with ProtoBuf format.
 
 We provide [a commandline tool](https://github.com/tensorlayer/hyperpose/blob/master/export_pb.py) to facilitate the conversion. The prerequisite of this tool is a tensorflow library installed along with HyperPose's dependency.
 
-#### Converting a `.onnx` model
+#### Converting a ONNX model
 
-To convert a trained model into `.onnx` format, we need to first convert the model into `.pb` format, we then convert a `.pb` model into `.onnx` format, which requires 2 additional libraries:
+To convert a trained model into ONNX format, we need to first convert the model into ProtoBuf format, we then convert a ProtoBuf model into ONNX format, which requires 2 additional libraries:
 
-* [**tf2onnx**](https://github.com/onnx/tensorflow-onnx) for converting TensorFlow's `.pb` model into `.onnx` format.
+* [**tf2onnx**](https://github.com/onnx/tensorflow-onnx) for converting TensorFlow's ProtoBuf model into ONNX format.
 * [**graph_transforms**](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/tools/graph_transforms#using-the-graph-transform-tool) 
 
 To install `tf2onnx`, we simply run:
@@ -147,7 +147,7 @@ To install `tf2onnx`, we simply run:
 pip install -U tf2onnx
 ```
 
-After converting a `.pb` file to an `.onnx` file using tf2onnx, it is usually required to provide the input node name and output node name of the computation graph stored in `.pb` file, which is often tedious. Instead, we use `graph_transform` to finding out the input and output node of the `.pb` model file automatically. 
+After converting a ProtoBuf file to an ONNX file using tf2onnx, it is usually required to provide the input node name and output node name of the computation graph stored in ProtoBuf file, which is often tedious. Instead, we use `graph_transform` to finding out the input and output node of the ProtoBuf model file automatically. 
 
 build graph_transforms according to [tensorflow tools](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/tools/graph_transforms#using-the-graph-transform-tool).
 
