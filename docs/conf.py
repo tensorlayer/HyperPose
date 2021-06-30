@@ -37,6 +37,8 @@ extensions = [
     'numpydoc',
 ]
 
+myst_enable_extensions = ["colon_fence"]
+
 autodoc_mock_imports = [
     'gridfs',
     'horovod',
