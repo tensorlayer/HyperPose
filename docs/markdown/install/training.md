@@ -111,7 +111,7 @@ Let's check whether HyperPose is successfully installed by running following com
 
 ```bash
 python -c '
-import tensorflow as tf             # Test TensorLayer installation
+import tensorflow as tf             # Test TensorFlow installation
 import tensorlayer as tl            # Test TensorLayer installation
 assert tf.test.is_gpu_available()   # Test GPU existence
 import hyperpose                    # Test HyperPose import
