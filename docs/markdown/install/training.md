@@ -124,7 +124,7 @@ import hyperpose                    # Test HyperPose import
 
 The hypeprose python training library handles the whole pipelines for developing the pose estimation system, including training, evaluating and testing. Its goal is to produce a **.npz** file that contains the well-trained model weights.
 
-For the training platform, the enviroment configuration above is engough. However, most inference engine accepts `.pb` or [`.onnx`] format model. For example, the HyperPose C++ inference engine leverages [TensorRT](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html) as the DNN engine, which takes `.onnx` models as inputs.
+For the training platform, the enviroment configuration above is engough. However, most inference engine accepts `.pb` or [`.onnx`](https://onnx.ai/) format model. For example, the HyperPose C++ inference engine leverages [TensorRT](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html) as the DNN engine, which takes `.onnx` models as inputs.
 
 Thus, one need to convert the trained model loaded with **.npz** file weight to **.pb** format or **.onnx** format for further deployment, which need extra configuration below:
 
