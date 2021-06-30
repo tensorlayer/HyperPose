@@ -64,6 +64,7 @@ The directory regarding training results are listed below:
 ---
 width: 40%
 name: debug-sample
+align: center
 ---
 Visualized training/evaluation/testing sample.
 ```
@@ -72,6 +73,7 @@ Visualized training/evaluation/testing sample.
 ---
 width: 40%
 name: annotated-sample
+align: center
 ---
 Visualized annotated dataset sample.
 ```
