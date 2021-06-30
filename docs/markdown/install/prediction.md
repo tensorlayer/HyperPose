@@ -15,13 +15,13 @@ To test your docker environment compatibility and get related instructions:
 wget https://raw.githubusercontent.com/tensorlayer/hyperpose/master/scripts/test_docker.py -qO- | python
 ```
 
-- [CUDA Driver >= 418.81.07 (bounded by NVidia Docker)](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#driver-installation)
-- [NVidia Docker >= 2.0](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#pre-requisites)
+- [CUDA Driver >= 418.81.07 (bounded by NVIDIA Docker)](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#driver-installation)
+- [NVIDIA Docker >= 2.0](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#pre-requisites)
 - [Docker >= 19.03](https://docs.docker.com/engine/install/)
 
 ### Official Docker Image
 
-NVidia docker support is required to execute our docker image. 
+NVIDIA docker support is required to execute our docker image. 
 
 The official image is on [DockerHub](https://hub.docker.com/r/tensorlayer/hyperpose).
 
