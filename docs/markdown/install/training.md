@@ -136,20 +136,13 @@ We provide [a commandline tool](https://github.com/tensorlayer/hyperpose/blob/ma
 
 #### Converting a ONNX model
 
-To convert a trained model into ONNX format, we need to first convert the model into ProtoBuf format, we then convert a ProtoBuf model into ONNX format, which requires 2 additional libraries:
-
-* [**tf2onnx**](https://github.com/onnx/tensorflow-onnx) for converting TensorFlow's ProtoBuf model into ONNX format.
-* [**graph_transforms**](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/tools/graph_transforms#using-the-graph-transform-tool) 
+To convert a trained model into ONNX format, we need to first convert the model into ProtoBuf format, we then convert a ProtoBuf model into ONNX format, which requires an additional library: [**tf2onnx**](https://github.com/onnx/tensorflow-onnx) for converting TensorFlow's ProtoBuf model into ONNX format.
 
 To install `tf2onnx`, we simply run:
 
 ```bash
 pip install -U tf2onnx
 ```
-
-After converting a ProtoBuf file to an ONNX file using tf2onnx, it is usually required to provide the input node name and output node name of the computation graph stored in ProtoBuf file, which is often tedious. Instead, we use `graph_transform` to finding out the input and output node of the ProtoBuf model file automatically. 
-
-To build `graph_transforms`, please refer to [tensorflow tools](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/tools/graph_transforms#using-the-graph-transform-tool).
 
 ### Extra configuration for distributed training with KungFu
 
