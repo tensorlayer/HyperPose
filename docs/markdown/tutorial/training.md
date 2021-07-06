@@ -1,65 +1,82 @@
 # Tutorial for Training Library
-Hyperpose python training library provides a one-step yet flexible platform for developing pose estimation models.
+HyperPose python training library provides a one-step yet flexible platform for developing pose estimation models.
 
-Based on the intented usage, there are two kinds of users of the pose estimation development platform:
-- **1.Users aim to adapt the existing algorithms to specific deployment scenario.**
+Based on the intended usage, there are two major categories of user requirements regarding developing a pose estimation system:
+
+- **Adapting existing algorithms to specific deployment scenarios**
 
   **Example:** Search for the pose estimation model architecture with best accuracy conditioned on the limited hardware resources.
 
-- **2.Users aim to design and polish their own pose estimation algorithms.**
+- **Developing customized pose estimation algorithms.**
 
   **Example:** Explore new pose estimation algorithms with the help of existing dataset generation pipeline and model architectures. 
 
-To meet the requirements of two kinds of users, Hyperpose provides both abundant High-level APIs with integrated pipelines (for first kind of users) and fine-grained APIs with in-depth customisation (for second kidn of users). 
+To meet these 2 kinds of user requirements, HyperPose provides both rich high-level APIs with integrated pipelines (for the first kind of requirement) and fine-grained APIs with in-depth customisation (for second kind of requirement). 
 
-Up to now, Hyperpose provides:
+Up to now, HyperPose provides:
 
 - **5 types of preset model algorithms**
-  - Openpose:
-  
-    Original Openpose algorithm. Paper is [here](https://openaccess.thecvf.com/content_cvpr_2017/html/Cao_Realtime_Multi-Person_2D_CVPR_2017_paper.html).
+  ```{list-table} HyperPose preset model algorithms
+  :header-rows: 1
 
-  - LightweightOpenpose:
-
-    A light weight variant of Openpose with optimized prediction branch, featured with fast inference. Paper is [here](https://arxiv.org/abs/1811.12004).
-
-  - MobilenetThinOpenpose:
-  
-    A light weight variant of Openpose with adapted Mobilnet backbone, featured with fast inference. Origin repository is [here](https://github.com/jiajunhua/ildoonet-tf-pose-estimation).
-
-  - Poseproposal:
-  
-    A pose estimation algorithm that models key point detection as object detection with bounding box, featured with fast inference and post-processing. Paper is [here](https://openaccess.thecvf.com/content_ECCV_2018/html/Sekii_Pose_Proposal_Networks_ECCV_2018_paper.html).
-
-  - Pifpaf:
-
-    An accurate pose esitmation algorithm that generates high resolution confidence map, featured with high accuracy over low resolution images. Paper is [here](https://openaccess.thecvf.com/content_CVPR_2019/html/Kreiss_PifPaf_Composite_Fields_for_Human_Pose_Estimation_CVPR_2019_paper.html).
+  * - Algorithm
+    - Description
+  * - [Openpose](https://openaccess.thecvf.com/content_cvpr_2017/html/Cao_Realtime_Multi-Person_2D_CVPR_2017_paper.html)
+    - Original Openpose algorithm.
+  * - [LightweightOpenpose](https://arxiv.org/abs/1811.12004)
+    - A light-weight variant of Openpose with optimized prediction branch, featured with fast inference.
+  * - [MobilenetThinOpenpose](https://github.com/jiajunhua/ildoonet-tf-pose-estimation)
+    - A light-weight variant of Openpose with adapted Mobilnet backbone, featured with fast inference.
+  * - [Poseproposal](https://openaccess.thecvf.com/content_ECCV_2018/html/Sekii_Pose_Proposal_Networks_ECCV_2018_paper.html)
+    - A pose estimation algorithm that models key point detection as object detection with bounding box, featured with fast inference and post-processing.
+  * - [Pifpaf](https://openaccess.thecvf.com/content_CVPR_2019/html/Kreiss_PifPaf_Composite_Fields_for_Human_Pose_Estimation_CVPR_2019_paper.html)
+    - An accurate pose esitmation algorithm that generates high resolution confidence map, featured with high accuracy over low resolution images.
+  ```
 
 - **10 types of common model backbone**
-  - Vgg Backbones:
-    - Vggtiny
-    - Vgg16
-    - Vgg19
-  - Resnet Backbones:
-    - Resnet18
-    - Resnet50
-  - Mobilnet Backbones:
-    - MobilenetV1
-    - MobilenetV2
-    - MobilenetThin (in preset model architecture)
-    - MobilenetSmall (in preset model architecture)   
-    - Dilated Mobilenet (in preset model architecture)
+```{list-table} HyperPose preset model backbones
+:header-rows: 1
+
+* - Backbone class
+  - Backbone types
+* - Vgg Backbones
+  - Vggtiny, Vgg16, Vgg19
+* - Resnet Backbones
+  - Resnet18, Resnet50
+* - Mobilnet Backbones
+  - MobilenetV1, MobilenetV2, 
+
+    MobilenetThin (in preset model architecture)
+
+    MobilenetSmall (in preset model architecture)   
+
+    Dilated Mobilenet (in preset model architecture)
+```
 
 - **2 types of popular dataset**
-  - COCO:
+```{list-table} HyperPose preset dataset
+:header-rows: 1
 
-    COCO is a large-scale object detection, segmentation, and captioning dataset. COCO Keypoint Detection Dataset includes 11827 train images, 5000 validation images and 40670 test images with 250000+ poeple with keypoints. reference is [here](https://cocodataset.org/#home).
-    - COCO 2014 (version publicated at 2014)
-    - COCO 2017 (version publicated at 2017)
+* - Dataset name
+  - Version
+  - Size
+  - Description 
+* - [COCO](https://cocodataset.org/#home)
+  - COCO 2014 (version publicated at 2014)
 
-  - MPII:
+    COCO 2017 (version publicated at 2017)
 
-    MPII Human Pose Dataset is a state of art benchmark for human pose estimation evaluation, which includes 25000 train images, 3000 validation images, and 7000 test images. reference is [here](https://paperswithcode.com/dataset/mpii).
+  - 11827 train images, 5000 validation images, 40670 test images
+
+  - COCO is a large-scale object detection, segmentation, and captioning dataset. COCO Keypoint Detection Dataset includes total  250000+ poeple with keypoints.
+
+* - [MPII](http://human-pose.mpi-inf.mpg.de/)
+  - MPII 2014 (version publicated at 2014)
+
+  - 25000 train images, 3000 validation images, 7000 test images.
+  
+  - MPII Human Pose Dataset is a state of art benchmark for human pose estimation evaluation.
+```
 
 - **Training Options**
   - Parallel Training
@@ -67,7 +84,7 @@ Up to now, Hyperpose provides:
   - Domain Adaptation
 
 - **Extension Interfaces**
-  - Custome dataset
+  - Customized dataset
     - User-add dataset
 
       User add their self-collected data into preset dataset generation pipeline for train and evaluation.
@@ -76,30 +93,30 @@ Up to now, Hyperpose provides:
 
       User define their own dataset class to take over the whole dataset generation pipeline.
 
-  - Custome model
+  - Customized model
 
       User define thier own model class to take over the model forwarding and loss calculation procedure.
 
-  - Custome pipeline
+  - Customized pipeline
 
       User use the provided pre-processors, post-processors and visualizers to assemble their own training or evalution pipeline.
 
 
 ## Integrated pipeline
-Hyperpose provides integrated train, evaluate and test pipeline with various High-level APIs for user to fast adapt the existing pose estimation algorithms for their specific usage scenario.
+HyperPose integrates training, evaluating and testing pipeline with various High-level APIs for quickly adapting the existing pose estimation algorithms for their customized usage scenarios.
 
 The whole procedure can be devided into two parts:
 
-**In the first part**, users use the **set** APIs of the **Config** module to set up the components of the pipeline. User can set up from the general settings such as algorithm type, network architecture and dataset type, to the detailed settings including training batch size, save interval and learning rate etc.
+**In the first part**, users use the `set` APIs of the **Config** module to set up the components of the pipeline. User can set up from the general settings such as algorithm type, network architecture and dataset type, to the detailed settings including training batch size, save interval and learning rate etc.
 
-**In the second part**, users use the **get** APIs of the **Model** module and the **Dataset** module to assemble the system. After the configuration is finished, user could get a *config* object containing all the configuration. Pass the *config* object to the **get** APIs, users get the configured model, dataset, and the train or evaluate pipeline. 
+**In the second part**, users use the `get` APIs of the **Model** module and the **Dataset** module to assemble the system. After the configuration is finished, user could get a *config* object containing all the configuration. Pass the *config* object to the `get` APIs, users get the configured model, dataset, and the train or evaluate pipeline. 
 
 
-The critical **set** APIs are below: (**necessary**)
+The critical `set` APIs are below: (**necessary**)
 
 - **Config.set_model_name**
  
-  Recieve a string, which is used as the name for identifing the current model.
+  Receive a string, which is used to uniquely identify the model with a name(string).
   
   Model name is important as all the files generated during train, evaluate and test procedure of the specific model will be stored at **./save_dir/${MODEL_NAME}** directory. 
 
@@ -127,139 +144,177 @@ The critical **set** APIs are below: (**necessary**)
 
 - **Config.set_model_type**
 
-  Recieve an Enum value from **Config.MODEL** , which is used to determine the algorithm type to use.
+  Receive an Enum value from **Config.MODEL** , which is used to determine the algorithm type to use.
 
   Available options are:
+  ```{list-table} Available options of *Config.set_model_type*
+  :header-rows: 1
 
-  - Config.MODEL.Openpose  (Openpose algorithm)
-  - Config.MODEL.LightweightOpenpose (Lightweight Openpose algorithm)
-  - Config.MODEL.MobilnetThinOpenpose (MobilenetThin Openpose algorithm)
-  - Conifg.MODEL.Poseproposal (Pose Proposal Network algorithm)
-  - Config.MODEL.Pifpaf (Pifpaf algorithm)
+  * - Available option
+    - Description
+  * - Config.MODEL.Openpose
+    - Openpose algorithm
+  * - Config.MODEL.LightweightOpenpose
+    - Lightweight Openpose algorithm
+  * - Config.MODEL.MobilnetThinOpenpose
+    - MobilenetThin Openpose algorithm
+  * - Conifg.MODEL.Poseproposal
+    - Pose Proposal Network algorithm
+  * - Config.MODEL.Pifpaf
+    - Pifpaf algorithm
+  ```
 
 - **Config.set_model_backbone**
 
-  Recieve an Enum value from **Config.BACKBONE** , which is used to determine the network backbone to use.
+  Receive an Enum value from **Config.BACKBONE** , which is used to determine the network backbone to use.
 
-  Different backbones will result in huge difference of the required computation resources. Each algorithm type has a default model backbone, while Hyperpose also provides other backbones for replacement.
+  Different backbones will result in huge difference of the required computation resources. Each algorithm type has a default model backbone, while HyperPose also provides other backbones for replacement.
 
   Available options are:
+  ```{list-table} Available options of *Config.set_model_backbone*
+  :header-rows: 1
 
-  - Config.BACKBONE.Default (use the algorithm default backbone)
-  - Config.BACKBONE.Vggtiny
-  - Config.BACKBONE.Vgg16
-  - Config.BACKBONE.Vgg19
-  - Config.BACKBONE.Resnet18
-  - Config.BACKBONE.Resnet50
-  - Config.BACKBONE.Mobilenetv1
-  - Config.BACKBONE.Mobilenetv2
+  * - Available option
+    - Description
+  * - Config.BACKBONE.Default
+    - Use the default backbone of the preset algorithm
+  * - Config.BACKBONE.Vggtiny
+    - Adapted Vggtiny backbone
+  * - Config.BACKBONE.Vgg16
+    - Vgg16
+  * - Config.BACKBONE.Vgg19
+    - Vgg19
+  * - Config.BACKBONE.Resnet18
+    - Resnet18
+  * - Config.BACKBONE.Resnet50
+    - Resnet50
+  * - Config.BACKBONE.Mobilenetv1
+    - Mobilenetv1
+  * - Config.BACKBONE.Mobilenetv2
+    - Mobilenetv2
+  ```
 
 - **Config.set_dataset_type**
 
-  Recieve an Enum value from **Config.DATA** , which is used to determine the dataset to use.
+  Receive an Enum value from **Config.DATA** , which is used to determine the dataset to use.
 
   Different dataset will result in different train and evalution images and different evaluation metrics.
 
   Available options are:
+  ```{list-table} Available options of *Config.set_model_backbone*
+  :header-rows: 1
 
-  - Config.DATA.COCO
-  - Config.DATA.MPII
-  - Config.DATA.USERDEF
+  * - Available option
+    - Description
+  * - Config.DATA.COCO
+    - [Mscoco dataset](https://cocodataset.org/#home) 
+  * - Config.DATA.MPII
+    - [MPII dataset](http://human-pose.mpi-inf.mpg.de/)
+  * - Config.DATA.USERDEF
+    - Use user defined dataset.
+  ```      
 
-      Use user defined dataset.
-
-Use the necessary *set* APIs above, the basic model and dataset configuration is done, users can get the *config* object which contains all the configurations using the **Config.get_config** API:
+Use the necessary `set` APIs above, the basic model and dataset configuration is done, users can get the *config* object which contains all the configurations using the **Config.get_config** API:
 
 - **Config.get_config**
 
-  Recieve nothing, return the *config* object.
+  Receive nothing, return the *config* object.
 
-Then user can get *model* and *dataset* object for either train or evaluating using the **get** APIs.
+Then user can get the *model* and *dataset* object for either train or evaluating using the `get` APIs.
+
 The critical **Get** APIs are below:
 
 - **Model.get_model**
 
-  Recieve the *config* object and return a configured *model* object.
+  Receive the *config* object and return a configured *model* object.
 
   The *model* object comes from the *Tensorlayer.Model* class and should have the following functions:
+  
+  ```{list-table} Functions of the *model* object
+  :header-rows: 1
 
-    ```{list-table} functions of the model object
-    :header-rows: 1
+  * - Function name
+    - Function utility
+  * - `forward`
+    - Input image.
 
-    * - Function name
-      - function utility
-    * - `forward`
-      - Input image.
+      Return predicted heat map.
 
-	    Return predicted heat map.
-    
-	* - `cal_loss`
-      - Input predicted heat map and ground truth heat map.
+  * - `cal_loss`
+    - Input predicted heat map and ground truth heat map. 
 
-	    Return calcuated loss value.
+      Return calcuated loss value.
 
-    * - `save_weights`
-      - Input save path and save format
+  * - `save_weights`
+    - Input save path and save format.
 
-		Save the trained model weight.
-
-    ```
+      Save the trained model weight.
+  ```
 
 - **Dataset.get_dataset**
 
-	Recieve the *config* object and return a configured *dataset* object.
+	Receive the *config* object and return a configured *dataset* object.
 
 	The *dataset* object should have the following functions:
 
-	```{list-table} functions of the dataset object
-    :header-rows: 1
+  ```{list-table} Functions of the *dataset* object
+  :header-rows: 1
 
-    * - Function name
-      - function utility
-    * - `get_parts`
-      - Return pre-defined keypoints in the format of an *Enum* object.
-    
-	* - `get_colors`
-	  - Return pre-defined corresponding colors of keypoints in the format of a list.
+  * - Function name
+    - Function utility
+  * - `get_parts`
+    - Input nothing.
 
-    * - `generate_train_data`
-      - Return a train image path list and the corresponding target list. Each target in the target list is 
-	    a *dict* object with keys of *kpt* (keypoint), *mask* (mask of unwanted image area) and *bbx* (keypoint bounding box) 
-	
-	* - `generate_eval_data`
-	  - Return a eval image path list and the corresponding image-id list.
-	
-	* - `generate_test_data`
-	  - Return a test image path list and the corresponding image-id list.
+      Return pre-defined keypoints in the format of an *Enum* object.
 
-    ```
+  * - `get_colors`
+    - Input nothing.
 
-No matter using the train or evaluate pipeline, the above **set** and **get** process is always neccesarry to get the specific *model* and *config* object.  
+      Return pre-defined corresponding colors of keypoints in the format of a list.
+
+  * - `generate_train_data`
+    - Input nothing.
+
+      Return a train image path list and the corresponding target list. Each target in the target list is 
+      a *dict* object with keys of *kpt* (keypoint), *mask* (mask of unwanted image area) and *bbx* (keypoint bounding box) 
+
+  * - `generate_eval_data`
+    - Input nothing.
+
+      Return a eval image path list and the corresponding image-id list.
+
+  * - `generate_test_data`
+    - Input nothing.
+
+      Return a test image path list and the corresponding image-id list.
+  ```
+
+No matter using the train or evaluate pipeline, the above `set` and `get` process is always neccesarry to get the specific *model* and *config* object.  
 
 User can either assemble thier own pipeline use the *model* and *dataset* object at hand, or they can use more fine-grained APIs to control the train and evaluate pipeline before use the **Config.get_config** API, so that they could use the *config* object to obain preset integrated train and evaluate pipeline for easy development.
 
-How to use the Integrated train and evaluate pipeline is followed:
+How to use the Integrated train and evaluate pipeline are below.
 
 ### Integrated train pipeline
-As mentioned above, the above usage of **set** and **get** APIs to get the *model* and *dataset* object are always necessary in Hyperpose. 
+As mentioned above, the above usage of `set` and `get` APIs to get the *model* and *dataset* object are always necessary in HyperPose. 
 
 To use the integrated train pipeline, the extra configuration APIs provided are below: (**Unnecessary for integrated train**)
 
 - **Config.set_batch_size**
   
-  Recieve a integer, which is used as batch size in train procedure.
+  Receive a integer, which is used as batch size in train procedure.
 
 - **Config.set_learning_rate**
 
-  Recieve a floating point, which is used as the learning arte in train procedure.
+  Receive a floating point, which is used as the learning arte in train procedure.
 
 - **Config.set_log_interval**
 
-  Recieve a integer, which is used as the interval bwteen logging loss information.
+  Receive a integer, which is used as the interval bwteen logging loss information.
 
 - **Config.set_train_type**
 
-  Recieve an Enum value from **Config.TRAIN**, which is used to determine the parallel training strategy.
+  Receive an Enum value from **Config.TRAIN**, which is used to determine the parallel training strategy.
 
   Available options:
   - Config.TRAIN.Single_train
@@ -272,18 +327,18 @@ To use the integrated train pipeline, the extra configuration APIs provided are 
 
 - **Config.set_kungfu_option**
 
-  Recieve an Enum value from **Config.KUNGFU**, which is used to determine the optimize startegy of parallel training.
+  Receive an Enum value from **Config.KUNGFU**, which is used to determine the optimize startegy of parallel training.
 
   Available options:
   - Config.KUNGFU.Sync_sgd
   - Config.KUNGFU.Sync_avg
   - Config.KUNGFU.Pair_avg
 
-Then we need to use the **get** API to get the **train pipeline** from the **model** module:(**necessary for integrated train**)
+Then we need to use the `get` API to get the **train pipeline** from the **model** module:(**necessary for integrated train**)
 
 - **Model.get_train**
 
-  Recieve the *config* object, return a training function.
+  Receive the *config* object, return a training function.
 
   The training function takes the *model* object and the *dataset* object and automatically start training.
 
@@ -320,18 +375,18 @@ train(model,dataset)
 To enable the parallel training, install the **Kungfu** library according to the [installation guide](../install/training.md), and using the following command when run your program.
 
 ```bash
-# Assuming we have 4 GPUs and train.py is the python script that contain your Hyperpose code
+# Assuming we have 4 GPUs and train.py is the python script that contain your HyperPose code
 CUDA_VISIBLE_DEVICES=0,1,2,3 kungfu-run -np 4 python train.py
 ```
 
 ### Integrated evaluate pipeline
 The usage of the integrated evaluate pipeline is similar to the usage pf the integrated training pipeline.  
 
-The differences is that we use **get** APIs to get the evaluate pipeline.
+The differences is that we use `get` APIs to get the evaluate pipeline.
 
-(Remeber, we still need the **set** and **get** APIs used to get the *model* and *dataset* object as in how we use the integrate train pipeline.)
+(Remeber, we still need the `set` and `get` APIs used to get the *model* and *dataset* object as in how we use the integrate train pipeline.)
 
-The API that we use **get** API to get the evaluate pipeline is below:
+The API that we use `get` API to get the evaluate pipeline is below:
 
 - **Model.get_eval**
 
@@ -372,7 +427,7 @@ It should be noticed that:
 - the evaluation metrics will follow the official evaluation metrics of dataset.
 
 ## User-defined model architecture
-Hyperpose leaves freedom for user to define thier own model architecture but use the provided integrated model pipeline at the same time, the following points should be considered:
+HyperPose leaves freedom for user to define thier own model architecture but use the provided integrated model pipeline at the same time, the following points should be considered:
 
 * 1.the model should be an object of a tensorlayer.models.Model class (or inherite from this class)
 
@@ -389,7 +444,7 @@ his own model object
 The other configuration procedures are the same with the integrated training pipeline.
 
 ## User-defined dataset
-Hyperpose allows user to use their own dataset to be integrated with the training and evaluating pipeline, as long as it has the following attribute and functions:
+HyperPose allows user to use their own dataset to be integrated with the training and evaluating pipeline, as long as it has the following attribute and functions:
 
 - **get_train_dataset**: 
 
@@ -415,11 +470,11 @@ Hyperpose allows user to use their own dataset to be integrated with the trainin
 
 
 ## User-defined dataset filter
-Hyperpose also leave freedom for user to define thier own dataset filter to filter the dataset as they want using *set_dataset_filter* function.
+HyperPose also leave freedom for user to define thier own dataset filter to filter the dataset as they want using *set_dataset_filter* function.
 
 To use this, a user should know the follow information:
 
-- Hyperpose organize the annotations of one image in one dataset in the similiar meta classes.
+- HyperPose organize the annotations of one image in one dataset in the similiar meta classes.
 
   For COCO dataset, it is COCOMeta; For MPII dataset, it is MPIIMeta.
 
@@ -442,7 +497,7 @@ otherwise it will be filtered out. Please refer the Dataset.xxxMeta classes for 
 
 ## User-defined train pipeline
 
-Hyperpose also provides three low level functions to help user consturct thier own pipeline. For each class of 
+HyperPose also provides three low level functions to help user consturct thier own pipeline. For each class of 
 model, functions of preprocess, postprocess and visualize are provided.
 
 - **Model.get_preprocess**
