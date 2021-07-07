@@ -1,105 +1,99 @@
 # Tutorial for Training Library
-HyperPose python training library provides a one-step yet flexible platform for developing pose estimation models.
+
+## Overview
+
+HyperPose Python Training library provides a one-step yet flexible platform for developing pose estimation models.
 
 Based on the intended usage, there are two major categories of user requirements regarding developing a pose estimation system:
 
-- **Adapting existing algorithms to specific deployment scenarios**
-
-  **Example:** Search for the pose estimation model architecture with best accuracy conditioned on the limited hardware resources.
-
-- **Developing customized pose estimation algorithms.**
-
-  **Example:** Explore new pose estimation algorithms with the help of existing dataset generation pipeline and model architectures. 
+1. **Adapting existing algorithms to specific deployment scenarios**: e.g., select the pose estimation model architecture with best accuracy conditioned on the limited hardware resources.
+2. **Developing customized pose estimation algorithms.**: e.g., explore new pose estimation algorithms with the help of existing dataset generation pipeline and model architectures. 
 
 To meet these 2 kinds of user requirements, HyperPose provides both rich high-level APIs with integrated pipelines (for the first kind of requirement) and fine-grained APIs with in-depth customisation (for second kind of requirement). 
 
-Up to now, HyperPose provides:
+## Model/Algorithm/Dataset Supports
 
-- **5 types of preset model algorithms**
-  ```{list-table} HyperPose preset model algorithms
-  :header-rows: 1
+### 5 model algorithm classes
 
-  * - Algorithm
-    - Description
-  * - [Openpose](https://openaccess.thecvf.com/content_cvpr_2017/html/Cao_Realtime_Multi-Person_2D_CVPR_2017_paper.html)
-    - Original Openpose algorithm.
-  * - [LightweightOpenpose](https://arxiv.org/abs/1811.12004)
-    - A light-weight variant of Openpose with optimized prediction branch, featured with fast inference.
-  * - [MobilenetThinOpenpose](https://github.com/jiajunhua/ildoonet-tf-pose-estimation)
-    - A light-weight variant of Openpose with adapted Mobilnet backbone, featured with fast inference.
-  * - [Poseproposal](https://openaccess.thecvf.com/content_ECCV_2018/html/Sekii_Pose_Proposal_Networks_ECCV_2018_paper.html)
-    - A pose estimation algorithm that models key point detection as object detection with bounding box, featured with fast inference and post-processing.
-  * - [Pifpaf](https://openaccess.thecvf.com/content_CVPR_2019/html/Kreiss_PifPaf_Composite_Fields_for_Human_Pose_Estimation_CVPR_2019_paper.html)
-    - An accurate pose esitmation algorithm that generates high resolution confidence map, featured with high accuracy over low resolution images.
-  ```
-
-- **10 types of common model backbone**
-```{list-table} HyperPose preset model backbones
+```{list-table} HyperPose preset model algorithms
 :header-rows: 1
 
-* - Backbone class
-  - Backbone types
-* - Vgg Backbones
-  - Vggtiny, Vgg16, Vgg19
-* - Resnet Backbones
-  - Resnet18, Resnet50
-* - Mobilnet Backbones
-  - MobilenetV1, MobilenetV2, 
-
-    MobilenetThin (in preset model architecture)
-
-    MobilenetSmall (in preset model architecture)   
-
-    Dilated Mobilenet (in preset model architecture)
+* - Algorithm
+  - Class API
+  - Description
+* - [OpenPose](https://openaccess.thecvf.com/content_cvpr_2017/html/Cao_Realtime_Multi-Person_2D_CVPR_2017_paper.html)
+  - `Openpose`
+  - Original OpenPose algorithm.
+* - [Light-weight OpenPose](https://arxiv.org/abs/1811.12004)
+  - `LightweightOpenpose`
+  - A light-weight variant of OpenPose with optimized prediction branch, designed for fast processing.
+* - [MobileNet-Thin OpenPose](https://github.com/jiajunhua/ildoonet-tf-pose-estimation)
+  - `MobilenetThinOpenpose`
+  - A light-weight variant of OpenPose with adapted MobilNet backbone, featured with fast inference.
+* - [PoseProposal](https://openaccess.thecvf.com/content_ECCV_2018/html/Sekii_Pose_Proposal_Networks_ECCV_2018_paper.html)
+  - `Poseproposal`
+  - A pose estimation algorithm which models key point detection as object detection with bounding box, featured with fast inference and post-processing.
+* - [PifPaf](https://openaccess.thecvf.com/content_CVPR_2019/html/Kreiss_PifPaf_Composite_Fields_for_Human_Pose_Estimation_CVPR_2019_paper.html)
+  - `Pifpaf`
+  - An accurate pose esitmation algorithm that generates high resolution confidence map, featured with high accuracy over low resolution images.
 ```
 
-- **2 types of popular dataset**
+### 10 model backbone classes
+
+```{list-table} HyperPose preset model backbones
+:header-rows: 1
+* - Model family
+  - Backbone class APIs
+* - Vgg Backbones
+  - `vgg16_backbone`, `vgg19_backbone`, `vgg19_backbone`
+* - Resnet Backbones
+  - `Resnet18_backbone`, `Resnet18_backbone`
+* - Mobilnet Backbones
+  - `MobilenetV1_backbone`, `MobilenetV2_backbone`
+```
+
+### 2 dataset classes
+
 ```{list-table} HyperPose preset dataset
 :header-rows: 1
 
 * - Dataset name
   - Version
   - Size
-  - Description 
 * - [COCO](https://cocodataset.org/#home)
-  - COCO 2014 (version publicated at 2014)
-
-    COCO 2017 (version publicated at 2017)
-
-  - 11827 train images, 5000 validation images, 40670 test images
-
-  - COCO is a large-scale object detection, segmentation, and captioning dataset. COCO Keypoint Detection Dataset includes total  250000+ poeple with keypoints.
+  - * COCO 2014 (version published in 2014)
+    * COCO 2017 (version published in 2017)
+  - 11'827 train images, 5'000 validation images, 40'670 test images
 
 * - [MPII](http://human-pose.mpi-inf.mpg.de/)
-  - MPII 2014 (version publicated at 2014)
-
-  - 25000 train images, 3000 validation images, 7000 test images.
-  
-  - MPII Human Pose Dataset is a state of art benchmark for human pose estimation evaluation.
+  - MPII 2014 (version published in 2014)
+  - 25'000 train images, 3'000 validation images, 7'000 test images.
 ```
 
-- **Training Options**
-  - Parallel Training
-  - Backbone Pretraining
-  - Domain Adaptation
+### Training Options
 
-- **Extension Interfaces**
-  - Customized dataset
-    - User-add dataset
+- Parallel Training
+- Backbone Pretraining
+- Domain Adaptation
 
-      User add their self-collected data into preset dataset generation pipeline for train and evaluation.
+### Extensions
 
-    - User-defined dataset
+- Customized dataset
+  - User-supplemented dataset
 
-      User define their own dataset class to take over the whole dataset generation pipeline.
+    User may supplement their self-collected data into preset dataset generation pipeline for training and evaluation.
 
-  - Customized model
+  - User-defined dataset
 
-      User define thier own model class to take over the model forwarding and loss calculation procedure.
+    User may define their own dataset class to take over the whole dataset generation pipeline.
 
-  - Customized pipeline
+- Customized model
 
-      User use the provided pre-processors, post-processors and visualizers to assemble their own training or evalution pipeline.
+    User define thier own model class to take over the model forwarding and loss calculation procedure.
+
+- Customized pipeline
+
+    User use the provided pre-processors, post-processors and visualizers to assemble their own training or evalution pipeline.
 
 
 ## Integrated pipeline
@@ -152,12 +146,12 @@ The critical `set` APIs are below: (**necessary**)
 
   * - Available option
     - Description
-  * - Config.MODEL.Openpose
-    - Openpose algorithm
+  * - Config.MODEL.OpenPose
+    - OpenPose algorithm
   * - Config.MODEL.LightweightOpenpose
-    - Lightweight Openpose algorithm
+    - Lightweight OpenPose algorithm
   * - Config.MODEL.MobilnetThinOpenpose
-    - MobilenetThin Openpose algorithm
+    - MobilenetThin OpenPose algorithm
   * - Conifg.MODEL.Poseproposal
     - Pose Proposal Network algorithm
   * - Config.MODEL.Pifpaf
