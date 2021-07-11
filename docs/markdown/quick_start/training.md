@@ -41,7 +41,7 @@ For each model, HyperPose will save all the related files in the directory:
 
 The directory regarding training results are listed below:  
 
-```{list-table} Direcories for training results
+```{list-table} Directories for training results
 :header-rows: 1
 
 * - Folder Name
