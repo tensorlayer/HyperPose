@@ -1,13 +1,35 @@
 #!/bin/sh
 set -e
 
+BUILD_LIB=1
+BUILD_TESTS=0
+BUILD_FAKE=0
+BUILD_EXAMPLES=0
+BUILD_USER_CODES=0
+
+if [ ! -e /dev/nvidia0 ]; then
+    BUILD_FAKE=1
+    echo "CUDA NOT Found, using BUILD_FAKE=$BUILD_FAKE"
+fi
+
 parse_args() {
     for i in "$@"; do
         case $i in
         --prefix=*)
             PREFIX="${i#*=}"
             ;;
-        # TODO: more
+        --examples)
+            BUILD_EXAMPLES=1
+            ;;
+        --tests)
+            BUILD_TESTS=1
+            ;;
+        --user-code)
+            BUILD_USER_CODE=1
+            ;;
+        --fake-cuda)
+            BUILD_FAKE=1
+            ;;
         *)
             echo "unknown argument $i"
             exit 1
@@ -26,14 +48,12 @@ cmake_flags() {
     if [ ! -z "$PREFIX" ]; then
         cmake_flag CMAKE_INSTALL_PREFIX $PREFIX
     fi
-
-    # TODO: parse from flags
-    cmake_flag BUILD_TESTS ON
-    cmake_flag BUILD_FAKE ON
-    cmake_flag BUILD_EXAMPLES ON
-    cmake_flag BUILD_LIB ON
-    cmake_flag BUILD_USER_CODES ON
-    cmake_flag EXECUTABLE_OUTPUT_PATH $PWD/bin
+    cmake_flag CMAKE_RUNTIME_OUTPUT_DIRECTORY $PWD/bin
+    cmake_flag BUILD_TESTS $BUILD_TESTS
+    cmake_flag BUILD_FAKE $BUILD_FAKE
+    cmake_flag BUILD_EXAMPLES $BUILD_EXAMPLES
+    cmake_flag BUILD_LIB $BUILD_LIB
+    cmake_flag BUILD_USER_CODES $BUILD_USER_CODES
 }
 
 cd $(dirname $0)
@@ -46,6 +66,8 @@ gen_make() {
     echo "\t\$(MAKE) -C $build"
     echo "install:"
     echo "\t\$(MAKE) -C $build install"
+    echo "test:"
+    echo "\t\$(MAKE) -C $build test"
 }
 
 mkdir -p $build
