@@ -1,0 +1,55 @@
+#!/bin/sh
+set -e
+
+parse_args() {
+    for i in "$@"; do
+        case $i in
+        --prefix=*)
+            PREFIX="${i#*=}"
+            ;;
+        # TODO: more
+        *)
+            echo "unknown argument $i"
+            exit 1
+            ;;
+        esac
+    done
+}
+
+parse_args $@
+
+cmake_flag() {
+    echo "-D$1=$2"
+}
+
+cmake_flags() {
+    if [ ! -z "$PREFIX" ]; then
+        cmake_flag CMAKE_INSTALL_PREFIX $PREFIX
+    fi
+
+    # TODO: parse from flags
+    cmake_flag BUILD_TESTS ON
+    cmake_flag BUILD_FAKE ON
+    cmake_flag BUILD_EXAMPLES ON
+    cmake_flag BUILD_LIB ON
+    cmake_flag BUILD_USER_CODES ON
+    cmake_flag EXECUTABLE_OUTPUT_PATH $PWD/bin
+}
+
+cd $(dirname $0)
+W=$PWD
+
+build='.build'
+
+gen_make() {
+    echo "build:"
+    echo "\t\$(MAKE) -C $build"
+    echo "install:"
+    echo "\t\$(MAKE) -C $build install"
+}
+
+mkdir -p $build
+cd $build
+cmake $W $(cmake_flags)
+
+gen_make >$W/Makefile
