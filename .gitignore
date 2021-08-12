@@ -59,3 +59,7 @@ debug.*
 !logo.png
 !docs/Makefile
 !docs/markdown/images/*
+
+
+/.build
+

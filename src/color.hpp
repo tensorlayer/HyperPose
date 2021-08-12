@@ -1,16 +1,14 @@
+#include <array>
+
 #include <opencv2/opencv.hpp>
 
 namespace hyperpose {
 
-using color_t = std::tuple<uint8_t, uint8_t, uint8_t>;
+using color_t = std::array<uint8_t, 3>;
 
 inline cv::Scalar to_cv_scalar(const color_t& color)
 {
-    // const auto [r, g, b] = color;
-    const auto r = std::get<0>(color);
-    const auto g = std::get<1>(color);
-    const auto b = std::get<2>(color);
-
+    const auto& [r, g, b] = color;
     return cv::Scalar(r, g, b);
 }
 
