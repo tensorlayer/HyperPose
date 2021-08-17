@@ -22,6 +22,7 @@
     <a href="#Quick-Start">Quick Start</a> •
     <a href="#Performance">Performance</a> •
     <a href="#Accuracy">Accuracy</a> •
+    <a href="#Cite-Us">Cite Us</a> •
     <a href="#License">License</a>
 </p>
 
@@ -190,6 +191,20 @@ We evaluate the accuracy of pose estimation models developed by HyperPose. The e
 | LightweightOpenPose (tiny VGG)   | 23.6 MB | 432 x 368 | MSCOCO2017 (all 5000 img.) | 47.3 map | - |
 | LightweightOpenPose (ResNet50)   | 42.7 MB | 432 x 368 | MSCOCO2017 (all 5000 img.) | 48.2 map | - |
 | PoseProposal (ResNet18)   | 45.2 MB | 384 x 384 | MPII (all 2729 img.) | 54.9 map (PCKh) | 72.8 map (PCKh)|
+
+## Cite Us
+
+If you find HyperPose helpful for your project, please cite our paper：
+
+```
+@article{hyperpose2021,
+    author  = {Guo, Yixiao and Liu, Jiawei and Li, Guo and Mai, Luo and Dong, Hao},
+    journal = {ACM Multimedia},
+    title   = {{Fast and Flexible Human Pose Estimation with HyperPose}},
+    url     = {https://github.com/tensorlayer/hyperpose},
+    year    = {2021}
+}
+```
 
 ## License
 
