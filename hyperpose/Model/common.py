@@ -1,11 +1,14 @@
 import logging
 from enum import Enum
 import time
+import multiprocessing
 from distutils.dir_util import mkpath
 
 import numpy as np
 import tensorflow as tf
 import cv2
+
+from pycocotools.coco import maskUtils
 from ..Config.define import MODEL,TRAIN,DATA,BACKBONE,KUNGFU,OPTIM
 
 regularizer_conv = 0.004
@@ -249,6 +252,22 @@ def tf_repeat(tensor, repeats):
     repeated_tesnor = tf.reshape(tiled_tensor, tf.shape(tensor) * repeats)
     return repeated_tesnor
 
+def decode_mask(meta_mask_list):
+    if(type(meta_mask_list)!=list):
+        return None
+    if(meta_mask_list==[]):
+        return None
+    inv_mask_list=[]
+    for meta_mask in meta_mask_list:
+        mask=maskUtils.decode(meta_mask)
+        inv_mask=np.logical_not(mask)
+        inv_mask_list.append(inv_mask)
+    mask=np.ones_like(inv_mask_list[0])
+    for inv_mask in inv_mask_list:
+        mask=np.logical_and(mask,inv_mask)
+    mask = mask.astype(np.uint8)
+    return mask
+
 def regulize_loss(target_model,weight_decay_factor):
     re_loss=0
     regularizer=tf.keras.regularizers.l2(l=weight_decay_factor)
@@ -314,3 +333,6 @@ def log(msg):
     logger=logging.getLogger(name="hyperpose")
     logger.info(msg=msg)
     print(msg)
+
+def get_num_parallel_calls():
+    max(multiprocessing.cpu_count() // 2, 1)

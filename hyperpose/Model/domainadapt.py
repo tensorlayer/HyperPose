@@ -3,12 +3,9 @@ import tensorlayer as tl
 from tensorlayer.models import Model
 from tensorlayer.layers import Conv2d,BatchNorm2d,Dense,Flatten,LayerList
 
-def get_discriminator(train_model,n_filter=512,layer_num=5):
-    scale_size=train_model.backbone.scale_size
-    data_format=train_model.data_format
-    feature_hin,feature_win=train_model.hin/scale_size,train_model.win/scale_size
+def get_discriminator(feature_hin,feature_win,in_channnels,n_filter=512,layer_num=5,data_format="channels_first"):
+    last_channels=in_channnels
     dis_hin,dis_win=feature_hin,feature_win
-    last_channels=train_model.backbone.out_channels
     layer_list=[]
     for layer_idx in range(0,layer_num):
         strides=(1,1)
@@ -24,14 +21,17 @@ def get_discriminator(train_model,n_filter=512,layer_num=5):
     layer_list.append(Dense(n_units=4096,in_channels=dis_hin*dis_win*n_filter,act=tf.nn.relu,name="fc1"))
     layer_list.append(Dense(n_units=1000,in_channels=4096,act=tf.nn.relu,name="fc2"))
     layer_list.append(Dense(n_units=1,in_channels=1000,act=None,name="fc3"))
-    discriminator=Discriminator(layer_list=layer_list,data_format=data_format)
-    print("domain adaptation discriminator generated!")
-    return discriminator
+    return layer_list
 
 
 class Discriminator(Model):
-    def __init__(self,layer_list,data_format="channels_first"):
+    def __init__(self,feature_hin,feature_win,in_channels,data_format="channels_first"):
         self.data_format=data_format
+        self.feature_hin=feature_hin
+        self.feature_win=feature_win
+        self.in_channels=in_channels
+        layer_list=get_discriminator(self.feature_hin, self.feature_win, self.in_channels, \
+            data_format=self.data_format)
         self.main_block=LayerList(layer_list)
     
     def forward(self,x):

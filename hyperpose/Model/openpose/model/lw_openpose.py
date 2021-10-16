@@ -43,7 +43,7 @@ class LightWeightOpenPose(Model):
             in_channels=self.num_channels+self.n_confmaps+self.n_pafmaps,data_format=self.data_format)
     
     @tf.function
-    def forward(self,x,is_train=False,stage_num=1,domainadapt=False):
+    def forward(self,x,is_train=False,stage_num=1,domainadapt=False,is_infer=False):
         conf_list=[]
         paf_list=[]
         #backbone feature extract
@@ -58,19 +58,21 @@ class LightWeightOpenPose(Model):
         ref_conf1,ref_paf1=self.refine_stage1(x)
         conf_list.append(ref_conf1)
         paf_list.append(ref_paf1)
-        if(domainadapt):
-            return conf_list[-1],paf_list[-1],conf_list,paf_list,backbone_features
-        elif(is_train):
-            return conf_list[-1],paf_list[-1],conf_list,paf_list
-        else:
-            return conf_list[-1],paf_list[-1]
+        predict_x={"conf_map":conf_list[-1],"paf_map":paf_list[-1],\
+            "stage_confs":conf_list,"stage_pafs":paf_list}
+        return predict_x
 
     @tf.function(experimental_relax_shapes=True)
     def infer(self,x):
-        conf_map,paf_map=self.forward(x,is_train=False)
+        ret_dict=self.forward(x,is_train=False,is_infer=True)
+        conf_map,paf_map=ret_dict["conf_map"],ret_dict["paf_map"]
         return conf_map,paf_map
     
-    def cal_loss(self,gt_conf,gt_paf,mask,stage_confs,stage_pafs):
+    def cal_loss(self,predict_x,target_x,mask,metric_manager):
+        stage_confs = predict_x["stage_confs"]
+        stage_pafs = predict_x["stage_pafs"]
+        gt_conf = target_x["conf_map"]
+        gt_paf = target_x["paf_map"]
         stage_losses=[]
         batch_size=gt_conf.shape[0]
         if(self.concat_dim==1):
@@ -81,14 +83,18 @@ class LightWeightOpenPose(Model):
             mask_paf=tf_repeat(mask,[1,1,1,self.n_pafmaps])
         loss_confs,loss_pafs=[],[]
         for stage_conf,stage_paf in zip(stage_confs,stage_pafs):
-            loss_conf=tf.nn.l2_loss((gt_conf-stage_conf)*mask_conf)
-            loss_paf=tf.nn.l2_loss((gt_paf-stage_paf)*mask_paf)
+            loss_conf=tf.nn.l2_loss((gt_conf-stage_conf)*1)
+            loss_paf=tf.nn.l2_loss((gt_paf-stage_paf)*1)
             stage_losses.append(loss_conf)
             stage_losses.append(loss_paf)
             loss_confs.append(loss_conf)
             loss_pafs.append(loss_paf)
         pd_loss=tf.reduce_mean(stage_losses)/batch_size
-        return pd_loss,loss_confs,loss_pafs
+        total_loss=pd_loss
+        metric_manager.update("model/conf_loss",loss_confs[-1])
+        metric_manager.update("model/paf_loss",loss_pafs[-1])
+        # TODO: add regularization loss here
+        return total_loss
 
     class Dilated_mobilenet(Model):
         def __init__(self,data_format="channels_first"):

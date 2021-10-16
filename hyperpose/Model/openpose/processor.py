@@ -3,8 +3,7 @@ import cv2
 import json
 import numpy as np
 import tensorflow as tf
-import scipy.stats as st
-from .utils import get_heatmap,get_vectormap
+from .utils import get_conf_map,get_paf_map,draw_results
 from ..human import Human,BodyPart
 
 class PreProcessor:
@@ -19,9 +18,10 @@ class PreProcessor:
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
 
     def process(self,annos,mask_valid):
-        heatmap = get_heatmap(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
-        vectormap = get_vectormap(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
-        return heatmap,vectormap
+        conf_map = get_conf_map(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
+        paf_map = get_paf_map(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
+        target_x = {"conf_map":conf_map,"paf_map":paf_map}
+        return target_x
 
 
 class PostProcessor:
@@ -250,5 +250,26 @@ class Connection:
     
     def __eq__(self,other):
         return self.score==other.score
+
+class Visualizer:
+    def __init__(self, save_dir="./save_dir"):
+        self.save_dir = save_dir
+    
+    def set_save_dir(self,save_dir):
+        self.save_dir = save_dir
+
+    def draw_results(self, images, masks, predict_x, target_x, name=""):
+        pd_conf_map=predict_x["conf_map"]
+        pd_paf_map=predict_x["paf_map"]
+        gt_conf_map=target_x["conf_map"]
+        gt_paf_map=target_x["paf_map"]
+        print(f"test before resize mask.shape:{masks.shape}")
+        masks = np.transpose(masks,[0,2,3,1])
+        masks = tf.image.resize(masks,pd_conf_map.shape[2:4])
+        masks = np.transpose(masks,[0,3,1,2])
+        print(f"test after resize mask.shape:{masks.shape}")
+        draw_results(images=images, masks=masks, heats_ground=gt_conf_map, heats_result=pd_conf_map,\
+                    pafs_ground=gt_paf_map, pafs_result=pd_paf_map, save_dir=self.save_dir, name=name)
+        
 
 

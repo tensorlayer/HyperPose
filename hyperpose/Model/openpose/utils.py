@@ -175,7 +175,7 @@ def visualize(img,conf_map,paf_map,save_name="maps",save_dir="./save_dir/vis_dir
         plt.close('all')
     return show_conf_map,show_paf_map
 
-def get_heatmap(annos, height, width, hout, wout, parts, limbs, data_format="channels_first"):
+def get_conf_map(annos, height, width, hout, wout, parts, limbs, data_format="channels_first"):
     """
 
     Parameters
@@ -243,7 +243,7 @@ def put_heatmap(heatmap, plane_idx, center, stride, sigma):
     return heatmap
 
 
-def get_vectormap(annos, height, width , hout, wout, parts, limbs, data_format="channels_first"):
+def get_paf_map(annos, height, width , hout, wout, parts, limbs, data_format="channels_first"):
     """
 
     Parameters

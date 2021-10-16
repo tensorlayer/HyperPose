@@ -35,6 +35,7 @@ train.lr_decay_factor = 0.666
 train.weight_decay_factor = 2e-4
 train.train_type=TRAIN.Single_train
 train.vis_dir=f"./save_dir/{model.model_name}/train_vis_dir"
+train.vis_interval=5
 
 #eval configuration
 eval =edict()

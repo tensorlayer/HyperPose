@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     export_batch_size=args.export_batch_size
     export_h,export_w=args.export_h,args.export_w
-    print(f"{export_batch_size = }\t{export_h = }\t{export_w = }")
+    print(f"export_batch_size={export_batch_size}\texport_h={export_h}\texport_w={export_w}")
     input_path=f"{config.model.model_dir}/newest_model.npz"
     output_dir=f"{args.output_dir}/{config.model.model_name}"
     output_path=f"{output_dir}/frozen_{config.model.model_name}.pb"
