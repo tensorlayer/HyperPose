@@ -17,7 +17,7 @@ class Discriminator(Model):
         self.feature_win=feature_win
         self.in_channels=in_channels
         self.layer_num=5
-        self.n_filter=128
+        self.n_filter=256
         # construct Model
         layer_list=[]
         last_channels=self.in_channels
