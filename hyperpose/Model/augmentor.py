@@ -14,13 +14,13 @@ class Augmentor:
         self.flip_list=flip_list
     
     def process(self,image,annos,mask_valid,bbxs=None):
-        #get transform matrix
+        # get transform matrix
         image_h,image_w,_=image.shape
         M_rotate = tl.prepro.affine_rotation_matrix(angle=(-30, 30))  # original paper: -40~40
         M_zoom = tl.prepro.affine_zoom_matrix(zoom_range=(0.5, 0.8))  # original paper: 0.5~1.1
         M_combined = M_rotate.dot(M_zoom)
         transform_matrix = tl.prepro.transform_matrix_offset_center(M_combined, x=image_w, y=image_h)
-        #apply data augmentation
+        # apply data augmentation
         image = tl.prepro.affine_transform_cv2(image, transform_matrix)
         annos = tl.prepro.affine_transform_keypoints(annos, transform_matrix)
         mask_valid = tl.prepro.affine_transform_cv2(mask_valid, transform_matrix, border_mode='replicate')
@@ -28,7 +28,7 @@ class Augmentor:
             image, annos, mask_valid = tl.prepro.keypoint_random_flip(image, annos, mask_valid, prob=0.5, flip_list=self.flip_list)
         image, annos, mask_valid = tl.prepro.keypoint_resize_random_crop(image, annos, mask_valid, size=(self.hin, self.win))
         if(type(bbxs)==np.ndarray):
-            #prepare transform bbx    
+            # prepare transform bbx    
             transform_bbx=np.zeros(shape=(bbxs.shape[0],4,2))
             bbxs_x,bbxs_y,bbxs_w,bbxs_h=bbxs[:,0],bbxs[:,1],bbxs[:,2],bbxs[:,3]
             transform_bbx[:,0,0],transform_bbx[:,0,1]=bbxs_x,bbxs_y #left_top
@@ -54,4 +54,17 @@ class Augmentor:
             bbxs=final_bbxs
             return image,annos,mask_valid,bbxs
         return image,annos,mask_valid
+    
+    def process_only_image(self,image):
+        # print(f"process_only_image dtype:{image.dtype} shape:{image.shape}")
+        # get transform matrix
+        image_h,image_w,_=image.shape
+        M_rotate = tl.prepro.affine_rotation_matrix(angle=(-30, 30))  # original paper: -40~40
+        M_zoom = tl.prepro.affine_zoom_matrix(zoom_range=(0.5, 0.8))  # original paper: 0.5~1.1
+        M_combined = M_rotate.dot(M_zoom)
+        transform_matrix = tl.prepro.transform_matrix_offset_center(M_combined, x=image_w, y=image_h)
+        # apply data augmentation
+        image = tl.prepro.affine_transform_cv2(image, transform_matrix)
+        image, _, _ = tl.prepro.keypoint_resize_random_crop(image, [], None, size=(self.hin, self.win))
+        return image
     

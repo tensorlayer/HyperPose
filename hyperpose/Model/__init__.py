@@ -8,6 +8,7 @@ from .pose_proposal import PoseProposal
 from .backbones import MobilenetV1_backbone,MobilenetV2_backbone,vgg16_backbone,vgg19_backbone,vggtiny_backbone
 from .backbones import Resnet18_backbone,Resnet50_backbone
 from .pretrain import single_pretrain
+from .common import log_model as log
 
 #claim:
 #all the model preprocessor,postprocessor,and visualizer processing logic are written in 'channels_first' data_format
@@ -34,7 +35,7 @@ def get_model(config):
     model=config.model
     #user configure model arch themselves
     if("model_arch" in model):
-        print("using user self-defined model arch!")
+        log("Using user self-defined model arch!")
         ret_model=model.model_arch(config)
     #using defualt arch
     else:
@@ -42,35 +43,35 @@ def get_model(config):
         if("model_backbone" in model):
             model_backbone=model.model_backbone
             if(model_backbone==BACKBONE.Default):
-                print(f"using default model backbone!")
+                log(f"Using default model backbone!")
             elif(model_backbone==BACKBONE.Mobilenetv1):
                 backbone=MobilenetV1_backbone
-                print(f"setting MobilnetV1_backbone!")
+                log(f"Setting MobilnetV1_backbone!")
             elif(model_backbone==BACKBONE.Vgg19):
                 backbone=vgg19_backbone
-                print(f"setting Vgg19_backbone!")
+                log(f"Setting Vgg19_backbone!")
             elif(model_backbone==BACKBONE.Resnet18):
                 backbone=Resnet18_backbone
-                print(f"setting Resnet18_backbone!")
+                log(f"Setting Resnet18_backbone!")
             elif(model_backbone==BACKBONE.Resnet50):
                 backbone=Resnet50_backbone
-                print(f"setting Resnet50_backbone!")
+                log(f"Setting Resnet50_backbone!")
             elif(model_backbone==BACKBONE.Vggtiny):
                 backbone=vggtiny_backbone
-                print(f"setting Vggtiny_backbone")
+                log(f"Setting Vggtiny_backbone")
             elif(model_backbone==BACKBONE.Mobilenetv2):
                 backbone=MobilenetV2_backbone
-                print(f"setting MobilenetV2_backbone")
+                log(f"Setting MobilenetV2_backbone")
             elif(model_backbone==BACKBONE.Vgg16):
                 backbone=vgg16_backbone
-                print(f"setting Vgg16_backbone")
+                log(f"Setting Vgg16_backbone")
             else:
-                raise NotImplementedError(f"unknown model backbone {model_backbone}")
+                raise NotImplementedError(f"Unknown model backbone {model_backbone}")
 
         model_type=model.model_type
         dataset_type=config.data.dataset_type
         pretraining=config.pretrain.enable
-        print(f"enable model backbone pretraining:{pretraining}")
+        log(f"Enable model backbone pretraining:{pretraining}")
         if(model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose):
             from .openpose.utils import get_parts
             from .openpose.utils import get_limbs
@@ -90,10 +91,10 @@ def get_model(config):
         userdef_parts=config.model.userdef_parts
         userdef_limbs=config.model.userdef_limbs
         if(userdef_parts!=None):
-            print("using user-defined model parts!")
+            log("Using user-defined model parts")
             model.parts=userdef_parts
         if(userdef_limbs!=None):
-            print("using user-defined model limbs!")
+            log("Using user-defined model limbs")
             model.limbs=userdef_limbs
         
         #set model
@@ -120,7 +121,7 @@ def get_model(config):
                 scale_size=32,pretraining=pretraining,data_format=model.data_format)
         else:
             raise RuntimeError(f'unknown model type {model_type}')
-        print(f"using {model_type.name} model arch!")
+        log(f"Using {model_type.name} model arch!")
     return ret_model
 
 def get_pretrain(config):
@@ -162,8 +163,8 @@ def get_train(config):
     elif model_type == MODEL.Pifpaf:
         from .pifpaf import single_train,parallel_train
     else:
-        raise RuntimeError(f'unknown model type {model_type}')
-    print(f"training {model_type.name} model...")
+        raise RuntimeError(f'Unknown model type {model_type}')
+    log(f"Training {model_type.name} model!")
 
     #determine train type
     train_type=config.train.train_type
@@ -174,7 +175,7 @@ def get_train(config):
         if("kungfu_option" not in config.train):
             config.train.kungfu_option=KUNGFU.Sma
         train=partial(parallel_train,config=config)
-    print(f"using {train_type.name}...")
+    log(f"Using {train_type.name}")
     return train
 
 def get_evaluate(config):
@@ -213,7 +214,7 @@ def get_evaluate(config):
     else:
         raise RuntimeError(f'unknown model type {model_type}')
     evaluate=partial(evaluate,config=config)
-    print(f"evaluating {model_type.name} model...")
+    log(f"evaluating {model_type.name} model...")
     return evaluate
 
 def get_test(config):
@@ -253,7 +254,7 @@ def get_test(config):
     else:
         raise RuntimeError(f'unknown model type {model_type}')
     test=partial(test,config=config)
-    print(f"testing {model_type.name} model...")
+    log(f"testing {model_type.name} model...")
     return test
 
 def get_preprocessor(model_type):

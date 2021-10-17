@@ -1,11 +1,14 @@
+import logging
 import os
 import cv2
 import numpy as np
 import zipfile
 from enum import Enum
 import _pickle as cpickle
+import tensorflow as tf
 import matplotlib.pyplot as plt
 from ..Config.define import TRAIN,MODEL,DATA,KUNGFU
+import multiprocessing
 
 def unzip(path_to_zip_file, directory_to_extract_to):
     zip_ref = zipfile.ZipFile(path_to_zip_file, 'r')
@@ -66,6 +69,19 @@ def visualize(vis_dir,vis_num,dataset,parts,colors,dataset_name="default"):
         plt.close('all')
         print()
     file_log(log_file,f"visualization finished! total {vis_num} image visualized!")
+
+def basic_map_func(image_path):
+    """TF Dataset pipeline."""
+    # load data
+    image = tf.io.read_file(image_path)
+    image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
+    image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+
+    # data augmentaion using tf
+    image = tf.image.random_brightness(image, max_delta=35. / 255.)  # 64./255. 32./255.)  caffe -30~50
+    image = tf.image.random_contrast(image, lower=0.5, upper=1.5)  # lower=0.2, upper=1.8)  caffe 0.3~1.5
+    image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
+    return image
     
 def get_domainadapt_targets(domainadapt_img_paths):
     domainadapt_targets=[]
@@ -78,3 +94,10 @@ def get_domainadapt_targets(domainadapt_img_paths):
                 "labeled":0
             })
     return domainadapt_targets
+
+def get_num_parallel_calls():
+    return max(multiprocessing.cpu_count()//2,1)
+
+def log_data(msg):
+    logger=logging.getLogger("DATA")
+    logger.info(msg)

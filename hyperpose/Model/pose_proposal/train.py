@@ -13,7 +13,8 @@ import _pickle as cPickle
 from .utils import  draw_results
 from .processor import PreProcessor
 from ..augmentor import Augmentor
-from ..common import log,KUNGFU,get_optim,init_log
+from ..common import KUNGFU,get_optim
+from ..common import log_train as log
 
 def regulize_loss(target_model,weight_decay_factor):
     re_loss=0

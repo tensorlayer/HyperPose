@@ -108,7 +108,7 @@ if __name__ == '__main__':
         Config.set_useradd_data(useradd_train_image_paths,useradd_train_targets,useradd_scale_rate=1)
     #sample use domain adaptation to train:
     if(args.domainadapt_data_path!=None):
-        domainadapt_image_paths=glob.glob(os.path.join(args.domainadapt_data_path,"images","*"))
+        domainadapt_image_paths=glob.glob(os.path.join(args.domainadapt_data_path,"*"))
         Config.set_domainadapt_dataset(domainadapt_train_img_paths=domainadapt_image_paths,domainadapt_scale_rate=1)
     #train
     config=Config.get_config()

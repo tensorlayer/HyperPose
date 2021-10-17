@@ -56,7 +56,7 @@ def get_config():
         an edict object contains all the configuration information.
 
     '''
-    #import basic configurations
+    # import basic configurations
     if(update_model.model_type==MODEL.Openpose):
         from .config_opps import model,train,eval,test,data,log
     elif(update_model.model_type==MODEL.LightweightOpenpose):
@@ -67,7 +67,7 @@ def get_config():
         from .config_ppn import model,train,eval,test,data,log
     elif(update_model.model_type==MODEL.Pifpaf):
         from .config_pifpaf import model,train,eval,test,data,log
-    #merge settings with basic configurations
+    # merge settings with basic configurations
     model.update(update_model)
     train.update(update_train)
     eval.update(update_eval)
@@ -75,7 +75,7 @@ def get_config():
     data.update(update_data)
     log.update(update_log)
     pretrain.update(update_pretrain)
-    #assemble configure
+    # assemble configure
     config=edict()
     config.model=model
     config.train=train
@@ -84,7 +84,7 @@ def get_config():
     config.data=data
     config.log=log
     config.pretrain=pretrain
-    #path configure
+    # path configure
     import tensorflow as tf
     import tensorlayer as tl
     tl.files.exists_or_mkdir(config.model.model_dir, verbose=True)  # to save model files 
@@ -93,18 +93,63 @@ def get_config():
     tl.files.exists_or_mkdir(config.test.vis_dir, verbose=True)  # to save visualization results
     tl.files.exists_or_mkdir(config.data.vis_dir, verbose=True)  # to save visualization results
     tl.files.exists_or_mkdir(config.pretrain.pretrain_model_dir,verbose=True)
-    #device configure
-    #FIXME: replace experimental tf functions when in tf 2.1 version
+    # device configure
+    # FIXME: replace experimental tf functions when in tf 2.1 version
     tf.debugging.set_log_device_placement(False)
     tf.config.set_soft_device_placement(True)
     for gpu in tf.config.experimental.get_visible_devices("GPU"):
         tf.config.experimental.set_memory_growth(gpu,True)
-    #limit the cpu usage when pretrain
-    #logging configure
+
+    # logging configure
+
+    # logging file path init
     tl.files.exists_or_mkdir(os.path.dirname(config.log.log_path),verbose=True)
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.WARN)
     tl.logging.set_verbosity(tl.logging.WARN)
-    return deepcopy(config)
+
+    # Dataset logging configure
+    data_logger = logging.getLogger(name="DATA")
+    data_logger.setLevel(logging.INFO)
+    # stream handler
+    data_cHandler = logging.StreamHandler()
+    data_cFormat = logging.Formatter("[%(name)s] %(levelname)s: %(message)s")
+    data_cHandler.setFormatter(data_cFormat)
+    data_logger.addHandler(data_cHandler)
+    # file handler
+    data_fHandler = logging.FileHandler(config.log.log_path,mode="a")
+    data_fFormat = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+    data_fHandler.setFormatter(data_fFormat)
+    data_logger.addHandler(data_fHandler)
+
+    # Model logging configure
+    model_logger = logging.getLogger(name="MODEL")
+    model_logger.setLevel(logging.INFO)
+    # stream handler
+    model_cHandler = logging.StreamHandler()
+    model_cFormat = logging.Formatter("[%(name)s] %(levelname)s: %(message)s")
+    model_cHandler.setFormatter(model_cFormat)
+    model_logger.addHandler(model_cHandler)
+    # file handler
+    model_fHandler = logging.FileHandler(config.log.log_path,mode="a")
+    model_fFormat = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+    model_fHandler.setFormatter(model_fFormat)
+    model_logger.addHandler(model_fHandler)
+
+    # Train logging configure
+    train_logger = logging.getLogger(name="TRAIN")
+    train_logger.setLevel(logging.INFO)
+    # stream handler
+    train_cHandler = logging.StreamHandler()
+    train_cFormat = logging.Formatter("[%(name)s] %(levelname)s: %(message)s")
+    train_cHandler.setFormatter(train_cFormat)
+    train_logger.addHandler(train_cHandler)
+    # file handler
+    train_fHandler = logging.FileHandler(config.log.log_path,mode="a")
+    train_fFormat = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+    train_fHandler.setFormatter(train_fFormat)
+    train_logger.addHandler(train_fHandler)
+
+    return config
 
 #set configure api
 #model configure api

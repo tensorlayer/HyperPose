@@ -43,7 +43,7 @@ class LightWeightOpenPose(Model):
             in_channels=self.num_channels+self.n_confmaps+self.n_pafmaps,data_format=self.data_format)
     
     @tf.function
-    def forward(self,x,is_train=False,stage_num=1,domainadapt=False,is_infer=False):
+    def forward(self,x,is_train=False, ret_backbone=False):
         conf_list=[]
         paf_list=[]
         #backbone feature extract
@@ -60,6 +60,8 @@ class LightWeightOpenPose(Model):
         paf_list.append(ref_paf1)
         predict_x={"conf_map":conf_list[-1],"paf_map":paf_list[-1],\
             "stage_confs":conf_list,"stage_pafs":paf_list}
+        if(ret_backbone):
+            predict_x["backbone_features"]=backbone_features
         return predict_x
 
     @tf.function(experimental_relax_shapes=True)

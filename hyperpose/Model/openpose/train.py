@@ -20,7 +20,8 @@ from .processor import PreProcessor, Visualizer
 from .utils import tf_repeat, draw_results
 from .utils import get_parts, get_limbs, get_flip_list
 from ..augmentor import Augmentor
-from ..common import log, KUNGFU, MODEL, get_optim, init_log, regulize_loss
+from ..common import KUNGFU, MODEL, regulize_loss
+from ..common import log_train as log
 from ..domainadapt import Discriminator
 from ..common import decode_mask,get_num_parallel_calls
 from ..metrics import TimeMetric, MetricManager
@@ -32,7 +33,6 @@ def _data_aug_fn(image, ground_truth, augmentor, preprocessor, data_format="chan
     image = image.numpy()
     ground_truth = cPickle.loads(ground_truth.numpy())
     annos = ground_truth["kpt"]
-    labeled = ground_truth["labeled"]
     meta_mask = ground_truth["mask"]
 
     # decode mask
@@ -49,15 +49,12 @@ def _data_aug_fn(image, ground_truth, augmentor, preprocessor, data_format="chan
     target_x = preprocessor.process(annos=annos, mask_valid=mask)
     target_x = cPickle.dumps(target_x)
 
-    # generate labeled value for domain adaptation
-    labeled = np.float32(labeled)
-
     # TODO: channel format
     if (data_format == "channels_first"):
         image = np.transpose(image, [2, 0, 1])
         mask = np.transpose(mask, [2, 0, 1])
 
-    return image, mask, target_x, labeled
+    return image, mask, target_x
 
 
 def _map_fn(img_list, annos, data_aug_fn):
@@ -69,24 +66,39 @@ def _map_fn(img_list, annos, data_aug_fn):
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
 
     # data augmentation using affine transform and get paf maps
-    image, mask, target_x, labeled = tf.py_function(data_aug_fn, [image, annos],
-                                                    [tf.float32, tf.float32, tf.string, tf.float32])
+    image, mask, target_x= tf.py_function(data_aug_fn, [image, annos],
+                                                    [tf.float32, tf.float32, tf.string])
 
     # data augmentaion using tf
     image = tf.image.random_brightness(image, max_delta=35. / 255.)  # 64./255. 32./255.)  caffe -30~50
     image = tf.image.random_contrast(image, lower=0.5, upper=1.5)  # lower=0.2, upper=1.8)  caffe 0.3~1.5
     image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
 
-    return image, mask, target_x, labeled
-
+    return image, mask, target_x
 
 def get_paramed_map_fn(augmentor, preprocessor, data_format="channels_first"):
     paramed_data_aug_fn = partial(_data_aug_fn, augmentor=augmentor, preprocessor=preprocessor, data_format=data_format)
     paramed_map_fn = partial(_map_fn, data_aug_fn=paramed_data_aug_fn)
     return paramed_map_fn
 
+def _dmadapt_data_aug_fn(image, augmentor, data_format="channels_first"):
+    image = image.numpy()
+    image = augmentor.process_only_image(image)
+    if(data_format=="channels_first"):
+        image = np.transpose(image, [2,0,1])
+    return image
 
-def single_train(train_model, dataset, config):
+def _dmadapt_map_fn(image, aug_fn):
+    image = tf.py_function(aug_fn, [image], tf.float32)
+    return image
+
+def get_paramed_dmadapt_map_fn(augmentor):
+    paramed_dmadapt_aug_fn = partial(_dmadapt_data_aug_fn, augmentor=augmentor)
+    paramed_dmadpat_map_fn = partial(_dmadapt_map_fn, aug_fn=paramed_dmadapt_aug_fn)
+    return paramed_dmadpat_map_fn
+
+
+def single_train(train_model, dataset, config, dmadapt_dataset=None):
     '''Single train pipeline of Openpose class models
 
     input model and dataset, the train pipeline will start automaticly
@@ -110,7 +122,6 @@ def single_train(train_model, dataset, config):
     None
     '''
 
-    init_log(config)
     # train hyper params
     # dataset params
     total_step = config.train.n_step
@@ -167,13 +178,25 @@ def single_train(train_model, dataset, config):
     if (not domainadapt_flag):
         ckpt = tf.train.Checkpoint(save_step=save_step, save_lr=save_lr, opt=opt)
     else:
-        log("domain adaptaion enabled!")
-        feature_hin = train_model.hin/train_model.backbone.scale_size
-        feature_win = train_model.win/train_model.backbone.scale_size
+        log("Domain adaptaion in training enabled!")
+        # weight param
+        lambda_adapt=1e-4
+        # construct discrminator model
+        feature_hin = train_model.hin//train_model.backbone.scale_size
+        feature_win = train_model.win//train_model.backbone.scale_size
         in_channels = train_model.backbone.out_channels
         adapt_dis = Discriminator(feature_hin, feature_win, in_channels, data_format=data_format)
         opt_d = tf.keras.optimizers.Adam(learning_rate=save_lr)
         ckpt = tf.train.Checkpoint(save_step=save_step, save_lr=save_lr, opt=opt, opt_d=opt_d)
+        # construct domain adaptation dataset
+        dmadapt_train_dataset = dataset.get_dmadapt_train_dataset()
+        paramed_dmadapt_map_fn = get_paramed_dmadapt_map_fn(augmentor)
+        dmadapt_train_dataset = dmadapt_train_dataset.map(paramed_dmadapt_map_fn, num_parallel_calls=get_num_parallel_calls())
+        dmadapt_train_dataset = dmadapt_train_dataset.shuffle(buffer_size=4096).repeat()
+        dmadapt_train_dataset = dmadapt_train_dataset.batch(config.train.batch_size)
+        dmadapt_train_dataset = dmadapt_train_dataset.prefetch(3)
+        dmadapt_train_dataset_iter = iter(dmadapt_train_dataset)
+
 
     #load from ckpt
     ckpt_manager = tf.train.CheckpointManager(ckpt, model_dir, max_to_keep=3)
@@ -211,29 +234,50 @@ def single_train(train_model, dataset, config):
             lr = lr * lr_decay_factor
 
     # optimize one step
-    def optimize_step(image, mask, target_x, labeled, train_model, metric_manager: MetricManager):
+    def optimize_step(image, mask, target_x, train_model, metric_manager: MetricManager):
+        # tape
         with tf.GradientTape() as tape:
-            # optimize model
-            predict_x = train_model.forward(x=image, is_train=True)
+            predict_x = train_model.forward(x=image, is_train=True, ret_backbone=domainadapt_flag)
             total_loss = train_model.cal_loss(predict_x=predict_x, target_x=target_x, \
                                                         mask=mask, metric_manager=metric_manager)
-            if (domainadapt_flag):
-                g_adapt_loss = adapt_dis.cal_loss(x=predict_x["backbone_feature"], label=1 - labeled)
-                metric_manager.update("model/adapt_loss", g_adapt_loss)
-                total_loss += g_adapt_loss
-            # tape
-            gradients = tape.gradient(total_loss, train_model.trainable_weights)
-            opt.apply_gradients(zip(gradients, train_model.trainable_weights))
-
-            # optimize dis
-            if (domainadapt_flag):
-                # optimize discriminator
-                d_adapt_loss = adapt_dis.cal_loss(x=predict_x["backbone_feature"], label=labeled)
-                metric_manager.update("dis/adapt_loss", d_adapt_loss)
-                # tape
-                d_gradients = tape.gradient(d_adapt_loss, adapt_dis.trainable_weights)
-                opt.apply_gradients(zip(d_gradients, adapt_dis.trainable_weights))
+        # optimize model
+        gradients = tape.gradient(total_loss, train_model.trainable_weights)
+        opt.apply_gradients(zip(gradients, train_model.trainable_weights))
         return predict_x
+    
+    def optimize_step_dmadapt(image_src, image_dst, train_model, adapt_dis: Discriminator, metric_manager: MetricManager):
+        # tape
+        with tf.GradientTape(persistent=True) as tape:
+            # feature extraction
+            # src feature
+            predict_src = train_model.forward(x=image_src, is_train=True, ret_backbone=True)
+            backbone_feature_src = predict_src["backbone_features"]
+            adapt_pd_src = adapt_dis.forward(backbone_feature_src)
+            # dst feature
+            predict_dst = train_model.forward(x=image_dst, is_train=True, ret_backbone=True)
+            backbone_feature_dst =  predict_dst["backbone_features"]
+            adapt_pd_dst = adapt_dis.forward(backbone_feature_dst)
+
+            # loss calculation
+            # loss of g
+            g_adapt_loss = adapt_dis.cal_loss(x=adapt_pd_dst, label=True)*lambda_adapt
+            # loss of d 
+            d_adapt_loss_src = adapt_dis.cal_loss(x=adapt_pd_src, label=True)
+            d_adapt_loss_dst = adapt_dis.cal_loss(x=adapt_pd_dst, label=False)
+            d_adapt_loss = (d_adapt_loss_src+d_adapt_loss_dst)/2
+
+        # optimize model
+        g_gradient = tape.gradient(g_adapt_loss, train_model.trainable_weights)
+        opt.apply_gradients(zip(g_gradient, train_model.trainable_weights))
+        metric_manager.update("model/g_adapt_loss",g_adapt_loss)
+        # optimize dis
+        d_gradients = tape.gradient(d_adapt_loss, adapt_dis.trainable_weights)
+        opt_d.apply_gradients(zip(d_gradients, adapt_dis.trainable_weights))
+        metric_manager.update("dis/d_adapt_loss_src",d_adapt_loss_src)
+        metric_manager.update("dis/d_adapt_loss_dst",d_adapt_loss_dst)
+        # delete persistent tape
+        del tape
+        return predict_dst
 
     # formal training procedure
     train_model.train()
@@ -243,10 +287,10 @@ def single_train(train_model, dataset, config):
         +f"lr_decay_factor:{lr_decay_factor} weight_decay_factor:{weight_decay_factor}" )
     for epoch_idx in range(cur_epoch,total_epoch):
         log(f"Epoch {epoch_idx}/{total_epoch}:")
-        for epoch_step in tqdm(range(0,epoch_size)):
+        for _ in tqdm(range(0,epoch_size)):
             step+=1
             metric_manager.start_timing()
-            image, mask, target_list, labeled = next(train_dataset_iter)
+            image, mask, target_list = next(train_dataset_iter)
             # extract gt_label
             target_list = [cPickle.loads(target) for target in target_list.numpy()]
             target_x = {key:[] for key,value in target_list[0].items()}
@@ -259,11 +303,17 @@ def single_train(train_model, dataset, config):
                 lr = lr_init * new_lr_decay
 
             # optimize one step
-            predict_x=optimize_step(image, mask, target_x, labeled, train_model, metric_manager)
+            predict_x = optimize_step(image, mask, target_x, train_model, metric_manager)
+
+            # optimize domain adaptation
+            if(domainadapt_flag):
+                src_image = image
+                dst_image = next(dmadapt_train_dataset_iter)
+                predict_dst = optimize_step_dmadapt(src_image, dst_image, train_model, adapt_dis, metric_manager)
 
             # log info periodly
             if ((step != 0) and (step % log_interval) == 0):
-                log(f"Train Epoch={epoch_idx}, Step={step} / {total_step}: learning_rate: {lr} {metric_manager.report_timing()}\n"\
+                log(f"Train Epoch={epoch_idx}, Step={step} / {total_step}: learning_rate: {lr:.6e} {metric_manager.report_timing()}\n"\
                         +f"{metric_manager.report_train()} ")
 
             # visualize periodly

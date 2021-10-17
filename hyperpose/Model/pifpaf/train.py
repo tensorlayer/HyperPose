@@ -17,9 +17,10 @@ from functools import partial
 from .utils import draw_result,maps_to_numpy
 from .processor import PreProcessor
 from ..augmentor import Augmentor
-from ..common import log,KUNGFU,MODEL,get_optim,init_log,regulize_loss
+from ..common import KUNGFU,MODEL,get_optim,regulize_loss
 from ..domainadapt import get_discriminator
 from ..metrics import AvgMetric
+from ..common import log_train as log
 
 #TODO:check all the x, y and scale correspond to the map shape(e.g. whether multiple by stride)
 def regulize_loss(target_model,weight_decay_factor):

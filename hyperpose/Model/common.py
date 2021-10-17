@@ -323,16 +323,13 @@ def regulize_loss(target_model,weight_decay_factor):
         re_loss+=regularizer(weight)
     return re_loss
 
-def init_log(config):
-    logger=logging.getLogger(name="hyperpose")
-    file_handler=logging.FileHandler(filename=config.log.log_path,mode="a")
-    logger.addHandler(file_handler)
-    logger.setLevel(logging.INFO)
-
-def log(msg):
-    logger=logging.getLogger(name="hyperpose")
-    logger.info(msg=msg)
-    print(msg)
-
 def get_num_parallel_calls():
-    max(multiprocessing.cpu_count() // 2, 1)
+    return max(multiprocessing.cpu_count()//2,1)
+
+def log_model(msg):
+    logger=logging.getLogger("MODEL")
+    logger.info(msg)
+
+def log_train(msg):
+    logger=logging.getLogger("TRAIN")
+    logger.info(msg)

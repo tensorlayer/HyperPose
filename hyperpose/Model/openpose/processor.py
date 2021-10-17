@@ -230,26 +230,6 @@ class PostProcessor:
     def debug_print(self,msg):
         if(self.debug):
             print(msg)
-        
-class Peak:
-    def __init__(self,peak_idx,part_idx,y,x,score):
-        self.idx=peak_idx
-        self.part_idx=part_idx
-        self.y=y
-        self.x=x
-        self.score=score
-
-class Connection:
-    def __init__(self,peak_src_id,peak_dst_id,score):
-        self.peak_src_id=peak_src_id
-        self.peak_dst_id=peak_dst_id
-        self.score=score
-    
-    def __lt__(self,other):
-        return self.score<other.score
-    
-    def __eq__(self,other):
-        return self.score==other.score
 
 class Visualizer:
     def __init__(self, save_dir="./save_dir"):
@@ -270,6 +250,26 @@ class Visualizer:
         print(f"test after resize mask.shape:{masks.shape}")
         draw_results(images=images, masks=masks, heats_ground=gt_conf_map, heats_result=pd_conf_map,\
                     pafs_ground=gt_paf_map, pafs_result=pd_paf_map, save_dir=self.save_dir, name=name)
+        
+class Peak:
+    def __init__(self,peak_idx,part_idx,y,x,score):
+        self.idx=peak_idx
+        self.part_idx=part_idx
+        self.y=y
+        self.x=x
+        self.score=score
+
+class Connection:
+    def __init__(self,peak_src_id,peak_dst_id,score):
+        self.peak_src_id=peak_src_id
+        self.peak_dst_id=peak_dst_id
+        self.score=score
+    
+    def __lt__(self,other):
+        return self.score<other.score
+    
+    def __eq__(self,other):
+        return self.score==other.score
         
 
 
