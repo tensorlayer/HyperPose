@@ -1,18 +1,17 @@
-
-from operator import pos
-import os
 import cv2
-import json
 import heapq
 import numpy as np
-import tensorflow as tf
-import scipy.stats as st
+import matplotlib.pyplot as plt
 from collections import defaultdict
-from .utils import get_hr_conf
+from .utils import get_hr_conf,get_arrow_map,nan2zero_dict
 from .utils import get_pifmap,get_pafmap
 from ..human import Human,BodyPart
+from ..processor import BasicVisualizer
+from ..processor import BasicPreProcessor
+from ..processor import BasicPostProcessor
+from ..processor import PltDrawer
 
-class PreProcessor:
+class PreProcessor(BasicPreProcessor):
     def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,data_format="channels_first"):
         self.hin=hin
         self.win=win
@@ -23,15 +22,26 @@ class PreProcessor:
         self.data_format=data_format
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
     
-    def process(self,annos,mask_valid):
-        mask_out=cv2.resize(mask_valid,(self.wout,self.hout))
+    def process(self,annos, mask, bbxs):
+        mask_out=cv2.resize(mask,(self.wout,self.hout))
         pif_conf,pif_vec,pif_bmin,pif_scale = get_pifmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
         paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale = get_pafmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
-        pif_maps=[pif_conf,pif_vec,pif_bmin,pif_scale]
-        paf_maps=[paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale]
-        return pif_maps,paf_maps
+        target_x = {
+            "pif_conf":pif_conf,
+            "pif_vec":pif_vec,
+            "pif_bmin":pif_bmin,
+            "pif_scale":pif_scale,
+            "paf_conf":paf_conf,
+            "paf_src_vec":paf_src_vec,
+            "paf_dst_vec":paf_dst_vec,
+            "paf_src_bmin":paf_src_bmin,
+            "paf_dst_bmin":paf_dst_bmin,
+            "paf_src_scale":paf_src_scale,
+            "paf_dst_scale":paf_dst_scale
+        }
+        return target_x
 
-class PostProcessor:
+class PostProcessor(BasicPostProcessor):
     def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,thresh_pif=0.3,thresh_paf=0.1,thresh_ref_pif=0.3,thresh_ref_paf=0.1,\
         thresh_gen_ref_pif=0.1,part_num_thresh=4,score_thresh=0.1,reduction=2,min_scale=4,greedy_match=True,reverse_match=True,data_format="channels_first",debug=False):
         self.parts=parts
@@ -64,14 +74,16 @@ class PostProcessor:
             self.by_source[dst_idx][src_idx]=(limb_idx,False)
         #TODO:whether add score weight for each parts
     
-    def process(self,pif_maps,paf_maps):
-        #shape:
-        #conf_map:[field_num,hout,wout]
-        #vec_map:[field_num,2,hout,wout]
-        #scale_map:[field_num,hout,wout]
-        #decode pif_maps,paf_maps
-        pif_conf,pif_vec,_,pif_scale=pif_maps
-        paf_conf,paf_src_vec,paf_dst_vec,_,_,paf_src_scale,paf_dst_scale=paf_maps
+    def process(self,predict_x):
+        # shape:
+        # conf_map:[field_num,hout,wout]
+        # vec_map:[field_num,2,hout,wout]
+        # scale_map:[field_num,hout,wout]
+        # decode pif_maps,paf_maps
+        pif_conf, pif_vec ,pif_scale = predict_x["pif_conf"], predict_x["pif_vec"], predict_x["pif_scale"]
+        paf_conf, paf_src_vec, paf_dst_vec, paf_src_scale, paf_dst_scale = predict_x["paf_conf"], predict_x["paf_src_vec"],\
+                                            predict_x["paf_dst_vec"], predict_x["paf_src_scale"], predict_x["paf_dst_scale"]
+
         #get pif_hr_conf
         pif_hr_conf=get_hr_conf(pif_conf,pif_vec,pif_scale,stride=self.stride,thresh=self.thresh_gen_ref_pif,debug=False)
         self.debug_print(f"test hr_conf")
@@ -358,3 +370,162 @@ class PostProcessor:
             add_frontier(ann,dst_idx)
         #finished matching a person
         return ann
+
+class Visualizer(BasicVisualizer):
+    def __init__(self, save_dir="./save_dir"):
+        self.save_dir = save_dir
+    
+    def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):
+        # defualt values
+        # TODO: pass config values
+        stride = 8
+
+        # predict maps
+        predict_x = nan2zero_dict(predict_x)
+        pd_pif_conf_batch, pd_pif_vec_batch, pd_pif_scale_batch = predict_x["pif_conf"], predict_x["pif_vec"], predict_x["pif_scale"]
+        pd_paf_conf_batch, pd_paf_src_vec_batch, pd_paf_dst_vec_batch = predict_x["paf_conf"], predict_x["paf_src_vec"], predict_x["paf_dst_vec"]
+        # mask
+        if(mask_batch is None):
+            mask_batch=np.ones_like(image_batch)
+        
+        batch_size = image_batch.shape[0]
+        for b_idx in range(0,batch_size):
+            image, mask = image_batch[b_idx], mask_batch[b_idx]
+            # pd map
+            pd_pif_conf, pd_pif_vec, pd_pif_scale = pd_pif_conf_batch[b_idx], pd_pif_vec_batch[b_idx], pd_pif_scale_batch[b_idx]
+            pd_paf_conf, pd_paf_src_vec, pd_paf_dst_vec = pd_paf_conf_batch[b_idx], pd_paf_src_vec_batch[b_idx], pd_paf_dst_vec_batch[b_idx]
+            
+            # draw maps
+            # begin draw
+            pltdrawer = PltDrawer(draw_row=2, draw_col=3, dpi=400)
+
+            # draw origin image
+            pltdrawer.add_subplot(image, "origin_image")
+
+            
+            # draw pd_pif_conf
+            pd_pif_conf_show = np.amax(pd_pif_conf, axis=0)
+            pltdrawer.add_subplot(pd_pif_conf_show, "pd pif_conf", color_bar=True)
+
+            # darw pd_pif_hr_conf
+            pd_pif_hr_conf = get_hr_conf(pd_pif_conf, pd_pif_vec, pd_pif_scale, stride)
+            pd_pif_hr_conf_show = np.amax(pd_pif_hr_conf, axis=0)
+            pltdrawer.add_subplot(pd_pif_hr_conf_show, "pd pif_hr_conf", color_bar=True)
+
+            # draw mask
+            pltdrawer.add_subplot(mask, "mask")
+
+            # darw pd paf_conf
+            pd_paf_conf_show = np.amax(pd_paf_conf, axis=0)
+            pltdrawer.add_subplot(pd_paf_conf_show, "pd paf_conf", color_bar=True)
+
+            # draw pd paf_vec
+            hout, wout = pd_paf_src_vec.shape[1], pd_paf_src_vec.shape[2]
+            pd_paf_vec_map_show = np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
+            pd_paf_vec_map_show = get_arrow_map(pd_paf_vec_map_show, pd_paf_conf, pd_paf_src_vec, pd_paf_dst_vec)
+            pltdrawer.add_subplot(pd_paf_vec_map_show, "pd paf_vec")
+
+            # save fig
+            pltdrawer.savefig(f"{self.save_dir}/{name}_{b_idx}_paf.png")
+
+            # draw results
+            if(humans_list is not  None):
+                humans = humans_list[b_idx]
+                self.visualize_result(image, humans, f"{self.save_dir}/{name}_{b_idx}_result.png")
+
+    
+    def visualize_compare(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
+        # defualt values
+        # TODO: pass config values
+        stride = 8
+
+        # predict maps
+        predict_x = nan2zero_dict(predict_x)
+        pd_pif_conf_batch, pd_pif_vec_batch, pd_pif_scale_batch = predict_x["pif_conf"], predict_x["pif_vec"], predict_x["pif_scale"]
+        pd_paf_conf_batch, pd_paf_src_vec_batch, pd_paf_dst_vec_batch = predict_x["paf_conf"], predict_x["paf_src_vec"], predict_x["paf_dst_vec"]
+        # target maps
+        target_x = nan2zero_dict(target_x)
+        gt_pif_conf_batch, gt_pif_vec_batch, gt_pif_scale_batch = target_x["pif_conf"], target_x["pif_vec"], target_x["pif_scale"]
+        gt_paf_conf_batch, gt_paf_src_vec_batch, gt_paf_dst_vec_batch = target_x["paf_conf"], target_x["paf_src_vec"], predict_x["paf_dst_vec"]
+        # mask
+        if(mask_batch is None):
+            mask_batch=np.ones_like(image_batch)
+        
+        batch_size = image_batch.shape[0]
+        for b_idx in range(0,batch_size):
+            image, mask = image_batch[b_idx], mask_batch[b_idx]
+            # pd map
+            pd_pif_conf, pd_pif_vec, pd_pif_scale = pd_pif_conf_batch[b_idx], pd_pif_vec_batch[b_idx], pd_pif_scale_batch[b_idx]
+            pd_paf_conf, pd_paf_src_vec, pd_paf_dst_vec = pd_paf_conf_batch[b_idx], pd_paf_src_vec_batch[b_idx], pd_paf_dst_vec_batch[b_idx]
+            # gt map
+            gt_pif_conf, gt_pif_vec, gt_pif_scale = gt_pif_conf_batch[b_idx], gt_pif_vec_batch[b_idx], gt_pif_scale_batch[b_idx]
+            gt_paf_conf, gt_paf_src_vec, gt_paf_dst_vec = gt_paf_conf_batch[b_idx], gt_paf_src_vec_batch[b_idx], gt_paf_dst_vec_batch[b_idx]
+
+            # draw pif maps
+            # begin draw
+            pif_pltdrawer = PltDrawer(draw_row=2, draw_col=3, dpi=400)
+
+            # draw origin image
+            pif_pltdrawer.add_subplot(image, "origin_image")
+
+            # draw gt_pif_conf
+            gt_pif_conf_show = np.amax(gt_pif_conf, axis=0)
+            pif_pltdrawer.add_subplot(gt_pif_conf_show, "gt pif_conf", color_bar=True)
+
+            # darw gt_pif_hr_conf
+            gt_pif_hr_conf = get_hr_conf(gt_pif_conf, gt_pif_vec, gt_pif_scale, stride)
+            gt_pif_hr_conf_show = np.amax(gt_pif_hr_conf, axis=0)
+            pif_pltdrawer.add_subplot(gt_pif_hr_conf_show, "gt pif_hr_conf", color_bar=True)
+
+            # draw mask
+            pif_pltdrawer.add_subplot(mask, "mask")
+
+            # draw pd_pif_conf
+            pd_pif_conf_show = np.amax(pd_pif_conf, axis=0)
+            pif_pltdrawer.add_subplot(pd_pif_conf_show, "pd pif_conf", color_bar=True)
+
+            # darw pd_pif_hr_conf
+            pd_pif_hr_conf = get_hr_conf(pd_pif_conf, pd_pif_vec, pd_pif_scale, stride)
+            pd_pif_hr_conf_show = np.amax(pd_pif_hr_conf, axis=0)
+            pif_pltdrawer.add_subplot(pd_pif_hr_conf_show, "pd pif_hr_conf", color_bar=True)
+
+            # save fig
+            pif_pltdrawer.savefig(f"{self.save_dir}/{name}_{b_idx}_pif.png")
+
+            # draw paf maps
+            # begin draw
+            paf_pltdrawer = PltDrawer(draw_row=2, draw_col=3, dpi=400)
+
+            # draw origin image
+            paf_pltdrawer.add_subplot(image, "origin image")
+
+            # draw gt paf_conf
+            gt_paf_conf_show = np.amax(gt_paf_conf, axis=0)
+            paf_pltdrawer.add_subplot(gt_paf_conf_show, "gt paf_conf", color_bar=True)
+
+            # draw gt paf_vec_map
+            hout, wout = gt_paf_src_vec.shape[1], gt_paf_src_vec.shape[2]
+            gt_paf_vec_map_show = np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
+            gt_paf_vec_map_show = get_arrow_map(gt_paf_vec_map_show, gt_paf_conf, gt_paf_src_vec, gt_paf_dst_vec)
+            paf_pltdrawer.add_subplot(gt_paf_vec_map_show, "gt paf_vec")
+            
+            # draw mask
+            paf_pltdrawer.add_subplot(mask, "mask")
+
+            # darw pd paf_conf
+            pd_paf_conf_show = np.amax(pd_paf_conf, axis=0)
+            paf_pltdrawer.add_subplot(pd_paf_conf_show, "pd paf_conf", color_bar=True)
+
+            # draw pd paf_vec
+            hout, wout = pd_paf_src_vec.shape[1], pd_paf_src_vec.shape[2]
+            pd_paf_vec_map_show = np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
+            pd_paf_vec_map_show = get_arrow_map(pd_paf_vec_map_show, pd_paf_conf, pd_paf_src_vec, pd_paf_dst_vec)
+            paf_pltdrawer.add_subplot(pd_paf_vec_map_show, "pd paf_vec")
+
+            # save fig
+            paf_pltdrawer.savefig(f"{self.save_dir}/{name}_{b_idx}_paf.png")
+
+            # draw results
+            if(humans_list is not  None):
+                humans = humans_list[b_idx]
+                self.visualize_result(image, humans, f"{self.save_dir}/{name}_{b_idx}_result.png")

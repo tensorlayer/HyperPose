@@ -38,28 +38,34 @@ class Mobilenetv2_small_Openpose(Model):
         self.refinement_stage_4=self.Refinement_stage(n_confmaps=self.n_confmaps,n_pafmaps=self.n_pafmaps,in_channels=self.backbone.out_channels+3*self.n_confmaps,data_format=self.data_format)
     
     @tf.function
-    def forward(self,x,mask_conf=None,mask_paf=None,is_train=False,stage_num=4,domainadapt=False):
+    def forward(self, x, is_train=False, ret_backbone=False):
+        stage_num=4
         conf_list=[]
         paf_list=[] 
+        # backbone feature extract
         backbone_features=self.backbone.forward(x)
+        # init stage
         conf_map,paf_map=self.init_stage.forward(backbone_features)
         conf_list.append(conf_map)
         paf_list.append(paf_map)
+        # refinement
         for refinement_stage_idx in range(1,stage_num+1):
             x=tf.concat([backbone_features,conf_list[-1],paf_list[-1]],self.concat_dim)
             conf_map,paf_map=eval(f"self.refinement_stage_{refinement_stage_idx}.forward(x)")
             conf_list.append(conf_map)
             paf_list.append(paf_map)
-        if(domainadapt):
-            return conf_list[-1],paf_list[-1],conf_list,paf_list,backbone_features
-        elif(is_train):
-            return conf_list[-1],paf_list[-1],conf_list,paf_list
-        else:
-            return conf_list[-1],paf_list[-1]
+        
+        # construct predict_x
+        predict_x = {"conf_map": conf_list[-1], "paf_map": paf_list[-1], "stage_confs": conf_list, "stage_pafs": paf_list}
+        if(ret_backbone):
+            predict_x["backbone_features"]=backbone_features
+        
+        return predict_x
     
     @tf.function(experimental_relax_shapes=True)
     def infer(self,x):
-        conf_map,paf_map=self.forward(x,is_train=False)
+        predict_x = self.forward(x,is_train=False)
+        conf_map, paf_map = predict_x["conf_map"],predict_x["paf_map"]
         return conf_map,paf_map
     
     def cal_loss(self,gt_conf,gt_paf,mask,stage_confs,stage_pafs):

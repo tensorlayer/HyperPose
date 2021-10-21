@@ -1,12 +1,15 @@
-import os
 import cv2
-import json
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 from .utils import get_conf_map,get_paf_map,draw_results
 from ..human import Human,BodyPart
+from ..processor import BasicPreProcessor
+from ..processor import BasicPostProcessor
+from ..processor import BasicVisualizer
+from ..processor import PltDrawer
 
-class PreProcessor:
+class PreProcessor(BasicPreProcessor):
     def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,data_format="channels_first"):
         self.hin=hin
         self.win=win
@@ -17,14 +20,14 @@ class PreProcessor:
         self.data_format=data_format
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
 
-    def process(self,annos,mask_valid):
+    def process(self, annos, mask, bbxs):
         conf_map = get_conf_map(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
         paf_map = get_paf_map(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
-        target_x = {"conf_map":conf_map,"paf_map":paf_map}
+        target_x = {"conf_map":conf_map, "paf_map":paf_map}
         return target_x
 
 
-class PostProcessor:
+class PostProcessor(BasicPostProcessor):
     def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,thresh_conf=0.05,thresh_vec=0.05,thresh_vec_cnt=6,\
                     step_paf=10,thresh_criterion2=0,thresh_part_cnt=4,thresh_human_score=0.3,data_format="channels_first",debug=False):
         self.cur_id=0
@@ -231,26 +234,101 @@ class PostProcessor:
         if(self.debug):
             print(msg)
 
-class Visualizer:
+class Visualizer(BasicVisualizer):
     def __init__(self, save_dir="./save_dir"):
         self.save_dir = save_dir
-    
-    def set_save_dir(self,save_dir):
-        self.save_dir = save_dir
 
-    def draw_results(self, images, masks, predict_x, target_x, name=""):
-        pd_conf_map=predict_x["conf_map"]
-        pd_paf_map=predict_x["paf_map"]
-        gt_conf_map=target_x["conf_map"]
-        gt_paf_map=target_x["paf_map"]
-        print(f"test before resize mask.shape:{masks.shape}")
-        masks = np.transpose(masks,[0,2,3,1])
-        masks = tf.image.resize(masks,pd_conf_map.shape[2:4])
-        masks = np.transpose(masks,[0,3,1,2])
-        print(f"test after resize mask.shape:{masks.shape}")
-        draw_results(images=images, masks=masks, heats_ground=gt_conf_map, heats_result=pd_conf_map,\
-                    pafs_ground=gt_paf_map, pafs_result=pd_paf_map, save_dir=self.save_dir, name=name)
-        
+    def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):
+        # predict maps
+        pd_conf_map_list, pd_paf_map_list = predict_x["conf_map"], predict_x["paf_map"]
+        # mask
+        if(mask_batch is None):
+            mask_batch = np.ones_like(image_batch)
+
+        batch_size = image_batch.shape[0]
+        for b_idx in range(0,batch_size):
+            image, mask = image_batch[b_idx], mask_batch[b_idx]
+            pd_conf_map, pd_paf_map = pd_conf_map_list[b_idx], pd_paf_map_list[b_idx]
+
+            # begin draw
+            pltdrawer = PltDrawer(draw_row=2, draw_col=2)
+
+            # draw origin image
+            pltdrawer.add_subplot(image, "origin image")
+
+            # draw mask
+            pltdrawer.add_subplot(mask, "mask")
+
+            # draw conf_map
+            conf_map_show=np.amax(pd_conf_map[:-1,:,:-1],axis=0)
+            pltdrawer.add_subplot(conf_map_show, "predict conf_map", color_bar=True)
+            
+            # draw paf_map
+            paf_map_show=np.amax(pd_paf_map[:,:,:],axis=0)
+            pltdrawer.add_subplot(paf_map_show, "predict paf_map", color_bar=True)
+
+            # save figure
+            pltdrawer.savefig(f"{self.save_dir}/{name}_{b_idx}.png")
+
+            # draw results
+            if(humans_list is not None):
+                humans = humans_list[b_idx]
+                self.visualize_result(image, humans, save_path=f"{self.save_dir}/{name}_{b_idx}_result.png")
+
+    def visualize_comapre(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
+        # predict maps
+        pd_conf_map_batch, pd_paf_map_batch = predict_x["conf_map"], predict_x["paf_map"]
+        # target maps
+        gt_conf_map_batch, gt_paf_map_batch = target_x["conf_map"], target_x["paf_map"]
+        # mask
+        if(mask_batch is None):
+            mask = np.ones_like(image_batch)
+
+        mask_batch = np.transpose(mask_batch,[0,2,3,1])
+        mask_batch = tf.image.resize(mask_batch,pd_conf_map_batch.shape[2:4])
+        mask_batch = np.transpose(mask_batch,[0,3,1,2])
+
+        batch_size = image_batch.shape[0]
+        for b_idx in range(0, batch_size):
+            image, mask = image_batch[b_idx], mask_batch[b_idx]
+            pd_conf_map, pd_paf_map = pd_conf_map_batch[b_idx], pd_paf_map_batch[b_idx]
+            gt_conf_map, gt_paf_map = gt_conf_map_batch[b_idx], gt_paf_map_batch[b_idx]
+            
+            # begin draw
+            pltdrawer = PltDrawer(draw_row=2, draw_col=3)
+
+            # draw origin image
+            pltdrawer.add_subplot(image, "origin_image")
+
+            # draw pd conf_map
+            show_pd_conf_map = np.amax(pd_conf_map[:-1,:,:],axis=0)
+            pltdrawer.add_subplot(show_pd_conf_map, "predict conf_map", color_bar=True)
+
+            # draw pd paf_map
+            show_pd_paf_map = np.amax(pd_paf_map[:,:,:],axis=0)
+            pltdrawer.add_subplot(show_pd_paf_map, "predict paf_map", color_bar=True)
+
+            # draw mask
+            pltdrawer.add_subplot(mask, "mask")
+            
+            # draw gt conf_map
+            show_gt_conf_map = np.amax(gt_conf_map[:-1,:,:],axis=0)
+            pltdrawer.add_subplot(show_gt_conf_map, "groudtruth conf_map", color_bar=True)
+
+            # draw gt conf_map
+            show_gt_paf_map = np.amax(gt_paf_map[:,:,:-1],axis=2)
+            pltdrawer.add_subplot(show_gt_paf_map, "groundtruth paf_map", color_bar=True)
+            
+            # save figure
+            pltdrawer.savefig(f"{self.save_dir}/{name}_{b_idx}.png")
+
+            # draw results
+            if(humans_list is not None):
+                batch_size = image_batch.shape[0]
+                for b_idx in range(0, batch_size):
+                    image, mask, humans = image_batch[b_idx], mask_batch[b_idx], humans_list[b_idx]
+                    self.visualize_result(image, humans, f"{self.save_dir}/{name}_{b_idx}_result.png")
+
 class Peak:
     def __init__(self,peak_idx,part_idx,y,x,score):
         self.idx=peak_idx

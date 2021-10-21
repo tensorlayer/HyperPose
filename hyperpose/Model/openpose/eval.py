@@ -83,30 +83,7 @@ def visualize(img,img_id,humans,conf_map,paf_map,save_dir):
     for human in humans:
         vis_img=human.draw_human(vis_img)
     fig=plt.figure(figsize=(8,8))
-    #show input image
-    a=fig.add_subplot(2,2,1)
-    a.set_title("input image")
-    plt.imshow(ori_img)
-    #show output result
-    a=fig.add_subplot(2,2,2)
-    a.set_title("output result")
-    plt.imshow(vis_img)
-    #show conf_map
-    show_conf_map=np.amax(conf_map[:,:,:-1],axis=2)
-    a=fig.add_subplot(2,2,3)
-    a.set_title("conf_map")
-    plt.imshow(show_conf_map,alpha=0.8)
-    plt.colorbar()
-    #show paf_map
-    show_paf_map=np.amax(paf_map[:,:,:],axis=2)
-    a=fig.add_subplot(2,2,4)
-    a.set_title("paf_map")
-    plt.imshow(show_paf_map,alpha=0.8)
-    plt.colorbar()
-    #save
-    plt.savefig(f"{save_dir}/{img_id}_visualize.png")
-    plt.close('all')
-
+    
 def _map_fn(image_file,image_id,hin,win):
     #load data
     image = tf.io.read_file(image_file)

@@ -8,10 +8,15 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from .define import area_ref,area_ref_45
 from .define import COCO_SIGMA,COCO_UPRIGHT_POSE,COCO_UPRIGHT_POSE_45
+from ..common import
 
 def nan2zero(x):
     x=np.where(x!=x,0,x)
     return x
+
+def nan2zero_dict(dict_x):
+    for key in dict_x.keys():
+        dict_x[key]=nan2zero(dict_x[key])
 
 def maps_to_numpy(maps):
     ret_maps=[]

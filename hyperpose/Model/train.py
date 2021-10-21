@@ -1,39 +1,30 @@
 #!/usr/bin/env python3
-
-import math
-import multiprocessing
 import os
-import cv2
-import time
-import sys
-import json
 from tqdm import tqdm
 import numpy as np
 import matplotlib
-
 matplotlib.use('Agg')
 import tensorflow as tf
 import tensorlayer as tl
 import _pickle as cPickle
 from functools import partial, reduce
-from .processor import PreProcessor, Visualizer
-from .utils import tf_repeat, draw_results
-from .utils import get_parts, get_limbs, get_flip_list
-from ..augmentor import Augmentor
-from ..common import KUNGFU, MODEL, regulize_loss
-from ..common import log_train as log
-from ..domainadapt import Discriminator
-from ..common import decode_mask,get_num_parallel_calls
-from ..metrics import TimeMetric, MetricManager
+from .augmentor import Augmentor, BasicAugmentor
+from .processor import BasicPreProcessor, BasicVisualizer
+from .common import KUNGFU
+from .common import log_train as log
+from .domainadapt import Discriminator
+from .common import decode_mask,get_num_parallel_calls
+from .metrics import MetricManager
 
 
-def _data_aug_fn(image, ground_truth, augmentor, preprocessor, data_format="channels_first"):
+def _data_aug_fn(image, ground_truth, augmentor:Augmentor, preprocessor:BasicPreProcessor, data_format="channels_first"):
     """Data augmentation function."""
     # restore data
     image = image.numpy()
     ground_truth = cPickle.loads(ground_truth.numpy())
     annos = ground_truth["kpt"]
     meta_mask = ground_truth["mask"]
+    bbxs = ground_truth["bbxs"]
 
     # decode mask
     mask = decode_mask(meta_mask)
@@ -41,7 +32,7 @@ def _data_aug_fn(image, ground_truth, augmentor, preprocessor, data_format="chan
         mask = np.ones_like(image)[:,:,0].astype(np.uint8)
 
     # general augmentaton process
-    image, annos, mask = augmentor.process(image=image, annos=annos, mask_valid=mask)
+    image, annos, mask, bbxs = augmentor.process(image=image, annos=annos, mask_valid=mask, bbxs=bbxs)
     mask = mask[:,:,np.newaxis]
     image = image * mask
 
@@ -98,7 +89,8 @@ def get_paramed_dmadapt_map_fn(augmentor):
     return paramed_dmadpat_map_fn
 
 
-def single_train(train_model, dataset, config, dmadapt_dataset=None):
+def single_train(train_model, dataset, config, \
+                    Augmentor=Augmentor, PreProcessor=BasicPreProcessor, Visualizer=BasicVisualizer):
     '''Single train pipeline of Openpose class models
 
     input model and dataset, the train pipeline will start automaticly
@@ -319,7 +311,8 @@ def single_train(train_model, dataset, config, dmadapt_dataset=None):
             # visualize periodly
             if ((step != 0) and (step % vis_interval) == 0):
                 log(f"Visualizing prediction maps and target maps")
-                visualizer.draw_results(image.numpy(), mask.numpy(), predict_x, target_x, name=f"train_{step}")
+                visualizer.visual_compare(image_batch=image.numpy(), mask_batch=mask.numpy(), predict_x=predict_x, target_x=target_x,\
+                                                    name=f"train_{step}")
 
             # save result and ckpt periodly
             if ((step!= 0) and (step % save_interval) == 0):
@@ -339,7 +332,7 @@ def single_train(train_model, dataset, config, dmadapt_dataset=None):
                     adapt_dis.save_weights(dis_save_path)
                     log(f"discriminator save_path:{dis_save_path} saved!\n")
 
-def parallel_train(train_model, dataset, config, dmadapt_dataset=None):
+def parallel_train(train_model, dataset, config, augmentor:BasicAugmentor, preprocessor:BasicPreProcessor, visualizer=BasicVisualizer):
     '''Single train pipeline of Openpose class models
 
     input model and dataset, the train pipeline will start automaticly
@@ -388,12 +381,6 @@ def parallel_train(train_model, dataset, config, dmadapt_dataset=None):
     model_dir = config.model.model_dir
     pretrain_model_dir = config.pretrain.pretrain_model_dir
     pretrain_model_path = f"{pretrain_model_dir}/newest_{train_model.backbone.name}.npz"
-
-    # processors
-    augmentor = Augmentor(hin=hin, win=win, angle_min=-30, angle_max=30, zoom_min=0.5, zoom_max=0.8, flip_list=None)
-    preprocessor = PreProcessor(parts=parts, limbs=limbs, hin=hin, win=win, hout=hout, wout=wout, colors=colors,\
-                                                                                    data_format=data_format)
-    visualizer = Visualizer(save_dir=vis_dir)
     
     # metrics
     metric_manager = MetricManager()
@@ -584,7 +571,8 @@ def parallel_train(train_model, dataset, config, dmadapt_dataset=None):
             # visualize periodly
             if ((step != 0) and (step % vis_interval) == 0 and current_rank() == 0):
                 log(f"Visualizing prediction maps and target maps")
-                visualizer.draw_results(image.numpy(), mask.numpy(), predict_x, target_x, name=f"train_{step}")
+                visualizer.visual_compare(image_batch=image.numpy(), mask_batch=mask.numpy(), predict_x=predict_x, target_x=target_x,\
+                                                    name=f"train_{step}")
 
             # save result and ckpt periodly
             if ((step!= 0) and (step % save_interval) == 0 and current_rank() == 0):

@@ -47,28 +47,30 @@ class OpenPose(Model):
         
 
     @tf.function
-    def forward(self,x,is_train=False,stage_num=5,domainadapt=False):
+    def forward(self,x,is_train=False,ret_backbone=False):
+        stage_num=5
         conf_list=[]
         paf_list=[]
-        #backbone feature extract
+        # backbone feature extract
         backbone_features=self.backbone.forward(x)
         backbone_features=self.cpm_stage.forward(backbone_features)
-        #init stage
+        # init stage
         init_conf,init_paf=self.init_stage.forward(backbone_features)
         conf_list.append(init_conf)
         paf_list.append(init_paf)
-        #refinement stages  
+        # refinement stages  
         for refine_stage_idx in range(1,stage_num+1):
             ref_x=tf.concat([backbone_features,conf_list[-1],paf_list[-1]],self.concat_dim)
             ref_conf,ref_paf=eval(f"self.refinement_stage_{refine_stage_idx}.forward(ref_x)")
             conf_list.append(ref_conf)
             paf_list.append(ref_paf)
-        if(domainadapt):
-            return conf_list[-1],paf_list[-1],conf_list,paf_list,backbone_features
-        if(is_train):
-            return conf_list[-1],paf_list[-1],conf_list,paf_list
-        else:
-            return conf_list[-1],paf_list[-1]
+        
+        # construct predict_x
+        predict_x = {"conf_map": conf_list[-1], "paf_map": paf_list[-1], "stage_confs": conf_list, "stage_pafs": paf_list}
+        if(ret_backbone):
+            predict_x["backbone_features"]=backbone_features
+
+        return predict_x
     
     @tf.function(experimental_relax_shapes=True)
     def infer(self,x,stage_num=5):

@@ -333,7 +333,9 @@ def get_visualize(model_type):
         a visualize function of the specified kind of model
     '''
     if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
-        from .openpose.utils import visualize
+        from .openpose import Visualizer
     elif model_type == MODEL.PoseProposal:
-        from .pose_proposal.utils import visualize
-    return visualize
+        from .pose_proposal import Visualizer
+    elif model_type == MODEL.Pifpaf
+        from .pifpaf import Visualizer
+    return Visualizer

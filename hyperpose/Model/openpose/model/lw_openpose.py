@@ -5,6 +5,7 @@ from tensorlayer.models import Model
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d
 from ..utils import tf_repeat
 from ..define import CocoPart,CocoLimb
+from ...common import regulize_loss
 initializer=tl.initializers.truncated_normal(stddev=0.005)
 
 class LightWeightOpenPose(Model):
@@ -46,28 +47,30 @@ class LightWeightOpenPose(Model):
     def forward(self,x,is_train=False, ret_backbone=False):
         conf_list=[]
         paf_list=[]
-        #backbone feature extract
+        # backbone feature extract
         backbone_features=self.backbone(x)
         cpm_features=self.cpm_stage(backbone_features)
-        #init stage
+        # init stage
         init_conf,init_paf=self.init_stage(cpm_features)
         conf_list.append(init_conf)
         paf_list.append(init_paf)
         x=tf.concat([cpm_features,init_conf,init_paf],self.concat_dim)
-        #refinement
+        # refinement
         ref_conf1,ref_paf1=self.refine_stage1(x)
         conf_list.append(ref_conf1)
         paf_list.append(ref_paf1)
-        predict_x={"conf_map":conf_list[-1],"paf_map":paf_list[-1],\
-            "stage_confs":conf_list,"stage_pafs":paf_list}
+
+        # construct predict_x
+        predict_x = {"conf_map": conf_list[-1], "paf_map": paf_list[-1], "stage_confs": conf_list, "stage_pafs": paf_list}
         if(ret_backbone):
             predict_x["backbone_features"]=backbone_features
+
         return predict_x
 
     @tf.function(experimental_relax_shapes=True)
     def infer(self,x):
-        ret_dict=self.forward(x,is_train=False,is_infer=True)
-        conf_map,paf_map=ret_dict["conf_map"],ret_dict["paf_map"]
+        predict_x = self.forward(x,is_train=False)
+        conf_map, paf_map = predict_x["conf_map"],predict_x["paf_map"]
         return conf_map,paf_map
     
     def cal_loss(self,predict_x,target_x,mask,metric_manager):
@@ -96,6 +99,9 @@ class LightWeightOpenPose(Model):
         metric_manager.update("model/conf_loss",loss_confs[-1])
         metric_manager.update("model/paf_loss",loss_pafs[-1])
         # TODO: add regularization loss here
+        regularize_loss = regulize_loss(self, weight_decay_factor=2e-4)
+        total_loss += regularize_loss
+        metric_manager.update("model/regular_loss",regularize_loss)
         return total_loss
 
     class Dilated_mobilenet(Model):

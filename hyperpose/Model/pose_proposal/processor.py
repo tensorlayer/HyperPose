@@ -1,9 +1,15 @@
+import os
 import numpy as np
 from ..human import Human,BodyPart
 from .utils import non_maximium_supress
 from .utils import get_pose_proposals
+from .utils import draw_bbx, draw_edge
+import matplotlib.pyplot as plt
+from ..processor import BasicPreProcessor, PltDrawer
+from ..processor import BasicPostProcessor
+from ..processor import BasicVisualizer
 
-class PreProcessor:
+class PreProcessor(BasicPreProcessor):
     def __init__(self,parts,limbs,hin,win,hout,wout,hnei,wnei,colors=None,data_format="channels_first"):
         self.hin=hin
         self.win=win
@@ -16,13 +22,14 @@ class PreProcessor:
         self.data_format=data_format
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
     
-    def process(self,annos,mask_valid,bbxs):
-        delta,tx,ty,tw,th,te,te_mask=get_pose_proposals(annos,bbxs,self.hin,self.win,self.hout,self.wout,self.hnei,self.wnei,\
-            self.parts,self.limbs,mask_valid,self.data_format)
-        return delta,tx,ty,tw,th,te,te_mask
+    def process(self,annos, mask, bbxs):
+        gc,gx,gy,gw,gh,ge,ge_mask=get_pose_proposals(annos,bbxs,self.hin,self.win,self.hout,self.wout,self.hnei,self.wnei,\
+            self.parts,self.limbs,mask,self.data_format)
+        target_x = {"c":gc, "x":gx, "y":gy, "w":gw, "h":gh, "e":ge, "e_mask":ge_mask}
+        return target_x
 
-class PostProcessor:
-    def __init__(self,parts,limbs,colors,thresh_hold=0.3,eps=1e-8,debug=False):
+class PostProcessor(BasicPostProcessor):
+    def __init__(self,parts,limbs,thresh_hold=0.3,eps=1e-8,colors=None,debug=False):
         self.parts=parts
         self.limbs=limbs
         self.colors=colors
@@ -45,7 +52,9 @@ class PostProcessor:
                 break
         print(f"PoseProposal Post-processer setting instance id as: {self.instance_id} {self.parts(self.instance_id)}")
 
-    def process(self,pc,pi,px,py,pw,ph,pe,scale_w_rate=1,scale_h_rate=1):
+    def process(self,predict_x,scale_w_rate=1,scale_h_rate=1):
+        pc, px, py, pw, ph, pi, pe  = predict_x["c"], predict_x["x"], predict_x["y"], predict_x["w"], predict_x["h"],\
+                                            predict_x["i"], predict_x["e"]
         def get_loc(idx,h,w):
             y=idx//w
             x=idx%w
@@ -184,4 +193,109 @@ class PostProcessor:
             if(human.get_partnum()>=self.thres_part_cnt):
                 filter_humans.append(human)
         return filter_humans
+
+class Visualizer(BasicVisualizer):
+    def __init__(self, parts, limbs, save_dir="./save_dir"):
+        self.parts = parts
+        self.limbs = limbs
+        self.save_dir = save_dir
+    
+    def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):
+        # defualt values
+        # TODO: pass config values
+        threshhold=0.3
+        hout, wout= 12, 12
+        wnei, hnei= 9, 9
+
+        # predict maps
+        pc_batch, px_batch, py_batch, pw_batch, ph_batch, pi_batch, pe_batch  = predict_x["c"], predict_x["x"], predict_x["y"], \
+                                                            predict_x["w"], predict_x["h"], predict_x["i"], predict_x["e"]
+        # mask
+        if(mask_batch is None):
+            mask_batch = np.ones_like(image_batch)
+
+        # draw figures
+        batch_size = image_batch.shape[0]
+        for b_idx in range(0,batch_size):
+            image, mask = image_batch[b_idx], mask_batch[b_idx]
+            pc, px, py, pw, ph, pi, pe = pc_batch[b_idx], px_batch[b_idx], py_batch[b_idx], pw_batch[b_idx], ph_batch[b_idx],\
+                                                                pi_batch[b_idx], pe_batch[b_idx]
+
+            # begin draw
+            pltdrawer = PltDrawer(draw_row=1, draw_col=2)
+            
+            # draw original image
+            origin_image = image.copy()
+            pltdrawer.add_subplot(origin_image, "origin image")
+
+            # draw predict image
+            pd_image = image.copy()
+            pd_image = draw_bbx(pd_image,pc,px,py,pw,ph,threshhold)
+            pd_image = draw_edge(pd_image,pe,px,py,pw,ph,hnei,wnei,hout,wout,self.limbs,threshhold)
+            pltdrawer.add_subplot(pd_image, "predict image")
+
+            # save figure
+            pltdrawer.savefig(f"{self.save_dir}/{name}_{b_idx}.png", dpi=300)
+
+            # draw results
+            if(humans_list is not None):
+                humans = humans_list[b_idx]
+                self.visualize_result(image, humans, save_path=f"{self.save_dir}/{name}_{b_idx}_result.png")
+        
+
+    def visualize_compare(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
+        # defualt values
+        # TODO: pass config values
+        threshhold = 0.3
+        hout, wout= 12, 12
+        wnei, hnei= 9, 9
+
+        # predict maps
+        pc_batch, px_batch, py_batch, pw_batch, ph_batch, pi_batch, pe_batch  = predict_x["c"], predict_x["x"], predict_x["y"], \
+                                                            predict_x["w"], predict_x["h"], predict_x["i"], predict_x["e"]
+        # target maps
+        gc_batch, gx_batch, gy_batch, gw_batch, gh_batch, ge_mask_batch, ge_batch  = target_x["c"], target_x["x"], target_x["y"], \
+                                                            target_x["w"], target_x["h"], target_x["i"], target_x["e"]
+        # mask
+        if(mask_batch is None):
+            mask_batch = np.ones_like(image_batch)
+        
+        # draw figures
+        batch_size = image_batch.shape[0]
+        for b_idx in range(0,batch_size):
+            image, mask = image_batch[b_idx], mask_batch[b_idx]
+            pc, px, py, pw, ph, pi, pe = pc_batch[b_idx], px_batch[b_idx], py_batch[b_idx], pw_batch[b_idx], ph_batch[b_idx],\
+                                                                pi_batch[b_idx], pe_batch[b_idx]
+            gc, gx, gy, gw, gh, ge_mask, ge = gc_batch[b_idx], gx_batch[b_idx], gy_batch[b_idx], gw_batch[b_idx], gh_batch[b_idx],\
+                                                                ge_mask_batch[b_idx], ge_batch[b_idx]
+
+            # begin draw
+            pltdrawer = PltDrawer(draw_row=2, draw_col=2)
+            
+            # draw original image
+            pltdrawer.add_subplot(image, "origin image")
+
+            # draw mask
+            pltdrawer.add_subplot(mask, "mask")
+
+            # draw predict image
+            pd_image = image.copy()
+            pd_image = draw_bbx(pd_image,pc,px,py,pw,ph,threshhold)
+            pd_image = draw_edge(pd_image,pe,px,py,pw,ph,hnei,wnei,hout,wout,self.limbs,threshhold)
+            pltdrawer.add_subplot(pd_image, "predict image")
+            
+            # draw ground truth image
+            gt_image = image.copy()
+            gt_image=draw_bbx(gt_image,gc,gx,gy,gw,gh,threshhold)
+            gt_image=draw_edge(gt_image,ge,gx,gy,gw,gh,hnei,wnei,hout,wout,self.limbs,threshhold)
+            pltdrawer.add_subplot(gt_image, "groundtruth image")
+
+            # save figure
+            pltdrawer.savefig(f"{self.save_dir}/{name}_{b_idx}.png")
+
+            # draw results
+            if(humans_list is not None):
+                humans = humans_list[b_idx]
+                self.visualize_result(image, humans, save_path=f"{self.save_dir}/{name}_{b_idx}_result.png")
+        
 
