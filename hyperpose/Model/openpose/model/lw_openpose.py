@@ -5,6 +5,7 @@ from tensorlayer.models import Model
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d
 from ..utils import tf_repeat
 from ..define import CocoPart,CocoLimb
+from ...backbones import MobilenetDilated_backbone
 from ...common import regulize_loss
 initializer=tl.initializers.truncated_normal(stddev=0.005)
 
@@ -31,7 +32,7 @@ class LightWeightOpenPose(Model):
             self.concat_dim=-1
         #dilated mobilenetv1 backbone
         if(backbone==None):
-            self.backbone=self.Dilated_mobilenet(data_format=self.data_format)
+            self.backbone=MobilenetDilated_backbone(data_format=self.data_format)
         else:
             self.backbone=backbone(scale_size=8,pretraining=pretraining,data_format=self.data_format)
         #cpm stage to cutdown dimension
@@ -44,7 +45,7 @@ class LightWeightOpenPose(Model):
             in_channels=self.num_channels+self.n_confmaps+self.n_pafmaps,data_format=self.data_format)
     
     @tf.function
-    def forward(self,x,is_train=False, ret_backbone=False):
+    def forward(self,x, is_train=False, ret_backbone=False):
         conf_list=[]
         paf_list=[]
         # backbone feature extract
@@ -73,7 +74,7 @@ class LightWeightOpenPose(Model):
         conf_map, paf_map = predict_x["conf_map"],predict_x["paf_map"]
         return conf_map,paf_map
     
-    def cal_loss(self, predict_x, target_x, metric_manager):
+    def cal_loss(self, predict_x, target_x, metric_manager, mask=None):
         # TODO: exclude the loss calculate from mask
         # predict maps
         stage_confs = predict_x["stage_confs"]
@@ -101,29 +102,6 @@ class LightWeightOpenPose(Model):
         total_loss += regularize_loss
         metric_manager.update("model/loss_re",regularize_loss)
         return total_loss
-
-    class Dilated_mobilenet(Model):
-        def __init__(self,data_format="channels_first"):
-            super().__init__()
-            self.data_format=data_format
-            self.out_channels=512
-            self.scale_size=8
-            self.main_block=layers.LayerList([
-            conv_block(n_filter=32,in_channels=3,data_format=self.data_format,strides=(2,2)),
-            dw_conv_block(n_filter=64,in_channels=32,data_format=self.data_format),
-            dw_conv_block(n_filter=128,in_channels=64,data_format=self.data_format,strides=(2,2)),
-            dw_conv_block(n_filter=128,in_channels=128,data_format=self.data_format),
-            dw_conv_block(n_filter=256,in_channels=128,data_format=self.data_format,strides=(2,2)),
-            dw_conv_block(n_filter=256,in_channels=256,data_format=self.data_format),
-            dw_conv_block(n_filter=512,in_channels=256,data_format=self.data_format),
-            dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format,dilation_rate=(2,2)),
-            dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format),
-            dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format),
-            dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format),
-            dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format)
-            ])
-        def forward(self,x):
-            return self.main_block.forward(x)
 
     class Cpm_stage(Model):
         def __init__(self,n_filter=128,in_channels=512,data_format="channels_first"):

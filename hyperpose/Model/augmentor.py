@@ -13,7 +13,7 @@ class BasicAugmentor:
         self.zoom_max=zoom_max
         self.flip_list=flip_list
     
-    def process(self,image,annos,mask_valid,bbxs=None):
+    def process(self,image,annos,mask,bbxs=None):
         # get transform matrix
         image_h,image_w,_=image.shape
         M_rotate = tl.prepro.affine_rotation_matrix(angle=(-30, 30))  # original paper: -40~40
@@ -23,10 +23,10 @@ class BasicAugmentor:
         # apply data augmentation
         image = tl.prepro.affine_transform_cv2(image, transform_matrix)
         annos = tl.prepro.affine_transform_keypoints(annos, transform_matrix)
-        mask_valid = tl.prepro.affine_transform_cv2(mask_valid, transform_matrix, border_mode='replicate')
+        mask = tl.prepro.affine_transform_cv2(mask, transform_matrix, border_mode='replicate')
         if(self.flip_list!=None):
-            image, annos, mask_valid = tl.prepro.keypoint_random_flip(image, annos, mask_valid, prob=0.5, flip_list=self.flip_list)
-        image, annos, mask_valid = tl.prepro.keypoint_resize_random_crop(image, annos, mask_valid, size=(self.hin, self.win))
+            image, annos, mask = tl.prepro.keypoint_random_flip(image, annos, mask, prob=0.5, flip_list=self.flip_list)
+        image, annos, mask = tl.prepro.keypoint_resize_random_crop(image, annos, mask, size=(self.hin, self.win))
         if(type(bbxs)==np.ndarray):
             # prepare transform bbx    
             transform_bbx=np.zeros(shape=(bbxs.shape[0],4,2))
@@ -52,8 +52,8 @@ class BasicAugmentor:
             final_bbxs[:,2]=final_bbxs[:,2]*resize_ratio
             final_bbxs[:,2]=final_bbxs[:,3]*resize_ratio
             bbxs=final_bbxs
-            return image,annos,mask_valid,bbxs
-        return image,annos,mask_valid
+            return image,annos,mask,bbxs
+        return image,annos,mask,bbxs
     
     def process_only_image(self,image):
         # print(f"process_only_image dtype:{image.dtype} shape:{image.shape}")

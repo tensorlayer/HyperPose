@@ -74,5 +74,6 @@ class PltDrawer:
                 plt.colorbar()
     
     def savefig(self,save_path):
+        self.draw_plots()
         plt.savefig(save_path,dpi=self.dpi)
         plt.close()

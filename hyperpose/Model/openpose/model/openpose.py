@@ -3,7 +3,7 @@ import tensorlayer as tl
 from tensorlayer import layers
 from tensorlayer.models import Model
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d
-from ..utils import tf_repeat
+from ..utils import NCHW_to_NHWC, NHWC_to_NCHW
 from ..define import CocoPart,CocoLimb
 from ...backbones import vgg19_backbone
 from ...common import regulize_loss
@@ -49,6 +49,8 @@ class OpenPose(Model):
 
     @tf.function
     def forward(self,x,is_train=False,ret_backbone=False):
+        if(self.data_format == "channels_last"):
+            x = NCHW_to_NHWC(x)
         stage_num=5
         conf_list=[]
         paf_list=[]
@@ -66,6 +68,11 @@ class OpenPose(Model):
             conf_list.append(ref_conf)
             paf_list.append(ref_paf)
         
+        if(self.data_format == "channels_last"):
+            backbone_features = NHWC_to_NCHW(backbone_features)
+            conf_list = [NHWC_to_NCHW(conf) for conf in conf_list]
+            paf_list = [NHWC_to_NCHW(paf) for paf in paf_list]
+        
         # construct predict_x
         predict_x = {"conf_map": conf_list[-1], "paf_map": paf_list[-1], "stage_confs": conf_list, "stage_pafs": paf_list}
         if(ret_backbone):
@@ -78,7 +85,7 @@ class OpenPose(Model):
         conf_map,paf_map=self.forward(x,is_train=False,stage_num=stage_num)
         return conf_map,paf_map
     
-    def cal_loss(self, predict_x, target_x, metric_manager):
+    def cal_loss(self, predict_x, target_x, metric_manager, mask=None):
         # TODO: exclude the loss calculate from mask
         # predict maps
         stage_confs = predict_x["stage_confs"]
@@ -141,6 +148,8 @@ class OpenPose(Model):
             ])
         
         def forward(self,x):
+            print(f"test init stage x:{x.shape}")
+            print(f"test data_format:{self.data_format}")
             conf_map=self.conf_block.forward(x)
             paf_map=self.paf_block.forward(x)
             return conf_map,paf_map

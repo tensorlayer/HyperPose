@@ -65,24 +65,29 @@ if __name__ == '__main__':
                         help='optimizer type used for training')
     parser.add_argument('--log_interval',
                         type=int,
-                        default=1e2,
-                        help='log frequency')
+                        default=None,
+                        help='log frequency, None stands for using default value')
+    parser.add_argument("--vis_interval",
+                        type=int,
+                        default=None,
+                        help="visualize frequency, None stands for using default value")
     parser.add_argument('--save_interval',
                         type=int,
-                        default=5e3,
-                        help='log frequency')
+                        default=None,
+                        help='log frequency, None stands for using default value')
                         
     args=parser.parse_args()
     #config model
     Config.set_model_name(args.model_name)
     Config.set_model_type(Config.MODEL[args.model_type])
     Config.set_model_backbone(Config.BACKBONE[args.model_backbone])
-    Config.set_log_interval(args.log_interval)
-    Config.set_save_interval(args.save_interval)
     #config train
     Config.set_train_type(Config.TRAIN[args.train_type])
     Config.set_optim_type(Config.OPTIM[args.optim_type])
     Config.set_kungfu_option(Config.KUNGFU[args.kf_optimizer])
+    Config.set_log_interval(args.log_interval)
+    Config.set_vis_interval(args.vis_interval)
+    Config.set_save_interval(args.save_interval)
     #config dataset
     Config.set_official_dataset(args.use_official_dataset)
     Config.set_dataset_type(Config.DATA[args.dataset_type])

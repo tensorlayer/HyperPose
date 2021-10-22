@@ -3,12 +3,14 @@ from enum import Enum
 class BACKBONE(Enum):
     Default=0
     Mobilenetv1=1
-    Vgg19=2
-    Resnet18=3
-    Resnet50=4
+    Mobilenetv2=2
+    MobilenetDilated=3
+    MobilenetThin=4
     Vggtiny=5
-    Mobilenetv2=6
+    Vgg19=6
     Vgg16=7
+    Resnet18=8
+    Resnet50=9
 
 class MODEL(Enum):
     Openpose=0

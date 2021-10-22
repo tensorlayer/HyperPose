@@ -15,7 +15,8 @@ from distutils.dir_util import mkpath
 from scipy.spatial.distance import cdist
 from ..human import Human
 from ..common import tf_repeat,TRAIN,MODEL,DATA
-from ..common import regulize_loss
+from ..common import regulize_loss, resize_NCHW, resize_CHW
+from ..common import NCHW_to_NHWC, NHWC_to_NCHW
 
 def get_conf_map(annos, height, width, hout, wout, parts, limbs, data_format="channels_first"):
     """
@@ -213,7 +214,6 @@ def cal_vectormap_fast(vectormap, countmap, i, v_start, v_end):
     vectormap[i*2+0,min_y:max_y,min_x:max_x]+=norm_x*filter_matrix
     vectormap[i*2+1,min_y:max_y,min_x:max_x]+=norm_y*filter_matrix
     return vectormap
-
 
 def draw_results(images, heats_ground, heats_result, pafs_ground, pafs_result, masks, save_dir ,name='', data_format="channels_first"):
     """Save results for debugging.

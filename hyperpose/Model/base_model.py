@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorlayer as tl
 from tensorlayer.models import Model
+from metrics import MetricManager
 
 class BasicModel(Model):
     def __init__(self,config, *args, **kargs):
@@ -8,7 +9,7 @@ class BasicModel(Model):
         self.config=config
     
     @tf.function(experimental_relax_shapes=True)
-    def forward(self,x,is_train=True,ret_backbone=False):
+    def forward(self, x, is_train=True, ret_backbone=False):
         '''custom model forwarding
         The `forward` function is expected to take in the images and return the activation maps calculated by the neural network. Implement your custom forwarding computation logic here.
         
@@ -25,13 +26,13 @@ class BasicModel(Model):
         raise NotImplementedError("virtual class BaseModel function: `forward` not implemented!")
     
     @tf.function(experimental_relax_shapes=True)
-    def infer(self,x):
+    def infer(self, x):
         '''custom model inference
         The `infer`  function is expected to take in the images and return the activation maps calculated by the neural network. Implement your custom inference computation logic here. The difference between the `forward` function and the `infer` function is that, the `infer` function is invoked especially in model exportation procedure, thus it's outputs are required to be the decoded `tf.Tensor` variables. In this way, The `infer` function is usually a warp function of the `forward` function, and the `infer` function output is usually constracted by parsing and formatting the `forward` function result into the `tf.Tensor` format. 
         '''
         raise NotImplementedError("virtual class BaseModel function: `infer` not implemented!")
     
-    def cal_loss(self,predict_x,target_x):
+    def cal_loss(self, predict_x, target_x, metric_manager:MetricManager ,mask=None):
         '''custom loss calculation function
         Teh `cal_loss` function is expected to take the output predict activation map and the ground truth target activation map and return the calculated loss for gradient descent.
 

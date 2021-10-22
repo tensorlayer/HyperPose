@@ -6,6 +6,7 @@ from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, 
 from ..utils import tf_repeat
 from ..define import CocoPart,CocoLimb
 from ...common import regulize_loss
+from ...backbones import MobilenetThin_backbone
 
 initial_w=tl.initializers.random_normal(stddev=0.01)
 initial_b=tl.initializers.constant(value=0.0)
@@ -32,7 +33,7 @@ class MobilenetThinOpenpose(Model):
         else:
             self.concat_dim=-1
         if(backbone==None):
-            self.backbone=self.Mobilenetv2_variant(data_format=self.data_format)
+            self.backbone=MobilenetThin_backbone(data_format=self.data_format)
         else:
             self.backbone=backbone(scale_size=8,pretraining=pretraining,data_format=self.data_format)
         self.init_stage=self.Init_stage(n_confmaps=self.n_confmaps,in_channels=self.backbone.out_channels,data_format=self.data_format)
@@ -73,7 +74,7 @@ class MobilenetThinOpenpose(Model):
         conf_map, paf_map = predict_x["conf_map"],predict_x["paf_map"]
         return conf_map,paf_map
     
-    def cal_loss(self, predict_x, target_x, metric_manager):
+    def cal_loss(self, predict_x, target_x, metric_manager, mask=None):
         # TODO: exclude the loss calculate from mask
         # predict maps
         stage_confs = predict_x["stage_confs"]
@@ -101,51 +102,6 @@ class MobilenetThinOpenpose(Model):
         total_loss += regularize_loss
         metric_manager.update("model/loss_re",regularize_loss)
         return total_loss
-
-    class Mobilenetv2_variant(Model):
-        def __init__(self,data_format="channels_first"):
-            super().__init__()
-            self.data_format=data_format
-            if(self.data_format=="channels_first"):
-                self.concat_dim=1
-            else:
-                self.concat_dim=-1
-            self.out_channels=1152
-            self.scale_size=8
-            self.convblock_0=conv_block(n_filter=32,in_channels=3,filter_size=(3,3),strides=(2,2),act=tf.nn.relu,data_format=self.data_format)
-            self.convblock_1=separable_block(n_filter=64,in_channels=32,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
-            self.convblock_2=separable_block(n_filter=128,in_channels=64,filter_size=(3,3),strides=(2,2),act=tf.nn.relu,data_format=self.data_format)
-            self.convblock_3=separable_block(n_filter=128,in_channels=128,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
-            self.convblock_4=separable_block(n_filter=256,in_channels=128,filter_size=(3,3),strides=(2,2),act=tf.nn.relu,data_format=self.data_format)
-            self.convblock_5=separable_block(n_filter=256,in_channels=256,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
-            self.convblock_6=separable_block(n_filter=512,in_channels=256,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
-            self.convblock_7=separable_block(n_filter=512,in_channels=512,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
-            self.convblock_8=separable_block(n_filter=512,in_channels=512,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
-            self.convblock_9=separable_block(n_filter=512,in_channels=512,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
-            self.convblock_10=separable_block(n_filter=512,in_channels=512,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
-            self.convblock_11=separable_block(n_filter=512,in_channels=512,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
-            self.maxpool=MaxPool2d(filter_size=(2,2),strides=(2,2),padding="SAME",data_format=self.data_format)
-            
-        
-        def forward(self,x):
-            concat_list=[]
-            x=self.convblock_0.forward(x)
-            x=self.convblock_1.forward(x)
-            x=self.convblock_2.forward(x)
-            x=self.convblock_3.forward(x)
-            concat_list.append(self.maxpool.forward(x))
-            x=self.convblock_4.forward(x)
-            x=self.convblock_5.forward(x)
-            x=self.convblock_6.forward(x)
-            x=self.convblock_7.forward(x)
-            concat_list.append(x)
-            x=self.convblock_8.forward(x)
-            x=self.convblock_9.forward(x)
-            x=self.convblock_10.forward(x)
-            x=self.convblock_11.forward(x)
-            concat_list.append(x)
-            x=tf.concat(concat_list,self.concat_dim)
-            return x
         
     class Init_stage(Model):
         def __init__(self,n_confmaps=19,n_pafmaps=38,in_channels=1152,data_format="channels_first"):

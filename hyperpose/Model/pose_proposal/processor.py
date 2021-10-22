@@ -23,7 +23,7 @@ class PreProcessor(BasicPreProcessor):
         self.data_format=data_format
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
     
-    def process(self,annos, mask, bbxs):
+    def process(self, annos, mask, bbxs):
         gc,gx,gy,gw,gh,ge,ge_mask=get_pose_proposals(annos,bbxs,self.hin,self.win,self.hout,self.wout,self.hnei,self.wnei,\
             self.parts,self.limbs,mask,self.data_format)
         target_x = {"c":gc, "x":gx, "y":gy, "w":gw, "h":gh, "e":ge, "e_mask":ge_mask}
@@ -202,6 +202,9 @@ class Visualizer(BasicVisualizer):
         self.save_dir = save_dir
     
     def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):
+        # transform
+        image_batch = np.transpose(image_batch,[0,2,3,1])
+        mask_batch = np.transpose(mask_batch,[0,2,3,1])
         # defualt values
         # TODO: pass config values
         threshhold=0.3
@@ -245,6 +248,9 @@ class Visualizer(BasicVisualizer):
         
 
     def visualize_compare(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
+        # transform
+        image_batch = np.transpose(image_batch,[0,2,3,1])
+        mask_batch = np.transpose(mask_batch,[0,2,3,1])
         # defualt values
         # TODO: pass config values
         threshhold = 0.3

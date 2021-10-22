@@ -2,7 +2,8 @@ import cv2
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from .utils import get_conf_map,get_paf_map,draw_results
+from .utils import get_conf_map,get_paf_map
+from .utils import resize_CHW
 from ..human import Human,BodyPart
 from ..processor import BasicPreProcessor
 from ..processor import BasicPostProcessor
@@ -10,19 +11,22 @@ from ..processor import BasicVisualizer
 from ..processor import PltDrawer
 
 class PreProcessor(BasicPreProcessor):
-    def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,data_format="channels_first", *args, **kargs):
+    def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,*args, **kargs):
         self.hin=hin
         self.win=win
         self.hout=hout
         self.wout=wout
         self.parts=parts
         self.limbs=limbs
-        self.data_format=data_format
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
 
     def process(self, annos, mask, bbxs):
-        conf_map = get_conf_map(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
-        paf_map = get_paf_map(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
+        conf_map = get_conf_map(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format="channels_first")
+        paf_map = get_paf_map(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format="channels_first")
+        hout, wout = conf_map.shape[-2], conf_map.shape[-1]
+        resize_mask = resize_CHW(mask, (hout, wout))
+        conf_map = conf_map * resize_mask
+        paf_map = paf_map * resize_mask
         target_x = {"conf_map":conf_map, "paf_map":paf_map}
         return target_x
 
@@ -240,6 +244,9 @@ class Visualizer(BasicVisualizer):
         self.save_dir = save_dir
 
     def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):
+        # transform
+        image_batch = np.transpose(image_batch,[0,2,3,1])
+        mask_batch = np.transpose(mask_batch,[0,2,3,1])
         # predict maps
         pd_conf_map_list, pd_paf_map_list = predict_x["conf_map"], predict_x["paf_map"]
         # mask
@@ -261,7 +268,7 @@ class Visualizer(BasicVisualizer):
             pltdrawer.add_subplot(mask, "mask")
 
             # draw conf_map
-            conf_map_show=np.amax(pd_conf_map[:-1,:,:-1],axis=0)
+            conf_map_show=np.amax(pd_conf_map[:-1,:,:],axis=0)
             pltdrawer.add_subplot(conf_map_show, "predict conf_map", color_bar=True)
             
             # draw paf_map
@@ -276,7 +283,10 @@ class Visualizer(BasicVisualizer):
                 humans = humans_list[b_idx]
                 self.visualize_result(image, humans, save_path=f"{self.save_dir}/{name}_{b_idx}_result.png")
 
-    def visualize_comapre(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
+    def visualize_compare(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
+        # transform
+        image_batch = np.transpose(image_batch,[0,2,3,1])
+        mask_batch = np.transpose(mask_batch,[0,2,3,1])
         # predict maps
         pd_conf_map_batch, pd_paf_map_batch = predict_x["conf_map"], predict_x["paf_map"]
         # target maps
@@ -284,10 +294,6 @@ class Visualizer(BasicVisualizer):
         # mask
         if(mask_batch is None):
             mask = np.ones_like(image_batch)
-
-        mask_batch = np.transpose(mask_batch,[0,2,3,1])
-        mask_batch = tf.image.resize(mask_batch,pd_conf_map_batch.shape[2:4])
-        mask_batch = np.transpose(mask_batch,[0,3,1,2])
 
         batch_size = image_batch.shape[0]
         for b_idx in range(0, batch_size):
@@ -316,8 +322,8 @@ class Visualizer(BasicVisualizer):
             show_gt_conf_map = np.amax(gt_conf_map[:-1,:,:],axis=0)
             pltdrawer.add_subplot(show_gt_conf_map, "groudtruth conf_map", color_bar=True)
 
-            # draw gt conf_map
-            show_gt_paf_map = np.amax(gt_paf_map[:,:,:-1],axis=2)
+            # draw gt paf_map
+            show_gt_paf_map = np.amax(gt_paf_map[:,:,:],axis=0)
             pltdrawer.add_subplot(show_gt_paf_map, "groundtruth paf_map", color_bar=True)
             
             # save figure

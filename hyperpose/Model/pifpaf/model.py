@@ -154,7 +154,7 @@ class Pifpaf(Model):
         scale_loss=tf.reduce_sum(scale_loss)/batch_size
         return scale_loss
     
-    def cal_loss(self, predict_x, target_x, metric_manager:MetricManager):
+    def cal_loss(self, predict_x, target_x, metric_manager:MetricManager, mask=None):
         # calculate pif losses
         # predict maps
         pd_pif_conf, pd_pif_vec, pd_pif_logb, pd_pif_scale = \

@@ -81,6 +81,7 @@ def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,bmin=0.1,dis
     strided_bmin=bmin/stride
     n_pos,n_limbs=len(parts),len(limbs)
     padded_h,padded_w=hout+2*padding,wout+2*padding
+    #TODO: change mask shape here
     #init fields
     pif_conf=np.full(shape=(n_pos,padded_h,padded_w),fill_value=0.0,dtype=np.float32)
     pif_vec=np.full(shape=(n_pos,2,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
@@ -100,8 +101,6 @@ def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,bmin=0.1,dis
             #calculate scale
             kpt=np.array(kpt)/stride
             kpt_scale=anno_scale*COCO_SIGMA[part_idx]
-            #print(f"test pif scale:")
-            #print(f"kpt_idx:{part_idx} kpt_scale:{kpt_scale}")
             #generate pif_maps for single point
             pif_maps=[pif_conf,pif_vec,pif_bmin,pif_scale,pif_vec_norm]
             pif_conf,pif_vec,pif_bmin,pif_scale,pif_vec_norm=put_pifmap(pif_maps,part_idx,kpt,\

@@ -3,23 +3,23 @@ import os
 from tqdm import tqdm
 import numpy as np
 import matplotlib
-
-from hyperpose.Model.openpose.processor import PostProcessor
 matplotlib.use('Agg')
 import tensorflow as tf
 import tensorlayer as tl
 import _pickle as cPickle
 from functools import partial, reduce
-from .augmentor import Augmentor, BasicAugmentor
-from .processor import BasicPostProcessor, BasicPreProcessor, BasicVisualizer
 from .common import KUNGFU
 from .common import log_train as log
 from .domainadapt import Discriminator
 from .common import decode_mask,get_num_parallel_calls
 from .metrics import MetricManager
+from .augmentor import BasicAugmentor
+from .processor import BasicPreProcessor
+from .processor import BasicPostProcessor
+from .processor import BasicVisualizer
 
 
-def _data_aug_fn(image, ground_truth, augmentor:Augmentor, preprocessor:BasicPreProcessor, data_format="channels_first"):
+def _data_aug_fn(image, ground_truth, augmentor:BasicAugmentor, preprocessor:BasicPreProcessor, data_format="channels_first"):
     """Data augmentation function."""
     # restore data
     image = image.numpy()
@@ -30,22 +30,21 @@ def _data_aug_fn(image, ground_truth, augmentor:Augmentor, preprocessor:BasicPre
 
     # decode mask
     mask = decode_mask(meta_mask)
-    if(type(mask) != np.ndarray):
+    if(mask is None):
         mask = np.ones_like(image)[:,:,0].astype(np.uint8)
 
     # general augmentaton process
-    image, annos, mask, bbxs = augmentor.process(image=image, annos=annos, mask_valid=mask, bbxs=bbxs)
+    image, annos, mask, bbxs = augmentor.process(image=image, annos=annos, mask=mask, bbxs=bbxs)
     mask = mask[:,:,np.newaxis]
     image = image * mask
 
-    # generate result including heatmap and vectormap
-    target_x = preprocessor.process(annos=annos, mask_valid=mask)
-    target_x = cPickle.dumps(target_x)
+    # TODO: all process are in channels_first format
+    image = np.transpose(image, [2, 0, 1])
+    mask = np.transpose(mask, [2, 0, 1])
 
-    # TODO: channel format
-    if (data_format == "channels_first"):
-        image = np.transpose(image, [2, 0, 1])
-        mask = np.transpose(mask, [2, 0, 1])
+    # generate result including heatmap and vectormap
+    target_x = preprocessor.process(annos=annos, mask=mask, bbxs=bbxs)
+    target_x = cPickle.dumps(target_x)
 
     return image, mask, target_x
 
@@ -129,14 +128,8 @@ def single_train(train_model, dataset, config, augmentor:BasicAugmentor, \
     log_interval = config.log.log_interval
     vis_interval =  config.train.vis_interval
     save_interval = config.train.save_interval
-    vis_dir = config.train.vis_dir
 
     # model hyper params
-    hin = train_model.hin
-    win = train_model.win
-    hout = train_model.hout
-    wout = train_model.wout
-    parts, limbs, colors = train_model.parts, train_model.limbs, train_model.colors
     data_format = train_model.data_format
     model_dir = config.model.model_dir
     pretrain_model_dir = config.pretrain.pretrain_model_dir
@@ -213,7 +206,7 @@ def single_train(train_model, dataset, config, augmentor:BasicAugmentor, \
             log("discriminator path doesn't exist, discriminator parameters are initialized")
 
     
-    print(f"single training using learning rate:{lr_init} batch_size:{batch_size}")
+    log(f"single training using learning rate:{lr_init} batch_size:{batch_size}")
     step = save_step.numpy()
     lr = save_lr.numpy()
 
@@ -307,7 +300,7 @@ def single_train(train_model, dataset, config, augmentor:BasicAugmentor, \
             # visualize periodly
             if ((step != 0) and (step % vis_interval) == 0):
                 log(f"Visualizing prediction maps and target maps")
-                visualizer.visual_compare(image_batch=image.numpy(), mask_batch=mask.numpy(), predict_x=predict_x, target_x=target_x,\
+                visualizer.visualize_compare(image_batch=image.numpy(), mask_batch=mask.numpy(), predict_x=predict_x, target_x=target_x,\
                                                     name=f"train_{step}")
 
             # save result and ckpt periodly

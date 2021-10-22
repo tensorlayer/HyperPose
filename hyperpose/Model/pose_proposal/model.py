@@ -130,7 +130,7 @@ class PoseProposal(Model):
         union_area = area1 + area2 - inter_area + 1e-6
         return inter_area / union_area
 
-    def cal_loss(self, predict_x, target_x, metric_manager: MetricManager, eps=1e-6):
+    def cal_loss(self, predict_x, target_x, metric_manager: MetricManager, mask=None, eps=1e-6):
         # target_x
         pc, px, py, pw, ph, pi, pe  = predict_x["c"], predict_x["x"], predict_x["y"], predict_x["w"], predict_x["h"],\
                                             predict_x["i"], predict_x["e"]

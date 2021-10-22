@@ -60,6 +60,8 @@ debug.*
 !docs/Makefile
 !docs/markdown/images/*
 
+test_cmd.txt
+
 
 /.build
 

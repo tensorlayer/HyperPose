@@ -16,71 +16,6 @@ regularizer_dsconv = 0.0004
 batchnorm_fused = True
 activation_fn = tf.nn.relu
 
-class MPIIPart(Enum):
-    RAnkle = 0
-    RKnee = 1
-    RHip = 2
-    LHip = 3
-    LKnee = 4
-    LAnkle = 5
-    RWrist = 6
-    RElbow = 7
-    RShoulder = 8
-    LShoulder = 9
-    LElbow = 10
-    LWrist = 11
-    Neck = 12
-    Head = 13
-
-    @staticmethod
-    def from_coco(human):
-        # t = {
-        #     MPIIPart.RAnkle: CocoPart.RAnkle,
-        #     MPIIPart.RKnee: CocoPart.RKnee,
-        #     MPIIPart.RHip: CocoPart.RHip,
-        #     MPIIPart.LHip: CocoPart.LHip,
-        #     MPIIPart.LKnee: CocoPart.LKnee,
-        #     MPIIPart.LAnkle: CocoPart.LAnkle,
-        #     MPIIPart.RWrist: CocoPart.RWrist,
-        #     MPIIPart.RElbow: CocoPart.RElbow,
-        #     MPIIPart.RShoulder: CocoPart.RShoulder,
-        #     MPIIPart.LShoulder: CocoPart.LShoulder,
-        #     MPIIPart.LElbow: CocoPart.LElbow,
-        #     MPIIPart.LWrist: CocoPart.LWrist,
-        #     MPIIPart.Neck: CocoPart.Neck,
-        #     MPIIPart.Nose: CocoPart.Nose,
-        # }
-        
-        from ..Dataset.mscoco_dataset.define import CocoPart
-        t = [
-            (MPIIPart.Head, CocoPart.Nose),
-            (MPIIPart.Neck, CocoPart.Neck),
-            (MPIIPart.RShoulder, CocoPart.RShoulder),
-            (MPIIPart.RElbow, CocoPart.RElbow),
-            (MPIIPart.RWrist, CocoPart.RWrist),
-            (MPIIPart.LShoulder, CocoPart.LShoulder),
-            (MPIIPart.LElbow, CocoPart.LElbow),
-            (MPIIPart.LWrist, CocoPart.LWrist),
-            (MPIIPart.RHip, CocoPart.RHip),
-            (MPIIPart.RKnee, CocoPart.RKnee),
-            (MPIIPart.RAnkle, CocoPart.RAnkle),
-            (MPIIPart.LHip, CocoPart.LHip),
-            (MPIIPart.LKnee, CocoPart.LKnee),
-            (MPIIPart.LAnkle, CocoPart.LAnkle),
-        ]
-
-        pose_2d_mpii = []
-        visibilty = []
-        for mpi, coco in t:
-            if coco.value not in human.body_parts.keys():
-                pose_2d_mpii.append((0, 0))
-                visibilty.append(False)
-                continue
-            pose_2d_mpii.append((human.body_parts[coco.value].x, human.body_parts[coco.value].y))
-            visibilty.append(True)
-        return pose_2d_mpii, visibilty
-
-
 def read_imgfile(path, width, height, data_format='channels_last'):
     """Read image file and resize to network input size."""
     val_image = cv2.imread(path, cv2.IMREAD_COLOR)
@@ -109,7 +44,6 @@ def get_sample_images(w, h):
     ]
     return val_image
 
-
 def load_graph(model_file):
     """Load a freezed graph from file."""
     graph_def = tf.GraphDef()
@@ -120,7 +54,6 @@ def load_graph(model_file):
     with graph.as_default():
         tf.import_graph_def(graph_def)
     return graph
-
 
 def get_op(graph, name):
     return graph.get_operation_by_name('import/%s' % name).outputs[0]
@@ -322,6 +255,24 @@ def regulize_loss(target_model,weight_decay_factor):
     for weight in target_model.trainable_weights:
         re_loss+=regularizer(weight)
     return re_loss
+
+def resize_CHW(x, dst_shape):
+    x = x[np.newaxis,:,:,:]
+    x = resize_NCHW(x, dst_shape)
+    x = x[0]
+    return x
+
+def resize_NCHW(x, dst_shape):
+    x = tf.transpose(x,[0,2,3,1])
+    x = tf.image.resize(x, dst_shape)
+    x = tf.transpose(x,[0,3,1,2])
+    return x
+
+def NCHW_to_NHWC(x):
+    return tf.transpose(x,[0,2,3,1])
+
+def NHWC_to_NCHW(x):
+    return tf.transpose(x,[0,3,1,2])
 
 def get_num_parallel_calls():
     return max(multiprocessing.cpu_count()//2,1)

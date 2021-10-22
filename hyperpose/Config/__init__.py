@@ -117,7 +117,7 @@ def get_config():
     info_logger.setLevel(logging.INFO)
     # stream handler
     info_cHandler = logging.StreamHandler()
-    info_cFormat = logging.Formatter("[%(name)s] %(levelname)s: %(message)s")
+    info_cFormat = logging.Formatter("[%(name)s]: %(message)s")
     info_cHandler.setFormatter(info_cFormat)
     info_logger.addHandler(info_cHandler)
     # file handler
@@ -167,88 +167,6 @@ def get_config():
     train_fFormat = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s: %(message)s")
     train_fHandler.setFormatter(train_fFormat)
     train_logger.addHandler(train_fHandler)
-
-    # information propt
-    info("Welcome to Hyperpose Development Platform!")
-    print("="*50)
-    
-    # variable definition
-    info("Variable Definition:")
-
-    info("parts: the joints of human body, Enum class")
-    info("limbs: the limbs of human body, List of tuple. example: [(joint index 1, joint index 2),...]")
-    info("colors: the visualize color for each parts, List. example: [(0,0,255),...] (optional)")
-
-    info("n_parts: number of human body joints, int. example: n_parts=len(parts)")
-    info("n_limbs: number of human body limbs, int. example: n_limbs=len(limbs)")
-
-    info("hin: height of the model input image, int. example: 368")
-    info("win: width of the model input image, int. example: 368")
-    info("hout: height of model output heatmap, int. example: 46")
-    info("wout: wout of model output heatmap, int. example: 46")
-    info("")
-
-    # object definition
-    print("="*50)
-    info("Object Definition:")
-    info("config: a object contains all the configurations used to assemble the model, dataset, and pipeline, easydict.\n"+\
-            "\t return by th `Config.get_config` function.\n")
-
-    info("model: a neural network takes in the image and output the calculated activation map, BasicModel.\n"\
-            +"\t have `forward`, `cal_loss`, `infer`(optional) functions.\n"
-            +"\t custom: users could inherit the Model.BasicModel class for customization.\n"
-            +"\t example: please refer to Model.LightWeightOpenPose class for details. \n")
-
-    info("dataset: a dataset generator provides train and evaluate dataset.\n"\
-            +"\t have `get_train_dataset` and `get_eval_dataset` functions.\n" \
-            +"\t custom: users could inherit the Dataset.BasicDataset class for customizationn\n"
-            +"\t example: please refer to Datset.CocoDataset class for details.\n")
-            
-    info("augmentor: a data augmentor that takes in the image, key point annotation, mask and perform affine transformation "\
-            +"for data augmentation.\n"\
-            +"\t have `process` and `process_only_image` functions.\n"
-            +"\t custom: users could inherit the Model.BasicAugmentor class for customization.\n"
-            +"\t example: please refer to Model.BasicAugmentor class for details.\n")
-
-    info("preprocessor: a data preprocessor that takes in the image, key point annotation and mask to produce the target heatmap "\
-            +"for model to calculate loss and learn.\n"\
-            +"\t have `process` function.\n"
-            +"\t custom: users could inherit the Model.BasicPreProcessor class for customizationn\n"
-            +"\t example: please refer to Model.openpose.PreProcessor class for details.\n")
-    
-    info("postprocessor: a data postprocessor that takes in the predicted heatmaps and infer the human body joints and limbs.\n"\
-            +"\t have `process` function.\n"
-            +"\t custom: users could inherit the Model.BasicPostProcessor class for customization\n"
-            +"\t example: please refer to the Model.openpose.PostProcessor class for details.\n")
-
-    info("visualizer: a visualizer that takes in the predicted heatmaps and output visualization images for train and evaluation.\n"\
-            +"\t have `visualize` and `visualize_comapre` functions.\n"\
-            +"\t custom: users could inherit the Model.BasicVisualizer class for customization.\n"
-            +"\t example: please refer to the Model.openpose.Visualizer class for details.\n"
-            )
-    info("\n")
-    
-    print("="*50)
-    info("Development platform basic usage:\n"\
-            +"\t1.Use the `sets` APIs of Config module to configure the pipeline, choose the algorithm type, the neural network backbone, "\
-                +"the dataset etc. that best fit your application scenario.\n"\
-            +"\t2.Use the `get_model` API of Model module to get the configured model, use `get_dataset` API of dataset module to "\
-                +"get the configured dataset, use the `get_train` API of Model module to get the configured train procedure. Then start training! "\
-                +"Check the loss values and sample training result images during training.\n"
-            +"\t3.Use the `get_eval` API of Model module to get the configured evaluation procedure. evaluate the model you trained. \n"\
-            +"\t4.Eport the model to .pb, .onnx, .tflite formats for deployment."
-        )
-    
-    info("Development platform custom usage:\n"\
-            +"\t Hyperpose enables users to custom model, dataset, augmentor, preprocessor, postprocessor and visualizer.\n"\
-            +"\t Users could inherit the corresponding basic class(mentioned above), and implement corresponding the member functions "\
-                +"required according to the function annotation, then use Config.set_custom_xxx APIs to set the custom component.")
-            
-    info("Additional features:\n"\
-            +"\t 1.Parallel distributed training with Kungfu.\n"
-            +"\t 2.Domain adaption to leverage unlabled data.\n"
-            +"\t 3.neural network backbone pretraining.")
-    print("="*50)
     
     info("Configuration initialized!")
     return config
@@ -421,9 +339,6 @@ def set_learning_rate(learning_rate):
     '''
     update_train.lr_init=learning_rate
 
-def set_save_interval(save_interval):
-    update_train.save_interval=save_interval
-
 def set_batch_size(batch_size):
     '''set the batch size in training
 
@@ -564,7 +479,8 @@ def set_dataset_filter(dataset_filter):
     '''
     update_data.dataset_filter=dataset_filter
 
-#log configure api
+# interval APIs
+# configure log interval
 def set_log_interval(log_interval):
     '''set the frequency of logging
 
@@ -580,24 +496,41 @@ def set_log_interval(log_interval):
     -------
     None
     '''
-    update_log.log_interval=log_interval
+    if(log_interval is not None):
+        update_log.log_interval=log_interval
+
+# configure save_interval
+def set_save_interval(save_interval):
+    if(save_interval is not None):
+        update_train.save_interval = save_interval
+
+# configure vis_interval
+def set_vis_interval(vis_interval):
+    if(vis_interval is not None):
+        update_train.vis_interval = vis_interval
 
 # custome module interfaces
+# custom parts
 def set_custom_parts(custom_parts):
     update_model.custom_parts = custom_parts
 
+# custom limbs
 def set_custom_limbs(custom_limbs):
     update_model.custom_limbs = custom_limbs
 
+# custom augmentor
 def set_custom_augmentor(augmentor):
     update_model.augmentor = augmentor
 
+# custom preprocessor
 def set_custom_preprocessor(preprocessor):
     update_model.preprocessor = preprocessor
 
+# custom postprocessor
 def set_custom_postprocessor(postprocessor):
     update_model.postprocessor = postprocessor
 
+# custom visualizer
 def set_custom_visualizer(visualizer):
     update_model.visualizer = visualizer
 

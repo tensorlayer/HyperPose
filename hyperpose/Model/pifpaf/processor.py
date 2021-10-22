@@ -23,8 +23,10 @@ class PreProcessor(BasicPreProcessor):
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
 
     def process(self,annos, mask, bbxs):
-        mask_out=cv2.resize(mask,(self.wout,self.hout))
-        pif_conf,pif_vec,pif_bmin,pif_scale = get_pifmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
+        print(f"test process init mask.shape:{mask.shape}")
+        mask_out=cv2.resize(mask[0],(self.wout,self.hout))
+        print(f"test process mask_out.shape:{mask_out.shape}")
+        pif_conf,pif_vec,pif_bmin,pif_scale = get_pifmap(annos, mask_out[0], self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
         paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale = get_pafmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
         target_x = {
             "pif_conf": pif_conf,
@@ -377,6 +379,9 @@ class Visualizer(BasicVisualizer):
         self.save_dir = save_dir
 
     def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):
+        # transform
+        image_batch = np.transpose(image_batch,[0,2,3,1])
+        mask_batch = np.transpose(mask_batch,[0,2,3,1])
         # defualt values
         # TODO: pass config values
         stride = 8
@@ -436,6 +441,9 @@ class Visualizer(BasicVisualizer):
 
 
     def visualize_compare(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
+        # transform
+        image_batch = np.transpose(image_batch,[0,2,3,1])
+        mask_batch = np.transpose(mask_batch,[0,2,3,1])
         # defualt values
         # TODO: pass config values
         stride = 8

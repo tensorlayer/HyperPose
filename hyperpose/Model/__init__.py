@@ -1,14 +1,15 @@
-import tensorflow as tf
+import logging
 from functools import partial
-
-from hyperpose.Model.openpose.processor import PostProcessor, Visualizer
-from .human import Human
-from .common import rename_tensor
 from .common import TRAIN,MODEL,DATA,KUNGFU,BACKBONE
-from .openpose import OpenPose,LightWeightOpenPose,MobilenetThinOpenpose
-from .pose_proposal import PoseProposal
-from .backbones import MobilenetV1_backbone,MobilenetV2_backbone,vgg16_backbone,vgg19_backbone,vggtiny_backbone
-from .backbones import Resnet18_backbone,Resnet50_backbone
+from .backbones import MobilenetV1_backbone
+from .backbones import MobilenetV2_backbone
+from .backbones import MobilenetDilated_backbone
+from .backbones import MobilenetThin_backbone
+from .backbones import vggtiny_backbone
+from .backbones import vgg16_backbone
+from .backbones import vgg19_backbone
+from .backbones import Resnet18_backbone
+from .backbones import Resnet50_backbone
 from .pretrain import single_pretrain
 from .common import log_model as log
 from .augmentor import BasicAugmentor
@@ -50,6 +51,21 @@ def get_model(config):
             elif(model_backbone==BACKBONE.Mobilenetv1):
                 backbone=MobilenetV1_backbone
                 log(f"Setting MobilnetV1_backbone!")
+            elif(model_backbone==BACKBONE.Mobilenetv2):
+                backbone=MobilenetV2_backbone
+                log(f"Setting MobilenetV2_backbone!")
+            elif(model_backbone==BACKBONE.MobilenetDilated):
+                backbone=MobilenetDilated_backbone
+                log(f"Setting MobilenetDilated_backbone!")
+            elif(model_backbone==BACKBONE.MobilenetThin):
+                backbone=MobilenetThin_backbone
+                log(f"Setting MobilenetThin_backbone!")
+            elif(model_backbone==BACKBONE.Vggtiny):
+                backbone=vggtiny_backbone
+                log(f"Setting Vggtiny_backbone!")
+            elif(model_backbone==BACKBONE.Vgg16):
+                backbone=vgg16_backbone
+                log(f"Setting Vgg16_backbone!")
             elif(model_backbone==BACKBONE.Vgg19):
                 backbone=vgg19_backbone
                 log(f"Setting Vgg19_backbone!")
@@ -59,15 +75,6 @@ def get_model(config):
             elif(model_backbone==BACKBONE.Resnet50):
                 backbone=Resnet50_backbone
                 log(f"Setting Resnet50_backbone!")
-            elif(model_backbone==BACKBONE.Vggtiny):
-                backbone=vggtiny_backbone
-                log(f"Setting Vggtiny_backbone")
-            elif(model_backbone==BACKBONE.Mobilenetv2):
-                backbone=MobilenetV2_backbone
-                log(f"Setting MobilenetV2_backbone")
-            elif(model_backbone==BACKBONE.Vgg16):
-                backbone=vgg16_backbone
-                log(f"Setting Vgg16_backbone")
             else:
                 raise NotImplementedError(f"Unknown model backbone {model_backbone}")
 
@@ -125,6 +132,7 @@ def get_model(config):
         else:
             raise RuntimeError(f'unknown model type {model_type}')
         log(f"Using {model_type.name} model arch!")
+    info_propt()
     return ret_model
 
 def get_pretrain(config):
@@ -188,6 +196,7 @@ def get_train(config):
     # assemble training pipeline
     train = partial(
         train_pipeline,
+        config = config,
         augmentor = augmentor,
         preprocessor = preprocessor,
         postprocessor = postprocessor,
@@ -373,3 +382,91 @@ def get_visualizer(config):
         elif model_type == MODEL.Pifpaf:
             from .pifpaf import Visualizer
         return Visualizer
+
+def info(msg):
+    info_logger = logging.getLogger("INFO")
+    info_logger.info(msg)
+
+def info_propt():
+    # information propt
+    print("\n")
+    info("Welcome to Hyperpose Development Platform!")
+    print("\n"+"="*100)
+    
+    # variable definition
+    info("Variable Definition:")
+
+    info("parts: \t the joints of human body, Enum class")
+    info("limbs: \t the limbs of human body, List of tuple.\t example: [(joint index 1, joint index 2),...]")
+    info("colors:\tthe visualize color for each parts, List.\t example: [(0,0,255),...] (optional)")
+
+    info("n_parts:\tnumber of human body joints, int.\t example: n_parts=len(parts)")
+    info("n_limbs:\tnumber of human body limbs, int.\t example: n_limbs=len(limbs)")
+
+    info("hin: \t height of the model input image, int.\t example: 368")
+    info("win: \t width of the model input image, int.\t example: 368")
+    info("hout: \t height of model output heatmap, int.\t example: 46")
+    info("wout: \t wout of model output heatmap, int.\t example: 46")
+    print("\n"+"="*100)
+
+    # object definition
+    info("Object Definition:")
+    info("config: a object contains all the configurations used to assemble the model, dataset, and pipeline, easydict.\n"+\
+            "\t return by th `Config.get_config` function.\n")
+
+    info("model: a neural network takes in the image and output the calculated activation map, BasicModel.\n"\
+            +"\t have `forward`, `cal_loss`, `infer`(optional) functions.\n"
+            +"\t custom: users could inherit the Model.BasicModel class for customization.\n"
+            +"\t example: please refer to Model.LightWeightOpenPose class for details. \n")
+
+    info("dataset: a dataset generator provides train and evaluate dataset.\n"\
+            +"\t have `get_train_dataset` and `get_eval_dataset` functions.\n" \
+            +"\t custom: users could inherit the Dataset.BasicDataset class for customizationn\n"
+            +"\t example: please refer to Datset.CocoDataset class for details.\n")
+            
+    info("augmentor: a data augmentor that takes in the image, key point annotation, mask and perform affine transformation "\
+            +"for data augmentation.\n"\
+            +"\t have `process` and `process_only_image` functions.\n"
+            +"\t custom: users could inherit the Model.BasicAugmentor class for customization.\n"
+            +"\t example: please refer to Model.BasicAugmentor class for details.\n")
+
+    info("preprocessor: a data preprocessor that takes in the image, key point annotation and mask to produce the target heatmap\n"\
+            +"\tfor model to calculate loss and learn.\n"\
+            +"\t have `process` function.\n"
+            +"\t custom: users could inherit the Model.BasicPreProcessor class for customizationn\n"
+            +"\t example: please refer to Model.openpose.PreProcessor class for details.\n")
+    
+    info("postprocessor: a data postprocessor that takes in the predicted heatmaps and infer the human body joints and limbs.\n"\
+            +"\t have `process` function.\n"
+            +"\t custom: users could inherit the Model.BasicPostProcessor class for customization\n"
+            +"\t example: please refer to the Model.openpose.PostProcessor class for details.\n")
+
+    info("visualizer: a visualizer that takes in the predicted heatmaps and output visualization images for train and evaluation.\n"\
+            +"\t have `visualize` and `visualize_comapre` functions.\n"\
+            +"\t custom: users could inherit the Model.BasicVisualizer class for customization.\n"
+            +"\t example: please refer to the Model.openpose.Visualizer class for details.\n"
+            )
+    print("\n"+"="*100)
+
+    info("Development platform basic usage:\n"\
+            +"\t1.Use the `sets` APIs of Config module to configure the pipeline, choose the algorithm type, the neural network\n"\
+                +"\tbackbone, the dataset etc. that best fit your application scenario.\n"\
+            +"\t2.Use the `get_model` API of Model module to get the configured model, use `get_dataset` API of dataset module to\n"\
+                +"\tget the configured dataset, use the `get_train` API of Model module to get the configured train procedure. Then start\n"\
+                +"\ttraining! Check the loss values and sample training result images during training.\n"
+            +"\t3.Use the `get_eval` API of Model module to get the configured evaluation procedure. evaluate the model you trained. \n"\
+            +"\t4.Eport the model to .pb, .onnx, .tflite formats for deployment."
+        )
+    
+    info("Development platform custom usage:\n"\
+            +"\t Hyperpose enables users to custom model, dataset, augmentor, preprocessor, postprocessor and visualizer.\n"\
+            +"\t Users could inherit the corresponding basic class(mentioned above), and implement corresponding the member functions\n"\
+                +"\trequired according to the function annotation, then use Config.set_custom_xxx APIs to set the custom component.")
+            
+    info("Additional features:\n"\
+            +"\t 1.Parallel distributed training with Kungfu.\n"
+            +"\t 2.Domain adaption to leverage unlabled data.\n"
+            +"\t 3.Neural network backbone pretraining.")
+    
+    info("Currently all the procedures are uniformed to be `channels_first` data format.")
+    print("\n"+"="*100)

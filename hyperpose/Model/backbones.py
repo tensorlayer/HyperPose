@@ -4,7 +4,7 @@ import tensorlayer as tl
 from tensorlayer import layers
 from tensorlayer.models import Model
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d, SeparableConv2d,\
-     MeanPool2d, Dense, Flatten
+        MeanPool2d, Dense, Flatten
 
 class MobilenetV1_backbone(Model):
     def __init__(self,scale_size=8,data_format="channels_last",pretraining=False):
@@ -173,6 +173,129 @@ class MobilenetV2_backbone(Model):
             else:
                 return self.main_block.forward(x)
 
+initializer=tl.initializers.truncated_normal(stddev=0.005)
+def conv_block(n_filter,in_channels,filter_size=(3,3),strides=(1,1),dilation_rate=(1,1),W_init=initializer,b_init=initializer,padding="SAME",data_format="channels_first"):
+    layer_list=[]
+    layer_list.append(Conv2d(n_filter=n_filter,filter_size=filter_size,strides=strides,in_channels=in_channels,\
+        dilation_rate=dilation_rate,padding=padding,W_init=initializer,b_init=initializer,data_format=data_format))
+    layer_list.append(BatchNorm2d(decay=0.99, act=tf.nn.relu,num_features=n_filter,data_format=data_format,is_train=True))
+    return layers.LayerList(layer_list)
+    
+def dw_conv_block(n_filter,in_channels,filter_size=(3,3),strides=(1,1),dilation_rate=(1,1),W_init=initializer,b_init=initializer,data_format="channels_first"):
+    layer_list=[]
+    layer_list.append(DepthwiseConv2d(filter_size=filter_size,strides=strides,in_channels=in_channels,
+        dilation_rate=dilation_rate,W_init=initializer,b_init=None,data_format=data_format))
+    layer_list.append(BatchNorm2d(decay=0.99,act=tf.nn.relu,num_features=in_channels,data_format=data_format,is_train=True))
+    layer_list.append(Conv2d(n_filter=n_filter,filter_size=(1,1),strides=(1,1),in_channels=in_channels,W_init=initializer,b_init=None,data_format=data_format))
+    layer_list.append(BatchNorm2d(decay=0.99,act=tf.nn.relu,num_features=n_filter,data_format=data_format,is_train=True))
+    return layers.LayerList(layer_list)
+
+def nobn_dw_conv_block(n_filter,in_channels,filter_size=(3,3),strides=(1,1),W_init=initializer,b_init=initializer,data_format="channels_first"):
+    layer_list=[]
+    layer_list.append(DepthwiseConv2d(filter_size=filter_size,strides=strides,in_channels=in_channels,
+        act=tf.nn.relu,W_init=initializer,b_init=None,data_format=data_format))
+    layer_list.append(Conv2d(n_filter=n_filter,filter_size=(1, 1),strides=(1, 1),in_channels=in_channels,
+        act=tf.nn.relu,W_init=initializer,b_init=None,data_format=data_format))
+    return layers.LayerList(layer_list)
+    
+class MobilenetDilated_backbone(Model):
+    def __init__(self,scale_size=8, data_format="channels_first", pretraining=False):
+        super().__init__()
+        self.scale_size = scale_size
+        self.data_format = data_format
+        self.pretraining = pretraining
+        self.out_channels=512
+        self.scale_size=8
+        if(self.scale_size==8):
+            strides=(1,1)
+        elif(self.scale_size==32 or self.pretraining):
+            strides=(2,2)
+        self.main_block=layers.LayerList([
+        conv_block(n_filter=32,in_channels=3,data_format=self.data_format,strides=(2,2)),
+        dw_conv_block(n_filter=64,in_channels=32,data_format=self.data_format),
+        dw_conv_block(n_filter=128,in_channels=64,data_format=self.data_format,strides=(2,2)),
+        dw_conv_block(n_filter=128,in_channels=128,data_format=self.data_format),
+        dw_conv_block(n_filter=256,in_channels=128,data_format=self.data_format,strides=(2,2)),
+        dw_conv_block(n_filter=256,in_channels=256,data_format=self.data_format),
+        dw_conv_block(n_filter=512,in_channels=256,data_format=self.data_format),
+        dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format,dilation_rate=(2,2), strides=strides),
+        dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format),
+        dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format, strides=strides),
+        dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format),
+        dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format)
+        ])
+
+    def forward(self,x):
+        return self.main_block.forward(x)
+
+initial_w=tl.initializers.random_normal(stddev=0.01)
+initial_b=tl.initializers.constant(value=0.0)
+
+def conv_block(n_filter=32,in_channels=3,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,padding="SAME",data_format="channels_first"):
+    layer_list=[]
+    layer_list.append(Conv2d(n_filter=n_filter,in_channels=in_channels,filter_size=filter_size,strides=strides,act=act,\
+        W_init=initial_w,b_init=initial_b,data_format=data_format,padding=padding))
+    layer_list.append(BatchNorm2d(num_features=n_filter,decay=0.999,is_train=True,act=act,data_format=data_format))
+    return LayerList(layer_list)
+
+def separable_block(n_filter=32,in_channels=3,filter_size=(3,3),strides=(1,1),dilation_rate=(1,1),act=tf.nn.relu,data_format="channels_first"):
+    layer_list=[]
+    layer_list.append(DepthwiseConv2d(filter_size=filter_size,strides=strides,in_channels=in_channels,
+        dilation_rate=dilation_rate,W_init=initial_w,b_init=None,data_format=data_format))
+    layer_list.append(BatchNorm2d(decay=0.99,act=act,num_features=in_channels,data_format=data_format,is_train=True))
+    layer_list.append(Conv2d(n_filter=n_filter,filter_size=(1,1),strides=(1,1),in_channels=in_channels,W_init=initial_w,b_init=None,data_format=data_format))
+    layer_list.append(BatchNorm2d(decay=0.99,act=act,num_features=n_filter,data_format=data_format,is_train=True))
+    return layers.LayerList(layer_list)
+
+class MobilenetThin_backbone(Model):
+    def __init__(self,scale_size=8,data_format="channels_first", pretraining=False):
+        super().__init__()
+        self.scale_size = scale_size
+        self.data_format = data_format
+        self.pretraining = pretraining
+        self.out_channels=1152
+        if(self.data_format=="channels_first"):
+            self.concat_dim=1
+        else:
+            self.concat_dim=-1
+        if(self.scale_size==8):
+            strides=(1,1)
+        elif(self.scale_size==32 or self.pretraining):
+            strides=(2,2)
+        self.convblock_0=conv_block(n_filter=32,in_channels=3,filter_size=(3,3),strides=(2,2),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_1=separable_block(n_filter=64,in_channels=32,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_2=separable_block(n_filter=128,in_channels=64,filter_size=(3,3),strides=(2,2),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_3=separable_block(n_filter=128,in_channels=128,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_4=separable_block(n_filter=256,in_channels=128,filter_size=(3,3),strides=(2,2),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_5=separable_block(n_filter=256,in_channels=256,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_6=separable_block(n_filter=512,in_channels=256,filter_size=(3,3),strides=strides,act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_7=separable_block(n_filter=512,in_channels=512,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_8=separable_block(n_filter=512,in_channels=512,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_9=separable_block(n_filter=512,in_channels=512,filter_size=(3,3),strides=strides,act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_10=separable_block(n_filter=512,in_channels=512,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_11=separable_block(n_filter=512,in_channels=512,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
+        self.maxpool=MaxPool2d(filter_size=(2,2),strides=(2,2),padding="SAME",data_format=self.data_format)
+    
+    def forward(self,x):
+        concat_list=[]
+        x=self.convblock_0.forward(x)
+        x=self.convblock_1.forward(x)
+        x=self.convblock_2.forward(x)
+        x=self.convblock_3.forward(x)
+        concat_list.append(self.maxpool.forward(x))
+        x=self.convblock_4.forward(x)
+        x=self.convblock_5.forward(x)
+        x=self.convblock_6.forward(x)
+        x=self.convblock_7.forward(x)
+        concat_list.append(x)
+        x=self.convblock_8.forward(x)
+        x=self.convblock_9.forward(x)
+        x=self.convblock_10.forward(x)
+        x=self.convblock_11.forward(x)
+        concat_list.append(x)
+        x=tf.concat(concat_list,self.concat_dim)
+        return x
+
 class vggtiny_backbone(Model):
     def __init__(self,in_channels=3,scale_size=8,data_format="channels_first",pretraining=False):
         super().__init__()
@@ -285,11 +408,11 @@ class vgg19_backbone(Model):
         self.data_format=data_format
         self.scale_size=scale_size
         self.pretraining=pretraining
-        self.vgg_mean=np.array([103.939, 116.779, 123.68])/255
+        self.vgg_mean=tf.constant([103.939, 116.779, 123.68])/255
         if(self.data_format=="channels_first"):
-            self.vgg_mean=self.vgg_mean.reshape([1,3,1,1])
+            self.vgg_mean=tf.reshape(self.vgg_mean,[1,3,1,1])
         elif(self.data_format=="channels_last"):
-            self.vgg_mean=self.vgg_mean.reshape([1,1,1,3])
+            self.vgg_mean=tf.reshape(self.vgg_mean,[1,1,1,3])
         self.initializer=tl.initializers.truncated_normal(stddev=0.005)
         self.main_layer_list=[]
         if(self.scale_size==8 or self.scale_size==32 or self.pretraining):
