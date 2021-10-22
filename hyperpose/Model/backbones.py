@@ -4,7 +4,7 @@ import tensorlayer as tl
 from tensorlayer import layers
 from tensorlayer.models import Model
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d, SeparableConv2d,\
-        MeanPool2d, Dense, Flatten
+        MeanPool2d, Dense, Flatten, UpSampling2d
 
 class MobilenetV1_backbone(Model):
     def __init__(self,scale_size=8,data_format="channels_last",pretraining=False):
@@ -293,6 +293,50 @@ class MobilenetThin_backbone(Model):
         x=self.convblock_10.forward(x)
         x=self.convblock_11.forward(x)
         concat_list.append(x)
+        x=tf.concat(concat_list,self.concat_dim)
+        return x
+
+class MobilenetSmall_backbone:
+    def __init__(self,scale_size=8,data_format="channels_first", pretraining=False):
+        super().__init__()
+        self.scale_size = scale_size
+        self.data_format = data_format
+        self.pretraining = pretraining
+        if(self.data_format=="channels_first"):
+            self.concat_dim=1
+        else:
+            self.concat_dim=-1
+        self.out_channels=704
+        
+        if(self.scale_size == 8):
+            strides=(1,1)
+        elif(self.scale_size == 32 or self.pretraining):
+            strides=(2,2)
+
+        self.convblock_0=conv_block(n_filter=32,in_channels=3,filter_size=(3,3),strides=(2,2),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_1=separable_block(n_filter=64,in_channels=32,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_2=separable_block(n_filter=128,in_channels=64,filter_size=(3,3),strides=(2,2),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_3=separable_block(n_filter=128,in_channels=128,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_4=separable_block(n_filter=256,in_channels=128,filter_size=(3,3),strides=(2,2),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_5=separable_block(n_filter=256,in_channels=256,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_6=separable_block(n_filter=512,in_channels=256,filter_size=(3,3),strides=strides,act=tf.nn.relu,data_format=self.data_format)
+        self.convblock_7=separable_block(n_filter=512,in_channels=512,filter_size=(3,3),strides=strides,act=tf.nn.relu,data_format=self.data_format)
+        self.maxpool=MaxPool2d(filter_size=(2,2),strides=(2,2),padding="SAME",data_format=self.data_format)
+        self.upsample=UpSampling2d(scale=2,data_format=self.data_format)
+
+    def forward(self,x):
+        concat_list=[]
+        x=self.convblock_0.forward(x)
+        x=self.convblock_1.forward(x)
+        concat_list.append(self.maxpool.forward(x))
+        x=self.convblock_2.forward(x)
+        x=self.convblock_3.forward(x)
+        concat_list.append(x)
+        x=self.convblock_4.forward(x)
+        x=self.convblock_5.forward(x)
+        x=self.convblock_6.forward(x)
+        x=self.convblock_7.forward(x)
+        concat_list.append(self.upsample.forward(x))
         x=tf.concat(concat_list,self.concat_dim)
         return x
 

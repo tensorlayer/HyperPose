@@ -274,6 +274,11 @@ def NCHW_to_NHWC(x):
 def NHWC_to_NCHW(x):
     return tf.transpose(x,[0,3,1,2])
 
+def to_tensor_dict(dict_x):
+    for key in dict_x.keys():
+        dict_x[key]=tf.convert_to_tensor(dict_x[key])
+    return dict_x
+
 def get_num_parallel_calls():
     return max(multiprocessing.cpu_count()//2,1)
 

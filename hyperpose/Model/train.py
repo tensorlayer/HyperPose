@@ -17,6 +17,7 @@ from .augmentor import BasicAugmentor
 from .processor import BasicPreProcessor
 from .processor import BasicPostProcessor
 from .processor import BasicVisualizer
+from .common import to_tensor_dict
 
 
 def _data_aug_fn(image, ground_truth, augmentor:BasicAugmentor, preprocessor:BasicPreProcessor, data_format="channels_first"):
@@ -277,6 +278,7 @@ def single_train(train_model, dataset, config, augmentor:BasicAugmentor, \
             target_x = {key:[] for key,value in target_list[0].items()}
             target_x = reduce(lambda x, y: {key:x[key]+[y[key]] for key,value in x.items()},[target_x]+target_list)
             target_x = {key:np.stack(value) for key,value in target_x.items()}
+            target_x = to_tensor_dict(target_x)
 
             # learning rate decay
             if (step in lr_decay_steps):
@@ -533,7 +535,9 @@ def parallel_train(train_model, dataset, config, augmentor:BasicAugmentor, \
             target_list = [cPickle.loads(target) for target in target_list.numpy()]
             target_x = {key:[] for key,value in target_list[0].items()}
             target_x = reduce(lambda x, y: {key:x[key]+[y[key]] for key,value in x.items()},[target_x]+target_list)
-            target_x = {key:np.stack(value) for key,value in target_x.items()}
+            target_x = {key:np.stack(value) for key,value in target_x.items()}            
+            target_x = to_tensor_dict(target_x)
+
 
             # learning rate decay
             if (step in lr_decay_steps):

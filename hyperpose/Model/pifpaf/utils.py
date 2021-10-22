@@ -88,6 +88,7 @@ def get_pifmap(annos, mask, height, width, hout, wout, parts, limbs,bmin=0.1,dis
     pif_bmin=np.full(shape=(n_pos,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     pif_scale=np.full(shape=(n_pos,padded_h,padded_w),fill_value=np.nan,dtype=np.float32)
     pif_vec_norm=np.full(shape=(n_pos,padded_h,padded_w),fill_value=np.inf,dtype=np.float32)
+    #print(f"pif_vec_norm:{pif_vec_norm.shape} pif_conf:{pif_conf.shape} mask:{mask.shape}")
     pif_vec_norm[:,padding:-padding,padding:-padding][:,mask==0]=dist_thresh
     pif_conf[:,padding:-padding,padding:-padding][:,mask==0]=np.nan
     #generate fields

@@ -23,10 +23,8 @@ class PreProcessor(BasicPreProcessor):
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
 
     def process(self,annos, mask, bbxs):
-        print(f"test process init mask.shape:{mask.shape}")
         mask_out=cv2.resize(mask[0],(self.wout,self.hout))
-        print(f"test process mask_out.shape:{mask_out.shape}")
-        pif_conf,pif_vec,pif_bmin,pif_scale = get_pifmap(annos, mask_out[0], self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
+        pif_conf,pif_vec,pif_bmin,pif_scale = get_pifmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
         paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale = get_pafmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
         target_x = {
             "pif_conf": pif_conf,

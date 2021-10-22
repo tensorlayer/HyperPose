@@ -6,11 +6,12 @@ class BACKBONE(Enum):
     Mobilenetv2=2
     MobilenetDilated=3
     MobilenetThin=4
-    Vggtiny=5
-    Vgg19=6
-    Vgg16=7
-    Resnet18=8
-    Resnet50=9
+    MobilenetSmall=5
+    Vggtiny=6
+    Vgg19=7
+    Vgg16=8
+    Resnet18=9
+    Resnet50=10
 
 class MODEL(Enum):
     Openpose=0

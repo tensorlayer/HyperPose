@@ -5,6 +5,7 @@ from .backbones import MobilenetV1_backbone
 from .backbones import MobilenetV2_backbone
 from .backbones import MobilenetDilated_backbone
 from .backbones import MobilenetThin_backbone
+from .backbones import MobilenetSmall_backbone
 from .backbones import vggtiny_backbone
 from .backbones import vgg16_backbone
 from .backbones import vgg19_backbone
@@ -60,6 +61,9 @@ def get_model(config):
             elif(model_backbone==BACKBONE.MobilenetThin):
                 backbone=MobilenetThin_backbone
                 log(f"Setting MobilenetThin_backbone!")
+            elif(model_backbone==BACKBONE.MobilenetSmall):
+                backbone=MobilenetSmall_backbone
+                log("Setting MobilenetSmall_backbone!")
             elif(model_backbone==BACKBONE.Vggtiny):
                 backbone=vggtiny_backbone
                 log(f"Setting Vggtiny_backbone!")
