@@ -55,9 +55,11 @@ class Pifpaf(Model):
         # pif maps
         pif_maps=self.pif_head.forward(backbone_x,is_train=is_train)
         pif_conf, pif_vec, pif_bmin, pif_scale = pif_maps
+        print(f"test forwarding pif_vec:{pif_vec.shape}")
         # paf maps
         paf_maps=self.paf_head.forward(backbone_x,is_train=is_train)
         paf_conf, paf_src_vec, paf_dst_vec, paf_src_bmin, paf_dst_bmin, paf_src_scale, paf_dst_scale = paf_maps
+        print(f"test forwarding paf_src_vec:{paf_src_vec.shape} paf_dst_vec:{paf_dst_vec.shape}")
 
         # construct predict_x
         predict_x = {

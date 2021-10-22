@@ -17,6 +17,7 @@ def nan2zero(x):
 def nan2zero_dict(dict_x):
     for key in dict_x.keys():
         dict_x[key]=nan2zero(dict_x[key])
+    return dict_x
 
 def maps_to_numpy(maps):
     ret_maps=[]
@@ -304,8 +305,8 @@ def get_arrow_map(array_map,conf_map,src_vec_map,dst_vec_map,thresh=0.1,src_colo
     dst_center_color=(30,144,255)
     image_h,image_w,_=array_map.shape
     stride=image_h/conf_map.shape[1]
-    radius=np.round(min(image_h,image_w)/300).astype(np.int)
-    thickness=np.round(min(image_h,image_w)/240).astype(np.int)
+    radius=max(np.round(min(image_h,image_w)/300).astype(np.int),1)
+    thickness=max(np.round(min(image_h,image_w)/240).astype(np.int),1)
     mask=conf_map>thresh
     fields,grid_ys,grid_xs=np.where(mask)
     for field,grid_y,grid_x in zip(fields,grid_ys,grid_xs):

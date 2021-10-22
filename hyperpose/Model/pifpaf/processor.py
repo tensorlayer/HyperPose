@@ -467,7 +467,7 @@ class Visualizer(BasicVisualizer):
             # gt map
             gt_pif_conf, gt_pif_vec, gt_pif_scale = gt_pif_conf_batch[b_idx], gt_pif_vec_batch[b_idx], gt_pif_scale_batch[b_idx]
             gt_paf_conf, gt_paf_src_vec, gt_paf_dst_vec = gt_paf_conf_batch[b_idx], gt_paf_src_vec_batch[b_idx], gt_paf_dst_vec_batch[b_idx]
-
+            print(f"test pd_pif_vec.shape:{pd_pif_vec.shape} gt_pif_vec.shape:{gt_pif_vec.shape}")
             # draw pif maps
             # begin draw
             pif_pltdrawer = PltDrawer(draw_row=2, draw_col=3, dpi=400)
@@ -513,7 +513,9 @@ class Visualizer(BasicVisualizer):
             # draw gt paf_vec_map
             hout, wout = gt_paf_src_vec.shape[1], gt_paf_src_vec.shape[2]
             gt_paf_vec_map_show = np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
+            print(f"test before gt_paf_vec_map_show.shape:{gt_paf_vec_map_show.shape}")
             gt_paf_vec_map_show = get_arrow_map(gt_paf_vec_map_show, gt_paf_conf, gt_paf_src_vec, gt_paf_dst_vec)
+            print(f"test after gt_paf_vec_map_show.shape:{gt_paf_vec_map_show.shape}")
             paf_pltdrawer.add_subplot(gt_paf_vec_map_show, "gt paf_vec")
 
             # draw mask
