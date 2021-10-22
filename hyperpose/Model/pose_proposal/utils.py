@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 from distutils.dir_util import mkpath
 from scipy.spatial.distance import cdist
 from pycocotools.coco import COCO, maskUtils
+from ..common import regulize_loss
+
 
 def get_pose_proposals(kpts_list,bbxs,hin,win,hout,wout,hnei,wnei,parts,limbs,img_mask=None,data_format="channels_first"):
     K,L=len(parts),len(limbs)

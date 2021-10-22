@@ -8,7 +8,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from .define import area_ref,area_ref_45
 from .define import COCO_SIGMA,COCO_UPRIGHT_POSE,COCO_UPRIGHT_POSE_45
-from ..common import
+from ..common import regulize_loss
 
 def nan2zero(x):
     x=np.where(x!=x,0,x)

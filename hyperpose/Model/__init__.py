@@ -1,5 +1,7 @@
 import tensorflow as tf
 from functools import partial
+
+from hyperpose.Model.openpose.processor import PostProcessor, Visualizer
 from .human import Human
 from .common import rename_tensor
 from .common import TRAIN,MODEL,DATA,KUNGFU,BACKBONE
@@ -9,6 +11,7 @@ from .backbones import MobilenetV1_backbone,MobilenetV2_backbone,vgg16_backbone,
 from .backbones import Resnet18_backbone,Resnet50_backbone
 from .pretrain import single_pretrain
 from .common import log_model as log
+from .augmentor import BasicAugmentor
 
 #claim:
 #all the model preprocessor,postprocessor,and visualizer processing logic are written in 'channels_first' data_format
@@ -88,14 +91,14 @@ def get_model(config):
             model.parts=get_parts(dataset_type)
             model.limbs=get_limbs(dataset_type)
 
-        userdef_parts=config.model.userdef_parts
-        userdef_limbs=config.model.userdef_limbs
-        if(userdef_parts!=None):
+        custom_parts=config.model.custom_parts
+        custom_limbs=config.model.custom_limbs
+        if(custom_parts!=None):
             log("Using user-defined model parts")
-            model.parts=userdef_parts
-        if(userdef_limbs!=None):
+            model.parts=custom_parts
+        if(custom_limbs!=None):
             log("Using user-defined model limbs")
-            model.limbs=userdef_limbs
+            model.limbs=custom_limbs
         
         #set model
         if model_type == MODEL.Openpose:
@@ -155,27 +158,41 @@ def get_train(config):
     
     '''
     # determine train process
-    model_type=config.model.model_type
-    if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
-        from .openpose import single_train,parallel_train
-    elif model_type == MODEL.PoseProposal:
-        from .pose_proposal import single_train,parallel_train
-    elif model_type == MODEL.Pifpaf:
-        from .pifpaf import single_train,parallel_train
-    else:
-        raise RuntimeError(f'Unknown model type {model_type}')
-    log(f"Training {model_type.name} model!")
-
-    #determine train type
-    train_type=config.train.train_type
-    if(train_type==TRAIN.Single_train):
-        train=partial(single_train,config=config)
-    elif(train_type==TRAIN.Parallel_train):
-        #set defualt kungfu opt type
-        if("kungfu_option" not in config.train):
-            config.train.kungfu_option=KUNGFU.Sma
-        train=partial(parallel_train,config=config)
-    log(f"Using {train_type.name}")
+    model_config = config.model
+    model_type = config.model.model_type
+    train_type = config.train.train_type
+    # determine train type
+    if(train_type == TRAIN.Single_train):
+        from .train import single_train as train_pipeline
+        log("Single train procedure initialized!")
+    elif(train_type == TRAIN.Parallel_train):
+        from .train import parallel_train as train_pipeline
+        log("Parallel train procedure initialized!")
+    # get augmentor
+    Augmentor = get_augmentor(config)
+    augmentor = Augmentor(**model_config)
+    log("Augmentor initialized!")
+    # get preprocessor
+    PreProcessor = get_preprocessor(config)
+    preprocessor = PreProcessor(**model_config)
+    log("Preprocessor initialized!")
+    # get postprocessor
+    PostProcessor = get_postprocessor(config)
+    postprocessor = PostProcessor(**model_config)
+    log("Postprocessor initialized!")
+    # get visualizer
+    Visualizer = get_visualizer(config)
+    visualizer = Visualizer(save_dir=config.train.vis_dir)
+    log("Visualizer initialized!")
+    
+    # assemble training pipeline
+    train = partial(
+        train_pipeline,
+        augmentor = augmentor,
+        preprocessor = preprocessor,
+        postprocessor = postprocessor,
+        visualizer = visualizer
+    )
     return train
 
 def get_evaluate(config):
@@ -257,7 +274,13 @@ def get_test(config):
     log(f"testing {model_type.name} model...")
     return test
 
-def get_preprocessor(model_type):
+def get_augmentor(config):
+    if(config.model.custom_augmentor is not None):
+        return config.model.custom_augmentor
+    else:
+        return BasicAugmentor
+
+def get_preprocessor(config):
     '''get a preprocessor class based on the specified model_type
 
     get the preprocessor class of the specified kind of model to help user directly construct their own 
@@ -268,24 +291,27 @@ def get_preprocessor(model_type):
 
     Parameters
     ----------
-    arg1 : Config.MODEL
-        a enum value of enum class Config.MODEL
+    arg1 : config
+        config object return by Config.get_config function
     
     Returns
     -------
     class
         a preprocessor class of the specified kind of model
     '''
+    model_type = config.model.model_type
+    if(config.model.custom_preprocessor is not None):
+        return config.model.custom_preprocessor
+    else:
+        if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
+            from .openpose import PreProcessor
+        elif model_type == MODEL.PoseProposal:
+            from .pose_proposal import PreProcessor
+        elif model_type == MODEL.Pifpaf:
+            from .pifpaf import PreProcessor
+        return PreProcessor
 
-    if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
-        from .openpose import PreProcessor
-    elif model_type == MODEL.PoseProposal:
-        from .pose_proposal import PreProcessor
-    elif model_type == MODEL.Pifpaf:
-        from .pifpaf import PreProcessor
-    return PreProcessor
-
-def get_postprocessor(model_type):
+def get_postprocessor(config):
     '''get a postprocessor class based on the specified model_type
 
     get the postprocessor class of the specified kind of model to help user directly construct their own 
@@ -297,23 +323,27 @@ def get_postprocessor(model_type):
 
     Parameters
     ----------
-    arg1 : Config.MODEL
-        a enum value of enum class Config.MODEL
+    arg1 : config
+        config object return by Config.get_config function
     
     Returns
     -------
     function
         a postprocessor class of the specified kind of model
     '''
-    if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
-        from .openpose import PostProcessor
-    elif model_type == MODEL.PoseProposal:
-        from .pose_proposal import PostProcessor
-    elif model_type == MODEL.Pifpaf:
-        from .pifpaf import PostProcessor
-    return PostProcessor
+    model_type = config.model.model_type
+    if(config.model.custom_postprocessor is not None):
+        return config.model.custom_postprocessor
+    else:
+        if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
+            from .openpose import PostProcessor
+        elif model_type == MODEL.PoseProposal:
+            from .pose_proposal import PostProcessor
+        elif model_type == MODEL.Pifpaf:
+            from .pifpaf import PostProcessor
+        return PostProcessor
 
-def get_visualize(model_type):
+def get_visualizer(config):
     '''get visualize function based model_type
 
     get the visualize function of the specified kind of model to help user construct thier own 
@@ -324,18 +354,22 @@ def get_visualize(model_type):
 
     Parameters
     ----------
-    arg1 : Config.MODEL
-        a enum value of enum class Config.MODEL
+    arg1 : config
+        config object return by Config.get_config function
     
     Returns
     -------
     function
         a visualize function of the specified kind of model
     '''
-    if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
-        from .openpose import Visualizer
-    elif model_type == MODEL.PoseProposal:
-        from .pose_proposal import Visualizer
-    elif model_type == MODEL.Pifpaf
-        from .pifpaf import Visualizer
-    return Visualizer
+    model_type = config.model.model_type
+    if(config.model.custom_visualizer is not None):
+        return config.model.custom_visualizer
+    else:
+        if model_type == MODEL.Openpose or model_type == MODEL.LightweightOpenpose or model_type==MODEL.MobilenetThinOpenpose:
+            from .openpose import Visualizer
+        elif model_type == MODEL.PoseProposal:
+            from .pose_proposal import Visualizer
+        elif model_type == MODEL.Pifpaf:
+            from .pifpaf import Visualizer
+        return Visualizer

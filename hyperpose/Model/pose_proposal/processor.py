@@ -1,16 +1,17 @@
+import imp
 import os
 import numpy as np
 from ..human import Human,BodyPart
 from .utils import non_maximium_supress
 from .utils import get_pose_proposals
 from .utils import draw_bbx, draw_edge
-import matplotlib.pyplot as plt
-from ..processor import BasicPreProcessor, PltDrawer
+from ..processor import BasicPreProcessor
 from ..processor import BasicPostProcessor
 from ..processor import BasicVisualizer
+from ..processor import PltDrawer
 
 class PreProcessor(BasicPreProcessor):
-    def __init__(self,parts,limbs,hin,win,hout,wout,hnei,wnei,colors=None,data_format="channels_first"):
+    def __init__(self,parts,limbs,hin,win,hout,wout,hnei,wnei,colors=None,data_format="channels_first",*args,**kargs):
         self.hin=hin
         self.win=win
         self.hout=hout
@@ -29,7 +30,7 @@ class PreProcessor(BasicPreProcessor):
         return target_x
 
 class PostProcessor(BasicPostProcessor):
-    def __init__(self,parts,limbs,thresh_hold=0.3,eps=1e-8,colors=None,debug=False):
+    def __init__(self,parts,limbs,thresh_hold=0.3,eps=1e-8,colors=None,debug=False,*args,**kargs):
         self.parts=parts
         self.limbs=limbs
         self.colors=colors
@@ -195,7 +196,7 @@ class PostProcessor(BasicPostProcessor):
         return filter_humans
 
 class Visualizer(BasicVisualizer):
-    def __init__(self, parts, limbs, save_dir="./save_dir"):
+    def __init__(self, parts, limbs, save_dir="./save_dir", *args, **kargs):
         self.parts = parts
         self.limbs = limbs
         self.save_dir = save_dir

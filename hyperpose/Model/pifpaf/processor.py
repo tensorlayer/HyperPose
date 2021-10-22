@@ -12,7 +12,7 @@ from ..processor import BasicPostProcessor
 from ..processor import PltDrawer
 
 class PreProcessor(BasicPreProcessor):
-    def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,data_format="channels_first"):
+    def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,data_format="channels_first", *args, **kargs):
         self.hin=hin
         self.win=win
         self.hout=hout
@@ -21,29 +21,30 @@ class PreProcessor(BasicPreProcessor):
         self.limbs=limbs
         self.data_format=data_format
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
-    
+
     def process(self,annos, mask, bbxs):
         mask_out=cv2.resize(mask,(self.wout,self.hout))
         pif_conf,pif_vec,pif_bmin,pif_scale = get_pifmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
         paf_conf,paf_src_vec,paf_dst_vec,paf_src_bmin,paf_dst_bmin,paf_src_scale,paf_dst_scale = get_pafmap(annos, mask_out, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
         target_x = {
-            "pif_conf":pif_conf,
-            "pif_vec":pif_vec,
-            "pif_bmin":pif_bmin,
-            "pif_scale":pif_scale,
-            "paf_conf":paf_conf,
-            "paf_src_vec":paf_src_vec,
-            "paf_dst_vec":paf_dst_vec,
-            "paf_src_bmin":paf_src_bmin,
-            "paf_dst_bmin":paf_dst_bmin,
-            "paf_src_scale":paf_src_scale,
-            "paf_dst_scale":paf_dst_scale
+            "pif_conf": pif_conf,
+            "pif_vec": pif_vec,
+            "pif_bmin": pif_bmin,
+            "pif_scale": pif_scale,
+            "paf_conf": paf_conf,
+            "paf_src_vec": paf_src_vec,
+            "paf_dst_vec": paf_dst_vec,
+            "paf_src_bmin": paf_src_bmin,
+            "paf_dst_bmin": paf_dst_bmin,
+            "paf_src_scale": paf_src_scale,
+            "paf_dst_scale": paf_dst_scale
         }
         return target_x
 
 class PostProcessor(BasicPostProcessor):
     def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,thresh_pif=0.3,thresh_paf=0.1,thresh_ref_pif=0.3,thresh_ref_paf=0.1,\
-        thresh_gen_ref_pif=0.1,part_num_thresh=4,score_thresh=0.1,reduction=2,min_scale=4,greedy_match=True,reverse_match=True,data_format="channels_first",debug=False):
+        thresh_gen_ref_pif=0.1,part_num_thresh=4,score_thresh=0.1,reduction=2,min_scale=4,greedy_match=True,reverse_match=True,\
+            data_format="channels_first",debug=False, *args, **kargs):
         self.parts=parts
         self.limbs=limbs
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
@@ -73,7 +74,7 @@ class PostProcessor(BasicPostProcessor):
             self.by_source[src_idx][dst_idx]=(limb_idx,True)
             self.by_source[dst_idx][src_idx]=(limb_idx,False)
         #TODO:whether add score weight for each parts
-    
+
     def process(self,predict_x):
         # shape:
         # conf_map:[field_num,hout,wout]
@@ -180,11 +181,11 @@ class PostProcessor(BasicPostProcessor):
             self.debug_print("")
         self.debug_print(f"total {len(ret_humans)} human detected!")
         return ret_humans
-    
+
     def debug_print(self,msg):
         if(self.debug):
             print(msg)
-    
+
     #convert vector field to scalar
     def field_to_scalar(self,vec_x,vec_y,scalar_map,debug=False):
         #scalar_map shape:[height,width]
@@ -197,7 +198,7 @@ class PostProcessor(BasicPostProcessor):
             if(x>=0 and x<w and y>=0 and y<h):
                 ret_scalar[vec_idx]=scalar_map[y,x]
         return ret_scalar
-    
+
     #check whether the position is occupied
     def check_occupy(self,occupied,pos_idx,x,y,reduction=2):
         _,field_h,field_w=occupied.shape
@@ -208,7 +209,7 @@ class PostProcessor(BasicPostProcessor):
             return True
         else:
             return False
-    
+
     #mark the postion as occupied
     def put_occupy(self,occupied,pos_idx,x,y,scale,reduction=2,min_scale=4,value=1):
         _,field_h,field_w=occupied.shape
@@ -220,7 +221,7 @@ class PostProcessor(BasicPostProcessor):
         max_y=max(min_y+1,min(field_h,int(y+size)+1))
         occupied[pos_idx,min_y:max_y,min_x:max_x]+=value
         return occupied
-    
+
     #keypoint-wise nms
     def kpt_nms(self,annotations):
         max_x=int(max([np.max(ann[:,1]) for ann in annotations])+1)
@@ -236,7 +237,7 @@ class PostProcessor(BasicPostProcessor):
                     self.put_occupy(occupied,pos_idx,x,y,scale,reduction=2,min_scale=4)
         annotations=sorted(annotations,key=lambda ann: -np.sum(ann[:,0]))
         return annotations
-    
+
     #get closest matching connection and blend them
     def find_connection(self,connections,x,y,scale,connection_method="blend",thresh_second=0.01):
         sigma_filter=2.0*scale
@@ -249,7 +250,7 @@ class PostProcessor(BasicPostProcessor):
         for con_idx in range(0,con_num):
             con_score=score_f[con_idx]
             con_src_x,con_src_y,_=src_x[con_idx],src_y[con_idx],src_scale[con_idx]
-            #ignore connections with src_kpts too distant 
+            #ignore connections with src_kpts too distant
             if(x<con_src_x-sigma_filter or x>con_src_x+sigma_filter):
                 continue
             if(y<con_src_y-sigma_filter or y>con_src_y+sigma_filter):
@@ -286,8 +287,8 @@ class PostProcessor(BasicPostProcessor):
             blend_y=(dst_y[first_idx]*first_score+dst_y[second_idx]*second_score)/(first_score+second_score)
             blend_scale=(dst_scale[first_idx]*first_score+dst_scale[second_idx]*second_score)/(first_score+second_score)
             return blend_score,blend_x,blend_y,blend_scale
-    
-    #get connection given a part, forwad_list and backward_list generated from paf maps 
+
+    #get connection given a part, forwad_list and backward_list generated from paf maps
     def get_connection(self,ann,src_idx,dst_idx,forward_list,backward_list,connection_method="blend",reverse_match=True):
         limb_idx,forward_flag=self.by_source[src_idx][dst_idx]
         if(forward_flag):
@@ -312,7 +313,7 @@ class PostProcessor(BasicPostProcessor):
                 return 0.0,0.0,0.0,0.0
         #successfully found connection
         return merge_score,fx,fy,fscale
-    
+
     #greedy matching pif seeds with forward and backward connections generated from paf maps
     def grow(self,ann,forward_list,backward_list,reverse_match=True):
         frontier = []
@@ -332,7 +333,7 @@ class PostProcessor(BasicPostProcessor):
                 max_possible_score=np.sqrt(ann[src_idx,0])
                 heapq.heappush(frontier,(-max_possible_score,src_idx,dst_idx))
                 in_frontier.add((src_idx,dst_idx))
-        
+
         #find matching connections from frontier
         def get_frontier(ann):
             while frontier:
@@ -372,9 +373,9 @@ class PostProcessor(BasicPostProcessor):
         return ann
 
 class Visualizer(BasicVisualizer):
-    def __init__(self, save_dir="./save_dir"):
+    def __init__(self, save_dir="./save_dir", *args, **kargs):
         self.save_dir = save_dir
-    
+
     def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):
         # defualt values
         # TODO: pass config values
@@ -387,14 +388,14 @@ class Visualizer(BasicVisualizer):
         # mask
         if(mask_batch is None):
             mask_batch=np.ones_like(image_batch)
-        
+
         batch_size = image_batch.shape[0]
         for b_idx in range(0,batch_size):
             image, mask = image_batch[b_idx], mask_batch[b_idx]
             # pd map
             pd_pif_conf, pd_pif_vec, pd_pif_scale = pd_pif_conf_batch[b_idx], pd_pif_vec_batch[b_idx], pd_pif_scale_batch[b_idx]
             pd_paf_conf, pd_paf_src_vec, pd_paf_dst_vec = pd_paf_conf_batch[b_idx], pd_paf_src_vec_batch[b_idx], pd_paf_dst_vec_batch[b_idx]
-            
+
             # draw maps
             # begin draw
             pltdrawer = PltDrawer(draw_row=2, draw_col=3, dpi=400)
@@ -402,7 +403,7 @@ class Visualizer(BasicVisualizer):
             # draw origin image
             pltdrawer.add_subplot(image, "origin_image")
 
-            
+
             # draw pd_pif_conf
             pd_pif_conf_show = np.amax(pd_pif_conf, axis=0)
             pltdrawer.add_subplot(pd_pif_conf_show, "pd pif_conf", color_bar=True)
@@ -433,7 +434,7 @@ class Visualizer(BasicVisualizer):
                 humans = humans_list[b_idx]
                 self.visualize_result(image, humans, f"{self.save_dir}/{name}_{b_idx}_result.png")
 
-    
+
     def visualize_compare(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
         # defualt values
         # TODO: pass config values
@@ -450,7 +451,7 @@ class Visualizer(BasicVisualizer):
         # mask
         if(mask_batch is None):
             mask_batch=np.ones_like(image_batch)
-        
+
         batch_size = image_batch.shape[0]
         for b_idx in range(0,batch_size):
             image, mask = image_batch[b_idx], mask_batch[b_idx]
@@ -508,7 +509,7 @@ class Visualizer(BasicVisualizer):
             gt_paf_vec_map_show = np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
             gt_paf_vec_map_show = get_arrow_map(gt_paf_vec_map_show, gt_paf_conf, gt_paf_src_vec, gt_paf_dst_vec)
             paf_pltdrawer.add_subplot(gt_paf_vec_map_show, "gt paf_vec")
-            
+
             # draw mask
             paf_pltdrawer.add_subplot(mask, "mask")
 

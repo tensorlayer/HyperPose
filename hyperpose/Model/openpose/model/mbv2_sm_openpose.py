@@ -5,6 +5,7 @@ from tensorlayer.models import Model
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d ,SeparableConv2d, UpSampling2d
 from ..utils import tf_repeat
 from ..define import CocoPart,CocoLimb
+from ...common import regulize_loss
 
 class Mobilenetv2_small_Openpose(Model):
     def __init__(self,parts=CocoPart,limbs=CocoLimb,colors=None,n_pos=19,n_limbs=19,num_channels=128,\
@@ -68,21 +69,35 @@ class Mobilenetv2_small_Openpose(Model):
         conf_map, paf_map = predict_x["conf_map"],predict_x["paf_map"]
         return conf_map,paf_map
     
-    def cal_loss(self,gt_conf,gt_paf,mask,stage_confs,stage_pafs):
+    def cal_loss(self, predict_x, target_x, metric_manager):
+        # TODO: exclude the loss calculate from mask
+        # predict maps
+        stage_confs = predict_x["stage_confs"]
+        stage_pafs = predict_x["stage_pafs"]
+        # target maps
+        gt_conf = target_x["conf_map"]
+        gt_paf = target_x["paf_map"]
+
         stage_losses=[]
         batch_size=gt_conf.shape[0]
-        mask_conf=tf_repeat(mask, [1,self.n_confmaps ,1,1])
-        mask_paf=tf_repeat(mask,[1,self.n_pafmaps ,1,1])
         loss_confs,loss_pafs=[],[]
         for stage_conf,stage_paf in zip(stage_confs,stage_pafs):
-            loss_conf=tf.nn.l2_loss((gt_conf-stage_conf)*mask_conf)
-            loss_paf=tf.nn.l2_loss((gt_paf-stage_paf)*mask_paf)
+            loss_conf=tf.nn.l2_loss(gt_conf-stage_conf)
+            loss_paf=tf.nn.l2_loss(gt_paf-stage_paf)
             stage_losses.append(loss_conf)
             stage_losses.append(loss_paf)
             loss_confs.append(loss_conf)
             loss_pafs.append(loss_paf)
         pd_loss=tf.reduce_mean(stage_losses)/batch_size
-        return pd_loss,loss_confs,loss_pafs
+        total_loss = pd_loss
+        metric_manager.update("model/conf_loss",loss_confs[-1])
+        metric_manager.update("model/paf_loss",loss_pafs[-1])
+        # regularize loss
+        regularize_loss = regulize_loss(self, weight_decay_factor=2e-4)
+        total_loss += regularize_loss
+        metric_manager.update("model/loss_re",regularize_loss)
+
+        return total_loss
 
     class Mobilenetv2_variant(Model):
         def __init__(self,data_format="channels_first"):
@@ -104,7 +119,6 @@ class Mobilenetv2_small_Openpose(Model):
             self.convblock_7=separable_block(n_filter=512,in_channels=512,filter_size=(3,3),strides=(1,1),act=tf.nn.relu,data_format=self.data_format)
             self.maxpool=MaxPool2d(filter_size=(2,2),strides=(2,2),padding="SAME",data_format=self.data_format)
             self.upsample=UpSampling2d(scale=2,data_format=self.data_format)
-            
 
         def forward(self,x):
             concat_list=[]

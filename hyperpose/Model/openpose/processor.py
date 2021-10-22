@@ -10,7 +10,7 @@ from ..processor import BasicVisualizer
 from ..processor import PltDrawer
 
 class PreProcessor(BasicPreProcessor):
-    def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,data_format="channels_first"):
+    def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,data_format="channels_first", *args, **kargs):
         self.hin=hin
         self.win=win
         self.hout=hout
@@ -29,7 +29,8 @@ class PreProcessor(BasicPreProcessor):
 
 class PostProcessor(BasicPostProcessor):
     def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,thresh_conf=0.05,thresh_vec=0.05,thresh_vec_cnt=6,\
-                    step_paf=10,thresh_criterion2=0,thresh_part_cnt=4,thresh_human_score=0.3,data_format="channels_first",debug=False):
+                    step_paf=10,thresh_criterion2=0,thresh_part_cnt=4,thresh_human_score=0.3,data_format="channels_first",debug=False,\
+                        *args, **kargs):
         self.cur_id=0
         self.parts=parts
         self.limbs=limbs
@@ -235,7 +236,7 @@ class PostProcessor(BasicPostProcessor):
             print(msg)
 
 class Visualizer(BasicVisualizer):
-    def __init__(self, save_dir="./save_dir"):
+    def __init__(self, save_dir="./save_dir", *args, **kargs):
         self.save_dir = save_dir
 
     def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):

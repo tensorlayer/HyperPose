@@ -1,4 +1,5 @@
 from .model import *
-from .train import *
 from .eval import *
-from .processor import PreProcessor,PostProcessor,Visualizer
+from .processor import PreProcessor
+from .processor import PostProcessor
+from .processor import Visualizer

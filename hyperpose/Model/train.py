@@ -3,13 +3,15 @@ import os
 from tqdm import tqdm
 import numpy as np
 import matplotlib
+
+from hyperpose.Model.openpose.processor import PostProcessor
 matplotlib.use('Agg')
 import tensorflow as tf
 import tensorlayer as tl
 import _pickle as cPickle
 from functools import partial, reduce
 from .augmentor import Augmentor, BasicAugmentor
-from .processor import BasicPreProcessor, BasicVisualizer
+from .processor import BasicPostProcessor, BasicPreProcessor, BasicVisualizer
 from .common import KUNGFU
 from .common import log_train as log
 from .domainadapt import Discriminator
@@ -89,8 +91,8 @@ def get_paramed_dmadapt_map_fn(augmentor):
     return paramed_dmadpat_map_fn
 
 
-def single_train(train_model, dataset, config, \
-                    Augmentor=Augmentor, PreProcessor=BasicPreProcessor, Visualizer=BasicVisualizer):
+def single_train(train_model, dataset, config, augmentor:BasicAugmentor, \
+                    preprocessor:BasicPreProcessor,postprocessor:BasicPostProcessor,visualizer:BasicVisualizer):
     '''Single train pipeline of Openpose class models
 
     input model and dataset, the train pipeline will start automaticly
@@ -140,12 +142,6 @@ def single_train(train_model, dataset, config, \
     pretrain_model_dir = config.pretrain.pretrain_model_dir
     pretrain_model_path = f"{pretrain_model_dir}/newest_{train_model.backbone.name}.npz"
 
-    # processors
-    augmentor = Augmentor(hin=hin, win=win, angle_min=-30, angle_max=30, zoom_min=0.5, zoom_max=0.8, flip_list=None)
-    preprocessor = PreProcessor(parts=parts, limbs=limbs, hin=hin, win=win, hout=hout, wout=wout, colors=colors,\
-                                                                                    data_format=data_format)
-    visualizer = Visualizer(save_dir=vis_dir)
-    
     # metrics
     metric_manager = MetricManager()
 
@@ -332,7 +328,8 @@ def single_train(train_model, dataset, config, \
                     adapt_dis.save_weights(dis_save_path)
                     log(f"discriminator save_path:{dis_save_path} saved!\n")
 
-def parallel_train(train_model, dataset, config, augmentor:BasicAugmentor, preprocessor:BasicPreProcessor, visualizer=BasicVisualizer):
+def parallel_train(train_model, dataset, config, augmentor:BasicAugmentor, \
+                        preprocessor:BasicPreProcessor,postprocessor:BasicPostProcessor,visualizer=BasicVisualizer):
     '''Single train pipeline of Openpose class models
 
     input model and dataset, the train pipeline will start automaticly

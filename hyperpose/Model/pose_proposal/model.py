@@ -5,7 +5,9 @@ from tensorlayer import layers
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d
 from tensorlayer.models import Model
 from .define import CocoPart, CocoLimb
+from .utils import regulize_loss
 from ..backbones import Resnet18_backbone
+from ..metrics import MetricManager
 
 
 class PoseProposal(Model):
@@ -82,22 +84,13 @@ class PoseProposal(Model):
         x = self.add_layer_2.forward(x)
         x = self.add_layer_3.forward(x)
         x = tf.nn.sigmoid(x)
-        if (self.data_format == "channels_first"):
-            pc = x[:, 0:self.K, :, :]
-            pi = x[:, self.K:2 * self.K, :, :]
-            px = x[:, 2 * self.K:3 * self.K, :, :]
-            py = x[:, 3 * self.K:4 * self.K, :, :]
-            pw = x[:, 4 * self.K:5 * self.K, :, :]
-            ph = x[:, 5 * self.K:6 * self.K, :, :]
-            pe = tf.reshape(x[:, 6 * self.K:, :, :], [-1, self.L, self.wnei, self.hnei, self.wout, self.hout])
-        else:
-            pc = x[:, :, :, 0:self.K]
-            pi = x[:, :, :, self.K:2 * self.K]
-            px = x[:, :, :, 2 * self.K:3 * self.K]
-            py = x[:, :, :, 3 * self.K:4 * self.K]
-            pw = x[:, :, :, 4 * self.K:5 * self.K]
-            ph = x[:, :, :, 5 * self.K:6 * self.K]
-            pe = tf.reshape(x[:, :, :, 6 * self.K:], [-1, self.wnei, self.hnei, self.wout, self.hout, self.L])
+        pc = x[:, 0:self.K, :, :]
+        pi = x[:, self.K:2 * self.K, :, :]
+        px = x[:, 2 * self.K:3 * self.K, :, :]
+        py = x[:, 3 * self.K:4 * self.K, :, :]
+        pw = x[:, 4 * self.K:5 * self.K, :, :]
+        ph = x[:, 5 * self.K:6 * self.K, :, :]
+        pe = tf.reshape(x[:, 6 * self.K:, :, :], [-1, self.L, self.wnei, self.hnei, self.wout, self.hout])
         if (is_train == False):
             px, py, pw, ph = self.restore_coor(px, py, pw, ph)
 
@@ -119,9 +112,6 @@ class PoseProposal(Model):
         grid_size_x = self.win / self.wout
         grid_size_y = self.hin / self.hout
         grid_x, grid_y = tf.meshgrid(np.arange(self.wout).astype(np.float32), np.arange(self.hout).astype(np.float32))
-        if (self.data_format == "channels_last"):
-            grid_x = grid_x[:, :, np.newaxis]
-            grid_y = grid_y[:, :, np.newaxis]
         rx = (x + grid_x) * grid_size_x
         ry = (y + grid_y) * grid_size_y
         rw = w * self.win
@@ -140,7 +130,7 @@ class PoseProposal(Model):
         union_area = area1 + area2 - inter_area + 1e-6
         return inter_area / union_area
 
-    def cal_loss(self, predict_x, target_x, eps=1e-6):
+    def cal_loss(self, predict_x, target_x, metric_manager: MetricManager, eps=1e-6):
         # target_x
         pc, px, py, pw, ph, pi, pe  = predict_x["c"], predict_x["x"], predict_x["y"], predict_x["w"], predict_x["h"],\
                                             predict_x["i"], predict_x["e"]
@@ -165,4 +155,14 @@ class PoseProposal(Model):
                                         (tf.sqrt(gh + eps) - tf.sqrt(ph + eps))**2),
                           axis=[1, 2, 3]))
         loss_limb = self.lmd_limb * tf.reduce_mean(tf.reduce_sum(mask_edge * ((ge - pe)**2), axis=[1, 2, 3, 4, 5]))
-        return loss_rsp, loss_iou, loss_coor, loss_size, loss_limb
+        # regularize loss
+        regularize_loss = regulize_loss(self, weight_decay_factor=2e-4)
+        total_loss = loss_rsp + loss_iou + loss_coor + loss_size + loss_limb + regularize_loss
+        metric_manager.update("model/loss_rsp", loss_rsp)
+        metric_manager.update("model/loss_iou", loss_iou)
+        metric_manager.update("model/loss_coor", loss_coor)
+        metric_manager.update("model/loss_size", loss_size)
+        metric_manager.update("model/loss_limb", loss_limb)
+        metric_manager.update("model/loss_re", regularize_loss)
+        metric_manager.update("model/total_loss", total_loss)
+        return total_loss

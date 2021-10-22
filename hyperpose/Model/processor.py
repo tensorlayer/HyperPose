@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 # Basic class of processors to be inherit
 class BasicPreProcessor:
-    def __init__(self, parts, limbs, hin, win, hout, wout, colors=None, data_format="channels_first"):
+    def __init__(self, parts, limbs, hin, win, hout, wout, colors=None, data_format="channels_first", *args, **kargs):
         self.parts = parts
         self.limbs = limbs
         self.hin, self.win = hin, win
@@ -13,7 +13,7 @@ class BasicPreProcessor:
         raise NotImplementedError("abstract class BasicPreProcessor function: process not implemented!")
 
 class BasicPostProcessor:
-    def __init__(self, parts, limbs, colors=None, data_format="channels_first"):
+    def __init__(self, parts, limbs, colors=None, data_format="channels_first", *args, **kargs):
         self.parts = parts
         self.limbs = limbs
         self.colors = colors
@@ -23,7 +23,7 @@ class BasicPostProcessor:
         raise NotImplementedError("abstract class BasicPostProcessor function: process not implemented!")
 
 class BasicVisualizer:
-    def __init__(self, save_dir="./save_dir"):
+    def __init__(self, save_dir="./save_dir", *args, **kargs):
         self.save_dir = save_dir
     
     def set_save_dir(self, save_dir):

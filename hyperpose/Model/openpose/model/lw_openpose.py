@@ -73,23 +73,21 @@ class LightWeightOpenPose(Model):
         conf_map, paf_map = predict_x["conf_map"],predict_x["paf_map"]
         return conf_map,paf_map
     
-    def cal_loss(self,predict_x,target_x,mask,metric_manager):
+    def cal_loss(self, predict_x, target_x, metric_manager):
+        # TODO: exclude the loss calculate from mask
+        # predict maps
         stage_confs = predict_x["stage_confs"]
         stage_pafs = predict_x["stage_pafs"]
+        # target maps
         gt_conf = target_x["conf_map"]
         gt_paf = target_x["paf_map"]
+
         stage_losses=[]
         batch_size=gt_conf.shape[0]
-        if(self.concat_dim==1):
-            mask_conf=tf_repeat(mask, [1,self.n_confmaps ,1,1])
-            mask_paf=tf_repeat(mask,[1,self.n_pafmaps ,1,1])
-        elif(self.concat_dim==-1):
-            mask_conf=tf_repeat(mask, [1,1,1,self.n_confmaps])
-            mask_paf=tf_repeat(mask,[1,1,1,self.n_pafmaps])
         loss_confs,loss_pafs=[],[]
         for stage_conf,stage_paf in zip(stage_confs,stage_pafs):
-            loss_conf=tf.nn.l2_loss((gt_conf-stage_conf)*1)
-            loss_paf=tf.nn.l2_loss((gt_paf-stage_paf)*1)
+            loss_conf=tf.nn.l2_loss(gt_conf-stage_conf)
+            loss_paf=tf.nn.l2_loss(gt_paf-stage_paf)
             stage_losses.append(loss_conf)
             stage_losses.append(loss_paf)
             loss_confs.append(loss_conf)
@@ -98,10 +96,10 @@ class LightWeightOpenPose(Model):
         total_loss=pd_loss
         metric_manager.update("model/conf_loss",loss_confs[-1])
         metric_manager.update("model/paf_loss",loss_pafs[-1])
-        # TODO: add regularization loss here
+        # regularize loss
         regularize_loss = regulize_loss(self, weight_decay_factor=2e-4)
         total_loss += regularize_loss
-        metric_manager.update("model/regular_loss",regularize_loss)
+        metric_manager.update("model/loss_re",regularize_loss)
         return total_loss
 
     class Dilated_mobilenet(Model):
@@ -170,6 +168,7 @@ class LightWeightOpenPose(Model):
             conf_map=self.conf_block.forward(x)
             paf_map=self.paf_block.forward(x)
             return conf_map,paf_map
+
     class Refinement_stage(Model):
         def __init__(self,n_filter=128,in_channels=185,n_confmaps=19,n_pafmaps=38,data_format="channels_first"):
             super().__init__()

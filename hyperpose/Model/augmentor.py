@@ -4,7 +4,7 @@ import tensorflow as tf
 import tensorlayer as tl
 
 class BasicAugmentor:
-    def __init__(self,hin,win,angle_min=-30,angle_max=30,zoom_min=0.5,zoom_max=0.8,flip_list=None):
+    def __init__(self,hin,win,angle_min=-30,angle_max=30,zoom_min=0.5,zoom_max=0.8,flip_list=None, *args, **kargs):
         self.hin=hin
         self.win=win
         self.angle_min=angle_min

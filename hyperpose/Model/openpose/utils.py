@@ -3,12 +3,10 @@
 ## xxx
 
 import os
-import cv2
 import math
 import logging
 import numpy as np
 import tensorflow as tf
-from tensorlayer.files.utils import (del_file, folder_exists, maybe_download_and_extract)
 
 import matplotlib
 matplotlib.use('Agg')
@@ -17,163 +15,7 @@ from distutils.dir_util import mkpath
 from scipy.spatial.distance import cdist
 from ..human import Human
 from ..common import tf_repeat,TRAIN,MODEL,DATA
-
-
-def preprocess(annos,img_height,img_width,model_hout,model_wout,parts,limbs,data_format="channels_first"):
-    '''preprocess function of openpose class models
-    
-    take keypoints annotations, image height and width, model input height and width, and dataset type,
-    return the constructed conf_map and paf_map
-
-    Parameters
-    ----------
-    arg1 : list
-        a list of annotation, each annotation is a list of keypoints that belongs to a person, each keypoint follows the
-        format (x,y), and x<0 or y<0 if the keypoint is not visible or not annotated.
-        the annotations must from a known dataset_type, other wise the keypoint and limbs order will not be correct.
-    
-    arg2 : Int
-        height of the input image, need this to make use of keypoint annotation
-    
-    arg3 : Int
-        width of the input image, need this to make use of keypoint annotation
-
-    arg4 : Int
-        height of the model output, will be the height of the generated maps
-    
-    arg5 : Int
-        width of the model output, will be the width of the generated maps
-
-    arg6 : Config.DATA
-        a enum value of enum class Config.DATA
-        dataset_type where the input annotation list from, because to generate correct
-        conf_map and paf_map, the order of keypoints and limbs should be awared.
-
-    arg7 : string
-        data format speficied for channel order
-        available input:
-        'channels_first': data_shape C*H*W
-        'channels_last': data_shape H*W*C  
-
-    Returns
-    -------
-    list
-        including two element
-        conf_map: heatmaps of keypoints, shape C*H*W(channels_first) or H*W*C(channels_last)
-        paf_map: heatmaps of limbs, shape C*H*W(channels_first) or H*W*C(channels_last)
-    '''
-    heatmap=get_heatmap(annos,img_height,img_width,model_hout,model_wout,parts,limbs,data_format)
-    vectormap=get_vectormap(annos,img_height,img_width,model_hout,model_wout,parts,limbs,data_format)
-    return heatmap,vectormap
-
-def postprocess(conf_map,paf_map,img_h,img_w,parts,limbs,data_format="channels_first",colors=None):
-    '''postprocess function of openpose class models
-    
-    take model predicted feature maps, output parsed human objects, each one contains all detected keypoints of the person
-
-    Parameters
-    ----------
-    arg1 : numpy array
-        model predicted conf_map, heatmaps of keypoints, shape C*H*W(channels_first) or H*W*C(channels_last)
-    
-    arg2 : numpy array
-        model predicted paf_map, heatmaps of limbs, shape C*H*W(channels_first) or H*W*C(channels_last)
-    
-    arg3 : Config.DATA
-        an enum value of enum class Config.DATA
-        width of the model output, will be the width of the generated maps
-
-    arg4 : string
-        data format speficied for channel order
-        available input:
-        'channels_first': data_shape C*H*W
-        'channels_last': data_shape H*W*C 
-
-    Returns
-    -------
-    list
-        contain object of humans,see Model.Human for detail information of Human object
-    '''
-    from .processor import PostProcessor
-    if(type(conf_map)!=np.ndarray):
-        conf_map=conf_map.numpy()
-    if(type(paf_map)!=np.ndarray):
-        paf_map=paf_map.numpy()
-
-    if(colors==None):
-        colors=[[255,0,0]]*len(parts)
-    post_processor=PostProcessor(parts,limbs,colors)
-    humans=post_processor.process(conf_map,paf_map,img_h,img_w,data_format=data_format)
-    return humans
-
-def visualize(img,conf_map,paf_map,save_name="maps",save_dir="./save_dir/vis_dir",data_format="channels_first",save_tofile=True):
-    '''visualize function of openpose class models
-    
-    take model predict feature maps, output visualized image.
-    the image will be saved at 'save_dir'/'save_name'_visualize.png
-
-    Parameters
-    ----------
-    arg1 : numpy array
-        image
-
-    arg2 : numpy array
-        model output conf_map, heatmaps of keypoints, shape C*H*W(channels_first) or H*W*C(channels_last)
-    
-    arg3 : numpy array
-        model output paf_map, heatmaps of limbs, shape C*H*W(channels_first) or H*W*C(channels_last)
-    
-    arg4 : String
-        specify output image name to distinguish.
-
-    arg5 : String
-        specify which directory to save the visualized image.
-
-    arg6 : string
-        data format speficied for channel order
-        available input:
-        'channels_first': data_shape C*H*W
-        'channels_last': data_shape H*W*C  
-
-    Returns
-    -------
-    None
-    '''
-    if(type(img)!=np.ndarray):
-        img=img.numpy()
-    if(type(conf_map)!=np.ndarray):
-        conf_map=conf_map.numpy()
-    if(type(paf_map)!=np.ndarray):
-        paf_map=paf_map.numpy()
-
-    if(data_format=="channels_last"):
-        conf_map=np.transpose(conf_map,[2,0,1])
-        paf_map=np.tranpose(paf_map,[2,0,1])
-    elif(data_format=="channels_first"):
-        img=np.transpose(img,[1,2,0])
-    os.makedirs(save_dir,exist_ok=True)
-    ori_img=np.clip(img*255.0,0.0,255.0).astype(np.uint8)
-    vis_img=ori_img.copy()
-    fig=plt.figure(figsize=(8,8))
-    #show input image
-    a=fig.add_subplot(2,2,1)
-    a.set_title("input image")
-    plt.imshow(vis_img)
-    #show conf_map
-    show_conf_map=np.amax(np.abs(conf_map[:-1,:,:]),axis=0)
-    a=fig.add_subplot(2,2,3)
-    a.set_title("conf_map")
-    plt.imshow(show_conf_map)
-    #show paf_map
-    show_paf_map=np.amax(np.abs(paf_map[:,:,:]),axis=0)
-    a=fig.add_subplot(2,2,4)
-    a.set_title("paf_map")
-    plt.imshow(show_paf_map)
-    #save
-    if(save_tofile):
-        plt.savefig(f"{save_dir}/{save_name}_visualize.png")
-        plt.close('all')
-    return show_conf_map,show_paf_map
+from ..common import regulize_loss
 
 def get_conf_map(annos, height, width, hout, wout, parts, limbs, data_format="channels_first"):
     """

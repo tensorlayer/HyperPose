@@ -3,7 +3,7 @@ import tensorlayer as tl
 from tensorlayer.models import Model
 
 class BasicModel(Model):
-    def __init__(self,config):
+    def __init__(self,config, *args, **kargs):
         super().__init__()
         self.config=config
     
