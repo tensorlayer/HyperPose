@@ -561,6 +561,10 @@ class Resnet18_backbone(Model):
             super().__init__()
             self.data_format=data_format
             self.is_down_sample=is_down_sample
+            if(is_down_sample):
+                init_filter_size=(1,1)
+            else:
+                init_filter_size=(3,3)
             self.main_block=LayerList([
             Conv2d(n_filter=n_filter,in_channels=in_channels,filter_size=(3,3),strides=strides,b_init=None,data_format=self.data_format,name=f"{name}_conv_1"),
             BatchNorm2d(decay=0.9,act=tf.nn.relu,is_train=True,num_features=n_filter,data_format=self.data_format,name=f"{name}_bn_1"),
@@ -569,8 +573,8 @@ class Resnet18_backbone(Model):
             ])
             if(self.is_down_sample):
                 self.down_sample=LayerList([
-                    Conv2d(n_filter=n_filter,in_channels=in_channels,filter_size=(3,3),strides=strides,b_init=None,data_format=self.data_format),
-                    BatchNorm2d(decay=0.9,is_train=True,num_features=n_filter,data_format=self.data_format)
+                    Conv2d(n_filter=n_filter,in_channels=in_channels,filter_size=init_filter_size,strides=strides,b_init=None,data_format=self.data_format,name=f"{name}_downsample_conv"),
+                    BatchNorm2d(decay=0.9,is_train=True,num_features=n_filter,data_format=self.data_format,name=f"{name}_downsample_bn")
                 ])
 
         def forward(self,x):

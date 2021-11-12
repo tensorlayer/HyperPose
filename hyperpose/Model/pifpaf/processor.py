@@ -3,8 +3,9 @@ import heapq
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
+
 from .utils import get_hr_conf,get_arrow_map,nan2zero_dict
-from .utils import get_pifmap,get_pafmap
+from .utils import get_pifmap,get_pafmap, restore_pif_maps, restore_paf_maps
 from ..human import Human,BodyPart
 from ..processor import BasicVisualizer
 from ..processor import BasicPreProcessor
@@ -81,9 +82,12 @@ class PostProcessor(BasicPostProcessor):
         # vec_map:[field_num,2,hout,wout]
         # scale_map:[field_num,hout,wout]
         # decode pif_maps,paf_maps
-        pif_conf, pif_vec ,pif_scale = predict_x["pif_conf"], predict_x["pif_vec"], predict_x["pif_scale"]
+        pif_conf, pif_vec, pif_scale = predict_x["pif_conf"], predict_x["pif_vec"], predict_x["pif_scale"]
         paf_conf, paf_src_vec, paf_dst_vec, paf_src_scale, paf_dst_scale = predict_x["paf_conf"], predict_x["paf_src_vec"],\
                                             predict_x["paf_dst_vec"], predict_x["paf_src_scale"], predict_x["paf_dst_scale"]
+        # restore maps
+        pif_vec, pif_scale = restore_pif_maps(pif_vec, pif_scale)
+        paf_src_vec, paf_dst_vec, paf_src_scale, paf_dst_scale = restore_paf_maps(paf_src_vec, paf_dst_scale, paf_src_scale, paf_dst_scale)
 
         #get pif_hr_conf
         pif_hr_conf=get_hr_conf(pif_conf,pif_vec,pif_scale,stride=self.stride,thresh=self.thresh_gen_ref_pif,debug=False)
@@ -387,7 +391,16 @@ class Visualizer(BasicVisualizer):
         # predict maps
         predict_x = nan2zero_dict(predict_x)
         pd_pif_conf_batch, pd_pif_vec_batch, pd_pif_scale_batch = predict_x["pif_conf"], predict_x["pif_vec"], predict_x["pif_scale"]
-        pd_paf_conf_batch, pd_paf_src_vec_batch, pd_paf_dst_vec_batch = predict_x["paf_conf"], predict_x["paf_src_vec"], predict_x["paf_dst_vec"]
+        pd_paf_conf_batch, pd_paf_src_vec_batch, pd_paf_dst_vec_batch, pd_paf_src_scale_batch, pd_paf_dst_scale_batch =\
+             predict_x["paf_conf"], predict_x["paf_src_vec"], predict_x["paf_dst_vec"], predict_x["paf_src_scale"], predict_x["paf_dst_scale"]
+        
+        # restore maps
+        # pif maps
+        pd_pif_vec_batch, pd_pif_scale_batch = restore_pif_maps(pd_pif_vec_batch, pd_pif_scale_batch)
+        # paf maps
+        pd_paf_src_vec_batch, pd_paf_dst_vec_batch, pd_paf_src_scale_batch, pd_paf_dst_scale_batch = \
+            restore_paf_maps(pd_paf_src_vec_batch, pd_paf_dst_vec_batch, pd_paf_src_scale_batch, pd_paf_dst_scale_batch)
+        
         # mask
         if(mask_batch is None):
             mask_batch=np.ones_like(image_batch)
@@ -450,13 +463,25 @@ class Visualizer(BasicVisualizer):
         predict_x = nan2zero_dict(predict_x)
         pd_pif_conf_batch, pd_pif_vec_batch, pd_pif_scale_batch = predict_x["pif_conf"], predict_x["pif_vec"], predict_x["pif_scale"]
         pd_paf_conf_batch, pd_paf_src_vec_batch, pd_paf_dst_vec_batch = predict_x["paf_conf"], predict_x["paf_src_vec"], predict_x["paf_dst_vec"]
+        pd_paf_src_scale_batch, pd_paf_dst_scale_batch = predict_x["paf_src_scale"], predict_x["paf_dst_scale"]
         # target maps
         target_x = nan2zero_dict(target_x)
         gt_pif_conf_batch, gt_pif_vec_batch, gt_pif_scale_batch = target_x["pif_conf"], target_x["pif_vec"], target_x["pif_scale"]
         gt_paf_conf_batch, gt_paf_src_vec_batch, gt_paf_dst_vec_batch = target_x["paf_conf"], target_x["paf_src_vec"], predict_x["paf_dst_vec"]
+        gt_paf_src_scale_batch, gt_paf_dst_scale_batch = target_x["paf_src_scale"], target_x["paf_dst_scale"]
         # mask
         if(mask_batch is None):
             mask_batch=np.ones_like(image_batch)
+        
+        # restore maps
+        # pif maps
+        pd_pif_vec_batch, pd_pif_scale_batch = restore_pif_maps(pd_pif_vec_batch, pd_pif_scale_batch)
+        gt_pif_vec_batch, gt_pif_scale_batch = restore_pif_maps(gt_pif_vec_batch, gt_pif_scale_batch)
+        # paf maps
+        pd_paf_src_vec_batch, pd_paf_dst_vec_batch, pd_paf_src_scale_batch, pd_paf_dst_scale_batch = \
+            restore_paf_maps(pd_paf_src_vec_batch, pd_paf_dst_vec_batch, pd_paf_src_scale_batch, pd_paf_dst_scale_batch)
+        gt_paf_src_vec_batch, gt_paf_dst_vec_batch, gt_paf_src_scale_batch, gt_paf_dst_scale_batch = \
+            restore_paf_maps(gt_paf_src_vec_batch, gt_paf_dst_vec_batch, gt_paf_src_scale_batch, gt_paf_dst_scale_batch)
 
         batch_size = image_batch.shape[0]
         for b_idx in range(0,batch_size):
@@ -467,7 +492,6 @@ class Visualizer(BasicVisualizer):
             # gt map
             gt_pif_conf, gt_pif_vec, gt_pif_scale = gt_pif_conf_batch[b_idx], gt_pif_vec_batch[b_idx], gt_pif_scale_batch[b_idx]
             gt_paf_conf, gt_paf_src_vec, gt_paf_dst_vec = gt_paf_conf_batch[b_idx], gt_paf_src_vec_batch[b_idx], gt_paf_dst_vec_batch[b_idx]
-            print(f"test pd_pif_vec.shape:{pd_pif_vec.shape} gt_pif_vec.shape:{gt_pif_vec.shape}")
             # draw pif maps
             # begin draw
             pif_pltdrawer = PltDrawer(draw_row=2, draw_col=3, dpi=400)
@@ -511,10 +535,10 @@ class Visualizer(BasicVisualizer):
             paf_pltdrawer.add_subplot(gt_paf_conf_show, "gt paf_conf", color_bar=True)
 
             # draw gt paf_vec_map
-            hout, wout = gt_paf_src_vec.shape[1], gt_paf_src_vec.shape[2]
+            hout, wout = gt_paf_src_vec.shape[-2], gt_paf_src_vec.shape[-1]
             gt_paf_vec_map_show = np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
             print(f"test before gt_paf_vec_map_show.shape:{gt_paf_vec_map_show.shape}")
-            gt_paf_vec_map_show = get_arrow_map(gt_paf_vec_map_show, gt_paf_conf, gt_paf_src_vec, gt_paf_dst_vec)
+            gt_paf_vec_map_show = get_arrow_map(gt_paf_vec_map_show, gt_paf_conf, gt_paf_src_vec, gt_paf_dst_vec, debug=True)
             print(f"test after gt_paf_vec_map_show.shape:{gt_paf_vec_map_show.shape}")
             paf_pltdrawer.add_subplot(gt_paf_vec_map_show, "gt paf_vec")
 
@@ -526,9 +550,11 @@ class Visualizer(BasicVisualizer):
             paf_pltdrawer.add_subplot(pd_paf_conf_show, "pd paf_conf", color_bar=True)
 
             # draw pd paf_vec
-            hout, wout = pd_paf_src_vec.shape[1], pd_paf_src_vec.shape[2]
+            hout, wout = pd_paf_src_vec.shape[-2], pd_paf_src_vec.shape[-1]
             pd_paf_vec_map_show = np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
+            print(f"test before pd_paf_vec_map_show.shape:{pd_paf_vec_map_show.shape}")
             pd_paf_vec_map_show = get_arrow_map(pd_paf_vec_map_show, pd_paf_conf, pd_paf_src_vec, pd_paf_dst_vec)
+            print(f"test after pd_paf_vec_map_show.shape:{pd_paf_vec_map_show.shape}")
             paf_pltdrawer.add_subplot(pd_paf_vec_map_show, "pd paf_vec")
 
             # save fig

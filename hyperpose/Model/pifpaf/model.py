@@ -238,11 +238,8 @@ class Pifpaf(Model):
             pif_scale=x[:,:,4,:,:]
             #restore vec_maps in inference
             if(is_train==False):
-                mesh_grid=get_meshgrid(mesh_h=hout,mesh_w=wout)+np.array([1.5,1.5])[:,np.newaxis,np.newaxis]
-                infer_pif_conf=tf.nn.sigmoid(pif_conf)
-                infer_pif_vec=(pif_vec[:,:]+mesh_grid)*self.stride
-                infer_pif_scale=tf.math.softplus(pif_scale)*self.stride
-                return infer_pif_conf,infer_pif_vec,pif_logb,infer_pif_scale
+                pif_conf=tf.nn.sigmoid(pif_conf)
+                pif_scale=tf.math.softplus(pif_scale)
             return pif_conf,pif_vec,pif_logb,pif_scale
         
     class PafHead(Model):
@@ -276,11 +273,7 @@ class Pifpaf(Model):
             paf_dst_scale=x[:,:,8,:,:]
             #restore vec_maps in inference
             if(is_train==False):
-                mesh_grid=get_meshgrid(mesh_h=hout,mesh_w=wout)+np.array([1.5,1.5])[:,np.newaxis,np.newaxis]
-                infer_paf_conf=tf.nn.sigmoid(paf_conf)
-                infer_paf_src_vec=(paf_src_vec[:,:]+mesh_grid)*self.stride
-                infer_paf_dst_vec=(paf_dst_vec[:,:]+mesh_grid)*self.stride
-                infer_paf_src_scale=tf.math.softplus(paf_src_scale)*self.stride
-                infer_paf_dst_scale=tf.math.softplus(paf_dst_scale)*self.stride
-                return infer_paf_conf,infer_paf_src_vec,infer_paf_dst_vec,paf_src_logb,paf_dst_logb,infer_paf_src_scale,infer_paf_dst_scale
+                paf_conf=tf.nn.sigmoid(paf_conf)
+                paf_src_scale=tf.math.softplus(paf_src_scale)
+                paf_dst_scale=tf.math.softplus(paf_dst_scale)
             return paf_conf,paf_src_vec,paf_dst_vec,paf_src_logb,paf_dst_logb,paf_src_scale,paf_dst_scale

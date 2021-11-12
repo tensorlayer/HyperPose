@@ -51,17 +51,13 @@ class PostProcessor(BasicPostProcessor):
         self.data_format=data_format
         self.debug=debug
     
-    def process(self,conf_map,paf_map,img_h,img_w,data_format="channels_first"):
+    def process(self,predict_x,data_format="channels_first"):
+        conf_map = predict_x["conf_map"]
+        paf_map = predict_x["paf_map"]
         if(data_format=="channels_first"):
             conf_map=np.transpose(conf_map,[1,2,0])
             paf_map=np.transpose(paf_map,[1,2,0])
-        #conf_map
-        if(conf_map.shape[0]!=img_h or conf_map.shape[1]!=img_w):
-            conf_map=cv2.resize(conf_map,(img_w,img_h))
         conf_map=conf_map[np.newaxis,:,:,:]
-        #paf_map
-        if(paf_map.shape[0]!=img_h or paf_map.shape[1]!=img_w):
-            paf_map=cv2.resize(paf_map,(img_w,img_h))
         paf_map=paf_map[np.newaxis,:,:,:]
         peak_map=self.get_peak_map(conf_map)
         humans=self.process_paf(peak_map[0],conf_map[0],paf_map[0])

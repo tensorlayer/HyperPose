@@ -1,6 +1,7 @@
 import logging
 from enum import Enum
 import time
+import functools
 import multiprocessing
 from distutils.dir_util import mkpath
 
@@ -281,6 +282,14 @@ def to_tensor_dict(dict_x):
 
 def get_num_parallel_calls():
     return max(multiprocessing.cpu_count()//2,1)
+
+@functools.lru_cache(maxsize=16)
+def get_meshgrid(mesh_h,mesh_w):
+    x_range=np.linspace(start=0,stop=mesh_w-1,num=mesh_w)
+    y_range=np.linspace(start=0,stop=mesh_h-1,num=mesh_h)
+    mesh_x,mesh_y=np.meshgrid(x_range,y_range)
+    mesh_grid=np.stack([mesh_x,mesh_y])
+    return mesh_grid
 
 def log_model(msg):
     logger=logging.getLogger("MODEL")

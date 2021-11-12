@@ -81,9 +81,10 @@ class OpenPose(Model):
         return predict_x
     
     @tf.function(experimental_relax_shapes=True)
-    def infer(self,x,stage_num=5):
-        conf_map,paf_map=self.forward(x,is_train=False,stage_num=stage_num)
-        return conf_map,paf_map
+    def infer(self,x):
+        predict_x = self.forward(x,is_train=False)
+        conf_map, paf_map = predict_x["conf_map"], predict_x["paf_map"]
+        return conf_map, paf_map
     
     def cal_loss(self, predict_x, target_x, metric_manager, mask=None):
         # TODO: exclude the loss calculate from mask

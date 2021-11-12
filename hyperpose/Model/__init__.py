@@ -15,6 +15,8 @@ from .pretrain import single_pretrain
 from .common import log_model as log
 from .augmentor import BasicAugmentor
 
+from .examine import exam_model_weights, exam_npz_dict_weights, exam_npz_weights
+
 #claim:
 #all the model preprocessor,postprocessor,and visualizer processing logic are written in 'channels_first' data_format
 #input data in "channels_last" data_format will be converted to "channels_first" format first and then handled
@@ -473,4 +475,5 @@ def info_propt():
             +"\t 3.Neural network backbone pretraining.")
     
     info("Currently all the procedures are uniformed to be `channels_first` data format.")
+    info("Currently all model weights are saved in `npz_dict` format.")
     print("\n"+"="*100)

@@ -190,13 +190,13 @@ def single_train(train_model, dataset, config, augmentor:BasicAugmentor, \
     #load pretrained backbone
     try:
         log("loading pretrained backbone...")
-        tl.files.load_and_assign_npz_dict(name=pretrain_model_path, network=train_model.backbone, skip=True)
+        train_model.backbone.load_weight(pretrain_model_path, format="npz_dict")
     except:
         log("pretrained backbone doesn't exist, model backbone are initialized")
     #load model weights
     try:
         log("loading saved training model weights...")
-        train_model.load_weights(os.path.join(model_dir, "newest_model.npz"))
+        train_model.load_weights(os.path.join(model_dir, "newest_model.npz"), format="npz_dict")
     except:
         log("model_path doesn't exist, model parameters are initialized")
     if (domainadapt_flag):
@@ -302,6 +302,7 @@ def single_train(train_model, dataset, config, augmentor:BasicAugmentor, \
             # visualize periodly
             if ((step != 0) and (step % vis_interval) == 0):
                 log(f"Visualizing prediction maps and target maps")
+                predict_x = train_model.forward(x=image, is_train=False)
                 visualizer.visualize_compare(image_batch=image.numpy(), mask_batch=mask.numpy(), predict_x=predict_x, target_x=target_x,\
                                                     name=f"train_{step}")
 
@@ -315,12 +316,12 @@ def single_train(train_model, dataset, config, augmentor:BasicAugmentor, \
                 log(f"ckpt save_path:{ckpt_save_path} saved!\n")
                 # save train model
                 model_save_path = os.path.join(model_dir, "newest_model.npz")
-                train_model.save_weights(model_save_path)
+                train_model.save_weights(model_save_path, format="npz_dict")
                 log(f"model save_path:{model_save_path} saved!\n")
                 # save discriminator model
                 if (domainadapt_flag):
                     dis_save_path = os.path.join(model_dir, "newest_discriminator.npz")
-                    adapt_dis.save_weights(dis_save_path)
+                    adapt_dis.save_weights(dis_save_path, format="npz_dict")
                     log(f"discriminator save_path:{dis_save_path} saved!\n")
 
 def parallel_train(train_model, dataset, config, augmentor:BasicAugmentor, \

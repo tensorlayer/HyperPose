@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from functools import partial
 from .processor import PostProcessor
 from .utils import draw_bbx,draw_edge
+from tqdm import tqdm
 
 def infer_one_img(model,postprocessor,img,img_id=-1,is_visual=False,save_dir="./vis_dir/pose_proposal"):
     img=img.numpy()
@@ -106,7 +107,7 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
     -------
     None
     '''
-    model.load_weights(os.path.join(config.model.model_dir,"newest_model.npz"))
+    model.load_weights(os.path.join(config.model.model_dir,"newest_model.npz"), format="npz_dict")
     pd_anns=[]
     vis_dir=config.eval.vis_dir
     kpt_converter=dataset.get_output_kpt_cvter()
@@ -116,7 +117,7 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
     dataset_size=dataset.get_eval_datasize()
     paramed_map_fn=partial(_map_fn)
     eval_dataset=eval_dataset.map(paramed_map_fn,num_parallel_calls=max(multiprocessing.cpu_count()//2,1))
-    for eval_num,(img,img_id) in enumerate(eval_dataset):
+    for eval_num,(img,img_id) in tqdm(enumerate(eval_dataset)):
         img_id=img_id.numpy()
         if(eval_num>=total_eval_num):
             break

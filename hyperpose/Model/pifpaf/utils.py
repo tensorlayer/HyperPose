@@ -8,7 +8,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from .define import area_ref,area_ref_45
 from .define import COCO_SIGMA,COCO_UPRIGHT_POSE,COCO_UPRIGHT_POSE_45
-from ..common import regulize_loss
+from ..common import regulize_loss, get_meshgrid
 
 def nan2zero(x):
     x=np.where(x!=x,0,x)
@@ -324,140 +324,21 @@ def get_arrow_map(array_map,conf_map,src_vec_map,dst_vec_map,thresh=0.1,src_colo
             array_map=cv2.line(array_map,(grid_x,grid_y),(dst_x,dst_y),color=dst_color,thickness=thickness)
     return array_map
 
-def draw_result(images,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps,masks,parts,limbs,stride=8,thresh_pif=0.1,thresh_paf=0.1,\
-    save_dir="./save_dir",name="default"):
-    #shape
-    #conf [batch_size,field_num,hout,wout]
-    #vec [batch_size,field_num,2,hout,wout]
-    #scale [batch_size,field_num,hout,wout]
-    #decode pif_maps
-    pd_pif_conf,pd_pif_vec,_,pd_pif_scale=pd_pif_maps
-    gt_pif_conf,gt_pif_vec,_,gt_pif_scale=gt_pif_maps
-    #decode paf_maps
-    pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,_,_,_,_=pd_paf_maps
-    gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,_,_,_,_=gt_paf_maps
-    #restore conf_maps
-    pd_pif_conf=tf.nn.sigmoid(pd_pif_conf).numpy()
-    pd_paf_conf=tf.nn.sigmoid(pd_paf_conf).numpy()
-    pd_pif_scale=tf.math.softplus(pd_pif_scale)
-    #restore nan in gt_maps
-    gt_pif_conf=nan2zero(gt_pif_conf)
-    gt_pif_vec=nan2zero(gt_pif_vec)
-    gt_pif_scale=nan2zero(gt_pif_scale)
-    gt_paf_conf=nan2zero(gt_paf_conf)
-    gt_paf_src_vec=nan2zero(gt_paf_src_vec)
-    gt_paf_dst_vec=nan2zero(gt_paf_dst_vec)
-    #restore vector maps
-    _,_,hout,wout=pd_pif_conf.shape
-    x_range=np.linspace(start=0,stop=wout-1,num=wout)
-    y_range=np.linspace(start=0,stop=hout-1,num=hout)
-    mesh_x,mesh_y=np.meshgrid(x_range,y_range)
-    mesh_grid=np.stack([mesh_x,mesh_y])
-    pd_pif_scale=pd_pif_scale*stride
-    gt_pif_scale=gt_pif_scale*stride
-    pd_pif_vec=(pd_pif_vec+mesh_grid)*stride
-    gt_pif_vec=(gt_pif_vec+mesh_grid)*stride
-    pd_paf_src_vec=(pd_paf_src_vec+mesh_grid)*stride
-    pd_paf_dst_vec=(pd_paf_dst_vec+mesh_grid)*stride
-    gt_paf_src_vec=(gt_paf_src_vec+mesh_grid)*stride
-    gt_paf_dst_vec=(gt_paf_dst_vec+mesh_grid)*stride
-    #draw
-    os.makedirs(save_dir,exist_ok=True)
-    batch_size=pd_paf_conf.shape[0]
-    for batch_idx in range(0,batch_size):
-        #image and mask
-        image_show=images[batch_idx].transpose([1,2,0])
-        mask_show=masks[batch_idx][0]
+def restore_pif_maps(pif_vec_map_batch, pif_scale_map_batch, stride=8):
+    hout, wout = pif_vec_map_batch.shape[-2], pif_vec_map_batch.shape[-1]
+    mesh_grid = get_meshgrid(mesh_h=hout, mesh_w=wout)
+    pif_vec_map_batch = (pif_vec_map_batch + mesh_grid)*stride
+    pif_scale_map_batch = pif_scale_map_batch*stride
+    return pif_vec_map_batch, pif_scale_map_batch
 
-        #draw pif maps
-        #pif_conf_map
-        pd_pif_conf_show=np.amax(pd_pif_conf[batch_idx],axis=0)
-        gt_pif_conf_show=np.amax(gt_pif_conf[batch_idx],axis=0)
-        #pif_hr_conf_map
-        pd_pif_hr_conf=get_hr_conf(pd_pif_conf[batch_idx],pd_pif_vec[batch_idx],pd_pif_scale[batch_idx],stride=stride,thresh=thresh_pif)
-        pd_pif_hr_conf_show=np.amax(pd_pif_hr_conf,axis=0)
-        gt_pif_hr_conf=get_hr_conf(gt_pif_conf[batch_idx],gt_pif_vec[batch_idx],gt_pif_scale[batch_idx],stride=stride,thresh=thresh_pif)
-        gt_pif_hr_conf_show=np.amax(gt_pif_hr_conf,axis=0)
-        #plt draw
-        fig=plt.figure(figsize=(8,8))
-        #show image
-        a=fig.add_subplot(2,3,1)
-        a.set_title("image")
-        plt.imshow(image_show)
-        #show gt_pif_conf
-        a=fig.add_subplot(2,3,2)
-        a.set_title("gt_pif_conf")
-        plt.imshow(gt_pif_conf_show,alpha=0.8)
-        plt.colorbar()
-        #show gt_pif_hr_conf
-        a=fig.add_subplot(2,3,3)
-        a.set_title("gt_pif_hr_conf")
-        plt.imshow(gt_pif_hr_conf_show,alpha=0.8)
-        plt.colorbar()
-        #show mask
-        a=fig.add_subplot(2,3,4)
-        a.set_title("mask")
-        plt.imshow(mask_show)
-        plt.colorbar()
-        #show pd_pif_conf
-        a=fig.add_subplot(2,3,5)
-        a.set_title("pd_pif_conf")
-        plt.imshow(pd_pif_conf_show,alpha=0.8)
-        plt.colorbar()
-        #show pd_pif_hr_conf
-        a=fig.add_subplot(2,3,6)
-        a.set_title("pd_pif_hr_conf")
-        plt.imshow(pd_pif_hr_conf_show,alpha=0.8)
-        plt.colorbar()
-        #save drawn figures
-        plt.savefig(os.path.join(save_dir,f"{name}_{batch_idx}_pif.png"),dpi=400)
-        plt.close()
-
-        #draw paf maps
-        #paf_conf_map
-        pd_paf_conf_show=np.amax(pd_paf_conf[batch_idx],axis=0)
-        gt_paf_conf_show=np.amax(gt_paf_conf[batch_idx],axis=0)
-        #paf_vec_map
-        #pd_paf_vec_map
-        pd_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
-        pd_paf_vec_show=get_arrow_map(pd_paf_vec_show,pd_paf_conf[batch_idx],pd_paf_src_vec[batch_idx],pd_paf_dst_vec[batch_idx],thresh_paf)
-        #gt_paf_vec_map
-        gt_paf_vec_show=np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
-        gt_paf_vec_show=get_arrow_map(gt_paf_vec_show,gt_paf_conf[batch_idx],gt_paf_src_vec[batch_idx],gt_paf_dst_vec[batch_idx],thresh_paf,debug=False)
-        #plt draw
-        fig=plt.figure(figsize=(8,8))
-        #show image
-        a=fig.add_subplot(2,3,1)
-        a.set_title("image")
-        plt.imshow(image_show)
-        #show gt_paf_conf
-        a=fig.add_subplot(2,3,2)
-        a.set_title("gt_paf_conf")
-        plt.imshow(gt_paf_conf_show,alpha=0.8)
-        plt.colorbar()
-        #show gt_paf_vec_conf
-        a=fig.add_subplot(2,3,3)
-        a.set_title("gt_paf_vec_conf")
-        plt.imshow(gt_paf_vec_show,alpha=0.8)
-        plt.colorbar()
-        #show mask
-        a=fig.add_subplot(2,3,4)
-        a.set_title("mask")
-        plt.imshow(mask_show)
-        plt.colorbar()
-        #show pd_paf_conf
-        a=fig.add_subplot(2,3,5)
-        a.set_title("pd_paf_conf")
-        plt.imshow(pd_paf_conf_show,alpha=0.8)
-        plt.colorbar()
-        #show pd_paf_vec_conf
-        a=fig.add_subplot(2,3,6)
-        a.set_title("pd_paf_vec_show")
-        plt.imshow(pd_paf_vec_show,alpha=0.8)
-        plt.colorbar()
-        #save drawn figures
-        plt.savefig(os.path.join(save_dir,f"{name}_{batch_idx}_paf.png"),dpi=400)
-        plt.close()
+def restore_paf_maps(paf_src_vec_map_batch, paf_dst_vec_map_batch, paf_src_scale_map_batch, paf_dst_scale_map_batch, stride=8):
+    hout, wout = paf_src_vec_map_batch.shape[-2], paf_src_vec_map_batch.shape[-1]
+    mesh_grid = get_meshgrid(mesh_h=hout, mesh_w=wout)
+    paf_src_vec_map_batch = (paf_src_vec_map_batch + mesh_grid)*stride
+    paf_dst_vec_map_batch = (paf_dst_vec_map_batch + mesh_grid)*stride
+    paf_src_scale_map_batch = paf_src_scale_map_batch*stride
+    paf_dst_scale_map_batch = paf_dst_scale_map_batch*stride
+    return paf_src_vec_map_batch, paf_dst_vec_map_batch, paf_src_scale_map_batch, paf_dst_scale_map_batch
 
 from ..common import DATA
 from .define import CocoPart,CocoLimb,CocoColor
@@ -497,13 +378,7 @@ def pixel_shuffle(x,scale):
     tc=tf.reshape(tb,[b,new_c,new_h,new_w])
     return tc
 
-@functools.lru_cache(maxsize=16)
-def get_meshgrid(mesh_h,mesh_w):
-    x_range=np.linspace(start=0,stop=mesh_w-1,num=mesh_w)
-    y_range=np.linspace(start=0,stop=mesh_h-1,num=mesh_h)
-    mesh_x,mesh_y=np.meshgrid(x_range,y_range)
-    mesh_grid=np.stack([mesh_x,mesh_y])
-    return mesh_grid
+
 
 
 

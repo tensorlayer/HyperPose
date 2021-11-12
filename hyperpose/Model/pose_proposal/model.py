@@ -40,6 +40,7 @@ class PoseProposal(Model):
             self.backbone = Resnet18_backbone(scale_size=32, pretraining=pretraining, data_format=data_format)
         else:
             self.backbone = backbone(scale_size=32, pretraining=pretraining, data_format=self.data_format)
+        print(f"test backbone.out_channels:{self.backbone.out_channels}")
         self.add_layer_1 = LayerList([
             Conv2d(n_filter=512,
                    in_channels=self.backbone.out_channels,

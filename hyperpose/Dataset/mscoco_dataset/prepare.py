@@ -100,6 +100,8 @@ def prepare_dataset(data_path="./data",version="2017",task="person"):
             else:
                 logging.info("    validating images exists")
             
+            # temply ignore: remember to uncomment!
+            '''
             if folder_exists(os.path.join(path, "train2017")) is False:
                 logging.info("    downloading training images")
                 os.system("wget http://images.cocodataset.org/zips/train2017.zip -P {}".format(path))
@@ -125,6 +127,7 @@ def prepare_dataset(data_path="./data",version="2017",task="person"):
                 del_file(os.path.join(path,"image_info_test2017.zip"))
             else:
                 logging.info("    testing split info exists")
+            '''
 
         else:
             raise Exception("dataset can only be 2014 and 2017, see MSCOCO website for more details.")

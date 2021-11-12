@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorlayer as tl
 from tensorlayer.models import Model
-from metrics import MetricManager
+from .metrics import MetricManager
 
 class BasicModel(Model):
     def __init__(self,config, *args, **kargs):

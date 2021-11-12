@@ -65,15 +65,6 @@ def get_pose_proposals(kpts_list,bbxs,hin,win,hout,wout,hnei,wnei,parts,limbs,im
             te_mask[:,:,:,iy,ix]=(np.maximum(start[:,0],end[:,:,:,0])).transpose(2,0,1)
             condition=np.logical_and((start[:,0]*end[:,:,:,0]==1),start[:,1]==end[:,:,:,1])
             te[:,:,:,iy,ix]=(np.where(condition,1,0)).transpose(2,0,1)
-    
-    if(data_format=="channels_last"):
-        delta=np.transpose(delta,[1,2,0])
-        tx=np.transpose(tx,[1,2,0])
-        ty=np.transpose(ty,[1,2,0])
-        tw=np.transpose(tw,[1,2,0])
-        th=np.transpose(th,[1,2,0])
-        te=np.transpose(te,[1,2,3,4,0])
-        te_mask=np.transpose(te_mask,[1,2,3,4,0])
 
     return delta,tx,ty,tw,th,te,te_mask
 
