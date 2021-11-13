@@ -3,7 +3,9 @@ import random
 import numpy as np
 import _pickle as cPickle
 import tensorflow as tf
-from .common import DATA,get_domainadapt_targets
+from .common import DATA
+from .common import log_data as log
+from .dmadapt_dataset import Domainadapt_dataset
 
 class Base_dataset:
     def __init__(self,config,input_kpt_cvter=lambda x: x,output_kpt_cvter=lambda x: x):
@@ -24,9 +26,10 @@ class Base_dataset:
         self.useradd_train_targets=config.data.useradd_train_targets
         # domain adaptation
         self.domainadapt_flag=config.data.domainadapt_flag
-        self.domainadapt_scale_rate=config.data.domainadapt_scale_rate
-        self.domainadapt_train_img_paths=config.data.domainadapt_train_img_paths
-        self.domainadapt_train_targets=get_domainadapt_targets(self.domainadapt_train_img_paths)
+        self.domainadapt_train_img_paths = config.data.domainadapt_train_img_paths
+        self.domainadapt_dataset = None
+        if(self.domainadapt_flag):
+            self.domainadapt_dataset = Domainadapt_dataset(self.domainadapt_train_img_paths)
 
     def visualize(self,vis_num=10):
         raise NotImplementedError("virtual class Base_dataset function: visualize not implemented!")
@@ -114,28 +117,21 @@ class Base_dataset:
         train_img_paths_list,train_targets_list=[],[]
         #official data
         if(self.official_flag):
-            print("generating official training data...")
+            log("Generating official training data...")
             official_img_paths_list,official_targets_list=self.generate_train_data()
             assert len(official_img_paths_list)==len(official_targets_list)
             train_img_paths_list+=official_img_paths_list
             train_targets_list+=official_targets_list
-            print(f"{len(train_img_paths_list)} official training data added!")
+            log(f"{len(train_img_paths_list)} official training data added!")
         #user defined data
         if(self.useradd_flag):
-            print("adding user defined training data...")
+            log("adding user defined training data...")
             assert len(self.useradd_train_img_paths)==len(self.useradd_train_targets)
             train_img_paths_list+=self.useradd_train_img_paths*self.useradd_scale_rate
             train_targets_list+=self.useradd_train_targets*self.useradd_scale_rate
-            print(f"{len(self.useradd_train_img_paths)} user define training data added! repeat time:{self.useradd_scale_rate}")
-        #domain adaptation data
-        if(self.domainadapt_flag):
-            print("adding domain adaptation training data...")
-            assert len(self.domainadapt_train_img_paths==len(self.domainadapt_train_targets))
-            train_img_paths_list+=self.domainadapt_train_img_paths*self.domainadapt_scale_rate
-            train_targets_list+=self.domainadapt_train_targets*self.domainadapt_scale_rate
-            print(f"{len(self.domainadapt_train_img_paths)} domain adaptation data added! repeat time:{self.domainadapt_scale_rate}")
+            log(f"{len(self.useradd_train_img_paths)} user define training data added! repeat time:{self.useradd_scale_rate}")
         #filter non-exist image and target
-        print("filtering non-exist images and targets")
+        log("filtering non-exist images and targets")
         filter_train_img_paths,filter_train_targets=[],[]
         filter_num=0
         for train_img_path,train_target in zip(train_img_paths_list,train_targets_list):
@@ -146,9 +142,9 @@ class Base_dataset:
                 filter_num+=1
         train_img_paths_list=filter_train_img_paths
         train_targets_list=filter_train_targets
-        print(f"filtering finished! total {len(train_img_paths_list)} images and targets left, {filter_num} invalid found.")
+        log(f"filtering finished! total {len(train_img_paths_list)} images and targets left, {filter_num} invalid found.")
         #input conversion
-        print("converting input keypoint...")
+        log("converting input keypoint...")
         for target_idx in range(0,len(train_targets_list)):
             target=train_targets_list[target_idx]
             #keypoint conversion
@@ -157,15 +153,15 @@ class Base_dataset:
                 kpts[p_idx]=self.input_kpt_cvter(np.array(kpts[p_idx]))
             target["kpt"]=kpts
             train_targets_list[target_idx]=target
-        print("conversion finished!")
+        log("conversion finished!")
         #shuffle all data
-        print("shuffling all training data...")
+        log("shuffling all training data...")
         shuffle_list=[{"image_path":img_path,"target":target} for img_path,target in zip(train_img_paths_list,train_targets_list)]
         random.shuffle(shuffle_list)
         train_img_paths_list=[shuffle_dict["image_path"] for shuffle_dict in shuffle_list]
         train_targets_list=[shuffle_dict["target"] for shuffle_dict in shuffle_list]
-        print("shuffling data finished, generating tensorflow dataset...")
-        print(f"total {len(train_img_paths_list)} training data generated!")
+        log("shuffling data finished, generating tensorflow dataset...")
+        log(f"total {len(train_img_paths_list)} training data generated!")
 
         #tensorflow data pipeline
         def generator():
@@ -177,7 +173,7 @@ class Base_dataset:
         train_dataset = tf.data.Dataset.from_generator(generator, output_types=(tf.string, tf.string))
         #update datasize
         self.train_datasize=len(train_img_paths_list)
-        print(f"train dataset generation finished!")
+        log(f"train dataset generation finished!")
         if(in_list):
             return train_img_paths_list,train_targets_list
         else:
@@ -208,11 +204,11 @@ class Base_dataset:
         tensorflow dataset object 
             a unifrom formated tensorflow dataset object for evaluating
         '''
-        print("generating official evaluating data...")
+        log("generating official evaluating data...")
         eval_img_files_list,eval_img_ids_list=self.generate_eval_data()
-        print(f"total {len(eval_img_files_list)} official evaluating data generated!")
+        log(f"total {len(eval_img_files_list)} official evaluating data generated!")
         #filter non-exist eval images and targets
-        print("filtering non-exist images and targets")
+        log("filtering non-exist images and targets")
         filter_img_files,filter_img_ids=[],[]
         filter_num=0
         for img_file,img_id in zip(eval_img_files_list,eval_img_ids_list):
@@ -223,7 +219,7 @@ class Base_dataset:
                 filter_num+=1
         eval_img_files_list=filter_img_files
         eval_img_ids_list=filter_img_ids
-        print(f"filtering finished! total {len(eval_img_files_list)} images and targets left, {filter_num} invalid found.")
+        log(f"filtering finished! total {len(eval_img_files_list)} images and targets left, {filter_num} invalid found.")
         #tensorflow data pipeline
         def generator():
             """TF Dataset generator."""
@@ -234,16 +230,16 @@ class Base_dataset:
         eval_dataset = tf.data.Dataset.from_generator(generator,output_types=(tf.string,tf.int32))
         #update datasize
         self.eval_datasize=len(eval_img_files_list)
-        print(f"eval dataset generation finished!")
+        log(f"eval dataset generation finished!")
         if(in_list):
             return eval_img_files_list,eval_img_ids_list
         else:
             return eval_dataset
     
     def get_test_dataset(self,in_list=False):
-        print("generating official test dataset...")
+        log("generating official test dataset...")
         test_img_files_list,test_img_ids_list=self.generate_test_data()
-        print(f"total {len(test_img_files_list)} official test data generated!")
+        log(f"total {len(test_img_files_list)} official test data generated!")
         #filter non-exist test images and targets
         filter_img_files_list,filter_img_ids_list=[],[]
         filter_num=0
@@ -255,7 +251,7 @@ class Base_dataset:
                 filter_num+=1
         test_img_files_list=filter_img_files_list
         test_img_ids_list=filter_img_ids_list
-        print(f"filtering finished! total {len(test_img_files_list)} images and targets left, {filter_num} invalid found.")
+        log(f"filtering finished! total {len(test_img_files_list)} images and targets left, {filter_num} invalid found.")
         #tensorflow data pipeline
         def generator():
             """TF Dataset generator."""
@@ -266,11 +262,14 @@ class Base_dataset:
         test_dataset=tf.data.Dataset.from_generator(generator,output_types=(tf.string,tf.int32))
         #update datasize
         self.test_datasize=len(test_img_files_list)
-        print("test dataset generation finished!")
+        log("test dataset generation finished!")
         if(in_list):
             return test_img_files_list,test_img_ids_list
         else:
             return test_dataset
+    
+    def get_dmadapt_train_dataset(self):
+        return self.domainadapt_dataset.get_train_dataset()
 
     def official_eval(self,pd_json,eval_dir=f"./eval_dir"):
         raise NotImplementedError("virtual class Base_dataset function: official_eval not implemented!")

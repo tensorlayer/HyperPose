@@ -3,9 +3,10 @@ import tensorlayer as tl
 from tensorlayer import layers
 from tensorlayer.models import Model
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d
-from ..utils import tf_repeat
+from ..utils import NCHW_to_NHWC, NHWC_to_NCHW
 from ..define import CocoPart,CocoLimb
 from ...backbones import vgg19_backbone
+from ...common import regulize_loss
 initial_w=tl.initializers.random_normal(stddev=0.001)
 initial_b=tl.initializers.constant(value=0.0)
 
@@ -47,54 +48,73 @@ class OpenPose(Model):
         
 
     @tf.function
-    def forward(self,x,is_train=False,stage_num=5,domainadapt=False):
+    def forward(self,x,is_train=False,ret_backbone=False):
+        if(self.data_format == "channels_last"):
+            x = NCHW_to_NHWC(x)
+        stage_num=5
         conf_list=[]
         paf_list=[]
-        #backbone feature extract
+        # backbone feature extract
         backbone_features=self.backbone.forward(x)
         backbone_features=self.cpm_stage.forward(backbone_features)
-        #init stage
+        # init stage
         init_conf,init_paf=self.init_stage.forward(backbone_features)
         conf_list.append(init_conf)
         paf_list.append(init_paf)
-        #refinement stages  
+        # refinement stages  
         for refine_stage_idx in range(1,stage_num+1):
             ref_x=tf.concat([backbone_features,conf_list[-1],paf_list[-1]],self.concat_dim)
             ref_conf,ref_paf=eval(f"self.refinement_stage_{refine_stage_idx}.forward(ref_x)")
             conf_list.append(ref_conf)
             paf_list.append(ref_paf)
-        if(domainadapt):
-            return conf_list[-1],paf_list[-1],conf_list,paf_list,backbone_features
-        if(is_train):
-            return conf_list[-1],paf_list[-1],conf_list,paf_list
-        else:
-            return conf_list[-1],paf_list[-1]
+        
+        if(self.data_format == "channels_last"):
+            backbone_features = NHWC_to_NCHW(backbone_features)
+            conf_list = [NHWC_to_NCHW(conf) for conf in conf_list]
+            paf_list = [NHWC_to_NCHW(paf) for paf in paf_list]
+        
+        # construct predict_x
+        predict_x = {"conf_map": conf_list[-1], "paf_map": paf_list[-1], "stage_confs": conf_list, "stage_pafs": paf_list}
+        if(ret_backbone):
+            predict_x["backbone_features"]=backbone_features
+
+        return predict_x
     
     @tf.function(experimental_relax_shapes=True)
-    def infer(self,x,stage_num=5):
-        conf_map,paf_map=self.forward(x,is_train=False,stage_num=stage_num)
-        return conf_map,paf_map
+    def infer(self,x):
+        predict_x = self.forward(x,is_train=False)
+        conf_map, paf_map = predict_x["conf_map"], predict_x["paf_map"]
+        return conf_map, paf_map
     
-    def cal_loss(self,gt_conf,gt_paf,mask,stage_confs,stage_pafs):
+    def cal_loss(self, predict_x, target_x, metric_manager, mask=None):
+        # TODO: exclude the loss calculate from mask
+        # predict maps
+        stage_confs = predict_x["stage_confs"]
+        stage_pafs = predict_x["stage_pafs"]
+        # target maps
+        gt_conf = target_x["conf_map"]
+        gt_paf = target_x["paf_map"]
+
         stage_losses=[]
         batch_size=gt_conf.shape[0]
-        if(self.concat_dim==1):
-            mask_conf=tf_repeat(mask, [1,self.n_confmaps ,1,1])
-            mask_paf=tf_repeat(mask,[1,self.n_pafmaps ,1,1])
-        elif(self.concat_dim==-1):
-            mask_conf=tf_repeat(mask, [1,1,1,self.n_confmaps])
-            mask_paf=tf_repeat(mask,[1,1,1,self.n_pafmaps])
         loss_confs,loss_pafs=[],[]
         for stage_id,(stage_conf,stage_paf) in enumerate(zip(stage_confs,stage_pafs)):
-            loss_conf=tf.nn.l2_loss((gt_conf-stage_conf)*mask_conf)
-            loss_paf=tf.nn.l2_loss((gt_paf-stage_paf)*mask_paf)
-            #print(f"test stage:{stage_id} conf_loss:{loss_conf} paf_loss:{loss_paf}")
+            loss_conf=tf.nn.l2_loss(gt_conf-stage_conf)
+            loss_paf=tf.nn.l2_loss(gt_paf-stage_paf)
             stage_losses.append(loss_conf)
             stage_losses.append(loss_paf)
             loss_confs.append(loss_conf)
             loss_pafs.append(loss_paf)
         pd_loss=tf.reduce_mean(stage_losses)/batch_size
-        return pd_loss,loss_confs,loss_pafs
+        total_loss = pd_loss
+        metric_manager.update("model/conf_loss",loss_confs[-1])
+        metric_manager.update("model/paf_loss",loss_pafs[-1])
+        # regularize loss
+        regularize_loss = regulize_loss(self, weight_decay_factor=2e-4)
+        total_loss += regularize_loss
+        metric_manager.update("model/loss_re",regularize_loss)
+
+        return total_loss
     
     class Init_stage(Model):
         def __init__(self,n_confmaps=19,n_pafmaps=38,in_channels=128,data_format="channels_first"):

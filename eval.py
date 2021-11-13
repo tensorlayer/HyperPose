@@ -58,7 +58,7 @@ if __name__ == '__main__':
                         help='number of visible evaluation')
     parser.add_argument('--multiscale',
                         type=bool,
-                        default=False,
+                        default=True,
                         help='enable multiscale_search')
                         
 

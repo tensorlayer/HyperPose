@@ -19,8 +19,8 @@ def generate_train_data(train_images_path,train_annos_path,dataset_filter=None,i
         target_list.append({
             "kpt":kpts,
             "mask":None,
-            "bbx":bbx,
-            "head_bbx":head_bbx,
+            "bbxs":bbx,
+            "head_bbxs":head_bbx,
             "labeled":1
         })
     return img_paths_list,target_list

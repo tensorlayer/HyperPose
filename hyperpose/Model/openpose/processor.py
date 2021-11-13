@@ -1,35 +1,47 @@
-import os
 import cv2
-import json
 import numpy as np
 import tensorflow as tf
-import scipy.stats as st
-from .utils import get_heatmap,get_vectormap
+import matplotlib.pyplot as plt
+from .utils import get_conf_map,get_paf_map
+from .utils import resize_CHW
 from ..human import Human,BodyPart
+from ..processor import BasicPreProcessor
+from ..processor import BasicPostProcessor
+from ..processor import BasicVisualizer
+from ..processor import PltDrawer
+from ..common import to_numpy_dict, image_float_to_uint8
 
-class PreProcessor:
-    def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,data_format="channels_first"):
+class PreProcessor(BasicPreProcessor):
+    def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,*args, **kargs):
         self.hin=hin
         self.win=win
         self.hout=hout
         self.wout=wout
         self.parts=parts
         self.limbs=limbs
-        self.data_format=data_format
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
 
-    def process(self,annos,mask_valid):
-        heatmap = get_heatmap(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
-        vectormap = get_vectormap(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format=self.data_format)
-        return heatmap,vectormap
+    def process(self, annos, mask, bbxs):
+        conf_map = get_conf_map(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format="channels_first")
+        paf_map = get_paf_map(annos, self.hin, self.win, self.hout, self.wout, self.parts, self.limbs, data_format="channels_first")
+        hout, wout = conf_map.shape[-2], conf_map.shape[-1]
+        resize_mask = resize_CHW(mask, (hout, wout))
+        conf_map = conf_map * resize_mask
+        paf_map = paf_map * resize_mask
+        target_x = {"conf_map":conf_map, "paf_map":paf_map}
+        return target_x
 
 
-class PostProcessor:
+class PostProcessor(BasicPostProcessor):
     def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,thresh_conf=0.05,thresh_vec=0.05,thresh_vec_cnt=6,\
-                    step_paf=10,thresh_criterion2=0,thresh_part_cnt=4,thresh_human_score=0.3,data_format="channels_first",debug=False):
+                    step_paf=10,thresh_criterion2=0,thresh_part_cnt=4,thresh_human_score=0.3,data_format="channels_first",debug=False,\
+                        *args, **kargs):
         self.cur_id=0
         self.parts=parts
         self.limbs=limbs
+        self.hin, self.win = hin, win
+        self.hout, self.wout = hout, wout
+        self.stride = int(self.hin/self.hout)
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
         self.n_pos=len(self.parts)
         self.n_limb=len(self.limbs)
@@ -43,18 +55,27 @@ class PostProcessor:
         self.data_format=data_format
         self.debug=debug
     
-    def process(self,conf_map,paf_map,img_h,img_w,data_format="channels_first"):
-        if(data_format=="channels_first"):
-            conf_map=np.transpose(conf_map,[1,2,0])
-            paf_map=np.transpose(paf_map,[1,2,0])
-        #conf_map
-        if(conf_map.shape[0]!=img_h or conf_map.shape[1]!=img_w):
-            conf_map=cv2.resize(conf_map,(img_w,img_h))
-        conf_map=conf_map[np.newaxis,:,:,:]
-        #paf_map
-        if(paf_map.shape[0]!=img_h or paf_map.shape[1]!=img_w):
-            paf_map=cv2.resize(paf_map,(img_w,img_h))
-        paf_map=paf_map[np.newaxis,:,:,:]
+    def process(self, predict_x, resize=True):
+        predict_x = {"conf_map":predict_x["conf_map"], "paf_map":predict_x["paf_map"]}
+        predict_x = to_numpy_dict(predict_x)
+        batch_size = list(predict_x.values())[0].shape[0]
+        humans_list = []
+        for batch_idx in range(0,batch_size):
+            predict_x_one = {key:value[batch_idx] for key,value in predict_x.items()}
+            humans_list.append(self.process_one(predict_x_one, resize=resize))        
+        return humans_list
+
+    def process_one(self,predict_x, resize=True):
+        conf_map = predict_x["conf_map"]
+        paf_map = predict_x["paf_map"]
+        conf_map=np.transpose(conf_map,[1,2,0])
+        paf_map=np.transpose(paf_map,[1,2,0])
+        h, w =conf_map.shape[0], conf_map.shape[1]
+        if(resize):
+            conf_map = cv2.resize(conf_map, dsize=(w*self.stride, h*self.stride), interpolation=cv2.INTER_CUBIC)
+            paf_map = cv2.resize(paf_map, dsize=(w*self.stride, h*self.stride), interpolation=cv2.INTER_CUBIC)
+        conf_map = conf_map[np.newaxis,:,:,:]
+        paf_map = paf_map[np.newaxis,:,:,:]
         peak_map=self.get_peak_map(conf_map)
         humans=self.process_paf(peak_map[0],conf_map[0],paf_map[0])
         return humans
@@ -230,7 +251,106 @@ class PostProcessor:
     def debug_print(self,msg):
         if(self.debug):
             print(msg)
-        
+
+class Visualizer(BasicVisualizer):
+    def __init__(self, save_dir="./save_dir", *args, **kargs):
+        self.save_dir = save_dir
+
+    def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):
+        # mask
+        if(mask_batch is None):
+            mask_batch = np.ones_like(image_batch)
+        # transform
+        image_batch = np.transpose(image_batch,[0,2,3,1])
+        mask_batch = np.transpose(mask_batch,[0,2,3,1])
+        # predict maps
+        pd_conf_map_list, pd_paf_map_list = predict_x["conf_map"], predict_x["paf_map"]
+
+        batch_size = image_batch.shape[0]
+        for b_idx in range(0,batch_size):
+            image, mask = image_batch[b_idx], mask_batch[b_idx]
+            pd_conf_map, pd_paf_map = pd_conf_map_list[b_idx], pd_paf_map_list[b_idx]
+
+            # begin draw
+            pltdrawer = PltDrawer(draw_row=2, draw_col=2)
+
+            # draw origin image
+            origin_image = image_float_to_uint8(image.copy())
+            pltdrawer.add_subplot(origin_image, "origin image")
+
+            # draw mask
+            pltdrawer.add_subplot(mask, "mask")
+
+            # draw conf_map
+            conf_map_show=np.amax(pd_conf_map[:-1,:,:],axis=0)
+            pltdrawer.add_subplot(conf_map_show, "predict conf_map", color_bar=True)
+            
+            # draw paf_map
+            paf_map_show=np.amax(pd_paf_map[:,:,:],axis=0)
+            pltdrawer.add_subplot(paf_map_show, "predict paf_map", color_bar=True)
+
+            # save figure
+            pltdrawer.savefig(f"{self.save_dir}/{name}_{b_idx}.png")
+
+            # draw results
+            if(humans_list is not None):
+                humans = humans_list[b_idx]
+                self.visualize_result(image, humans, name=f"{name}_{b_idx}_result")
+
+    def visualize_compare(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
+        # mask
+        if(mask_batch is None):
+            mask = np.ones_like(image_batch)
+        # transform
+        image_batch = np.transpose(image_batch,[0,2,3,1])
+        mask_batch = np.transpose(mask_batch,[0,2,3,1])
+        # predict maps
+        pd_conf_map_batch, pd_paf_map_batch = predict_x["conf_map"], predict_x["paf_map"]
+        # target maps
+        gt_conf_map_batch, gt_paf_map_batch = target_x["conf_map"], target_x["paf_map"]
+
+        batch_size = image_batch.shape[0]
+        for b_idx in range(0, batch_size):
+            image, mask = image_batch[b_idx], mask_batch[b_idx]
+            pd_conf_map, pd_paf_map = pd_conf_map_batch[b_idx], pd_paf_map_batch[b_idx]
+            gt_conf_map, gt_paf_map = gt_conf_map_batch[b_idx], gt_paf_map_batch[b_idx]
+            
+            # begin draw
+            pltdrawer = PltDrawer(draw_row=2, draw_col=3)
+
+            # draw origin image
+            origin_image = image_float_to_uint8(image.copy())
+            pltdrawer.add_subplot(origin_image, "origin_image")
+
+            # draw pd conf_map
+            show_pd_conf_map = np.amax(pd_conf_map[:-1,:,:],axis=0)
+            pltdrawer.add_subplot(show_pd_conf_map, "predict conf_map", color_bar=True)
+
+            # draw pd paf_map
+            show_pd_paf_map = np.amax(pd_paf_map[:,:,:],axis=0)
+            pltdrawer.add_subplot(show_pd_paf_map, "predict paf_map", color_bar=True)
+
+            # draw mask
+            pltdrawer.add_subplot(mask, "mask")
+            
+            # draw gt conf_map
+            show_gt_conf_map = np.amax(gt_conf_map[:-1,:,:],axis=0)
+            pltdrawer.add_subplot(show_gt_conf_map, "groudtruth conf_map", color_bar=True)
+
+            # draw gt paf_map
+            show_gt_paf_map = np.amax(gt_paf_map[:,:,:],axis=0)
+            pltdrawer.add_subplot(show_gt_paf_map, "groundtruth paf_map", color_bar=True)
+            
+            # save figure
+            pltdrawer.savefig(f"{self.save_dir}/{name}_{b_idx}.png")
+
+            # draw results
+            if(humans_list is not None):
+                batch_size = image_batch.shape[0]
+                for b_idx in range(0, batch_size):
+                    image, mask, humans = image_batch[b_idx], mask_batch[b_idx], humans_list[b_idx]
+                    self.visualize_result(image, humans, f"{name}_{b_idx}_result")
+
 class Peak:
     def __init__(self,peak_idx,part_idx,y,x,score):
         self.idx=peak_idx
@@ -250,5 +370,6 @@ class Connection:
     
     def __eq__(self,other):
         return self.score==other.score
+        
 
 

@@ -6,9 +6,10 @@ import tensorflow as tf
 from functools import partial
 import multiprocessing
 import matplotlib.pyplot as plt
-from .processor import PostProcessor
+from .processor import PostProcessor, Visualizer
 from .utils import draw_results
-from ..common import pad_image
+from ..common import pad_image, resize_NCHW
+from tqdm import tqdm
 
 def multiscale_search(img,model):
     scales=[0.5,1.0,1.5,2.0]
@@ -26,15 +27,14 @@ def multiscale_search(img,model):
         padded_img,pad=pad_image(scaled_img,stride,pad_value=0.0)
         padded_h,padded_w,_=padded_img.shape
         input_img=padded_img[np.newaxis,:,:,:].astype(np.float32)
-        if(data_format=="channels_first"):
-            input_img=input_img.transpose([0,3,1,2])
+        input_img=input_img.transpose([0,3,1,2])
         input_img=tf.convert_to_tensor(input_img)
+        # image process
         conf_map,paf_map=model.infer(input_img)
         conf_map=conf_map.numpy()[0]
         paf_map=paf_map.numpy()[0]
-        if(data_format=="channels_first"):
-            conf_map=np.transpose(conf_map,[1,2,0])
-            paf_map=np.transpose(paf_map,[1,2,0])
+        conf_map=np.transpose(conf_map,[1,2,0])
+        paf_map=np.transpose(paf_map,[1,2,0])
         #conf_map restore
         conf_map=cv2.resize(conf_map,(padded_w,padded_h),interpolation=cv2.INTER_CUBIC)
         conf_map=conf_map[pad[0]:pad[0]+scale_h,pad[2]:pad[2]+scale_w,:]
@@ -43,70 +43,33 @@ def multiscale_search(img,model):
         paf_map=cv2.resize(paf_map,(padded_w,padded_h),interpolation=cv2.INTER_CUBIC)
         paf_map=paf_map[pad[0]:pad[0]+scale_h,pad[2]:pad[2]+scale_w,:]
         paf_map=cv2.resize(paf_map,(img_w,img_h),interpolation=cv2.INTER_CUBIC)
-        if(data_format=="channels_first"):
-            conf_map=np.transpose(conf_map,[2,0,1])
-            paf_map=np.transpose(paf_map,[2,0,1])
+        conf_map=np.transpose(conf_map,[2,0,1])
+        paf_map=np.transpose(paf_map,[2,0,1])
         #average
         avg_conf_map+=conf_map/(len(scales))
         avg_paf_map+=paf_map/(len(scales))
-    return avg_conf_map,avg_paf_map
+    avg_conf_map = avg_conf_map[np.newaxis,:,:,:]
+    avg_paf_map = avg_paf_map[np.newaxis,:,:,:]
+    return avg_conf_map,avg_paf_map,input_img
 
-def infer_one_img(model,post_processor,img,img_id=-1,enable_multiscale_search=False,is_visual=False,save_dir="./vis_dir"):
+def infer_one_img(model,post_processor:PostProcessor,visualizer:Visualizer,img,image_id=-1,enable_multiscale_search=False,is_visual=False):
     img=img.numpy().astype(np.float32)
     img_h,img_w,_=img.shape
-    data_format=model.data_format
     if(enable_multiscale_search):
-        conf_map,paf_map=multiscale_search(img,model)
+        conf_map,paf_map,input_image=multiscale_search(img,model)
     else:
-        input_img=cv2.resize(img,(model.win,model.hin))[np.newaxis,:,:,:]
-        if(data_format=="channels_first"):
-            input_img=input_img.transpose([0,3,1,2])
-        conf_map,paf_map=model.infer(input_img)
-        conf_map=conf_map.numpy()[0]
-        paf_map=paf_map.numpy()[0]
-    humans=post_processor.process(conf_map.copy(),paf_map.copy(),img_h,img_w,data_format=data_format)
+        input_image=cv2.resize(img,(model.win,model.hin))[np.newaxis,:,:,:]
+        input_image=input_image.transpose([0,3,1,2])
+        conf_map,paf_map=model.infer(input_image)
+        conf_map=resize_NCHW(conf_map.numpy(),dst_shape=(img_h, img_w))
+        paf_map=resize_NCHW(paf_map.numpy(),dst_shape=(img_h, img_w))
+    predict_x = {"conf_map":conf_map, "paf_map":paf_map}
+    humans = post_processor.process(predict_x, resize=False)[0]
     if(is_visual):
-        if(data_format=="channels_first"):
-            conf_map=conf_map.transpose([1,2,0])
-            paf_map=paf_map.transpose([1,2,0])
-        draw_conf_map=cv2.resize(conf_map,(img_w,img_h))
-        draw_paf_map=cv2.resize(paf_map,(img_w,img_h))
-        visualize(img,img_id,humans,draw_conf_map,draw_paf_map,save_dir)
+        visualizer.visualize(image_batch=input_image, predict_x=predict_x, name=f"{image_id}_heatmaps")
+        visualizer.visualize_result(image=img, humans=humans, name=f"{image_id}_result.png")
     return humans
-
-def visualize(img,img_id,humans,conf_map,paf_map,save_dir):
-    print(f"{len(humans)} human found!")
-    print("visualizing...")
-    os.makedirs(save_dir,exist_ok=True)
-    ori_img=np.clip(img*255.0,0.0,255.0).astype(np.uint8)
-    vis_img=ori_img.copy()
-    for human in humans:
-        vis_img=human.draw_human(vis_img)
-    fig=plt.figure(figsize=(8,8))
-    #show input image
-    a=fig.add_subplot(2,2,1)
-    a.set_title("input image")
-    plt.imshow(ori_img)
-    #show output result
-    a=fig.add_subplot(2,2,2)
-    a.set_title("output result")
-    plt.imshow(vis_img)
-    #show conf_map
-    show_conf_map=np.amax(conf_map[:,:,:-1],axis=2)
-    a=fig.add_subplot(2,2,3)
-    a.set_title("conf_map")
-    plt.imshow(show_conf_map,alpha=0.8)
-    plt.colorbar()
-    #show paf_map
-    show_paf_map=np.amax(paf_map[:,:,:],axis=2)
-    a=fig.add_subplot(2,2,4)
-    a.set_title("paf_map")
-    plt.imshow(show_paf_map,alpha=0.8)
-    plt.colorbar()
-    #save
-    plt.savefig(f"{save_dir}/{img_id}_visualize.png")
-    plt.close('all')
-
+    
 def _map_fn(image_file,image_id,hin,win):
     #load data
     image = tf.io.read_file(image_file)
@@ -143,30 +106,31 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
     None
     '''
     print(f"enable multiscale_search:{enable_multiscale_search}")
-    model.load_weights(os.path.join(config.model.model_dir,"newest_model.npz"))
+    model.load_weights(os.path.join(config.model.model_dir,"newest_model.npz"), format="npz_dict")
     model.eval()
     pd_anns=[]
     vis_dir=config.eval.vis_dir
     kpt_converter=dataset.get_output_kpt_cvter()
     post_processor=PostProcessor(parts=model.parts,limbs=model.limbs,colors=model.colors,\
         hin=model.hin,win=model.win,hout=model.hout,wout=model.wout)
+    visualizer = Visualizer(save_dir=f"./save_dir/{config.model.model_name}/eval_vis_dir")
     
     eval_dataset=dataset.get_eval_dataset()
     dataset_size=dataset.get_eval_datasize()
     paramed_map_fn=partial(_map_fn,hin=model.hin,win=model.win)
     eval_dataset=eval_dataset.map(paramed_map_fn,num_parallel_calls=max(multiprocessing.cpu_count()//2,1))
-    for eval_num,(img,img_id) in enumerate(eval_dataset):
-        img_id=img_id.numpy()
+    for eval_num,(image,image_id) in tqdm(enumerate(eval_dataset)):
+        image_id=image_id.numpy()
         if(eval_num>=total_eval_num):
             break
         if(eval_num<=vis_num):
-            humans=infer_one_img(model,post_processor,img,img_id=img_id,is_visual=True,save_dir=vis_dir,enable_multiscale_search=enable_multiscale_search)
+            humans=infer_one_img(model,post_processor,visualizer,image,image_id=image_id,is_visual=True,enable_multiscale_search=enable_multiscale_search)
         else:
-            humans=infer_one_img(model,post_processor,img,img_id=img_id,is_visual=False,save_dir=vis_dir,enable_multiscale_search=enable_multiscale_search)
+            humans=infer_one_img(model,post_processor,visualizer,image,image_id=image_id,is_visual=False,enable_multiscale_search=enable_multiscale_search)
         for human in humans:
             ann={}
             ann["category_id"]=1
-            ann["image_id"]=int(img_id)
+            ann["image_id"]=int(image_id)
             ann["id"]=human.get_global_id()
             ann["area"]=human.get_area()
             ann["score"]=human.get_score()
@@ -213,28 +177,29 @@ def test(model,dataset,config,vis_num=30,total_test_num=10000,enable_multiscale_
     None
     '''
     print(f"enable multiscale_search:{enable_multiscale_search}")
-    model.load_weights(os.path.join(config.model.model_dir,"newest_model.npz"))
+    model.load_weights(os.path.join(config.model.model_dir,"newest_model.npz"),format="npz_dict")
     model.eval()
     pd_anns=[]
     vis_dir=config.test.vis_dir
     kpt_converter=dataset.get_output_kpt_cvter()
     post_processor=PostProcessor(parts=model.parts,limbs=model.limbs,colors=model.colors,\
         hin=model.hin,win=model.win,hout=model.hout,wout=model.wout)
+    visualizer = Visualizer(save_dir=f"./save_dir/{config.model.model_name}/eval_vis_dir")
     
     test_dataset=dataset.get_test_dataset()
     dataset_size=dataset.get_test_datasize()
     paramed_map_fn=partial(_map_fn,hin=model.hin,win=model.win)
     test_dataset=test_dataset.map(paramed_map_fn,num_parallel_calls=max(multiprocessing.cpu_count()//2,1))
-    for test_num,(img,img_id) in enumerate(test_dataset):
-        img_id=img_id.numpy()
+    for test_num,(image,image_id) in enumerate(test_dataset):
+        image_id=image_id.numpy()
         if(test_num>=total_test_num):
             break
         is_visual=(test_num<=vis_num)
-        humans=infer_one_img(model,post_processor,img,img_id=img_id,is_visual=is_visual,save_dir=vis_dir,enable_multiscale_search=enable_multiscale_search)
+        humans=infer_one_img(model,post_processor,image,image_id=image_id,is_visual=is_visual,enable_multiscale_search=enable_multiscale_search)
         for human in humans:
             ann={}
             ann["category_id"]=1
-            ann["image_id"]=int(img_id)
+            ann["image_id"]=int(image_id)
             ann["id"]=human.get_global_id()
             ann["area"]=human.get_area()
             ann["score"]=human.get_score()

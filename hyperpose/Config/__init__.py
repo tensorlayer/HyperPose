@@ -10,12 +10,17 @@ update_config,update_train,update_eval,update_test,update_model,update_data,upda
 
 #default train
 update_train.optim_type=OPTIM.Adam
+update_train.kungfu_option = KUNGFU.Sync_avg
 
 #defualt model config
 update_model.model_type=MODEL.Openpose
 #userdef model
-update_model.userdef_parts=None
-update_model.userdef_limbs=None
+update_model.custom_parts = None
+update_model.custom_limbs = None
+update_model.custom_augmentor = None
+update_model.custom_preprocessor = None
+update_model.custom_postprocessor = None
+update_model.custom_visualizer = None
 
 #default dataset config
 #official dataset
@@ -56,7 +61,7 @@ def get_config():
         an edict object contains all the configuration information.
 
     '''
-    #import basic configurations
+    # import basic configurations
     if(update_model.model_type==MODEL.Openpose):
         from .config_opps import model,train,eval,test,data,log
     elif(update_model.model_type==MODEL.LightweightOpenpose):
@@ -67,7 +72,7 @@ def get_config():
         from .config_ppn import model,train,eval,test,data,log
     elif(update_model.model_type==MODEL.Pifpaf):
         from .config_pifpaf import model,train,eval,test,data,log
-    #merge settings with basic configurations
+    # merge settings with basic configurations
     model.update(update_model)
     train.update(update_train)
     eval.update(update_eval)
@@ -75,7 +80,7 @@ def get_config():
     data.update(update_data)
     log.update(update_log)
     pretrain.update(update_pretrain)
-    #assemble configure
+    # assemble configure
     config=edict()
     config.model=model
     config.train=train
@@ -84,7 +89,7 @@ def get_config():
     config.data=data
     config.log=log
     config.pretrain=pretrain
-    #path configure
+    # path configure
     import tensorflow as tf
     import tensorlayer as tl
     tl.files.exists_or_mkdir(config.model.model_dir, verbose=True)  # to save model files 
@@ -93,18 +98,78 @@ def get_config():
     tl.files.exists_or_mkdir(config.test.vis_dir, verbose=True)  # to save visualization results
     tl.files.exists_or_mkdir(config.data.vis_dir, verbose=True)  # to save visualization results
     tl.files.exists_or_mkdir(config.pretrain.pretrain_model_dir,verbose=True)
-    #device configure
-    #FIXME: replace experimental tf functions when in tf 2.1 version
+    # device configure
+    # FIXME: replace experimental tf functions when in tf 2.1 version
     tf.debugging.set_log_device_placement(False)
     tf.config.set_soft_device_placement(True)
     for gpu in tf.config.experimental.get_visible_devices("GPU"):
         tf.config.experimental.set_memory_growth(gpu,True)
-    #limit the cpu usage when pretrain
-    #logging configure
+
+    # logging configure
+
+    # logging file path init
     tl.files.exists_or_mkdir(os.path.dirname(config.log.log_path),verbose=True)
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.WARN)
     tl.logging.set_verbosity(tl.logging.WARN)
-    return deepcopy(config)
+
+    # Info logging configure
+    info_logger = logging.getLogger(name="INFO")
+    info_logger.setLevel(logging.INFO)
+    # stream handler
+    info_cHandler = logging.StreamHandler()
+    info_cFormat = logging.Formatter("[%(name)s]: %(message)s")
+    info_cHandler.setFormatter(info_cFormat)
+    info_logger.addHandler(info_cHandler)
+    # file handler
+    info_fHandler = logging.FileHandler(config.log.log_path,mode="a")
+    info_fFormat = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+    info_fHandler.setFormatter(info_fFormat)
+    info_logger.addHandler(info_fHandler)
+
+    # Dataset logging configure
+    data_logger = logging.getLogger(name="DATA")
+    data_logger.setLevel(logging.INFO)
+    # stream handler
+    data_cHandler = logging.StreamHandler()
+    data_cFormat = logging.Formatter("[%(name)s] %(levelname)s: %(message)s")
+    data_cHandler.setFormatter(data_cFormat)
+    data_logger.addHandler(data_cHandler)
+    # file handler
+    data_fHandler = logging.FileHandler(config.log.log_path,mode="a")
+    data_fFormat = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+    data_fHandler.setFormatter(data_fFormat)
+    data_logger.addHandler(data_fHandler)
+
+    # Model logging configure
+    model_logger = logging.getLogger(name="MODEL")
+    model_logger.setLevel(logging.INFO)
+    # stream handler
+    model_cHandler = logging.StreamHandler()
+    model_cFormat = logging.Formatter("[%(name)s] %(levelname)s: %(message)s")
+    model_cHandler.setFormatter(model_cFormat)
+    model_logger.addHandler(model_cHandler)
+    # file handler
+    model_fHandler = logging.FileHandler(config.log.log_path,mode="a")
+    model_fFormat = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+    model_fHandler.setFormatter(model_fFormat)
+    model_logger.addHandler(model_fHandler)
+
+    # Train logging configure
+    train_logger = logging.getLogger(name="TRAIN")
+    train_logger.setLevel(logging.INFO)
+    # stream handler
+    train_cHandler = logging.StreamHandler()
+    train_cFormat = logging.Formatter("[%(name)s] %(levelname)s: %(message)s")
+    train_cHandler.setFormatter(train_cFormat)
+    train_logger.addHandler(train_cHandler)
+    # file handler
+    train_fHandler = logging.FileHandler(config.log.log_path,mode="a")
+    train_fFormat = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+    train_fHandler.setFormatter(train_fFormat)
+    train_logger.addHandler(train_fHandler)
+    
+    info("Configuration initialized!")
+    return config
 
 #set configure api
 #model configure api
@@ -235,12 +300,6 @@ def set_model_name(model_name):
     update_data.vis_dir=f"./save_dir/{update_model.model_name}/data_vis_dir"
     update_log.log_path= f"./save_dir/{update_model.model_name}/log.txt"
 
-def set_model_parts(userdef_parts):
-    update_model.userdef_parts=userdef_parts
-
-def set_model_limbs(userdef_limbs):
-    update_model.userdef_limbs=userdef_limbs
-
 #train configure api
 def set_train_type(train_type):
     '''set single_train or parallel train
@@ -279,9 +338,6 @@ def set_learning_rate(learning_rate):
     None
     '''
     update_train.lr_init=learning_rate
-
-def set_save_interval(save_interval):
-    update_train.save_interval=save_interval
 
 def set_batch_size(batch_size):
     '''set the batch size in training
@@ -423,7 +479,8 @@ def set_dataset_filter(dataset_filter):
     '''
     update_data.dataset_filter=dataset_filter
 
-#log configure api
+# interval APIs
+# configure log interval
 def set_log_interval(log_interval):
     '''set the frequency of logging
 
@@ -439,10 +496,51 @@ def set_log_interval(log_interval):
     -------
     None
     '''
-    update_log.log_interval=log_interval
+    if(log_interval is not None):
+        update_log.log_interval=log_interval
+
+# configure save_interval
+def set_save_interval(save_interval):
+    if(save_interval is not None):
+        update_train.save_interval = save_interval
+
+# configure vis_interval
+def set_vis_interval(vis_interval):
+    if(vis_interval is not None):
+        update_train.vis_interval = vis_interval
+
+# custome module interfaces
+# custom parts
+def set_custom_parts(custom_parts):
+    update_model.custom_parts = custom_parts
+
+# custom limbs
+def set_custom_limbs(custom_limbs):
+    update_model.custom_limbs = custom_limbs
+
+# custom augmentor
+def set_custom_augmentor(augmentor):
+    update_model.augmentor = augmentor
+
+# custom preprocessor
+def set_custom_preprocessor(preprocessor):
+    update_model.preprocessor = preprocessor
+
+# custom postprocessor
+def set_custom_postprocessor(postprocessor):
+    update_model.postprocessor = postprocessor
+
+# custom visualizer
+def set_custom_visualizer(visualizer):
+    update_model.visualizer = visualizer
+
 
 def set_pretrain(enable):
     update_pretrain.enable=enable
 
 def set_pretrain_dataset_path(pretrain_dataset_path):
     update_pretrain.pretrain_dataset_path=pretrain_dataset_path
+
+def info(msg):
+    info_logger = logging.getLogger("INFO")
+    info_logger.info(msg)

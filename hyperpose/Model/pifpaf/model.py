@@ -5,8 +5,9 @@ from tensorlayer import layers
 from tensorlayer.models import Model
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d
 from .define import CocoColor
-from .utils import pixel_shuffle,get_meshgrid
+from .utils import pixel_shuffle,get_meshgrid, regulize_loss
 from ..backbones import Resnet50_backbone
+from ..metrics import MetricManager
 
 
 class Pifpaf(Model):
@@ -34,6 +35,8 @@ class Pifpaf(Model):
         self.lambda_paf_src_scale=lambda_paf_src_scale
         self.lambda_paf_dst_scale=lambda_paf_dst_scale
         self.data_format=data_format
+        self.mean = np.array([0.485, 0.456, 0.406])[np.newaxis,:,np.newaxis,np.newaxis]
+        self.std = np.array([0.229, 0.224, 0.225])[np.newaxis,:,np.newaxis,np.newaxis]
         if(backbone==None):
             self.backbone=Resnet50_backbone(data_format=data_format,use_pool=False,scale_size=self.scale_size,decay=0.99,eps=1e-4)
             self.stride=int(self.stride/2) #because of not using max_pool layer of resnet50
@@ -49,19 +52,44 @@ class Pifpaf(Model):
     
     @tf.function(experimental_relax_shapes=True)
     def forward(self,x,is_train=False,ret_backbone=False):
+        # normalize
+        x = (x-self.mean)/self.std
+        # backbone feature extraction
         backbone_x=self.backbone.forward(x)
+        # pif maps
         pif_maps=self.pif_head.forward(backbone_x,is_train=is_train)
+        pif_conf, pif_vec, pif_bmin, pif_scale = pif_maps
+        # paf maps
         paf_maps=self.paf_head.forward(backbone_x,is_train=is_train)
+        paf_conf, paf_src_vec, paf_dst_vec, paf_src_bmin, paf_dst_bmin, paf_src_scale, paf_dst_scale = paf_maps
+
+        # construct predict_x
+        predict_x = {
+            "pif_conf": pif_conf,
+            "pif_vec": pif_vec,
+            "pif_bmin": pif_bmin,
+            "pif_scale": pif_scale,
+            "paf_conf": paf_conf,
+            "paf_src_vec": paf_src_vec,
+            "paf_dst_vec": paf_dst_vec,
+            "paf_src_bmin": paf_src_bmin,
+            "paf_dst_bmin": paf_dst_bmin,
+            "paf_src_scale": paf_src_scale,
+            "paf_dst_scale": paf_dst_scale
+        }
         if(ret_backbone):
-            return pif_maps,paf_maps,backbone_x
-        return pif_maps,paf_maps
+            predict_x["backbone_features"] = backbone_x
+        return predict_x
     
     @tf.function(experimental_relax_shapes=True)
     def infer(self,x):
-        pif_maps,paf_maps,backbone_x=self.forward(x,is_train=False,ret_backbone=True)
-        pif_conf,pif_vec,_,pif_scale=pif_maps
-        paf_conf,paf_src_vec,paf_dst_vec,_,_,paf_src_scale,paf_dst_scale=paf_maps
-        return pif_conf,pif_vec,pif_scale,paf_conf,paf_src_vec,paf_dst_vec,paf_src_scale,paf_dst_scale,backbone_x
+        predict_x = self.forward(x,is_train=False)
+        # pif maps
+        pif_conf, pif_vec, pif_scale = predict_x["pif_conf"], predict_x["pif_vec"], predict_x["pif_scale"]
+        # paf maps
+        paf_conf, paf_src_vec, paf_dst_vec =  predict_x["paf_conf"], predict_x["paf_src_vec"], predict_x["paf_dst_vec"]
+        paf_src_scale, paf_dst_scale = predict_x["paf_src_scale"], predict_x["paf_dst_scale"]
+        return pif_conf,pif_vec,pif_scale, paf_conf, paf_src_vec, paf_dst_vec, paf_src_scale, paf_dst_scale
     
     def soft_clamp(self,x,max_value=5.0):
         above_mask=tf.where(x>=max_value,1.0,0.0)
@@ -130,29 +158,59 @@ class Pifpaf(Model):
         scale_loss=tf.reduce_sum(scale_loss)/batch_size
         return scale_loss
     
-    def cal_loss(self,pd_pif_maps,pd_paf_maps,gt_pif_maps,gt_paf_maps):
-        #calculate pif losses
-        pd_pif_conf,pd_pif_vec,pd_pif_logb,pd_pif_scale=pd_pif_maps
-        gt_pif_conf,gt_pif_vec,gt_pif_bmin,gt_pif_scale=gt_pif_maps
-        loss_pif_conf=self.Bce_loss(pd_pif_conf,gt_pif_conf)
-        loss_pif_vec=self.Laplace_loss(pd_pif_vec,pd_pif_logb,gt_pif_vec,gt_pif_bmin)
-        loss_pif_scale=self.Scale_loss(pd_pif_scale,gt_pif_scale)
-        loss_pif_maps=[loss_pif_conf,loss_pif_vec,loss_pif_scale]
-        #calculate paf losses
-        pd_paf_conf,pd_paf_src_vec,pd_paf_dst_vec,pd_paf_src_logb,pd_paf_dst_logb,pd_paf_src_scale,pd_paf_dst_scale=pd_paf_maps
-        gt_paf_conf,gt_paf_src_vec,gt_paf_dst_vec,gt_paf_src_bmin,gt_paf_dst_bmin,gt_paf_src_scale,gt_paf_dst_scale=gt_paf_maps
-        loss_paf_conf=self.Bce_loss(pd_paf_conf,gt_paf_conf)
-        loss_paf_src_scale=self.Scale_loss(pd_paf_src_scale,gt_paf_src_scale)
-        loss_paf_dst_scale=self.Scale_loss(pd_paf_dst_scale,gt_paf_dst_scale)
-        loss_paf_src_vec=self.Laplace_loss(pd_paf_src_vec,pd_paf_src_logb,gt_paf_src_vec,gt_paf_src_bmin)
-        loss_paf_dst_vec=self.Laplace_loss(pd_paf_dst_vec,pd_paf_dst_logb,gt_paf_dst_vec,gt_paf_dst_bmin)
-        loss_paf_maps=[loss_paf_conf,loss_paf_src_vec,loss_paf_dst_vec,loss_paf_src_scale,loss_paf_dst_scale]
-        #calculate total loss
-        total_loss=(loss_pif_conf*self.lambda_pif_conf+loss_pif_vec*self.lambda_pif_vec+loss_pif_scale*self.lambda_pif_scale+
-            loss_paf_conf*self.lambda_paf_conf+loss_paf_src_vec*self.lambda_paf_src_vec+loss_paf_dst_vec*self.lambda_paf_dst_vec+
-            loss_paf_src_scale*self.lambda_paf_src_scale+loss_paf_dst_scale*self.lambda_paf_dst_scale)
-        #retun losses
-        return loss_pif_maps,loss_paf_maps,total_loss
+    def cal_loss(self, predict_x, target_x, metric_manager:MetricManager, mask=None):
+        # calculate pif losses
+        # predict maps
+        pd_pif_conf, pd_pif_vec, pd_pif_logb, pd_pif_scale = \
+                predict_x["pif_conf"], predict_x["pif_vec"], predict_x["pif_bmin"], predict_x["pif_scale"]
+        # target maps
+        gt_pif_conf, gt_pif_vec, gt_pif_bmin, gt_pif_scale = \
+                target_x["pif_conf"], target_x["pif_vec"], target_x["pif_bmin"], target_x["pif_scale"]
+        # loss calculation
+        loss_pif_conf = self.Bce_loss(pd_pif_conf,gt_pif_conf)*self.lambda_pif_conf
+        loss_pif_vec = self.Laplace_loss(pd_pif_vec,pd_pif_logb,gt_pif_vec,gt_pif_bmin)*self.lambda_pif_vec
+        loss_pif_scale = self.Scale_loss(pd_pif_scale,gt_pif_scale)*self.lambda_pif_scale
+        
+        # calculate paf losses
+        # predict maps
+        pd_paf_conf, pd_paf_src_vec, pd_paf_dst_vec =  \
+                predict_x["paf_conf"], predict_x["paf_src_vec"], predict_x["paf_dst_vec"]
+        pd_paf_src_logb, pd_paf_dst_logb, pd_paf_src_scale, pd_paf_dst_scale = \
+                predict_x["paf_src_bmin"], predict_x["paf_dst_bmin"], predict_x["paf_src_scale"], predict_x["paf_dst_scale"]
+        # target maps
+        gt_paf_conf, gt_paf_src_vec, gt_paf_dst_vec = \
+                target_x["paf_conf"], target_x["paf_src_vec"], target_x["paf_dst_vec"]
+        gt_paf_src_bmin, gt_paf_dst_bmin, gt_paf_src_scale, gt_paf_dst_scale = \
+                target_x["paf_src_bmin"], target_x["paf_dst_bmin"], target_x["paf_src_scale"], target_x["paf_dst_scale"]
+        # loss calculation
+        loss_paf_conf = self.Bce_loss(pd_paf_conf,gt_paf_conf)*self.lambda_paf_conf
+        loss_paf_src_scale = self.Scale_loss(pd_paf_src_scale,gt_paf_src_scale)*self.lambda_paf_src_scale
+        loss_paf_dst_scale = self.Scale_loss(pd_paf_dst_scale,gt_paf_dst_scale)*self.lambda_paf_dst_scale
+        loss_paf_src_vec = self.Laplace_loss(pd_paf_src_vec,pd_paf_src_logb,gt_paf_src_vec,gt_paf_src_bmin)*self.lambda_paf_src_vec
+        loss_paf_dst_vec = self.Laplace_loss(pd_paf_dst_vec,pd_paf_dst_logb,gt_paf_dst_vec,gt_paf_dst_bmin)*self.lambda_paf_dst_vec
+        
+        # regularize loss
+        loss_re = regulize_loss(self,2e-4)
+        
+        # calculate total loss
+        total_loss=loss_pif_conf + loss_pif_vec + loss_pif_scale+\
+                    loss_paf_conf + loss_paf_src_scale + loss_paf_dst_scale + loss_paf_src_vec +loss_paf_dst_vec + loss_re
+        # metrics
+        # pif metrics
+        metric_manager.update("model/loss_pif_conf", loss_pif_conf)
+        metric_manager.update("model/loss_pif_vec", loss_pif_vec)
+        metric_manager.update("model/loss_pif_scale", loss_pif_scale)
+        # paf metrics
+        metric_manager.update("model/loss_paf_conf", loss_paf_conf)
+        metric_manager.update("model/loss_paf_src_vec", loss_paf_src_vec)
+        metric_manager.update("model/loss_paf_dst_vec", loss_paf_dst_vec)
+        metric_manager.update("model/loss_paf_src_scale", loss_paf_src_scale)
+        metric_manager.update("model/loss_paf_dst_scale", loss_paf_dst_scale)
+        # regularize
+        metric_manager.update("model/loss_re", loss_re)
+        # total
+        metric_manager.update("model/total_loss", total_loss)
+        return total_loss
     
     class PifHead(Model):
         def __init__(self,input_features=2048,n_pos=19,n_limbs=19,quad_size=2,hout=8,wout=8,stride=8,data_format="channels_first"):
@@ -182,11 +240,8 @@ class Pifpaf(Model):
             pif_scale=x[:,:,4,:,:]
             #restore vec_maps in inference
             if(is_train==False):
-                mesh_grid=get_meshgrid(mesh_h=hout,mesh_w=wout)+np.array([1.5,1.5])[:,np.newaxis,np.newaxis]
-                infer_pif_conf=tf.nn.sigmoid(pif_conf)
-                infer_pif_vec=(pif_vec[:,:]+mesh_grid)*self.stride
-                infer_pif_scale=tf.math.softplus(pif_scale)*self.stride
-                return infer_pif_conf,infer_pif_vec,pif_logb,infer_pif_scale
+                pif_conf=tf.nn.sigmoid(pif_conf)
+                pif_scale=tf.math.softplus(pif_scale)
             return pif_conf,pif_vec,pif_logb,pif_scale
         
     class PafHead(Model):
@@ -220,11 +275,7 @@ class Pifpaf(Model):
             paf_dst_scale=x[:,:,8,:,:]
             #restore vec_maps in inference
             if(is_train==False):
-                mesh_grid=get_meshgrid(mesh_h=hout,mesh_w=wout)+np.array([1.5,1.5])[:,np.newaxis,np.newaxis]
-                infer_paf_conf=tf.nn.sigmoid(paf_conf)
-                infer_paf_src_vec=(paf_src_vec[:,:]+mesh_grid)*self.stride
-                infer_paf_dst_vec=(paf_dst_vec[:,:]+mesh_grid)*self.stride
-                infer_paf_src_scale=tf.math.softplus(paf_src_scale)*self.stride
-                infer_paf_dst_scale=tf.math.softplus(paf_dst_scale)*self.stride
-                return infer_paf_conf,infer_paf_src_vec,infer_paf_dst_vec,paf_src_logb,paf_dst_logb,infer_paf_src_scale,infer_paf_dst_scale
+                paf_conf=tf.nn.sigmoid(paf_conf)
+                paf_src_scale=tf.math.softplus(paf_src_scale)
+                paf_dst_scale=tf.math.softplus(paf_dst_scale)
             return paf_conf,paf_src_vec,paf_dst_vec,paf_src_logb,paf_dst_logb,paf_src_scale,paf_dst_scale

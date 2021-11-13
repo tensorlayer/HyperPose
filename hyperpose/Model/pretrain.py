@@ -5,7 +5,8 @@ import multiprocessing
 import tensorflow as tf
 import tensorlayer as tl
 from functools import partial
-from .common import log,regulize_loss
+from .common import regulize_loss
+from .common import log_train as log
 
 def _data_aug(image,hin,win,data_format):
     image=image.numpy()

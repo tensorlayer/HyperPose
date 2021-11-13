@@ -5,6 +5,8 @@ from tensorlayer.models import Model
 from tensorlayer.layers import BatchNorm2d, Conv2d, DepthwiseConv2d, LayerList, MaxPool2d
 from ..utils import tf_repeat
 from ..define import CocoPart,CocoLimb
+from ...backbones import MobilenetDilated_backbone
+from ...common import regulize_loss
 initializer=tl.initializers.truncated_normal(stddev=0.005)
 
 class LightWeightOpenPose(Model):
@@ -30,7 +32,7 @@ class LightWeightOpenPose(Model):
             self.concat_dim=-1
         #dilated mobilenetv1 backbone
         if(backbone==None):
-            self.backbone=self.Dilated_mobilenet(data_format=self.data_format)
+            self.backbone=MobilenetDilated_backbone(data_format=self.data_format)
         else:
             self.backbone=backbone(scale_size=8,pretraining=pretraining,data_format=self.data_format)
         #cpm stage to cutdown dimension
@@ -43,75 +45,63 @@ class LightWeightOpenPose(Model):
             in_channels=self.num_channels+self.n_confmaps+self.n_pafmaps,data_format=self.data_format)
     
     @tf.function
-    def forward(self,x,is_train=False,stage_num=1,domainadapt=False):
+    def forward(self,x, is_train=False, ret_backbone=False):
         conf_list=[]
         paf_list=[]
-        #backbone feature extract
+        # backbone feature extract
         backbone_features=self.backbone(x)
         cpm_features=self.cpm_stage(backbone_features)
-        #init stage
+        # init stage
         init_conf,init_paf=self.init_stage(cpm_features)
         conf_list.append(init_conf)
         paf_list.append(init_paf)
         x=tf.concat([cpm_features,init_conf,init_paf],self.concat_dim)
-        #refinement
+        # refinement
         ref_conf1,ref_paf1=self.refine_stage1(x)
         conf_list.append(ref_conf1)
         paf_list.append(ref_paf1)
-        if(domainadapt):
-            return conf_list[-1],paf_list[-1],conf_list,paf_list,backbone_features
-        elif(is_train):
-            return conf_list[-1],paf_list[-1],conf_list,paf_list
-        else:
-            return conf_list[-1],paf_list[-1]
+
+        # construct predict_x
+        predict_x = {"conf_map": conf_list[-1], "paf_map": paf_list[-1], "stage_confs": conf_list, "stage_pafs": paf_list}
+        if(ret_backbone):
+            predict_x["backbone_features"]=backbone_features
+
+        return predict_x
 
     @tf.function(experimental_relax_shapes=True)
     def infer(self,x):
-        conf_map,paf_map=self.forward(x,is_train=False)
+        predict_x = self.forward(x,is_train=False)
+        conf_map, paf_map = predict_x["conf_map"],predict_x["paf_map"]
         return conf_map,paf_map
     
-    def cal_loss(self,gt_conf,gt_paf,mask,stage_confs,stage_pafs):
+    def cal_loss(self, predict_x, target_x, metric_manager, mask=None):
+        # TODO: exclude the loss calculate from mask
+        # predict maps
+        stage_confs = predict_x["stage_confs"]
+        stage_pafs = predict_x["stage_pafs"]
+        # target maps
+        gt_conf = target_x["conf_map"]
+        gt_paf = target_x["paf_map"]
+
         stage_losses=[]
         batch_size=gt_conf.shape[0]
-        if(self.concat_dim==1):
-            mask_conf=tf_repeat(mask, [1,self.n_confmaps ,1,1])
-            mask_paf=tf_repeat(mask,[1,self.n_pafmaps ,1,1])
-        elif(self.concat_dim==-1):
-            mask_conf=tf_repeat(mask, [1,1,1,self.n_confmaps])
-            mask_paf=tf_repeat(mask,[1,1,1,self.n_pafmaps])
         loss_confs,loss_pafs=[],[]
         for stage_conf,stage_paf in zip(stage_confs,stage_pafs):
-            loss_conf=tf.nn.l2_loss((gt_conf-stage_conf)*mask_conf)
-            loss_paf=tf.nn.l2_loss((gt_paf-stage_paf)*mask_paf)
+            loss_conf=tf.nn.l2_loss(gt_conf-stage_conf)
+            loss_paf=tf.nn.l2_loss(gt_paf-stage_paf)
             stage_losses.append(loss_conf)
             stage_losses.append(loss_paf)
             loss_confs.append(loss_conf)
             loss_pafs.append(loss_paf)
         pd_loss=tf.reduce_mean(stage_losses)/batch_size
-        return pd_loss,loss_confs,loss_pafs
-
-    class Dilated_mobilenet(Model):
-        def __init__(self,data_format="channels_first"):
-            super().__init__()
-            self.data_format=data_format
-            self.out_channels=512
-            self.scale_size=8
-            self.main_block=layers.LayerList([
-            conv_block(n_filter=32,in_channels=3,data_format=self.data_format,strides=(2,2)),
-            dw_conv_block(n_filter=64,in_channels=32,data_format=self.data_format),
-            dw_conv_block(n_filter=128,in_channels=64,data_format=self.data_format,strides=(2,2)),
-            dw_conv_block(n_filter=128,in_channels=128,data_format=self.data_format),
-            dw_conv_block(n_filter=256,in_channels=128,data_format=self.data_format,strides=(2,2)),
-            dw_conv_block(n_filter=256,in_channels=256,data_format=self.data_format),
-            dw_conv_block(n_filter=512,in_channels=256,data_format=self.data_format),
-            dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format,dilation_rate=(2,2)),
-            dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format),
-            dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format),
-            dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format),
-            dw_conv_block(n_filter=512,in_channels=512,data_format=self.data_format)
-            ])
-        def forward(self,x):
-            return self.main_block.forward(x)
+        total_loss=pd_loss
+        metric_manager.update("model/conf_loss",loss_confs[-1])
+        metric_manager.update("model/paf_loss",loss_pafs[-1])
+        # regularize loss
+        regularize_loss = regulize_loss(self, weight_decay_factor=2e-4)
+        total_loss += regularize_loss
+        metric_manager.update("model/loss_re",regularize_loss)
+        return total_loss
 
     class Cpm_stage(Model):
         def __init__(self,n_filter=128,in_channels=512,data_format="channels_first"):
@@ -156,6 +146,7 @@ class LightWeightOpenPose(Model):
             conf_map=self.conf_block.forward(x)
             paf_map=self.paf_block.forward(x)
             return conf_map,paf_map
+
     class Refinement_stage(Model):
         def __init__(self,n_filter=128,in_channels=185,n_confmaps=19,n_pafmaps=38,data_format="channels_first"):
             super().__init__()

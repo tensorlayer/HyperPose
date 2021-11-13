@@ -60,6 +60,12 @@ debug.*
 !docs/Makefile
 !docs/markdown/images/*
 
+test_cmd.txt
+
 
 /.build
+test_dir
+*_save_dir
+cvt_dir
+test_cmd.txt
 

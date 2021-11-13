@@ -1,82 +1,21 @@
 import logging
 from enum import Enum
 import time
+import functools
+import multiprocessing
 from distutils.dir_util import mkpath
 
 import numpy as np
 import tensorflow as tf
 import cv2
+
+from pycocotools.coco import maskUtils
 from ..Config.define import MODEL,TRAIN,DATA,BACKBONE,KUNGFU,OPTIM
 
 regularizer_conv = 0.004
 regularizer_dsconv = 0.0004
 batchnorm_fused = True
 activation_fn = tf.nn.relu
-
-class MPIIPart(Enum):
-    RAnkle = 0
-    RKnee = 1
-    RHip = 2
-    LHip = 3
-    LKnee = 4
-    LAnkle = 5
-    RWrist = 6
-    RElbow = 7
-    RShoulder = 8
-    LShoulder = 9
-    LElbow = 10
-    LWrist = 11
-    Neck = 12
-    Head = 13
-
-    @staticmethod
-    def from_coco(human):
-        # t = {
-        #     MPIIPart.RAnkle: CocoPart.RAnkle,
-        #     MPIIPart.RKnee: CocoPart.RKnee,
-        #     MPIIPart.RHip: CocoPart.RHip,
-        #     MPIIPart.LHip: CocoPart.LHip,
-        #     MPIIPart.LKnee: CocoPart.LKnee,
-        #     MPIIPart.LAnkle: CocoPart.LAnkle,
-        #     MPIIPart.RWrist: CocoPart.RWrist,
-        #     MPIIPart.RElbow: CocoPart.RElbow,
-        #     MPIIPart.RShoulder: CocoPart.RShoulder,
-        #     MPIIPart.LShoulder: CocoPart.LShoulder,
-        #     MPIIPart.LElbow: CocoPart.LElbow,
-        #     MPIIPart.LWrist: CocoPart.LWrist,
-        #     MPIIPart.Neck: CocoPart.Neck,
-        #     MPIIPart.Nose: CocoPart.Nose,
-        # }
-        
-        from ..Dataset.mscoco_dataset.define import CocoPart
-        t = [
-            (MPIIPart.Head, CocoPart.Nose),
-            (MPIIPart.Neck, CocoPart.Neck),
-            (MPIIPart.RShoulder, CocoPart.RShoulder),
-            (MPIIPart.RElbow, CocoPart.RElbow),
-            (MPIIPart.RWrist, CocoPart.RWrist),
-            (MPIIPart.LShoulder, CocoPart.LShoulder),
-            (MPIIPart.LElbow, CocoPart.LElbow),
-            (MPIIPart.LWrist, CocoPart.LWrist),
-            (MPIIPart.RHip, CocoPart.RHip),
-            (MPIIPart.RKnee, CocoPart.RKnee),
-            (MPIIPart.RAnkle, CocoPart.RAnkle),
-            (MPIIPart.LHip, CocoPart.LHip),
-            (MPIIPart.LKnee, CocoPart.LKnee),
-            (MPIIPart.LAnkle, CocoPart.LAnkle),
-        ]
-
-        pose_2d_mpii = []
-        visibilty = []
-        for mpi, coco in t:
-            if coco.value not in human.body_parts.keys():
-                pose_2d_mpii.append((0, 0))
-                visibilty.append(False)
-                continue
-            pose_2d_mpii.append((human.body_parts[coco.value].x, human.body_parts[coco.value].y))
-            visibilty.append(True)
-        return pose_2d_mpii, visibilty
-
 
 def read_imgfile(path, width, height, data_format='channels_last'):
     """Read image file and resize to network input size."""
@@ -106,7 +45,6 @@ def get_sample_images(w, h):
     ]
     return val_image
 
-
 def load_graph(model_file):
     """Load a freezed graph from file."""
     graph_def = tf.GraphDef()
@@ -117,7 +55,6 @@ def load_graph(model_file):
     with graph.as_default():
         tf.import_graph_def(graph_def)
     return graph
-
 
 def get_op(graph, name):
     return graph.get_operation_by_name('import/%s' % name).outputs[0]
@@ -167,31 +104,6 @@ def measure(f, name=None):
     _default_profiler(name, duration)
     return result
 
-
-def draw_humans(npimg, humans):
-    npimg = np.copy(npimg)
-    image_h, image_w = npimg.shape[:2]
-    centers = {}
-    for human in humans:
-        # draw point
-        for i in range(CocoPart.Background.value):
-            if i not in human.body_parts.keys():
-                continue
-
-            body_part = human.body_parts[i]
-            center = (int(body_part.x * image_w + 0.5), int(body_part.y * image_h + 0.5))
-            centers[i] = center
-            cv2.circle(npimg, center, 3, CocoColors[i], thickness=3, lineType=8, shift=0)
-
-        # draw line
-        for pair_order, pair in enumerate(CocoPairsRender):
-            if pair[0] not in human.body_parts.keys() or pair[1] not in human.body_parts.keys():
-                continue
-            cv2.line(npimg, centers[pair[0]], centers[pair[1]], CocoColors[pair_order], 3)
-
-    return npimg
-
-
 def plot_humans(image, heatMat, pafMat, humans, name):
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -220,18 +132,6 @@ def plot_humans(image, heatMat, pafMat, humans, name):
     mkpath('vis')
     plt.savefig('vis/result-%s.png' % name)
 
-
-def rename_tensor(x, name):
-    # FIXME: use tf.identity(x, name=name) doesn't work
-    new_shape = []
-    for d in x.shape:
-        try:
-            d = int(d)
-        except:
-            d = -1
-        new_shape.append(d)
-    return tf.reshape(x, new_shape, name=name)
-
 def tf_repeat(tensor, repeats):
     """
     Args:
@@ -248,6 +148,22 @@ def tf_repeat(tensor, repeats):
     tiled_tensor = tf.tile(expanded_tensor, multiples=multiples)
     repeated_tesnor = tf.reshape(tiled_tensor, tf.shape(tensor) * repeats)
     return repeated_tesnor
+
+def decode_mask(meta_mask_list):
+    if(type(meta_mask_list)!=list):
+        return None
+    if(meta_mask_list==[]):
+        return None
+    inv_mask_list=[]
+    for meta_mask in meta_mask_list:
+        mask=maskUtils.decode(meta_mask)
+        inv_mask=np.logical_not(mask)
+        inv_mask_list.append(inv_mask)
+    mask=np.ones_like(inv_mask_list[0])
+    for inv_mask in inv_mask_list:
+        mask=np.logical_and(mask,inv_mask)
+    mask = mask.astype(np.uint8)
+    return mask
 
 def regulize_loss(target_model,weight_decay_factor):
     re_loss=0
@@ -304,13 +220,55 @@ def regulize_loss(target_model,weight_decay_factor):
         re_loss+=regularizer(weight)
     return re_loss
 
-def init_log(config):
-    logger=logging.getLogger(name="hyperpose")
-    file_handler=logging.FileHandler(filename=config.log.log_path,mode="a")
-    logger.addHandler(file_handler)
-    logger.setLevel(logging.INFO)
+def resize_CHW(x, dst_shape):
+    x = x[np.newaxis,:,:,:]
+    x = resize_NCHW(x, dst_shape)
+    x = x[0]
+    return x
 
-def log(msg):
-    logger=logging.getLogger(name="hyperpose")
-    logger.info(msg=msg)
-    print(msg)
+def resize_NCHW(x, dst_shape):
+    x = tf.transpose(x,[0,2,3,1])
+    x = tf.image.resize(x, dst_shape)
+    x = tf.transpose(x,[0,3,1,2])
+    return x
+
+def NCHW_to_NHWC(x):
+    return tf.transpose(x,[0,2,3,1])
+
+def NHWC_to_NCHW(x):
+    return tf.transpose(x,[0,3,1,2])
+
+def to_tensor_dict(dict_x):
+    for key in dict_x.keys():
+        dict_x[key]=tf.convert_to_tensor(dict_x[key])
+    return dict_x
+
+def to_numpy_dict(dict_x):
+    for key in dict_x.keys():
+        value=dict_x[key]
+        if(type(value) is not np.ndarray):
+            value=value.numpy()
+        dict_x[key]=value
+    return dict_x
+
+def get_num_parallel_calls():
+    return max(multiprocessing.cpu_count()//2,1)
+
+@functools.lru_cache(maxsize=16)
+def get_meshgrid(mesh_h,mesh_w):
+    x_range=np.linspace(start=0,stop=mesh_w-1,num=mesh_w)
+    y_range=np.linspace(start=0,stop=mesh_h-1,num=mesh_h)
+    mesh_x,mesh_y=np.meshgrid(x_range,y_range)
+    mesh_grid=np.stack([mesh_x,mesh_y])
+    return mesh_grid
+
+def log_model(msg):
+    logger=logging.getLogger("MODEL")
+    logger.info(msg)
+
+def log_train(msg):
+    logger=logging.getLogger("TRAIN")
+    logger.info(msg)
+
+def image_float_to_uint8(image):
+    return np.clip(image*255,0,255).astype(np.uint8)

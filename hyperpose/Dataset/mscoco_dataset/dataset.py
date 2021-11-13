@@ -13,6 +13,7 @@ from .prepare import prepare_dataset
 from .format import CocoMeta,PoseInfo
 from .define import CocoPart,CocoColor
 from .generate import generate_train_data,generate_eval_data,generate_test_data
+from ..common import log_data as log
 
 def init_dataset(config):
     dataset=MSCOCO_dataset(config)
@@ -38,7 +39,7 @@ class MSCOCO_dataset(Base_dataset):
         self.input_kpt_cvter=input_kpt_cvter
         self.output_kpt_cvter=output_kpt_cvter
         self.dataset_filter=dataset_filter
-        print(f"using MSCOCO dataset version:{self.dataset_version}")
+        log(f"Using MSCOCO dataset version:{self.dataset_version}")
     
     def visualize(self,vis_num):
         '''visualize annotations of the train dataset
@@ -157,26 +158,26 @@ class MSCOCO_dataset(Base_dataset):
         json.dump(pd_anns,pd_json_file)
         pd_json_file.close()
         #evaluating 
-        print(f"model predicted evaluation result saved at {pd_json_path}!")
-        print(f"evaluating on total {len(image_ids)} images...")
+        log(f"model predicted evaluation result saved at {pd_json_path}!")
+        log(f"Evaluating on total {len(image_ids)} images...")
         gt_coco=COCO(gt_json_path)
         pd_coco=gt_coco.loadRes(pd_json_path)
 
         '''
         #debug
-        print(f"test result compare!:")
+        log(f"test result compare!:")
         for image_id in image_ids:
-            print(f"test image_{image_id}:")
+            log(f"test image_{image_id}:")
             pd_anns=pd_coco.loadAnns(pd_coco.getAnnIds(imgIds=image_id))
-            print(f"pd_kpts:{np.array(pd_anns[0]['keypoints']).astype(np.int32)}")
+            log(f"pd_kpts:{np.array(pd_anns[0]['keypoints']).astype(np.int32)}")
             gt_anns=gt_coco.loadAnns(gt_coco.getAnnIds(imgIds=image_id))
-            print(f"gt_kpts:{np.array(gt_anns[0]['keypoints']).astype(np.int32)}")
+            log(f"gt_kpts:{np.array(gt_anns[0]['keypoints']).astype(np.int32)}")
             
-            print(f"test all_info_gt:")
+            log(f"test all_info_gt:")
             for gt_ann in gt_anns:
-                print(f"kpts:{gt_ann['keypoints']}")
-                print(f"bbxs:{gt_ann['bbox']}")
-                print()
+                log(f"kpts:{gt_ann['keypoints']}")
+                log(f"bbxs:{gt_ann['bbox']}")
+                log()
         '''
 
         std_eval=COCOeval(cocoGt=gt_coco,cocoDt=pd_coco,iouType="keypoints")
@@ -190,5 +191,5 @@ class MSCOCO_dataset(Base_dataset):
         pd_json_file=open(pd_json_path,mode="w")
         json.dump(pd_anns,pd_json_file)
         pd_json_file.close()
-        print(f"model predicted test result saved at {pd_json_path}!")
-        print(f"please upload the result file to MScoco official server at {server_url} to get official test metrics")
+        log(f"model predicted test result saved at {pd_json_path}!")
+        log(f"please upload the result file to MScoco official server at {server_url} to get official test metrics")
