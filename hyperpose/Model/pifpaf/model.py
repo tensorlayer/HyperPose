@@ -35,6 +35,8 @@ class Pifpaf(Model):
         self.lambda_paf_src_scale=lambda_paf_src_scale
         self.lambda_paf_dst_scale=lambda_paf_dst_scale
         self.data_format=data_format
+        self.mean = np.array([0.485, 0.456, 0.406])[np.newaxis,:,np.newaxis,np.newaxis]
+        self.std = np.array([0.229, 0.224, 0.225])[np.newaxis,:,np.newaxis,np.newaxis]
         if(backbone==None):
             self.backbone=Resnet50_backbone(data_format=data_format,use_pool=False,scale_size=self.scale_size,decay=0.99,eps=1e-4)
             self.stride=int(self.stride/2) #because of not using max_pool layer of resnet50
@@ -50,16 +52,16 @@ class Pifpaf(Model):
     
     @tf.function(experimental_relax_shapes=True)
     def forward(self,x,is_train=False,ret_backbone=False):
+        # normalize
+        x = (x-self.mean)/self.std
         # backbone feature extraction
         backbone_x=self.backbone.forward(x)
         # pif maps
         pif_maps=self.pif_head.forward(backbone_x,is_train=is_train)
         pif_conf, pif_vec, pif_bmin, pif_scale = pif_maps
-        print(f"test forwarding pif_vec:{pif_vec.shape}")
         # paf maps
         paf_maps=self.paf_head.forward(backbone_x,is_train=is_train)
         paf_conf, paf_src_vec, paf_dst_vec, paf_src_bmin, paf_dst_bmin, paf_src_scale, paf_dst_scale = paf_maps
-        print(f"test forwarding paf_src_vec:{paf_src_vec.shape} paf_dst_vec:{paf_dst_vec.shape}")
 
         # construct predict_x
         predict_x = {

@@ -111,7 +111,7 @@ class Human:
     def print(self):
         for part_idx in self.body_parts.keys():
             body_part=self.body_parts[part_idx]
-            print(f"body-part:{self.parts(part_idx)} x:{body_part.x} y:{body_part.y} score:{body_part.score}")
+            print(f"body-part:{self.parts(part_idx):20} x:{body_part.x:< 8.2f} y:{body_part.y:< 8.2f} score:{body_part.score:< .8f}")
         print()
 
     def __str__(self):

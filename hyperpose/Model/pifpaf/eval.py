@@ -94,20 +94,11 @@ def visualize(img,img_id,processed_img,pd_pif_maps,pd_paf_maps,humans,stride=8,s
     plt.savefig(os.path.join(save_dir,f"{img_id}_visualize.png"))
     plt.close()
 
-def normalize(image):
-    #normalize
-    mean=np.array([0.485, 0.456, 0.406])[np.newaxis,np.newaxis,:]
-    std=np.array([0.229, 0.224, 0.225])[np.newaxis,np.newaxis,:]
-    image=(image-mean)/std
-    return image
-
 def _map_fn(image_file,image_id):
     #load data
     image = tf.io.read_file(image_file)
     image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
-    #normalize
-    image=tf.py_function(normalize,[image],tf.float32)
     return image,image_id
 
 def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multiscale_search=False):

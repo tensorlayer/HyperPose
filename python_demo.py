@@ -20,6 +20,10 @@ if __name__ == '__main__':
                         type=str,
                         default="Default",
                         help="model backbone, available options: Mobilenet, Vggtiny, Vgg19, Resnet18, Resnet50")
+    parser.add_argument("--dataset_type",
+                        type=str,
+                        default="MSCOCO",
+                        help="dataset name,to determine which dataset to use, available options: MSCOCO, MPII ")
     parser.add_argument("--model_name",
                         type=str,
                         default="default_name",
@@ -39,15 +43,17 @@ args=parser.parse_args()
 # config model
 Config.set_model_name(args.model_name)
 Config.set_model_type(Config.MODEL[args.model_type])
+Config.set_dataset_type(Config.DATA[args.dataset_type])
 Config.set_model_backbone(Config.BACKBONE[args.model_backbone])
 config = Config.get_config()
-os.makedirs(args.output_dir, exist_ok=True)
+output_dir = os.path.join(args.output_dir,args.model_name)
+os.makedirs(output_dir, exist_ok=True)
 
 # contruct model and processors
 model = Model.get_model(config)
 # visualizer
 VisualizerClass = Model.get_visualizer(config)
-visualizer = VisualizerClass(save_dir=args.output_dir)
+visualizer = VisualizerClass(save_dir=output_dir, parts=model.parts, limbs=model.limbs)
 # post processor
 PostProcessorClass = Model.get_postprocessor(config)
 post_processor = PostProcessorClass(parts=model.parts, limbs=model.limbs, hin=model.hin, win=model.win, hout=model.hout,
@@ -67,7 +73,6 @@ for image_path in glob.glob(f"{args.image_dir}/*"):
     # image read, normalize, and scale
     image = image_processor.read_image_rgb_float(image_path)
     input_image, scale, pad = image_processor.image_pad_and_scale(image)
-    print(f"test scale:{scale} pad:{pad}")
     input_image = np.transpose(input_image,[2,0,1])[np.newaxis,:,:,:]
     # model forward
     predict_x = model.forward(input_image)
@@ -77,12 +82,11 @@ for image_path in glob.glob(f"{args.image_dir}/*"):
     visualizer.visualize(image_batch=input_image, predict_x=predict_x, humans_list=[humans], name=image_name)
     # visualize results (restore detected humans)
     print(f"{len(humans)} humans detected")
-    for human_idx,human in enumerate(humans):
-        print(f"before scale:{human.print()}")
+    for human_idx,human in enumerate(humans,start=1):
         human.unpad(pad)
         human.unscale(scale)
-        print(f"after scale:{human.print()}")
         print(f"human:{human_idx} num of detected body joints:{human.get_partnum()}")
+        human.print()
     visualizer.visualize_result(image=image, humans=humans, name=f"{image_name}_result")
 
     

@@ -37,7 +37,8 @@ class BasicVisualizer:
     def visualize_result(self, image, humans, name):
         pltdrawer = PltDrawer(draw_row=1, draw_col=2, figsize=(8,8))
         # origin image
-        pltdrawer.add_subplot(image, "origin image")
+        origin_image = image_float_to_uint8(image.copy())
+        pltdrawer.add_subplot(origin_image, "origin image")
 
         # result image
         result_image = image_float_to_uint8(image.copy())

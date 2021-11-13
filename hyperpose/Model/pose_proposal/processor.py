@@ -53,16 +53,16 @@ class PostProcessor(BasicPostProcessor):
                 break
         print(f"PoseProposal Post-processer setting instance id as: {self.instance_id} {self.parts(self.instance_id)}")
 
-    def process(self, predict_x, scale_w_rate=1,scale_h_rate=1):
+    def process(self, predict_x, scale_w_rate=1,scale_h_rate=1, resize=True):
         predict_x = to_numpy_dict(predict_x)
         batch_size = list(predict_x.values())[0].shape[0]
         humans_list = []
         for batch_idx in range(0,batch_size):
             predict_x_one = {key:value[batch_idx] for key,value in predict_x.items()}
-            humans_list.append(self.process_one(predict_x_one, scale_w_rate, scale_h_rate))        
+            humans_list.append(self.process_one(predict_x_one, scale_w_rate, scale_h_rate, resize=resize))        
         return humans_list
 
-    def process_one(self,predict_x,scale_w_rate=1,scale_h_rate=1):
+    def process_one(self,predict_x,scale_w_rate=1,scale_h_rate=1, resize=True):
         pc, px, py, pw, ph, pi, pe  = predict_x["c"], predict_x["x"], predict_x["y"], predict_x["w"], predict_x["h"],\
                                             predict_x["i"], predict_x["e"]
         def get_loc(idx,h,w):
@@ -139,7 +139,6 @@ class PostProcessor(BasicPostProcessor):
             assems_list[self.instance_id][p_id]=p_id
         #assemble limbs
         for l,limb in enumerate(self.limbs):
-            print(f"choosing edge: {self.parts(limb[0])}-{self.parts(limb[1])}:")
             src_part_idx,dst_part_idx=limb
             src_score_list=scores_list[src_part_idx]
             src_bbxid_list=bbxids_list[src_part_idx]
@@ -243,18 +242,18 @@ class Visualizer(BasicVisualizer):
             pltdrawer.add_subplot(origin_image, "origin image")
 
             # draw predict image
-            pd_image = image.copy()
+            pd_image = origin_image.copy()
             pd_image = draw_bbx(pd_image,pc,px,py,pw,ph,threshhold)
             pd_image = draw_edge(pd_image,pe,px,py,pw,ph,hnei,wnei,hout,wout,self.limbs,threshhold)
             pltdrawer.add_subplot(pd_image, "predict image")
 
             # save figure
-            pltdrawer.savefig(f"{self.save_dir}/{name}_{b_idx}.png", dpi=300)
+            pltdrawer.savefig(f"{self.save_dir}/{name}_{b_idx}.png")
 
             # draw results
             if(humans_list is not None):
                 humans = humans_list[b_idx]
-                self.visualize_result(image, humans, save_path=f"{name}_{b_idx}_result")
+                self.visualize_result(image, humans, name=f"{name}_{b_idx}_result")
         
 
     def visualize_compare(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
@@ -297,13 +296,13 @@ class Visualizer(BasicVisualizer):
             pltdrawer.add_subplot(mask, "mask")
 
             # draw predict image
-            pd_image = image.copy()
+            pd_image = origin_image.copy()
             pd_image = draw_bbx(pd_image,pc,px,py,pw,ph,threshhold)
             pd_image = draw_edge(pd_image,pe,px,py,pw,ph,hnei,wnei,hout,wout,self.limbs,threshhold)
             pltdrawer.add_subplot(pd_image, "predict image")
             
             # draw ground truth image
-            gt_image = image.copy()
+            gt_image = origin_image.copy()
             gt_image=draw_bbx(gt_image,gc,gx,gy,gw,gh,threshhold)
             gt_image=draw_edge(gt_image,ge,gx,gy,gw,gh,hnei,wnei,hout,wout,self.limbs,threshhold)
             pltdrawer.add_subplot(gt_image, "groundtruth image")
@@ -314,6 +313,6 @@ class Visualizer(BasicVisualizer):
             # draw results
             if(humans_list is not None):
                 humans = humans_list[b_idx]
-                self.visualize_result(image, humans, save_path=f"{name}_{b_idx}_result")
+                self.visualize_result(image, humans, name=f"{name}_{b_idx}_result")
         
 

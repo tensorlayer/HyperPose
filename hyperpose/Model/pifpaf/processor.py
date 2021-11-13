@@ -77,16 +77,16 @@ class PostProcessor(BasicPostProcessor):
             self.by_source[dst_idx][src_idx]=(limb_idx,False)
         #TODO:whether add score weight for each parts
     
-    def process(self, predict_x):
+    def process(self, predict_x, resize=True):
         predict_x = to_numpy_dict(predict_x)
         batch_size = list(predict_x.values())[0].shape[0]
         humans_list = []
         for batch_idx in range(0,batch_size):
             predict_x_one = {key:value[batch_idx] for key,value in predict_x.items()}
-            humans_list.append(self.process_one(predict_x_one))        
+            humans_list.append(self.process_one(predict_x_one, resize=resize))        
         return humans_list
 
-    def process_one(self,predict_x):
+    def process_one(self,predict_x, resize=True):
         # shape:
         # conf_map:[field_num,hout,wout]
         # vec_map:[field_num,2,hout,wout]
@@ -95,9 +95,15 @@ class PostProcessor(BasicPostProcessor):
         pif_conf, pif_vec, pif_scale = predict_x["pif_conf"], predict_x["pif_vec"], predict_x["pif_scale"]
         paf_conf, paf_src_vec, paf_dst_vec, paf_src_scale, paf_dst_scale = predict_x["paf_conf"], predict_x["paf_src_vec"],\
                                             predict_x["paf_dst_vec"], predict_x["paf_src_scale"], predict_x["paf_dst_scale"]
+        self.debug_print(f"exam pif shapes: pif_conf:{pif_conf.shape} pif_vec:{pif_vec.shape} pif_scale:{pif_scale.shape}")
+        self.debug_print(f"exam paf shapes: paf_conf:{paf_conf.shape} paf_src_vec:{paf_src_vec.shape} paf_dst_vec:{paf_dst_vec.shape} "\
+            +f"paf_src_scale:{paf_src_scale.shape} paf_dst_scale:{paf_dst_scale.shape}")
+        
         # restore maps
-        pif_vec, pif_scale = restore_pif_maps(pif_vec, pif_scale)
-        paf_src_vec, paf_dst_vec, paf_src_scale, paf_dst_scale = restore_paf_maps(paf_src_vec, paf_dst_scale, paf_src_scale, paf_dst_scale)
+        pif_vec, pif_scale = restore_pif_maps(pif_vec_map_batch=pif_vec, pif_scale_map_batch=pif_scale, stride=self.stride)
+        paf_src_vec, paf_dst_vec, paf_src_scale, paf_dst_scale = restore_paf_maps(paf_src_vec_map_batch=paf_src_vec,\
+                        paf_dst_vec_map_batch=paf_dst_vec, paf_src_scale_map_batch=paf_src_scale,\
+                        paf_dst_scale_map_batch=paf_dst_scale, stride=self.stride)
 
         #get pif_hr_conf
         pif_hr_conf=get_hr_conf(pif_conf,pif_vec,pif_scale,stride=self.stride,thresh=self.thresh_gen_ref_pif,debug=False)
@@ -196,8 +202,8 @@ class PostProcessor(BasicPostProcessor):
         self.debug_print(f"total {len(ret_humans)} human detected!")
         return ret_humans
 
-    def debug_print(self,msg):
-        if(self.debug):
+    def debug_print(self,msg, debug=False):
+        if(self.debug or debug):
             print(msg)
 
     #convert vector field to scalar
@@ -387,8 +393,13 @@ class PostProcessor(BasicPostProcessor):
         return ann
 
 class Visualizer(BasicVisualizer):
-    def __init__(self, save_dir="./save_dir", *args, **kargs):
+    def __init__(self, save_dir="./save_dir", debug=False, *args, **kargs):
         self.save_dir = save_dir
+        self.debug=debug
+    
+    def debug_print(self,msg, debug=False):
+        if(self.debug or debug):
+            print(msg)
 
     def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):
         # mask
@@ -410,9 +421,14 @@ class Visualizer(BasicVisualizer):
         # restore maps
         # pif maps
         pd_pif_vec_batch, pd_pif_scale_batch = restore_pif_maps(pd_pif_vec_batch, pd_pif_scale_batch)
+        self.debug_print(f"test pd_pif_vec_batch.shape:{pd_pif_vec_batch.shape}")
         # paf maps
         pd_paf_src_vec_batch, pd_paf_dst_vec_batch, pd_paf_src_scale_batch, pd_paf_dst_scale_batch = \
             restore_paf_maps(pd_paf_src_vec_batch, pd_paf_dst_vec_batch, pd_paf_src_scale_batch, pd_paf_dst_scale_batch)
+        self.debug_print(f"test visualize shape: pd_paf_src_vec_batch:{pd_paf_src_vec_batch.shape}")
+        self.debug_print(f"test visualize shape: pd_paf_dst_vec_batch:{pd_paf_dst_vec_batch.shape}")
+        self.debug_print(f"test visualize shape: pd_paf_src_scale_batch:{pd_paf_src_scale_batch.shape}")
+        self.debug_print(f"test visualize shape: pd_paf_dst_scale_batch:{pd_paf_dst_scale_batch.shape}")
 
         batch_size = image_batch.shape[0]
         for b_idx in range(0,batch_size):
@@ -447,11 +463,10 @@ class Visualizer(BasicVisualizer):
             pltdrawer.add_subplot(pd_paf_conf_show, "pd paf_conf", color_bar=True)
 
             # draw pd paf_vec
-            hout, wout = pd_paf_src_vec.shape[1], pd_paf_src_vec.shape[2]
+            hout, wout = pd_paf_conf.shape[1], pd_paf_conf.shape[2]
             pd_paf_vec_map_show = np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
             pd_paf_vec_map_show = get_arrow_map(pd_paf_vec_map_show, pd_paf_conf, pd_paf_src_vec, pd_paf_dst_vec)
             pltdrawer.add_subplot(pd_paf_vec_map_show, "pd paf_vec")
-
             # save fig
             pltdrawer.savefig(f"{self.save_dir}/{name}_{b_idx}_paf.png")
 
@@ -548,9 +563,7 @@ class Visualizer(BasicVisualizer):
             # draw gt paf_vec_map
             hout, wout = gt_paf_src_vec.shape[-2], gt_paf_src_vec.shape[-1]
             gt_paf_vec_map_show = np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
-            print(f"test before gt_paf_vec_map_show.shape:{gt_paf_vec_map_show.shape}")
-            gt_paf_vec_map_show = get_arrow_map(gt_paf_vec_map_show, gt_paf_conf, gt_paf_src_vec, gt_paf_dst_vec, debug=True)
-            print(f"test after gt_paf_vec_map_show.shape:{gt_paf_vec_map_show.shape}")
+            gt_paf_vec_map_show = get_arrow_map(gt_paf_vec_map_show, gt_paf_conf, gt_paf_src_vec, gt_paf_dst_vec, debug=False)
             paf_pltdrawer.add_subplot(gt_paf_vec_map_show, "gt paf_vec")
 
             # draw mask

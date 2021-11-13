@@ -196,7 +196,7 @@ def get_train(config):
     log("Postprocessor initialized!")
     # get visualizer
     Visualizer = get_visualizer(config)
-    visualizer = Visualizer(save_dir=config.train.vis_dir)
+    visualizer = Visualizer(save_dir=config.train.vis_dir,**model_config)
     log("Visualizer initialized!")
     
     # assemble training pipeline
@@ -420,38 +420,38 @@ def info_propt():
 
     # object definition
     info("Object Definition:")
-    info("config: a object contains all the configurations used to assemble the model, dataset, and pipeline, easydict.\n"+\
-            "\t return by th `Config.get_config` function.\n")
+    info("config: a object contains all the configurations used to assemble the model, dataset, and pipeline. easydict object.\n"+\
+            "\t return by the `Config.get_config` function.\n")
 
-    info("model: a neural network takes in the image and output the calculated activation map, BasicModel.\n"\
+    info("model: a neural network takes in the image and output the calculated activation map. BasicModel object.\n"\
             +"\t have `forward`, `cal_loss`, `infer`(optional) functions.\n"
             +"\t custom: users could inherit the Model.BasicModel class for customization.\n"
             +"\t example: please refer to Model.LightWeightOpenPose class for details. \n")
 
-    info("dataset: a dataset generator provides train and evaluate dataset.\n"\
+    info("dataset: a dataset generator provides train and evaluate dataset. Base_dataset object.\n"\
             +"\t have `get_train_dataset` and `get_eval_dataset` functions.\n" \
             +"\t custom: users could inherit the Dataset.BasicDataset class for customizationn\n"
             +"\t example: please refer to Datset.CocoDataset class for details.\n")
             
     info("augmentor: a data augmentor that takes in the image, key point annotation, mask and perform affine transformation "\
-            +"for data augmentation.\n"\
+            +"for data augmentation. BasicAumentor object.\n"\
             +"\t have `process` and `process_only_image` functions.\n"
             +"\t custom: users could inherit the Model.BasicAugmentor class for customization.\n"
             +"\t example: please refer to Model.BasicAugmentor class for details.\n")
 
     info("preprocessor: a data preprocessor that takes in the image, key point annotation and mask to produce the target heatmap\n"\
-            +"\tfor model to calculate loss and learn.\n"\
+            +"\tfor model to calculate loss and learn. BasicPreProcessor object.\n"\
             +"\t have `process` function.\n"
             +"\t custom: users could inherit the Model.BasicPreProcessor class for customizationn\n"
             +"\t example: please refer to Model.openpose.PreProcessor class for details.\n")
     
     info("postprocessor: a data postprocessor that takes in the predicted heatmaps and infer the human body joints and limbs.\n"\
-            +"\t have `process` function.\n"
+            +"\t have `process` function. BasicPostProcessor object.\n"
             +"\t custom: users could inherit the Model.BasicPostProcessor class for customization\n"
             +"\t example: please refer to the Model.openpose.PostProcessor class for details.\n")
 
     info("visualizer: a visualizer that takes in the predicted heatmaps and output visualization images for train and evaluation.\n"\
-            +"\t have `visualize` and `visualize_comapre` functions.\n"\
+            +"\t have `visualize` and `visualize_comapre` functions. BasicVisualizer object.\n"\
             +"\t custom: users could inherit the Model.BasicVisualizer class for customization.\n"
             +"\t example: please refer to the Model.openpose.Visualizer class for details.\n"
             )
