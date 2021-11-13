@@ -104,31 +104,6 @@ def measure(f, name=None):
     _default_profiler(name, duration)
     return result
 
-
-def draw_humans(npimg, humans):
-    npimg = np.copy(npimg)
-    image_h, image_w = npimg.shape[:2]
-    centers = {}
-    for human in humans:
-        # draw point
-        for i in range(CocoPart.Background.value):
-            if i not in human.body_parts.keys():
-                continue
-
-            body_part = human.body_parts[i]
-            center = (int(body_part.x * image_w + 0.5), int(body_part.y * image_h + 0.5))
-            centers[i] = center
-            cv2.circle(npimg, center, 3, CocoColors[i], thickness=3, lineType=8, shift=0)
-
-        # draw line
-        for pair_order, pair in enumerate(CocoPairsRender):
-            if pair[0] not in human.body_parts.keys() or pair[1] not in human.body_parts.keys():
-                continue
-            cv2.line(npimg, centers[pair[0]], centers[pair[1]], CocoColors[pair_order], 3)
-
-    return npimg
-
-
 def plot_humans(image, heatMat, pafMat, humans, name):
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -156,18 +131,6 @@ def plot_humans(image, heatMat, pafMat, humans, name):
     plt.colorbar()
     mkpath('vis')
     plt.savefig('vis/result-%s.png' % name)
-
-
-def rename_tensor(x, name):
-    # FIXME: use tf.identity(x, name=name) doesn't work
-    new_shape = []
-    for d in x.shape:
-        try:
-            d = int(d)
-        except:
-            d = -1
-        new_shape.append(d)
-    return tf.reshape(x, new_shape, name=name)
 
 def tf_repeat(tensor, repeats):
     """
@@ -280,6 +243,14 @@ def to_tensor_dict(dict_x):
         dict_x[key]=tf.convert_to_tensor(dict_x[key])
     return dict_x
 
+def to_numpy_dict(dict_x):
+    for key in dict_x.keys():
+        value=dict_x[key]
+        if(type(value) is not np.ndarray):
+            value=value.numpy()
+        dict_x[key]=value
+    return dict_x
+
 def get_num_parallel_calls():
     return max(multiprocessing.cpu_count()//2,1)
 
@@ -298,3 +269,6 @@ def log_model(msg):
 def log_train(msg):
     logger=logging.getLogger("TRAIN")
     logger.info(msg)
+
+def image_float_to_uint8(image):
+    return np.clip(image*255,0,255).astype(np.uint8)

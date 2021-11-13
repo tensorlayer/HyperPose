@@ -11,6 +11,7 @@ from ..processor import BasicVisualizer
 from ..processor import BasicPreProcessor
 from ..processor import BasicPostProcessor
 from ..processor import PltDrawer
+from ..common import to_numpy_dict, image_float_to_uint8
 
 class PreProcessor(BasicPreProcessor):
     def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,data_format="channels_first", *args, **kargs):
@@ -75,8 +76,17 @@ class PostProcessor(BasicPostProcessor):
             self.by_source[src_idx][dst_idx]=(limb_idx,True)
             self.by_source[dst_idx][src_idx]=(limb_idx,False)
         #TODO:whether add score weight for each parts
+    
+    def process(self, predict_x):
+        predict_x = to_numpy_dict(predict_x)
+        batch_size = list(predict_x.values())[0].shape[0]
+        humans_list = []
+        for batch_idx in range(0,batch_size):
+            predict_x_one = {key:value[batch_idx] for key,value in predict_x.items()}
+            humans_list.append(self.process_one(predict_x_one))        
+        return humans_list
 
-    def process(self,predict_x):
+    def process_one(self,predict_x):
         # shape:
         # conf_map:[field_num,hout,wout]
         # vec_map:[field_num,2,hout,wout]
@@ -381,6 +391,9 @@ class Visualizer(BasicVisualizer):
         self.save_dir = save_dir
 
     def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):
+        # mask
+        if(mask_batch is None):
+            mask_batch = np.ones_like(image_batch)
         # transform
         image_batch = np.transpose(image_batch,[0,2,3,1])
         mask_batch = np.transpose(mask_batch,[0,2,3,1])
@@ -400,10 +413,6 @@ class Visualizer(BasicVisualizer):
         # paf maps
         pd_paf_src_vec_batch, pd_paf_dst_vec_batch, pd_paf_src_scale_batch, pd_paf_dst_scale_batch = \
             restore_paf_maps(pd_paf_src_vec_batch, pd_paf_dst_vec_batch, pd_paf_src_scale_batch, pd_paf_dst_scale_batch)
-        
-        # mask
-        if(mask_batch is None):
-            mask_batch=np.ones_like(image_batch)
 
         batch_size = image_batch.shape[0]
         for b_idx in range(0,batch_size):
@@ -417,7 +426,8 @@ class Visualizer(BasicVisualizer):
             pltdrawer = PltDrawer(draw_row=2, draw_col=3, dpi=400)
 
             # draw origin image
-            pltdrawer.add_subplot(image, "origin_image")
+            origin_image = image_float_to_uint8(image.copy())
+            pltdrawer.add_subplot(origin_image, "origin_image")
 
 
             # draw pd_pif_conf
@@ -448,10 +458,13 @@ class Visualizer(BasicVisualizer):
             # draw results
             if(humans_list is not  None):
                 humans = humans_list[b_idx]
-                self.visualize_result(image, humans, f"{self.save_dir}/{name}_{b_idx}_result.png")
+                self.visualize_result(image, humans, f"{name}_{b_idx}_result")
 
 
     def visualize_compare(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
+        # mask
+        if(mask_batch is None):
+            mask_batch = np.ones_like(image_batch)
         # transform
         image_batch = np.transpose(image_batch,[0,2,3,1])
         mask_batch = np.transpose(mask_batch,[0,2,3,1])
@@ -469,9 +482,6 @@ class Visualizer(BasicVisualizer):
         gt_pif_conf_batch, gt_pif_vec_batch, gt_pif_scale_batch = target_x["pif_conf"], target_x["pif_vec"], target_x["pif_scale"]
         gt_paf_conf_batch, gt_paf_src_vec_batch, gt_paf_dst_vec_batch = target_x["paf_conf"], target_x["paf_src_vec"], predict_x["paf_dst_vec"]
         gt_paf_src_scale_batch, gt_paf_dst_scale_batch = target_x["paf_src_scale"], target_x["paf_dst_scale"]
-        # mask
-        if(mask_batch is None):
-            mask_batch=np.ones_like(image_batch)
         
         # restore maps
         # pif maps
@@ -497,7 +507,8 @@ class Visualizer(BasicVisualizer):
             pif_pltdrawer = PltDrawer(draw_row=2, draw_col=3, dpi=400)
 
             # draw origin image
-            pif_pltdrawer.add_subplot(image, "origin_image")
+            origin_image = image_float_to_uint8(image.copy())
+            pif_pltdrawer.add_subplot(origin_image, "origin_image")
 
             # draw gt_pif_conf
             gt_pif_conf_show = np.amax(gt_pif_conf, axis=0)
@@ -552,9 +563,7 @@ class Visualizer(BasicVisualizer):
             # draw pd paf_vec
             hout, wout = pd_paf_src_vec.shape[-2], pd_paf_src_vec.shape[-1]
             pd_paf_vec_map_show = np.zeros(shape=(hout*stride,wout*stride,3)).astype(np.int8)
-            print(f"test before pd_paf_vec_map_show.shape:{pd_paf_vec_map_show.shape}")
             pd_paf_vec_map_show = get_arrow_map(pd_paf_vec_map_show, pd_paf_conf, pd_paf_src_vec, pd_paf_dst_vec)
-            print(f"test after pd_paf_vec_map_show.shape:{pd_paf_vec_map_show.shape}")
             paf_pltdrawer.add_subplot(pd_paf_vec_map_show, "pd paf_vec")
 
             # save fig
@@ -563,4 +572,4 @@ class Visualizer(BasicVisualizer):
             # draw results
             if(humans_list is not  None):
                 humans = humans_list[b_idx]
-                self.visualize_result(image, humans, f"{self.save_dir}/{name}_{b_idx}_result.png")
+                self.visualize_result(image, humans, f"{name}_{b_idx}_result")

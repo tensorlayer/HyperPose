@@ -14,8 +14,8 @@ from .backbones import Resnet50_backbone
 from .pretrain import single_pretrain
 from .common import log_model as log
 from .augmentor import BasicAugmentor
-
 from .examine import exam_model_weights, exam_npz_dict_weights, exam_npz_weights
+from .processor import ImageProcessor
 
 #claim:
 #all the model preprocessor,postprocessor,and visualizer processing logic are written in 'channels_first' data_format
@@ -388,6 +388,9 @@ def get_visualizer(config):
         elif model_type == MODEL.Pifpaf:
             from .pifpaf import Visualizer
         return Visualizer
+
+def get_imageprocessor():
+    return ImageProcessor
 
 def info(msg):
     info_logger = logging.getLogger("INFO")

@@ -5,11 +5,11 @@ import tensorflow as tf
 from functools import partial
 import multiprocessing
 import matplotlib.pyplot as plt
-from .processor import PostProcessor
+from .processor import PostProcessor, Visualizer
 from .utils import get_hr_conf,get_arrow_map,maps_to_numpy
 from ..common import pad_image_shape
 
-def infer_one_img(model,postprocessor,img,img_id=-1,is_visual=False,save_dir="./save_dir",enable_multiscale_search=False,debug=False):
+def infer_one_img(model,postprocessor:PostProcessor,visualizer:Visualizer,img,img_id=-1,is_visual=False,enable_multiscale_search=False,debug=False):
     img=img.numpy().astype(np.float32)
     if(debug):
         print(f"infer image id:{img_id}")
@@ -23,16 +23,15 @@ def infer_one_img(model,postprocessor,img,img_id=-1,is_visual=False,save_dir="./
     padded_image,pad=pad_image_shape(scale_image,shape=(hin,win),pad_value=0.0)
     #default channels_first
     input_image=np.transpose(padded_image[np.newaxis,:,:,:].astype(np.float32),[0,3,1,2])
-    pif_maps,paf_maps=model.forward(input_image,is_train=False)
-    pif_maps=maps_to_numpy([pif_map[0] for pif_map in pif_maps])
-    paf_maps=maps_to_numpy([paf_map[0] for paf_map in paf_maps])
-    ret_humans=postprocessor.process(pif_maps,paf_maps)
-    for ret_human in ret_humans:
-        ret_human.bias(bias_w=-pad[2],bias_h=-pad[0])
-        ret_human.scale(scale_w=1/scale_rate,scale_h=1/scale_rate)
+    predict_x = model.forward(input_image,is_train=False)
+    humans=postprocessor.process(predict_x)[0]
+    for human in humans:
+        human.bias(bias_w=-pad[2],bias_h=-pad[0])
+        human.scale(scale_w=1/scale_rate,scale_h=1/scale_rate)
     if(is_visual):
-        visualize(img,img_id,padded_image,pif_maps,paf_maps,ret_humans,stride=postprocessor.stride,save_dir=save_dir)
-    return ret_humans
+        visualizer.visualize(image_batch=input_image, predict_x=predict_x, name=f"{img_id}_heatmap")
+        visualizer.visualize_result(image=img, humans=humans, name=f"{img_id}_result")
+    return humans
 
 def visualize(img,img_id,processed_img,pd_pif_maps,pd_paf_maps,humans,stride=8,save_dir="./save_dir"):
     print(f"{len(humans)} human found!")
@@ -147,6 +146,7 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
     kpt_converter=dataset.get_output_kpt_cvter()
     postprocessor=PostProcessor(parts=model.parts,limbs=model.limbs,colors=model.colors,hin=model.hin,win=model.win,\
         hout=model.hout,wout=model.wout,debug=False)
+    visualizer = Visualizer(save_dir=vis_dir)
     
     eval_dataset=dataset.get_eval_dataset()
     dataset_size=dataset.get_eval_datasize()
@@ -157,7 +157,7 @@ def evaluate(model,dataset,config,vis_num=30,total_eval_num=10000,enable_multisc
         if(eval_num>=total_eval_num):
             break
         is_visual=(eval_num<=vis_num)
-        humans=infer_one_img(model,postprocessor,img,img_id=img_id,is_visual=is_visual,save_dir=vis_dir,enable_multiscale_search=enable_multiscale_search)
+        humans=infer_one_img(model,postprocessor,visualizer,img,img_id=img_id,is_visual=is_visual,enable_multiscale_search=enable_multiscale_search)
         for human in humans:
             ann={}
             ann["category_id"]=1
@@ -215,6 +215,7 @@ def test(model,dataset,config,vis_num=30,total_test_num=10000,enable_multiscale_
     kpt_converter=dataset.get_output_kpt_cvter()
     postprocessor=PostProcessor(parts=model.parts,limbs=model.limbs,colors=model.colors,hin=model.hin,win=model.win,\
         hout=model.hout,wout=model.wout,debug=False)
+    visualizer = Visualizer(save_dir=vis_dir)
     
     test_dataset=dataset.get_test_dataset()
     dataset_size=dataset.get_test_datasize()
@@ -225,7 +226,7 @@ def test(model,dataset,config,vis_num=30,total_test_num=10000,enable_multiscale_
         if(test_num>=total_test_num):
             break
         is_visual=(test_num<=vis_num)
-        humans=infer_one_img(model,postprocessor,img,img_id=img_id,is_visual=is_visual,save_dir=vis_dir,enable_multiscale_search=enable_multiscale_search)
+        humans=infer_one_img(model,postprocessor,visualizer,img,img_id=img_id,is_visual=is_visual,enable_multiscale_search=enable_multiscale_search)
         for human in humans:
             ann={}
             ann["category_id"]=1

@@ -73,6 +73,7 @@ def prepare_dataset(data_path="./data",version="2017",task="person"):
             else:
                 logging.info("    training images exists")
 
+            '''
             if folder_exists(os.path.join(path, "test2014")) is False:
                 logging.info("    downloading testing images")
                 os.system("wget http://images.cocodataset.org/zips/test2014.zip -P {}".format(path))
@@ -80,6 +81,7 @@ def prepare_dataset(data_path="./data",version="2017",task="person"):
                 del_file(os.path.join(path, "test2014.zip"))
             else:
                 logging.info("    testing images exists")
+            '''
         elif version == "2017":
             # 11.5w train, 0.5w valid, test (no annotation)
             path = os.path.join(data_path, 'mscoco2017')
@@ -101,7 +103,6 @@ def prepare_dataset(data_path="./data",version="2017",task="person"):
                 logging.info("    validating images exists")
             
             # temply ignore: remember to uncomment!
-            '''
             if folder_exists(os.path.join(path, "train2017")) is False:
                 logging.info("    downloading training images")
                 os.system("wget http://images.cocodataset.org/zips/train2017.zip -P {}".format(path))
@@ -109,7 +110,7 @@ def prepare_dataset(data_path="./data",version="2017",task="person"):
                 del_file(os.path.join(path, "train2017.zip"))
             else:
                 logging.info("    training images exists")
-            
+            '''
             if folder_exists(os.path.join(path, "test2017")) is False:
                 #downloading test images
                 logging.info("    downloading testing images")
@@ -118,6 +119,7 @@ def prepare_dataset(data_path="./data",version="2017",task="person"):
                 del_file(os.path.join(path, "test2017.zip"))
             else:
                 logging.info("    testing images exists")
+            '''
 
             if os.path.exists(os.path.join(path,"annotations","image_info_test-dev2017.json")) is False:
                 #downloading test split infos
@@ -127,7 +129,6 @@ def prepare_dataset(data_path="./data",version="2017",task="person"):
                 del_file(os.path.join(path,"image_info_test2017.zip"))
             else:
                 logging.info("    testing split info exists")
-            '''
 
         else:
             raise Exception("dataset can only be 2014 and 2017, see MSCOCO website for more details.")

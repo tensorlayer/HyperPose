@@ -9,6 +9,7 @@ from ..processor import BasicPreProcessor
 from ..processor import BasicPostProcessor
 from ..processor import BasicVisualizer
 from ..processor import PltDrawer
+from ..common import to_numpy_dict, image_float_to_uint8
 
 class PreProcessor(BasicPreProcessor):
     def __init__(self,parts,limbs,hin,win,hout,wout,colors=None,*args, **kargs):
@@ -38,6 +39,9 @@ class PostProcessor(BasicPostProcessor):
         self.cur_id=0
         self.parts=parts
         self.limbs=limbs
+        self.hin, self.win = hin, win
+        self.hout, self.wout = hout, wout
+        self.stride = int(self.hin/self.hout)
         self.colors=colors if (colors!=None) else (len(self.parts)*[[0,255,0]])
         self.n_pos=len(self.parts)
         self.n_limb=len(self.limbs)
@@ -51,14 +55,27 @@ class PostProcessor(BasicPostProcessor):
         self.data_format=data_format
         self.debug=debug
     
-    def process(self,predict_x,data_format="channels_first"):
+    def process(self, predict_x, resize=True):
+        predict_x = {"conf_map":predict_x["conf_map"], "paf_map":predict_x["paf_map"]}
+        predict_x = to_numpy_dict(predict_x)
+        batch_size = list(predict_x.values())[0].shape[0]
+        humans_list = []
+        for batch_idx in range(0,batch_size):
+            predict_x_one = {key:value[batch_idx] for key,value in predict_x.items()}
+            humans_list.append(self.process_one(predict_x_one, resize=resize))        
+        return humans_list
+
+    def process_one(self,predict_x, resize=True):
         conf_map = predict_x["conf_map"]
         paf_map = predict_x["paf_map"]
-        if(data_format=="channels_first"):
-            conf_map=np.transpose(conf_map,[1,2,0])
-            paf_map=np.transpose(paf_map,[1,2,0])
-        conf_map=conf_map[np.newaxis,:,:,:]
-        paf_map=paf_map[np.newaxis,:,:,:]
+        conf_map=np.transpose(conf_map,[1,2,0])
+        paf_map=np.transpose(paf_map,[1,2,0])
+        h, w =conf_map.shape[0], conf_map.shape[1]
+        if(resize):
+            conf_map = cv2.resize(conf_map, dsize=(w*self.stride, h*self.stride), interpolation=cv2.INTER_CUBIC)
+            paf_map = cv2.resize(paf_map, dsize=(w*self.stride, h*self.stride), interpolation=cv2.INTER_CUBIC)
+        conf_map = conf_map[np.newaxis,:,:,:]
+        paf_map = paf_map[np.newaxis,:,:,:]
         peak_map=self.get_peak_map(conf_map)
         humans=self.process_paf(peak_map[0],conf_map[0],paf_map[0])
         return humans
@@ -240,14 +257,14 @@ class Visualizer(BasicVisualizer):
         self.save_dir = save_dir
 
     def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):
+        # mask
+        if(mask_batch is None):
+            mask_batch = np.ones_like(image_batch)
         # transform
         image_batch = np.transpose(image_batch,[0,2,3,1])
         mask_batch = np.transpose(mask_batch,[0,2,3,1])
         # predict maps
         pd_conf_map_list, pd_paf_map_list = predict_x["conf_map"], predict_x["paf_map"]
-        # mask
-        if(mask_batch is None):
-            mask_batch = np.ones_like(image_batch)
 
         batch_size = image_batch.shape[0]
         for b_idx in range(0,batch_size):
@@ -258,7 +275,8 @@ class Visualizer(BasicVisualizer):
             pltdrawer = PltDrawer(draw_row=2, draw_col=2)
 
             # draw origin image
-            pltdrawer.add_subplot(image, "origin image")
+            origin_image = image_float_to_uint8(image.copy())
+            pltdrawer.add_subplot(origin_image, "origin image")
 
             # draw mask
             pltdrawer.add_subplot(mask, "mask")
@@ -277,9 +295,12 @@ class Visualizer(BasicVisualizer):
             # draw results
             if(humans_list is not None):
                 humans = humans_list[b_idx]
-                self.visualize_result(image, humans, save_path=f"{self.save_dir}/{name}_{b_idx}_result.png")
+                self.visualize_result(image, humans, name=f"{name}_{b_idx}_result")
 
     def visualize_compare(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
+        # mask
+        if(mask_batch is None):
+            mask = np.ones_like(image_batch)
         # transform
         image_batch = np.transpose(image_batch,[0,2,3,1])
         mask_batch = np.transpose(mask_batch,[0,2,3,1])
@@ -287,9 +308,6 @@ class Visualizer(BasicVisualizer):
         pd_conf_map_batch, pd_paf_map_batch = predict_x["conf_map"], predict_x["paf_map"]
         # target maps
         gt_conf_map_batch, gt_paf_map_batch = target_x["conf_map"], target_x["paf_map"]
-        # mask
-        if(mask_batch is None):
-            mask = np.ones_like(image_batch)
 
         batch_size = image_batch.shape[0]
         for b_idx in range(0, batch_size):
@@ -301,7 +319,8 @@ class Visualizer(BasicVisualizer):
             pltdrawer = PltDrawer(draw_row=2, draw_col=3)
 
             # draw origin image
-            pltdrawer.add_subplot(image, "origin_image")
+            origin_image = image_float_to_uint8(image.copy())
+            pltdrawer.add_subplot(origin_image, "origin_image")
 
             # draw pd conf_map
             show_pd_conf_map = np.amax(pd_conf_map[:-1,:,:],axis=0)
@@ -330,7 +349,7 @@ class Visualizer(BasicVisualizer):
                 batch_size = image_batch.shape[0]
                 for b_idx in range(0, batch_size):
                     image, mask, humans = image_batch[b_idx], mask_batch[b_idx], humans_list[b_idx]
-                    self.visualize_result(image, humans, f"{self.save_dir}/{name}_{b_idx}_result.png")
+                    self.visualize_result(image, humans, f"{name}_{b_idx}_result")
 
 class Peak:
     def __init__(self,peak_idx,part_idx,y,x,score):

@@ -73,7 +73,13 @@ class Human:
                 body_part.x=-1000.0
             if(body_part.y<0):
                 body_part.y=-1000.0
-                
+    
+    def unpad(self, pad):
+        pad_start_h, pad_start_w = pad[0], pad[2]
+        self.bias(bias_w=-pad_start_w, bias_h=-pad_start_h)
+    
+    def unscale(self, scale):
+        self.scale(1/scale, 1/scale)
     
     def draw_human(self,img):
         img_h,img_w,img_c=img.shape

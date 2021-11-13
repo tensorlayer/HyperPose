@@ -1,14 +1,14 @@
-import imp
 import os
 import numpy as np
-from ..human import Human,BodyPart
 from .utils import non_maximium_supress
 from .utils import get_pose_proposals
 from .utils import draw_bbx, draw_edge
+from ..human import Human,BodyPart
 from ..processor import BasicPreProcessor
 from ..processor import BasicPostProcessor
 from ..processor import BasicVisualizer
 from ..processor import PltDrawer
+from ..common import to_numpy_dict, image_float_to_uint8
 
 class PreProcessor(BasicPreProcessor):
     def __init__(self,parts,limbs,hin,win,hout,wout,hnei,wnei,colors=None,data_format="channels_first",*args,**kargs):
@@ -53,7 +53,16 @@ class PostProcessor(BasicPostProcessor):
                 break
         print(f"PoseProposal Post-processer setting instance id as: {self.instance_id} {self.parts(self.instance_id)}")
 
-    def process(self,predict_x,scale_w_rate=1,scale_h_rate=1):
+    def process(self, predict_x, scale_w_rate=1,scale_h_rate=1):
+        predict_x = to_numpy_dict(predict_x)
+        batch_size = list(predict_x.values())[0].shape[0]
+        humans_list = []
+        for batch_idx in range(0,batch_size):
+            predict_x_one = {key:value[batch_idx] for key,value in predict_x.items()}
+            humans_list.append(self.process_one(predict_x_one, scale_w_rate, scale_h_rate))        
+        return humans_list
+
+    def process_one(self,predict_x,scale_w_rate=1,scale_h_rate=1):
         pc, px, py, pw, ph, pi, pe  = predict_x["c"], predict_x["x"], predict_x["y"], predict_x["w"], predict_x["h"],\
                                             predict_x["i"], predict_x["e"]
         def get_loc(idx,h,w):
@@ -202,6 +211,9 @@ class Visualizer(BasicVisualizer):
         self.save_dir = save_dir
     
     def visualize(self, image_batch, predict_x, mask_batch=None, humans_list=None, name="vis"):
+        # mask
+        if(mask_batch is None):
+            mask_batch = np.ones_like(image_batch)
         # transform
         image_batch = np.transpose(image_batch,[0,2,3,1])
         mask_batch = np.transpose(mask_batch,[0,2,3,1])
@@ -214,9 +226,6 @@ class Visualizer(BasicVisualizer):
         # predict maps
         pc_batch, px_batch, py_batch, pw_batch, ph_batch, pi_batch, pe_batch  = predict_x["c"], predict_x["x"], predict_x["y"], \
                                                             predict_x["w"], predict_x["h"], predict_x["i"], predict_x["e"]
-        # mask
-        if(mask_batch is None):
-            mask_batch = np.ones_like(image_batch)
 
         # draw figures
         batch_size = image_batch.shape[0]
@@ -230,6 +239,7 @@ class Visualizer(BasicVisualizer):
             
             # draw original image
             origin_image = image.copy()
+            origin_image = image_float_to_uint8(origin_image)
             pltdrawer.add_subplot(origin_image, "origin image")
 
             # draw predict image
@@ -244,10 +254,13 @@ class Visualizer(BasicVisualizer):
             # draw results
             if(humans_list is not None):
                 humans = humans_list[b_idx]
-                self.visualize_result(image, humans, save_path=f"{self.save_dir}/{name}_{b_idx}_result.png")
+                self.visualize_result(image, humans, save_path=f"{name}_{b_idx}_result")
         
 
     def visualize_compare(self, image_batch, predict_x, target_x, mask_batch=None, humans_list=None, name="vis"):
+        # mask
+        if(mask_batch is None):
+            mask_batch = np.ones_like(image_batch)
         # transform
         image_batch = np.transpose(image_batch,[0,2,3,1])
         mask_batch = np.transpose(mask_batch,[0,2,3,1])
@@ -263,9 +276,6 @@ class Visualizer(BasicVisualizer):
         # target maps
         gc_batch, gx_batch, gy_batch, gw_batch, gh_batch, ge_mask_batch, ge_batch  = target_x["c"], target_x["x"], target_x["y"], \
                                                             target_x["w"], target_x["h"], target_x["i"], target_x["e"]
-        # mask
-        if(mask_batch is None):
-            mask_batch = np.ones_like(image_batch)
         
         # draw figures
         batch_size = image_batch.shape[0]
@@ -280,7 +290,8 @@ class Visualizer(BasicVisualizer):
             pltdrawer = PltDrawer(draw_row=2, draw_col=2)
             
             # draw original image
-            pltdrawer.add_subplot(image, "origin image")
+            origin_image = image_float_to_uint8(image.copy())
+            pltdrawer.add_subplot(origin_image, "origin image")
 
             # draw mask
             pltdrawer.add_subplot(mask, "mask")
@@ -303,6 +314,6 @@ class Visualizer(BasicVisualizer):
             # draw results
             if(humans_list is not None):
                 humans = humans_list[b_idx]
-                self.visualize_result(image, humans, save_path=f"{self.save_dir}/{name}_{b_idx}_result.png")
+                self.visualize_result(image, humans, save_path=f"{name}_{b_idx}_result")
         
 

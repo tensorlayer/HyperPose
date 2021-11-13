@@ -149,8 +149,6 @@ class OpenPose(Model):
             ])
         
         def forward(self,x):
-            print(f"test init stage x:{x.shape}")
-            print(f"test data_format:{self.data_format}")
             conf_map=self.conf_block.forward(x)
             paf_map=self.paf_block.forward(x)
             return conf_map,paf_map
