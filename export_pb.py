@@ -84,7 +84,7 @@ if __name__ == '__main__':
         print("Input model file doesn't exist!")
         print("Conversion aborted!")
     else:
-        export_model.load_weights(input_path)
+        export_model.load_weights(input_path,format="npz_dict")
         export_model.eval()
         if(export_model.data_format=="channels_last"):
             input_signature=tf.TensorSpec(shape=(export_batch_size,export_h,export_w,3))
