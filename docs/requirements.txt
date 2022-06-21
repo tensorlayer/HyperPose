@@ -5,7 +5,7 @@ furo==2021.6.18b36
 sphinx-markdown-tables
 Sphinx==3.1
 nltk==3.6.2
-numpy==1.19.5
+numpy==1.22.0
 cython==0.29.23
 easydict==1.9
 pycocotools==2.0.2
