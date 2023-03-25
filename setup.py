@@ -12,7 +12,7 @@ setup(
         "numpy==1.16.4",
         "easydict>=1.9,<=1.10",
         "opencv-python>=3.4,<3.5",
-        "tensorflow==2.3.1",
+        "tensorflow==2.11.1",
         "tensorlayer==2.2.3",
         "pycocotools"
     ],
